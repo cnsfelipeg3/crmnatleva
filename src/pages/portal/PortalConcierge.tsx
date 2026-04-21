@@ -1,0 +1,370 @@
+import { useEffect, useRef, useState } from "react";
+import PortalLayout from "@/components/portal/PortalLayout";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "@/hooks/use-toast";
+
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+type Message = {
+  role: "user" | "assistant";
+  content: string | ContentPart[];
+  displayText?: string; // plain text for rendering user bubbles
+  displayImages?: string[]; // data URLs
+};
+
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
+
+const SUGGESTIONS = [
+  "Monta um roteiro de 3 dias em Lisboa focado em gastronomia",
+  "Que passeio bate o pôr-do-sol mais bonito em Santorini?",
+  "Vou para Orlando em maio, o que não pode faltar?",
+  "Lugares fora do óbvio em Paris",
+];
+
+export default function PortalConcierge() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [attachedImages, setAttachedImages] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 180) + "px";
+    }
+  }, [input]);
+
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const newImages: string[] = [];
+    for (const file of Array.from(files).slice(0, 4 - attachedImages.length)) {
+      if (file.size > 8 * 1024 * 1024) {
+        toast({ title: "Imagem muito grande", description: `${file.name} ultrapassa 8MB.`, variant: "destructive" });
+        continue;
+      }
+      const dataUrl = await new Promise<string>((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result as string);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      newImages.push(dataUrl);
+    }
+    setAttachedImages((prev) => [...prev, ...newImages]);
+  };
+
+  const removeImage = (idx: number) => {
+    setAttachedImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const send = async (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
+    if (!text && attachedImages.length === 0) return;
+    if (isLoading) return;
+
+    // Build message content
+    const displayImages = [...attachedImages];
+    let content: string | ContentPart[];
+    if (attachedImages.length > 0) {
+      const parts: ContentPart[] = [];
+      if (text) parts.push({ type: "text", text });
+      for (const img of attachedImages) {
+        parts.push({ type: "image_url", image_url: { url: img } });
+      }
+      content = parts;
+    } else {
+      content = text;
+    }
+
+    const userMsg: Message = {
+      role: "user",
+      content,
+      displayText: text,
+      displayImages: displayImages.length ? displayImages : undefined,
+    };
+
+    // Prepare payload messages (strip display helpers)
+    const payloadMessages = [...messages, userMsg].map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    setMessages((prev) => [...prev, userMsg]);
+    setInput("");
+    setAttachedImages([]);
+    setIsLoading(true);
+
+    try {
+      const resp = await fetch(CHAT_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: payloadMessages }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        const err = await resp.json().catch(() => ({ error: "Erro de rede" }));
+        if (resp.status === 429) {
+          toast({ title: "Aguarde um momento", description: err.error || "Muitas requisições.", variant: "destructive" });
+        } else if (resp.status === 402) {
+          toast({ title: "Serviço indisponível", description: err.error || "Créditos esgotados.", variant: "destructive" });
+        } else {
+          toast({ title: "Erro", description: err.error || "Falha na comunicação.", variant: "destructive" });
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      // Add empty assistant message to stream into
+      setMessages((prev) => [...prev, { role: "assistant", content: "", displayText: "" }]);
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      let streamDone = false;
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIdx: number;
+        while ((newlineIdx = buffer.indexOf("\n")) !== -1) {
+          let line = buffer.slice(0, newlineIdx);
+          buffer = buffer.slice(newlineIdx + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") {
+            streamDone = true;
+            break;
+          }
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              acc += delta;
+              setMessages((prev) => {
+                const copy = [...prev];
+                const last = copy[copy.length - 1];
+                if (last?.role === "assistant") {
+                  copy[copy.length - 1] = { ...last, content: acc, displayText: acc };
+                }
+                return copy;
+              });
+            }
+          } catch {
+            buffer = line + "\n" + buffer;
+            break;
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e);
+      toast({ title: "Erro", description: "Não consegui conectar agora. Tenta de novo?", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      send();
+    }
+  };
+
+  return (
+    <PortalLayout>
+      <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col" style={{ minHeight: "calc(100vh - 180px)" }}>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-6"
+        >
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-accent" />
+            <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-accent">Concierge.IA</span>
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-foreground">
+            Seu concierge pessoal de viagens
+          </h1>
+          <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
+            Pergunte qualquer coisa sobre destinos, roteiros, passeios, restaurantes ou envie uma foto e descubra que lugar é aquele.
+          </p>
+        </motion.div>
+
+        {/* Messages */}
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto space-y-5 pb-4 px-1"
+          style={{ scrollbarWidth: "thin" }}
+        >
+          {messages.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="py-10"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => send(s)}
+                    className="text-left px-4 py-3 rounded-2xl border border-border/40 bg-card/40 hover:bg-card hover:border-accent/30 transition-all text-sm text-foreground/80 hover:text-foreground"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+
+          <AnimatePresence initial={false}>
+            {messages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              >
+                {msg.role === "assistant" && (
+                  <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="w-4 h-4 text-accent" />
+                  </div>
+                )}
+                <div
+                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                    msg.role === "user"
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-muted/60 text-foreground"
+                  }`}
+                >
+                  {msg.displayImages && msg.displayImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {msg.displayImages.map((img, idx) => (
+                        <img
+                          key={idx}
+                          src={img}
+                          alt="anexo"
+                          className="w-24 h-24 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {msg.role === "user" ? (
+                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.displayText}</p>
+                  ) : (
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:mt-3 prose-headings:mb-1.5">
+                      {msg.displayText ? (
+                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.displayText}</ReactMarkdown>
+                      ) : (
+                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                  )}
+                </div>
+                {msg.role === "user" && (
+                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <UserIcon className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+
+          {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
+            <div className="flex gap-3 justify-start">
+              <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-4 h-4 text-accent" />
+              </div>
+              <div className="bg-muted/60 rounded-2xl px-4 py-3">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Input */}
+        <div className="sticky bottom-4 mt-4">
+          <div className="rounded-3xl border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg p-2.5">
+            {attachedImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2 px-1">
+                {attachedImages.map((img, idx) => (
+                  <div key={idx} className="relative group">
+                    <img src={img} alt="preview" className="w-16 h-16 object-cover rounded-xl" />
+                    <button
+                      onClick={() => removeImage(idx)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-end gap-2">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attachedImages.length >= 4}
+                className="p-2.5 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                title="Anexar imagem"
+              >
+                <ImageIcon className="w-5 h-5" />
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  handleImageUpload(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <textarea
+                ref={textareaRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={onKeyDown}
+                placeholder="Pergunte qualquer coisa sobre viagens..."
+                rows={1}
+                className="flex-1 resize-none bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[180px]"
+                disabled={isLoading}
+              />
+              <button
+                onClick={() => send()}
+                disabled={isLoading || (!input.trim() && attachedImages.length === 0)}
+                className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+              </button>
+            </div>
+          </div>
+          <p className="text-center text-[10px] text-muted-foreground mt-2">
+            Concierge.IA pode errar — confirme informações críticas antes de viajar.
+          </p>
+        </div>
+      </div>
+    </PortalLayout>
+  );
+}

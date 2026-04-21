@@ -3,7 +3,7 @@ import { useNavigate, Link, useLocation, Navigate } from "react-router-dom";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet, PlaneTakeoff, Maximize, Minimize } from "lucide-react";
+import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet, PlaneTakeoff, Maximize, Minimize, Sparkles } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
@@ -88,6 +88,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
   const navItems = [
     { to: "/portal", icon: Home, label: "Início" },
     { to: "/portal/viagens", icon: Map, label: "Minhas Viagens" },
+    { to: "/portal/concierge", icon: Sparkles, label: "Concierge.IA" },
     { to: "/portal/financeiro", icon: Wallet, label: "Financeiro" },
     { to: "/portal/nova-cotacao", icon: PlaneTakeoff, label: "Nova Cotação" },
     { to: "/portal/perfil", icon: User, label: "Meu Perfil" },
