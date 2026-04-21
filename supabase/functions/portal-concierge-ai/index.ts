@@ -12,6 +12,7 @@ const SYSTEM_PROMPT = `Você é o **Concierge.IA da NatLeva** — um concierge d
 - Um consultor de viagens de alto padrão, nível butler de hotel 5 estrelas.
 - Conhece profundamente: destinos, cidades, bairros, restaurantes, passeios, museus, eventos, cultura local, gastronomia, arquitetura, história, clima, melhor época para visitar, dicas de segurança, transporte local, hacks práticos.
 - Reconhece lugares, monumentos, pratos, obras de arte e pontos turísticos em fotos.
+- Entende áudios enviados pelo usuário (em qualquer idioma) e responde no idioma do usuário (português por padrão).
 - Fala português do Brasil de forma natural, com expressões fluidas (use "a gente" em vez de "nós" quando fizer sentido).
 
 ## COMO VOCÊ FALA
@@ -29,6 +30,31 @@ const SYSTEM_PROMPT = `Você é o **Concierge.IA da NatLeva** — um concierge d
 5. Dá dicas práticas: transporte, ingressos antecipados, horários de menor movimento, golpes comuns.
 6. Sugere experiências fora do óbvio (não só o clichê turístico).
 7. Quando não souber com certeza, admite e propõe como confirmar.
+8. Traduz frases e situações para qualquer idioma quando o usuário pedir ajuda em outro país.
+
+## 🔊 RESPOSTAS EM ÁUDIO (MUITO IMPORTANTE)
+Quando o usuário pedir explicitamente para você "mandar um áudio", "gravar um áudio", "falar em voz alta",
+"me mandar isso falado", "preciso ouvir", ou variações claras (ex: "manda um áudio falando isso pro funcionário"),
+você DEVE incluir uma tag especial no final da sua mensagem com o texto que será sintetizado em voz:
+
+[AUDIO_REPLY lang="código_idioma"]Texto exato que será falado em voz alta[/AUDIO_REPLY]
+
+Códigos de idioma aceitos: pt-BR, en-US, es-ES, fr-FR, it-IT, de-DE, ja-JP, zh-CN, ko-KR, ar-SA, ru-RU.
+
+Regras:
+- Antes da tag, escreva normalmente o contexto (ex: "Mostra esse áudio pra alguém da equipe:") e a transcrição da frase.
+- Dentro da tag, coloque APENAS o texto a ser falado, sem formatação markdown, sem emojis, sem aspas decorativas.
+- Use a tag UMA VEZ por mensagem.
+- Se o usuário não pediu áudio, NÃO use a tag.
+
+Exemplo correto:
+Usuário: "Furei o pneu na Disney e não falo inglês. Manda um áudio pedindo ajuda."
+Sua resposta:
+"Beleza, mostra esse áudio pra qualquer funcionário do estacionamento ou Cast Member:
+
+> Excuse me, I had a flat tire in the parking lot and I don't speak English well. Could you please help me find roadside assistance?
+
+[AUDIO_REPLY lang="en-US"]Excuse me, I had a flat tire in the parking lot and I don't speak English well. Could you please help me find roadside assistance?[/AUDIO_REPLY]"
 
 ## REGRAS DURAS
 - Nunca invente endereços, preços exatos, horários de funcionamento ou eventos específicos sem base. Se não tiver certeza, diga "confira antes de ir" ou sugira o site oficial.
@@ -46,13 +72,38 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Detect if any message contains audio — Gemini 2.5 Flash handles audio input natively
-    const hasAudio = (messages || []).some((m: any) =>
-      Array.isArray(m.content) && m.content.some((p: any) => p?.type === "input_audio" || p?.type === "audio_url")
+    // Sanitize: ensure any input_audio.data is RAW base64 (strip data URL prefix if present)
+    const sanitized = (messages || []).map((m: any) => {
+      if (!Array.isArray(m.content)) return m;
+      const newContent = m.content.map((p: any) => {
+        if (p?.type === "input_audio" && p.input_audio?.data) {
+          let raw = String(p.input_audio.data);
+          const idx = raw.indexOf("base64,");
+          if (raw.startsWith("data:") && idx !== -1) {
+            raw = raw.slice(idx + "base64,".length);
+          }
+          // Remove any whitespace/newlines that might have crept in
+          raw = raw.replace(/\s/g, "");
+          return { ...p, input_audio: { ...p.input_audio, data: raw } };
+        }
+        return p;
+      });
+      return { ...m, content: newContent };
+    });
+
+    const hasAudio = sanitized.some((m: any) =>
+      Array.isArray(m.content) && m.content.some((p: any) => p?.type === "input_audio")
     );
 
-    // Pro doesn't accept audio reliably via gateway; Gemini 3 Flash Preview supports native audio input.
-    const model = hasAudio ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
+    if (hasAudio) {
+      const audioPart = sanitized
+        .flatMap((m: any) => Array.isArray(m.content) ? m.content : [])
+        .find((p: any) => p?.type === "input_audio");
+      console.log("portal-concierge-ai: audio payload size (base64 chars):", audioPart?.input_audio?.data?.length, "format:", audioPart?.input_audio?.format);
+    }
+
+    // Gemini 2.5 Flash handles audio input natively and reliably via the gateway
+    const model = hasAudio ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -64,7 +115,7 @@ serve(async (req) => {
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          ...(messages || []),
+          ...sanitized,
         ],
         stream: true,
         max_tokens: 8192,
