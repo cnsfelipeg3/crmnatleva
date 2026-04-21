@@ -15,7 +15,26 @@ type ContentPart =
 
 type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
-type GeneratedAudio = { text: string; lang: string; status: "ready" | "speaking" | "error" };
+type GeneratedAudio = {
+  text: string;
+  lang: string;
+  status: "ready" | "speaking" | "translating" | "error";
+  translations?: Record<string, string>; // lang -> translated text
+  selectedLang?: string;
+};
+
+const AVAILABLE_LANGS: { code: string; label: string; flag: string }[] = [
+  { code: "pt-BR", label: "Português", flag: "🇧🇷" },
+  { code: "en-US", label: "English", flag: "🇺🇸" },
+  { code: "es-ES", label: "Español", flag: "🇪🇸" },
+  { code: "fr-FR", label: "Français", flag: "🇫🇷" },
+  { code: "it-IT", label: "Italiano", flag: "🇮🇹" },
+  { code: "de-DE", label: "Deutsch", flag: "🇩🇪" },
+  { code: "ja-JP", label: "日本語", flag: "🇯🇵" },
+  { code: "zh-CN", label: "中文", flag: "🇨🇳" },
+  { code: "ar-SA", label: "العربية", flag: "🇸🇦" },
+  { code: "ru-RU", label: "Русский", flag: "🇷🇺" },
+];
 
 type Message = {
   role: "user" | "assistant";
