@@ -7,6 +7,7 @@ import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon, 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ContentPart =
   | { type: "text"; text: string }
