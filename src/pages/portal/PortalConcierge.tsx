@@ -140,9 +140,15 @@ export default function PortalConcierge() {
     const parts: ContentPart[] = [];
 
     if (audio) {
-      const { base64, format } = parseDataUrl(audio.dataUrl);
+      // Robustly extract RAW base64 from the recorded blob (no data URL prefix, no whitespace)
+      const base64 = await dataUrlToRawBase64(audio.dataUrl);
+      const mimeOnly = (audio.mimeType || "audio/webm").split(";")[0].toLowerCase();
+      let format = "webm";
+      if (mimeOnly.includes("mp3") || mimeOnly.includes("mpeg")) format = "mp3";
+      else if (mimeOnly.includes("wav")) format = "wav";
+      else if (mimeOnly.includes("ogg")) format = "ogg";
+      else if (mimeOnly.includes("mp4") || mimeOnly.includes("aac") || mimeOnly.includes("m4a")) format = "mp4";
       parts.push({ type: "input_audio", input_audio: { data: base64, format } });
-      // Helpful nudge so the model knows to interpret the audio
       parts.push({ type: "text", text: "Ouça este áudio e responda como concierge de viagens." });
     } else {
       if (finalText) parts.push({ type: "text", text: finalText });
