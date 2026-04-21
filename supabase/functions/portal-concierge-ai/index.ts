@@ -51,8 +51,8 @@ serve(async (req) => {
       Array.isArray(m.content) && m.content.some((p: any) => p?.type === "input_audio" || p?.type === "audio_url")
     );
 
-    // Pro doesn't accept audio reliably via gateway; Flash does. Use Flash whenever audio is present.
-    const model = hasAudio ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
+    // Pro doesn't accept audio reliably via gateway; Gemini 3 Flash Preview supports native audio input.
+    const model = hasAudio ? "google/gemini-3-flash-preview" : "google/gemini-2.5-pro";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
