@@ -45,69 +45,140 @@ export default function AudioRecorder({ onCancel, onSend }: Props) {
   };
 
   const start = async () => {
+    // Make sure any leftover speech from the assistant is canceled —
+    // some browsers (Chrome) keep the audio output channel busy and
+    // can interfere with a fresh getUserMedia call.
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+    } catch {
+      /* ignore */
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Seu navegador não suporta gravação de áudio.");
+      return;
+    }
+
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
       });
-      streamRef.current = stream;
+    } catch (e: any) {
+      console.error("[AudioRecorder] getUserMedia failed:", e?.name, e?.message);
+      if (e?.name === "NotAllowedError" || e?.name === "SecurityError") {
+        setError("Permissão do microfone negada. Libere o acesso no navegador.");
+      } else if (e?.name === "NotFoundError") {
+        setError("Nenhum microfone encontrado.");
+      } else if (e?.name === "NotReadableError") {
+        setError("O microfone está em uso por outro app. Feche e tente novamente.");
+      } else {
+        setError("Não consegui acessar o microfone. Tente novamente.");
+      }
+      return;
+    }
 
+    streamRef.current = stream;
+
+    let mr: MediaRecorder;
+    try {
       const mime = pickMime();
-      const mr = new MediaRecorder(stream, { mimeType: mime });
-      mediaRecorderRef.current = mr;
-      chunksRef.current = [];
-      mr.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
+      mr = new MediaRecorder(stream, { mimeType: mime });
+    } catch (e: any) {
+      console.error("[AudioRecorder] MediaRecorder creation failed:", e);
+      try {
+        mr = new MediaRecorder(stream);
+      } catch (e2: any) {
+        console.error("[AudioRecorder] MediaRecorder fallback failed:", e2);
+        stream.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        setError("Não consegui iniciar a gravação. Tente novamente.");
+        return;
+      }
+    }
+
+    mediaRecorderRef.current = mr;
+    chunksRef.current = [];
+    mr.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    try {
       mr.start(100);
+    } catch (e: any) {
+      console.error("[AudioRecorder] mr.start failed:", e);
+      stream.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+      mediaRecorderRef.current = null;
+      setError("Não consegui iniciar a gravação. Tente novamente.");
+      return;
+    }
 
-      // Waveform analyser
+    startTimeRef.current = performance.now();
+    accumulatedRef.current = 0;
+    waveformRef.current = [];
+    setWaveform([]);
+    setElapsed(0);
+    setRecording(true);
+    setPaused(false);
+
+    // Waveform analyser is OPTIONAL — failure here must not block recording
+    let analyser: AnalyserNode | null = null;
+    try {
       const AC = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AC();
-      audioCtxRef.current = ctx;
-      const source = ctx.createMediaStreamSource(stream);
-      const analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
-      source.connect(analyser);
-      analyserRef.current = analyser;
+      if (AC) {
+        const ctx = new AC();
+        audioCtxRef.current = ctx;
+        if (ctx.state === "suspended") {
+          try {
+            await ctx.resume();
+          } catch {
+            /* ignore */
+          }
+        }
+        const source = ctx.createMediaStreamSource(stream);
+        analyser = ctx.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        analyserRef.current = analyser;
+      }
+    } catch (e) {
+      console.warn("[AudioRecorder] Waveform analyser unavailable:", e);
+      analyserRef.current = null;
+    }
 
-      startTimeRef.current = performance.now();
-      accumulatedRef.current = 0;
-      waveformRef.current = [];
-      setWaveform([]);
-      setElapsed(0);
-      setRecording(true);
-      setPaused(false);
+    const data = analyser ? new Uint8Array(analyser.frequencyBinCount) : null;
+    let lastSample = 0;
+    const tick = () => {
+      const now = performance.now();
+      const total = accumulatedRef.current + (now - startTimeRef.current) / 1000;
+      setElapsed(total);
 
-      const data = new Uint8Array(analyser.frequencyBinCount);
-      let lastSample = 0;
-      const tick = () => {
-        if (!analyserRef.current) return;
+      if (analyserRef.current && data) {
         analyserRef.current.getByteTimeDomainData(data);
-        // RMS
         let sum = 0;
         for (let i = 0; i < data.length; i++) {
           const v = (data[i] - 128) / 128;
           sum += v * v;
         }
         const rms = Math.sqrt(sum / data.length);
-        const now = performance.now();
-        const total = accumulatedRef.current + (now - startTimeRef.current) / 1000;
-        setElapsed(total);
-
-        // Sample waveform ~12 bars/sec
         if (now - lastSample > 80) {
           lastSample = now;
           const amp = Math.min(1, rms * 3);
           waveformRef.current = [...waveformRef.current, amp].slice(-80);
           setWaveform(waveformRef.current);
         }
-        rafRef.current = requestAnimationFrame(tick);
-      };
+      } else if (now - lastSample > 80) {
+        // No analyser → still show a small pulsing bar so the user sees activity
+        lastSample = now;
+        const amp = 0.25 + Math.random() * 0.25;
+        waveformRef.current = [...waveformRef.current, amp].slice(-80);
+        setWaveform(waveformRef.current);
+      }
       rafRef.current = requestAnimationFrame(tick);
-    } catch (e: any) {
-      console.error(e);
-      setError("Não consegui acessar o microfone. Verifique a permissão.");
-    }
+    };
+    rafRef.current = requestAnimationFrame(tick);
   };
 
   const togglePause = () => {
