@@ -435,8 +435,9 @@ export default function PortalConcierge() {
           }
           return copy;
         });
-        // Auto-play once when ready
-        playGeneratedAudio(speech, lang);
+        // Auto-play once when ready - need to compute index after the state update
+        const autoPlayIndex = messages.length + 1; // user msg + new assistant msg
+        setTimeout(() => playGeneratedAudio(autoPlayIndex), 50);
       }
     } catch (e) {
       console.error(e);
