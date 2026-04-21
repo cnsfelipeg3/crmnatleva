@@ -309,8 +309,17 @@ export default function AudioRecorder({ onCancel, onSend }: Props) {
       <div className="flex items-center gap-3 px-3 py-2">
         <p className="text-sm text-destructive flex-1">{error}</p>
         <button
+          onClick={() => {
+            setError(null);
+            start();
+          }}
+          className="px-3 py-1.5 rounded-xl bg-accent text-accent-foreground text-sm hover:bg-accent/90 transition-colors"
+        >
+          Tentar de novo
+        </button>
+        <button
           onClick={onCancel}
-          className="px-3 py-1.5 rounded-xl bg-muted text-foreground text-sm"
+          className="px-3 py-1.5 rounded-xl bg-muted text-foreground text-sm hover:bg-muted/80 transition-colors"
         >
           Fechar
         </button>
