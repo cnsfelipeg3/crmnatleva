@@ -378,6 +378,19 @@ export default function PortalConcierge() {
       let acc = "";
       let streamDone = false;
 
+      // Helper: returns the visible text by stripping any (possibly partial) AUDIO_REPLY tag.
+      // While the tag is being streamed but not yet closed, hide everything from the opening tag onward.
+      const visibleText = (full: string): string => {
+        const closed = full.replace(AUDIO_TAG_RE, "").trim();
+        // Hide partial open tag (still streaming, not yet closed)
+        const partialOpen = closed.search(/\[AUDIO_REPLY(?:\s+lang="[^"]*")?\]/i);
+        if (partialOpen !== -1) return closed.slice(0, partialOpen).trim();
+        // Also hide a lone "[AUDIO_R..." prefix while it's being typed
+        const looseOpen = closed.search(/\[AUDIO_?R?E?P?L?Y?$/i);
+        if (looseOpen !== -1 && closed.length - looseOpen < 30) return closed.slice(0, looseOpen).trim();
+        return closed;
+      };
+
       while (!streamDone) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -400,11 +413,12 @@ export default function PortalConcierge() {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               acc += delta;
+              const display = visibleText(acc);
               setMessages((prev) => {
                 const copy = [...prev];
                 const last = copy[copy.length - 1];
                 if (last?.role === "assistant") {
-                  copy[copy.length - 1] = { ...last, content: acc, displayText: acc };
+                  copy[copy.length - 1] = { ...last, content: acc, displayText: display };
                 }
                 return copy;
               });
@@ -422,22 +436,26 @@ export default function PortalConcierge() {
         const lang = match[1] || "pt-BR";
         const speech = match[2].trim();
         const cleanedText = acc.replace(AUDIO_TAG_RE, "").trim();
+        let autoPlayIndex = -1;
         setMessages((prev) => {
           const copy = [...prev];
-          const last = copy[copy.length - 1];
+          const lastIdx = copy.length - 1;
+          const last = copy[lastIdx];
           if (last?.role === "assistant") {
-            copy[copy.length - 1] = {
+            copy[lastIdx] = {
               ...last,
               content: cleanedText,
               displayText: cleanedText,
               generatedAudio: { text: speech, lang, status: "ready" },
             };
+            autoPlayIndex = lastIdx;
           }
           return copy;
         });
-        // Auto-play once when ready - need to compute index after the state update
-        const autoPlayIndex = messages.length + 1; // user msg + new assistant msg
-        setTimeout(() => playGeneratedAudio(autoPlayIndex), 50);
+        // Auto-play once the state has been committed
+        if (autoPlayIndex >= 0) {
+          setTimeout(() => playGeneratedAudio(autoPlayIndex), 80);
+        }
       }
     } catch (e) {
       console.error(e);
