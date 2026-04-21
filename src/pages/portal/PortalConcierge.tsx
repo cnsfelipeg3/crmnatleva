@@ -15,15 +15,34 @@ type ContentPart =
 
 type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
+type GeneratedAudio = { dataUrl: string; lang: string; status: "loading" | "ready" | "error" };
+
 type Message = {
   role: "user" | "assistant";
   content: string | ContentPart[];
   displayText?: string;
   displayImages?: string[];
   displayAudio?: AudioMeta;
+  generatedAudio?: GeneratedAudio;
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-tts`;
+
+const AUDIO_TAG_RE = /\[AUDIO_REPLY(?:\s+lang="([^"]+)")?\]([\s\S]*?)\[\/AUDIO_REPLY\]/i;
+
+// Convert a Blob/dataUrl to RAW base64 (no data URL prefix, no whitespace)
+async function dataUrlToRawBase64(dataUrl: string): Promise<string> {
+  // Fast path: if it's already a data URL, fetch it as a blob and re-encode reliably
+  const blob = await (await fetch(dataUrl)).blob();
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)));
+  }
+  return btoa(bin);
+}
 
 const SUGGESTIONS = [
   "Monta um roteiro de 3 dias em Lisboa focado em gastronomia",
@@ -121,9 +140,15 @@ export default function PortalConcierge() {
     const parts: ContentPart[] = [];
 
     if (audio) {
-      const { base64, format } = parseDataUrl(audio.dataUrl);
+      // Robustly extract RAW base64 from the recorded blob (no data URL prefix, no whitespace)
+      const base64 = await dataUrlToRawBase64(audio.dataUrl);
+      const mimeOnly = (audio.mimeType || "audio/webm").split(";")[0].toLowerCase();
+      let format = "webm";
+      if (mimeOnly.includes("mp3") || mimeOnly.includes("mpeg")) format = "mp3";
+      else if (mimeOnly.includes("wav")) format = "wav";
+      else if (mimeOnly.includes("ogg")) format = "ogg";
+      else if (mimeOnly.includes("mp4") || mimeOnly.includes("aac") || mimeOnly.includes("m4a")) format = "mp4";
       parts.push({ type: "input_audio", input_audio: { data: base64, format } });
-      // Helpful nudge so the model knows to interpret the audio
       parts.push({ type: "text", text: "Ouça este áudio e responda como concierge de viagens." });
     } else {
       if (finalText) parts.push({ type: "text", text: finalText });
@@ -220,6 +245,76 @@ export default function PortalConcierge() {
             break;
           }
         }
+      }
+
+      // Detect [AUDIO_REPLY lang="..."]...[/AUDIO_REPLY] tag and synthesize audio
+      const match = acc.match(AUDIO_TAG_RE);
+      if (match) {
+        const lang = match[1] || "pt-BR";
+        const speech = match[2].trim();
+        const cleanedText = acc.replace(AUDIO_TAG_RE, "").trim();
+        // Update message: hide tag from text, mark audio as loading
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant") {
+            copy[copy.length - 1] = {
+              ...last,
+              content: cleanedText,
+              displayText: cleanedText,
+              generatedAudio: { dataUrl: "", lang, status: "loading" },
+            };
+          }
+          return copy;
+        });
+
+        // Fire TTS request (non-blocking for UI)
+        (async () => {
+          try {
+            const ttsResp = await fetch(TTS_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({ text: speech, lang }),
+            });
+            const j = await ttsResp.json();
+            if (!ttsResp.ok || !j.audioBase64) {
+              throw new Error(j.error || "Falha ao gerar áudio");
+            }
+            const audioDataUrl = `data:${j.mimeType || "audio/wav"};base64,${j.audioBase64}`;
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant" && last.generatedAudio) {
+                copy[copy.length - 1] = {
+                  ...last,
+                  generatedAudio: { dataUrl: audioDataUrl, lang, status: "ready" },
+                };
+              }
+              return copy;
+            });
+          } catch (err: any) {
+            console.error("TTS error:", err);
+            toast({
+              title: "Áudio indisponível",
+              description: err?.message || "Não consegui gerar o áudio agora.",
+              variant: "destructive",
+            });
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant" && last.generatedAudio) {
+                copy[copy.length - 1] = {
+                  ...last,
+                  generatedAudio: { dataUrl: "", lang, status: "error" },
+                };
+              }
+              return copy;
+            });
+          }
+        })();
       }
     } catch (e) {
       console.error(e);
@@ -336,6 +431,34 @@ export default function PortalConcierge() {
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.displayText}</ReactMarkdown>
                       ) : (
                         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                      )}
+                      {msg.generatedAudio && (
+                        <div className="mt-3 not-prose">
+                          {msg.generatedAudio.status === "loading" && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-2xl px-3 py-2 border border-border/40">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Gerando áudio...
+                            </div>
+                          )}
+                          {msg.generatedAudio.status === "ready" && (
+                            <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
+                                {msg.generatedAudio.lang}
+                              </span>
+                              <audio
+                                controls
+                                src={msg.generatedAudio.dataUrl}
+                                className="flex-1 h-9"
+                                style={{ maxWidth: "100%" }}
+                              />
+                            </div>
+                          )}
+                          {msg.generatedAudio.status === "error" && (
+                            <div className="text-xs text-destructive bg-destructive/10 rounded-2xl px-3 py-2 border border-destructive/30">
+                              Não consegui gerar o áudio. O texto da frase está acima.
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}
