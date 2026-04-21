@@ -182,17 +182,103 @@ export default function PortalConcierge() {
     sendCore({ audio });
   };
 
-  const playGeneratedAudio = async (text: string, lang: string) => {
+  const translateText = async (text: string, targetLang: string): Promise<string> => {
+    const langName = AVAILABLE_LANGS.find((l) => l.code === targetLang)?.label || targetLang;
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: `Traduza o texto abaixo para ${langName} (${targetLang}). Responda APENAS com a tradução, sem aspas, sem comentários, sem explicações, mantendo o tom natural e falado.\n\nTexto:\n${text}`,
+          },
+        ],
+      }),
+    });
+    if (!resp.ok || !resp.body) throw new Error("Falha ao traduzir");
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let acc = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") return acc.trim();
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) acc += delta;
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    return acc.trim();
+  };
+
+  const updateMessageAudio = (msgIndex: number, patch: Partial<GeneratedAudio>) => {
     setMessages((prev) => {
       const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (last?.role === "assistant" && last.generatedAudio) {
-        copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "speaking" } };
+      const m = copy[msgIndex];
+      if (m?.role === "assistant" && m.generatedAudio) {
+        copy[msgIndex] = { ...m, generatedAudio: { ...m.generatedAudio, ...patch } };
       }
       return copy;
     });
+  };
+
+  const playGeneratedAudio = async (msgIndex: number, langOverride?: string) => {
+    const target = messages[msgIndex];
+    if (!target?.generatedAudio) return;
+    const ga = target.generatedAudio;
+    const lang = langOverride || ga.selectedLang || ga.lang;
+    const isOriginal = lang === ga.lang;
+    let textToSpeak = isOriginal ? ga.text : ga.translations?.[lang];
+
+    if (!textToSpeak) {
+      updateMessageAudio(msgIndex, { status: "translating", selectedLang: lang });
+      try {
+        textToSpeak = await translateText(ga.text, lang);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const m = copy[msgIndex];
+          if (m?.role === "assistant" && m.generatedAudio) {
+            copy[msgIndex] = {
+              ...m,
+              generatedAudio: {
+                ...m.generatedAudio,
+                translations: { ...(m.generatedAudio.translations || {}), [lang]: textToSpeak! },
+                selectedLang: lang,
+                status: "ready",
+              },
+            };
+          }
+          return copy;
+        });
+      } catch (err: any) {
+        updateMessageAudio(msgIndex, { status: "ready" });
+        toast({ title: "Tradução falhou", description: err?.message || "Tente outro idioma.", variant: "destructive" });
+        return;
+      }
+    } else {
+      updateMessageAudio(msgIndex, { selectedLang: lang });
+    }
+
+    updateMessageAudio(msgIndex, { status: "speaking" });
     try {
-      await speakText(text, lang);
+      await speakText(textToSpeak!, lang);
     } catch (err: any) {
       toast({
         title: "Áudio indisponível",
@@ -200,16 +286,10 @@ export default function PortalConcierge() {
         variant: "destructive",
       });
     } finally {
-      setMessages((prev) => {
-        const copy = [...prev];
-        const last = copy[copy.length - 1];
-        if (last?.role === "assistant" && last.generatedAudio) {
-          copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "ready" } };
-        }
-        return copy;
-      });
+      updateMessageAudio(msgIndex, { status: "ready" });
     }
   };
+
 
 
   const send = async (textOverride?: string) => {
