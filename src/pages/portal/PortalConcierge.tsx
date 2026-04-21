@@ -7,6 +7,7 @@ import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon, 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "@/hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type ContentPart =
   | { type: "text"; text: string }
@@ -15,7 +16,26 @@ type ContentPart =
 
 type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
-type GeneratedAudio = { text: string; lang: string; status: "ready" | "speaking" | "error" };
+type GeneratedAudio = {
+  text: string;
+  lang: string;
+  status: "ready" | "speaking" | "translating" | "error";
+  translations?: Record<string, string>; // lang -> translated text
+  selectedLang?: string;
+};
+
+const AVAILABLE_LANGS: { code: string; label: string; flag: string }[] = [
+  { code: "pt-BR", label: "Português", flag: "🇧🇷" },
+  { code: "en-US", label: "English", flag: "🇺🇸" },
+  { code: "es-ES", label: "Español", flag: "🇪🇸" },
+  { code: "fr-FR", label: "Français", flag: "🇫🇷" },
+  { code: "it-IT", label: "Italiano", flag: "🇮🇹" },
+  { code: "de-DE", label: "Deutsch", flag: "🇩🇪" },
+  { code: "ja-JP", label: "日本語", flag: "🇯🇵" },
+  { code: "zh-CN", label: "中文", flag: "🇨🇳" },
+  { code: "ar-SA", label: "العربية", flag: "🇸🇦" },
+  { code: "ru-RU", label: "Русский", flag: "🇷🇺" },
+];
 
 type Message = {
   role: "user" | "assistant";
@@ -162,17 +182,103 @@ export default function PortalConcierge() {
     sendCore({ audio });
   };
 
-  const playGeneratedAudio = async (text: string, lang: string) => {
+  const translateText = async (text: string, targetLang: string): Promise<string> => {
+    const langName = AVAILABLE_LANGS.find((l) => l.code === targetLang)?.label || targetLang;
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({
+        messages: [
+          {
+            role: "user",
+            content: `Traduza o texto abaixo para ${langName} (${targetLang}). Responda APENAS com a tradução, sem aspas, sem comentários, sem explicações, mantendo o tom natural e falado.\n\nTexto:\n${text}`,
+          },
+        ],
+      }),
+    });
+    if (!resp.ok || !resp.body) throw new Error("Falha ao traduzir");
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let acc = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let idx: number;
+      while ((idx = buffer.indexOf("\n")) !== -1) {
+        let line = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 1);
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (!line.startsWith("data: ")) continue;
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") return acc.trim();
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const delta = parsed.choices?.[0]?.delta?.content;
+          if (delta) acc += delta;
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    return acc.trim();
+  };
+
+  const updateMessageAudio = (msgIndex: number, patch: Partial<GeneratedAudio>) => {
     setMessages((prev) => {
       const copy = [...prev];
-      const last = copy[copy.length - 1];
-      if (last?.role === "assistant" && last.generatedAudio) {
-        copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "speaking" } };
+      const m = copy[msgIndex];
+      if (m?.role === "assistant" && m.generatedAudio) {
+        copy[msgIndex] = { ...m, generatedAudio: { ...m.generatedAudio, ...patch } };
       }
       return copy;
     });
+  };
+
+  const playGeneratedAudio = async (msgIndex: number, langOverride?: string) => {
+    const target = messages[msgIndex];
+    if (!target?.generatedAudio) return;
+    const ga = target.generatedAudio;
+    const lang = langOverride || ga.selectedLang || ga.lang;
+    const isOriginal = lang === ga.lang;
+    let textToSpeak = isOriginal ? ga.text : ga.translations?.[lang];
+
+    if (!textToSpeak) {
+      updateMessageAudio(msgIndex, { status: "translating", selectedLang: lang });
+      try {
+        textToSpeak = await translateText(ga.text, lang);
+        setMessages((prev) => {
+          const copy = [...prev];
+          const m = copy[msgIndex];
+          if (m?.role === "assistant" && m.generatedAudio) {
+            copy[msgIndex] = {
+              ...m,
+              generatedAudio: {
+                ...m.generatedAudio,
+                translations: { ...(m.generatedAudio.translations || {}), [lang]: textToSpeak! },
+                selectedLang: lang,
+                status: "ready",
+              },
+            };
+          }
+          return copy;
+        });
+      } catch (err: any) {
+        updateMessageAudio(msgIndex, { status: "ready" });
+        toast({ title: "Tradução falhou", description: err?.message || "Tente outro idioma.", variant: "destructive" });
+        return;
+      }
+    } else {
+      updateMessageAudio(msgIndex, { selectedLang: lang });
+    }
+
+    updateMessageAudio(msgIndex, { status: "speaking" });
     try {
-      await speakText(text, lang);
+      await speakText(textToSpeak!, lang);
     } catch (err: any) {
       toast({
         title: "Áudio indisponível",
@@ -180,16 +286,10 @@ export default function PortalConcierge() {
         variant: "destructive",
       });
     } finally {
-      setMessages((prev) => {
-        const copy = [...prev];
-        const last = copy[copy.length - 1];
-        if (last?.role === "assistant" && last.generatedAudio) {
-          copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "ready" } };
-        }
-        return copy;
-      });
+      updateMessageAudio(msgIndex, { status: "ready" });
     }
   };
+
 
 
   const send = async (textOverride?: string) => {
@@ -335,8 +435,9 @@ export default function PortalConcierge() {
           }
           return copy;
         });
-        // Auto-play once when ready
-        playGeneratedAudio(speech, lang);
+        // Auto-play once when ready - need to compute index after the state update
+        const autoPlayIndex = messages.length + 1; // user msg + new assistant msg
+        setTimeout(() => playGeneratedAudio(autoPlayIndex), 50);
       }
     } catch (e) {
       console.error(e);
@@ -457,12 +558,31 @@ export default function PortalConcierge() {
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
                           <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
-                              {msg.generatedAudio.lang}
-                            </span>
+                            <Select
+                              value={msg.generatedAudio.selectedLang || msg.generatedAudio.lang}
+                              onValueChange={(newLang) => {
+                                updateMessageAudio(i, { selectedLang: newLang });
+                              }}
+                              disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
+                            >
+                              <SelectTrigger className="w-[140px] h-8 text-xs border-border/40 bg-card/60">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AVAILABLE_LANGS.map((l) => (
+                                  <SelectItem key={l.code} value={l.code} className="text-xs">
+                                    <span className="mr-1.5">{l.flag}</span>
+                                    {l.label}
+                                    {l.code === msg.generatedAudio!.lang && (
+                                      <span className="ml-1 text-[9px] text-muted-foreground">(original)</span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <button
-                              onClick={() => playGeneratedAudio(msg.generatedAudio!.text, msg.generatedAudio!.lang)}
-                              disabled={msg.generatedAudio.status === "speaking"}
+                              onClick={() => playGeneratedAudio(i)}
+                              disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
                               className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60"
                             >
                               {msg.generatedAudio.status === "speaking" ? (
@@ -470,10 +590,15 @@ export default function PortalConcierge() {
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   Falando...
                                 </>
+                              ) : msg.generatedAudio.status === "translating" ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Traduzindo...
+                                </>
                               ) : (
                                 <>
                                   <Mic className="w-3.5 h-3.5" />
-                                  Ouvir novamente
+                                  Ouvir
                                 </>
                               )}
                             </button>
