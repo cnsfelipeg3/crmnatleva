@@ -432,6 +432,34 @@ export default function PortalConcierge() {
                       ) : (
                         <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                       )}
+                      {msg.generatedAudio && (
+                        <div className="mt-3 not-prose">
+                          {msg.generatedAudio.status === "loading" && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground bg-background/50 rounded-2xl px-3 py-2 border border-border/40">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Gerando áudio...
+                            </div>
+                          )}
+                          {msg.generatedAudio.status === "ready" && (
+                            <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
+                                {msg.generatedAudio.lang}
+                              </span>
+                              <audio
+                                controls
+                                src={msg.generatedAudio.dataUrl}
+                                className="flex-1 h-9"
+                                style={{ maxWidth: "100%" }}
+                              />
+                            </div>
+                          )}
+                          {msg.generatedAudio.status === "error" && (
+                            <div className="text-xs text-destructive bg-destructive/10 rounded-2xl px-3 py-2 border border-destructive/30">
+                              Não consegui gerar o áudio. O texto da frase está acima.
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
