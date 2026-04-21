@@ -15,15 +15,34 @@ type ContentPart =
 
 type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
+type GeneratedAudio = { dataUrl: string; lang: string; status: "loading" | "ready" | "error" };
+
 type Message = {
   role: "user" | "assistant";
   content: string | ContentPart[];
   displayText?: string;
   displayImages?: string[];
   displayAudio?: AudioMeta;
+  generatedAudio?: GeneratedAudio;
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
+const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-tts`;
+
+const AUDIO_TAG_RE = /\[AUDIO_REPLY(?:\s+lang="([^"]+)")?\]([\s\S]*?)\[\/AUDIO_REPLY\]/i;
+
+// Convert a Blob/dataUrl to RAW base64 (no data URL prefix, no whitespace)
+async function dataUrlToRawBase64(dataUrl: string): Promise<string> {
+  // Fast path: if it's already a data URL, fetch it as a blob and re-encode reliably
+  const blob = await (await fetch(dataUrl)).blob();
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buf.length; i += chunk) {
+    bin += String.fromCharCode.apply(null, Array.from(buf.subarray(i, i + chunk)));
+  }
+  return btoa(bin);
+}
 
 const SUGGESTIONS = [
   "Monta um roteiro de 3 dias em Lisboa focado em gastronomia",
