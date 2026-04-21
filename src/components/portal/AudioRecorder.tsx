@@ -222,10 +222,27 @@ export default function AudioRecorder({ onCancel, onSend }: Props) {
   const cleanup = () => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     rafRef.current = null;
+    const mr = mediaRecorderRef.current;
+    if (mr && mr.state !== "inactive") {
+      try {
+        mr.stop();
+      } catch {
+        /* ignore */
+      }
+    }
     mediaRecorderRef.current = null;
-    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current?.getTracks().forEach((t) => {
+      try {
+        t.stop();
+      } catch {
+        /* ignore */
+      }
+    });
     streamRef.current = null;
-    audioCtxRef.current?.close().catch(() => {});
+    const ctx = audioCtxRef.current;
+    if (ctx && ctx.state !== "closed") {
+      ctx.close().catch(() => {});
+    }
     audioCtxRef.current = null;
     analyserRef.current = null;
   };
