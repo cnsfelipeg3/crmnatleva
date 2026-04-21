@@ -27,9 +27,48 @@ type Message = {
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
-const TTS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-tts`;
 
 const AUDIO_TAG_RE = /\[AUDIO_REPLY(?:\s+lang="([^"]+)")?\]([\s\S]*?)\[\/AUDIO_REPLY\]/i;
+
+// Pick the best available system voice for a given BCP-47 language code
+function pickVoice(lang: string): SpeechSynthesisVoice | null {
+  const voices = window.speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  const target = lang.toLowerCase();
+  const base = target.split("-")[0];
+  // Prefer high-quality voices when present (Apple/Google premium ones contain these keywords)
+  const score = (v: SpeechSynthesisVoice) => {
+    let s = 0;
+    const n = (v.name || "").toLowerCase();
+    if (v.lang?.toLowerCase() === target) s += 100;
+    else if (v.lang?.toLowerCase().startsWith(base)) s += 50;
+    if (/google|natural|premium|enhanced|neural|siri|samantha|luciana|joana|paulina/.test(n)) s += 20;
+    if (v.localService) s += 5;
+    return s;
+  };
+  return [...voices].sort((a, b) => score(b) - score(a))[0] || null;
+}
+
+// Speak text using the browser's native TTS. Returns a Promise that resolves when speech ends.
+function speakText(text: string, lang: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      reject(new Error("Seu navegador não suporta síntese de voz."));
+      return;
+    }
+    const synth = window.speechSynthesis;
+    synth.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = lang;
+    utter.rate = 1;
+    utter.pitch = 1;
+    const voice = pickVoice(lang);
+    if (voice) utter.voice = voice;
+    utter.onend = () => resolve();
+    utter.onerror = (e) => reject(new Error(e.error || "Falha ao falar"));
+    synth.speak(utter);
+  });
+}
 
 // Convert a Blob/dataUrl to RAW base64 (no data URL prefix, no whitespace)
 async function dataUrlToRawBase64(dataUrl: string): Promise<string> {
