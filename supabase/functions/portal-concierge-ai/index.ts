@@ -46,10 +46,13 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Detect if any message contains audio — Gemini Pro handles audio natively
+    // Detect if any message contains audio — Gemini 2.5 Flash handles audio input natively
     const hasAudio = (messages || []).some((m: any) =>
       Array.isArray(m.content) && m.content.some((p: any) => p?.type === "input_audio" || p?.type === "audio_url")
     );
+
+    // Pro doesn't accept audio reliably via gateway; Flash does. Use Flash whenever audio is present.
+    const model = hasAudio ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -58,12 +61,13 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           ...(messages || []),
         ],
         stream: true,
+        max_tokens: 8192,
       }),
     });
 
