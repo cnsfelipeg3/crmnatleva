@@ -558,12 +558,31 @@ export default function PortalConcierge() {
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
                           <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-accent px-1.5">
-                              {msg.generatedAudio.lang}
-                            </span>
+                            <Select
+                              value={msg.generatedAudio.selectedLang || msg.generatedAudio.lang}
+                              onValueChange={(newLang) => {
+                                updateMessageAudio(i, { selectedLang: newLang });
+                              }}
+                              disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
+                            >
+                              <SelectTrigger className="w-[140px] h-8 text-xs border-border/40 bg-card/60">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {AVAILABLE_LANGS.map((l) => (
+                                  <SelectItem key={l.code} value={l.code} className="text-xs">
+                                    <span className="mr-1.5">{l.flag}</span>
+                                    {l.label}
+                                    {l.code === msg.generatedAudio!.lang && (
+                                      <span className="ml-1 text-[9px] text-muted-foreground">(original)</span>
+                                    )}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <button
-                              onClick={() => playGeneratedAudio(msg.generatedAudio!.text, msg.generatedAudio!.lang)}
-                              disabled={msg.generatedAudio.status === "speaking"}
+                              onClick={() => playGeneratedAudio(i)}
+                              disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
                               className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60"
                             >
                               {msg.generatedAudio.status === "speaking" ? (
@@ -571,10 +590,15 @@ export default function PortalConcierge() {
                                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   Falando...
                                 </>
+                              ) : msg.generatedAudio.status === "translating" ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  Traduzindo...
+                                </>
                               ) : (
                                 <>
                                   <Mic className="w-3.5 h-3.5" />
-                                  Ouvir novamente
+                                  Ouvir
                                 </>
                               )}
                             </button>
