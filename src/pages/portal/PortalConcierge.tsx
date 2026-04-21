@@ -162,6 +162,36 @@ export default function PortalConcierge() {
     sendCore({ audio });
   };
 
+  const playGeneratedAudio = async (text: string, lang: string) => {
+    setMessages((prev) => {
+      const copy = [...prev];
+      const last = copy[copy.length - 1];
+      if (last?.role === "assistant" && last.generatedAudio) {
+        copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "speaking" } };
+      }
+      return copy;
+    });
+    try {
+      await speakText(text, lang);
+    } catch (err: any) {
+      toast({
+        title: "Áudio indisponível",
+        description: err?.message || "Seu navegador não conseguiu tocar o áudio.",
+        variant: "destructive",
+      });
+    } finally {
+      setMessages((prev) => {
+        const copy = [...prev];
+        const last = copy[copy.length - 1];
+        if (last?.role === "assistant" && last.generatedAudio) {
+          copy[copy.length - 1] = { ...last, generatedAudio: { ...last.generatedAudio, status: "ready" } };
+        }
+        return copy;
+      });
+    }
+  };
+
+
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachedImages.length === 0) return;
