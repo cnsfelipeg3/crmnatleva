@@ -1,20 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import PortalLayout from "@/components/portal/PortalLayout";
+import AudioRecorder from "@/components/portal/AudioRecorder";
+import AudioBubble from "@/components/portal/AudioBubble";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon } from "lucide-react";
+import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon, Mic } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "@/hooks/use-toast";
 
 type ContentPart =
   | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  | { type: "image_url"; image_url: { url: string } }
+  | { type: "input_audio"; input_audio: { data: string; format: string } };
+
+type AudioMeta = { dataUrl: string; mimeType: string; durationSec: number; waveform: number[] };
 
 type Message = {
   role: "user" | "assistant";
   content: string | ContentPart[];
-  displayText?: string; // plain text for rendering user bubbles
-  displayImages?: string[]; // data URLs
+  displayText?: string;
+  displayImages?: string[];
+  displayAudio?: AudioMeta;
 };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/portal-concierge-ai`;
@@ -26,11 +32,28 @@ const SUGGESTIONS = [
   "Lugares fora do óbvio em Paris",
 ];
 
+// Strip "data:audio/xxx;base64," prefix and return the format hint
+function parseDataUrl(dataUrl: string): { base64: string; format: string } {
+  const match = dataUrl.match(/^data:([^;]+);base64,(.*)$/);
+  if (!match) return { base64: dataUrl, format: "webm" };
+  const mime = match[1];
+  const base64 = match[2];
+  // Gemini accepts: webm, mp3, wav, ogg, flac, m4a/aac
+  let format = "webm";
+  if (mime.includes("mp3") || mime.includes("mpeg")) format = "mp3";
+  else if (mime.includes("wav")) format = "wav";
+  else if (mime.includes("ogg")) format = "ogg";
+  else if (mime.includes("mp4") || mime.includes("aac")) format = "mp4";
+  else if (mime.includes("webm")) format = "webm";
+  return { base64, format };
+}
+
 export default function PortalConcierge() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -69,37 +92,54 @@ export default function PortalConcierge() {
     setAttachedImages((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  const sendAudioMessage = (audio: AudioMeta) => {
+    setIsRecording(false);
+    sendCore({ audio });
+  };
+
   const send = async (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text && attachedImages.length === 0) return;
-    if (isLoading) return;
+    sendCore({ text });
+  };
 
-    // Build message content
+  const sendCore = async ({ text, audio }: { text?: string; audio?: AudioMeta }) => {
+    if (isLoading) return;
+    const finalText = (text ?? "").trim();
+    if (!finalText && !audio && attachedImages.length === 0) return;
+
     const displayImages = [...attachedImages];
+
     let content: string | ContentPart[];
-    if (attachedImages.length > 0) {
-      const parts: ContentPart[] = [];
-      if (text) parts.push({ type: "text", text });
+    const parts: ContentPart[] = [];
+
+    if (audio) {
+      const { base64, format } = parseDataUrl(audio.dataUrl);
+      parts.push({ type: "input_audio", input_audio: { data: base64, format } });
+      // Helpful nudge so the model knows to interpret the audio
+      parts.push({ type: "text", text: "Ouça este áudio e responda como concierge de viagens." });
+    } else {
+      if (finalText) parts.push({ type: "text", text: finalText });
       for (const img of attachedImages) {
         parts.push({ type: "image_url", image_url: { url: img } });
       }
-      content = parts;
+    }
+
+    if (parts.length === 1 && parts[0].type === "text" && !audio && attachedImages.length === 0) {
+      content = finalText;
     } else {
-      content = text;
+      content = parts;
     }
 
     const userMsg: Message = {
       role: "user",
       content,
-      displayText: text,
-      displayImages: displayImages.length ? displayImages : undefined,
+      displayText: audio ? "" : finalText,
+      displayImages: !audio && displayImages.length ? displayImages : undefined,
+      displayAudio: audio,
     };
 
-    // Prepare payload messages (strip display helpers)
-    const payloadMessages = [...messages, userMsg].map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const payloadMessages = [...messages, userMsg].map((m) => ({ role: m.role, content: m.content }));
 
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
@@ -129,7 +169,6 @@ export default function PortalConcierge() {
         return;
       }
 
-      // Add empty assistant message to stream into
       setMessages((prev) => [...prev, { role: "assistant", content: "", displayText: "" }]);
 
       const reader = resp.body.getReader();
@@ -190,6 +229,8 @@ export default function PortalConcierge() {
     }
   };
 
+  const canSend = !isLoading && (input.trim().length > 0 || attachedImages.length > 0);
+
   return (
     <PortalLayout>
       <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col" style={{ minHeight: "calc(100vh - 180px)" }}>
@@ -207,7 +248,7 @@ export default function PortalConcierge() {
             Seu concierge pessoal de viagens
           </h1>
           <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
-            Pergunte qualquer coisa sobre destinos, roteiros, passeios, restaurantes ou envie uma foto e descubra que lugar é aquele.
+            Pergunte por texto, foto ou áudio. Roteiros, restaurantes, dicas locais — ou descubra que lugar é aquele da sua foto.
           </p>
         </motion.div>
 
@@ -270,8 +311,18 @@ export default function PortalConcierge() {
                       ))}
                     </div>
                   )}
+                  {msg.displayAudio && (
+                    <AudioBubble
+                      src={msg.displayAudio.dataUrl}
+                      durationSec={msg.displayAudio.durationSec}
+                      waveform={msg.displayAudio.waveform}
+                      variant="user"
+                    />
+                  )}
                   {msg.role === "user" ? (
-                    <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.displayText}</p>
+                    msg.displayText ? (
+                      <p className="text-sm whitespace-pre-wrap leading-relaxed mt-1">{msg.displayText}</p>
+                    ) : null
                   ) : (
                     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:mt-3 prose-headings:mb-1.5">
                       {msg.displayText ? (
@@ -306,59 +357,80 @@ export default function PortalConcierge() {
         {/* Input */}
         <div className="sticky bottom-4 mt-4">
           <div className="rounded-3xl border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg p-2.5">
-            {attachedImages.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-2 px-1">
-                {attachedImages.map((img, idx) => (
-                  <div key={idx} className="relative group">
-                    <img src={img} alt="preview" className="w-16 h-16 object-cover rounded-xl" />
-                    <button
-                      onClick={() => removeImage(idx)}
-                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+            {isRecording ? (
+              <AudioRecorder
+                onCancel={() => setIsRecording(false)}
+                onSend={sendAudioMessage}
+              />
+            ) : (
+              <>
+                {attachedImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-2 px-1">
+                    {attachedImages.map((img, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={img} alt="preview" className="w-16 h-16 object-cover rounded-xl" />
+                        <button
+                          onClick={() => removeImage(idx)}
+                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="flex items-end gap-2">
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={attachedImages.length >= 4 || isLoading}
+                    className="p-2.5 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="Anexar imagem"
+                  >
+                    <ImageIcon className="w-5 h-5" />
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      handleImageUpload(e.target.files);
+                      e.target.value = "";
+                    }}
+                  />
+                  <textarea
+                    ref={textareaRef}
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={onKeyDown}
+                    placeholder="Pergunte qualquer coisa sobre viagens..."
+                    rows={1}
+                    className="flex-1 resize-none bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[180px]"
+                    disabled={isLoading}
+                  />
+                  {canSend ? (
+                    <button
+                      onClick={() => send()}
+                      disabled={isLoading}
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Enviar"
+                    >
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setIsRecording(true)}
+                      disabled={isLoading}
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Gravar áudio"
+                    >
+                      <Mic className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              </>
             )}
-            <div className="flex items-end gap-2">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={attachedImages.length >= 4}
-                className="p-2.5 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                title="Anexar imagem"
-              >
-                <ImageIcon className="w-5 h-5" />
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  handleImageUpload(e.target.files);
-                  e.target.value = "";
-                }}
-              />
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Pergunte qualquer coisa sobre viagens..."
-                rows={1}
-                className="flex-1 resize-none bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[180px]"
-                disabled={isLoading}
-              />
-              <button
-                onClick={() => send()}
-                disabled={isLoading || (!input.trim() && attachedImages.length === 0)}
-                className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
-              </button>
-            </div>
           </div>
           <p className="text-center text-[10px] text-muted-foreground mt-2">
             Concierge.IA pode errar — confirme informações críticas antes de viajar.
