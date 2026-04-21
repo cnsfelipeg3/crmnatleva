@@ -246,6 +246,76 @@ export default function PortalConcierge() {
           }
         }
       }
+
+      // Detect [AUDIO_REPLY lang="..."]...[/AUDIO_REPLY] tag and synthesize audio
+      const match = acc.match(AUDIO_TAG_RE);
+      if (match) {
+        const lang = match[1] || "pt-BR";
+        const speech = match[2].trim();
+        const cleanedText = acc.replace(AUDIO_TAG_RE, "").trim();
+        // Update message: hide tag from text, mark audio as loading
+        setMessages((prev) => {
+          const copy = [...prev];
+          const last = copy[copy.length - 1];
+          if (last?.role === "assistant") {
+            copy[copy.length - 1] = {
+              ...last,
+              content: cleanedText,
+              displayText: cleanedText,
+              generatedAudio: { dataUrl: "", lang, status: "loading" },
+            };
+          }
+          return copy;
+        });
+
+        // Fire TTS request (non-blocking for UI)
+        (async () => {
+          try {
+            const ttsResp = await fetch(TTS_URL, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              },
+              body: JSON.stringify({ text: speech, lang }),
+            });
+            const j = await ttsResp.json();
+            if (!ttsResp.ok || !j.audioBase64) {
+              throw new Error(j.error || "Falha ao gerar áudio");
+            }
+            const audioDataUrl = `data:${j.mimeType || "audio/wav"};base64,${j.audioBase64}`;
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant" && last.generatedAudio) {
+                copy[copy.length - 1] = {
+                  ...last,
+                  generatedAudio: { dataUrl: audioDataUrl, lang, status: "ready" },
+                };
+              }
+              return copy;
+            });
+          } catch (err: any) {
+            console.error("TTS error:", err);
+            toast({
+              title: "Áudio indisponível",
+              description: err?.message || "Não consegui gerar o áudio agora.",
+              variant: "destructive",
+            });
+            setMessages((prev) => {
+              const copy = [...prev];
+              const last = copy[copy.length - 1];
+              if (last?.role === "assistant" && last.generatedAudio) {
+                copy[copy.length - 1] = {
+                  ...last,
+                  generatedAudio: { dataUrl: "", lang, status: "error" },
+                };
+              }
+              return copy;
+            });
+          }
+        })();
+      }
     } catch (e) {
       console.error(e);
       toast({ title: "Erro", description: "Não consegui conectar agora. Tenta de novo?", variant: "destructive" });
