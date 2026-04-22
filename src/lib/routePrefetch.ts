@@ -73,3 +73,22 @@ export function prefetchRoute(path: string): void {
     /* noop */
   }
 }
+
+/**
+ * Warm up ALL known routes during browser idle time.
+ * Called once after the app shell mounts so any sidebar click is instant —
+ * the chunks are already in memory by the time the user moves the mouse.
+ */
+let warmedAll = false;
+export function prefetchAllRoutes(): void {
+  if (warmedAll) return;
+  warmedAll = true;
+  const paths = Object.keys(loaders);
+  const ric: (cb: () => void, opts?: { timeout: number }) => void =
+    (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 200));
+  // Stagger so we don't fire 40+ network requests at the exact same instant.
+  paths.forEach((path, i) => {
+    setTimeout(() => ric(() => prefetchRoute(path), { timeout: 2000 }), i * 60);
+  });
+}
+
