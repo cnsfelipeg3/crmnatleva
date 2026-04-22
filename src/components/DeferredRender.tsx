@@ -26,9 +26,9 @@ export default function DeferredRender({
     setReady(false);
 
     let cancelled = false;
-    let delayTimer: ReturnType<typeof window.setTimeout> | undefined;
+    let delayTimer: number | undefined;
     let idleId: number | undefined;
-    let fallbackTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
+    let fallbackTimer: number | undefined;
 
     const reveal = () => {
       if (!cancelled) setReady(true);
@@ -39,7 +39,7 @@ export default function DeferredRender({
         idleId = window.requestIdleCallback(reveal, { timeout: timeoutMs });
         return;
       }
-      fallbackTimer = globalThis.setTimeout(reveal, Math.min(timeoutMs, 250));
+      fallbackTimer = window.setTimeout(reveal, Math.min(timeoutMs, 250));
     };
 
     if (typeof window === "undefined") {
