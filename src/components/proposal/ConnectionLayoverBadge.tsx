@@ -8,7 +8,7 @@ import { localTimeToUTC, getAirportTimezone } from "@/lib/airportTimezones";
  *
  * Suporta também voos com chegada no dia seguinte (overnight).
  */
-function calcLayoverMinutes(prev: FlightSegmentData, next: FlightSegmentData): number | null {
+export function calcLayoverMinutes(prev: FlightSegmentData, next: FlightSegmentData): number | null {
   if (!prev.arrival_time || !next.departure_time) return null;
 
   // Estima a data/hora de chegada do voo anterior:
