@@ -14,6 +14,7 @@ import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.png";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
 import { assignDirections, classifyItinerary } from "@/lib/itineraryClassifier";
 import { buildFlightTitle } from "@/lib/airportCities";
+import { iataToCityName } from "@/lib/iataUtils";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -423,6 +424,28 @@ function buildPreviewFlightGrouping(displaySegments: any[]) {
     return { legs: fallbackLegs, itineraryType: "ONE_WAY", title: "" };
   }
 
+  if (displaySegments.length === 4) {
+    const normalizedSegments = displaySegments.map((seg: any, index: number) => ({
+      ...seg,
+      direction: index < 2 ? "ida" : "volta",
+    }));
+
+    const forcedLegs = [
+      { label: "Ida", direction: "ida", segments: normalizedSegments.slice(0, 2) },
+      { label: "Volta", direction: "volta", segments: normalizedSegments.slice(2, 4) },
+    ];
+
+    return {
+      legs: forcedLegs,
+      itineraryType: "ROUND_TRIP",
+      title: buildFlightTitle(
+        normalizedSegments[0]?.origin_iata || "",
+        normalizedSegments[1]?.destination_iata || normalizedSegments[0]?.destination_iata || "",
+        "ROUND_TRIP",
+      ),
+    };
+  }
+
   const buildTitleFromLegs = (legs: { direction: string; segments: any[] }[], itineraryType: string) => {
     const outboundLeg = legs.find((leg) => leg.direction === "ida") || legs[0];
     return outboundLeg?.segments?.length
@@ -556,13 +579,41 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
           const stops = leg.segments.length - 1;
           const firstSeg = leg.segments[0];
           const lastSeg = leg.segments[leg.segments.length - 1];
-          const routeLabel = firstSeg && lastSeg ? `${firstSeg.origin_iata} → ${lastSeg.destination_iata}` : "";
+          const originCity = iataToCityName(firstSeg?.origin_iata);
+          const destinationCity = iataToCityName(lastSeg?.destination_iata);
+          const routeLabel = firstSeg && lastSeg ? `${originCity} → ${destinationCity}` : "";
+          const connectionSummaries = leg.segments.slice(1).map((seg: any, segIndex: number) => {
+            const previousSeg = leg.segments[segIndex];
+            return {
+              airport: previousSeg?.destination_iata || seg?.origin_iata || "",
+              layoverMinutes: calcPreciseLayoverMinutes(previousSeg, seg) ?? undefined,
+            };
+          });
           return (
             <div key={li}>
-              <div className="flex items-center justify-center mb-3">
-                <p className="text-xs uppercase tracking-[0.2em] text-foreground/80 font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  {leg.label}
+              <div className="mb-4 rounded-2xl border border-border/30 bg-card/60 px-4 py-4 text-center sm:px-6">
+                <p className="text-sm uppercase tracking-[0.2em] text-foreground font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                  Passagem aérea - {leg.label}
                 </p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-4 text-sm">
+                  <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
+                    <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Origem</span>
+                    <span className="block mt-1 font-semibold text-foreground">{originCity}</span>
+                  </div>
+                  <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
+                    <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Destino</span>
+                    <span className="block mt-1 font-semibold text-foreground">{destinationCity}</span>
+                  </div>
+                </div>
+                <div className="mt-3 space-y-1.5">
+                  <p className="text-sm font-medium text-foreground/90">{routeLabel}</p>
+                  {connectionSummaries.length > 0 && connectionSummaries.map((connection, connectionIndex) => (
+                    <p key={connectionIndex} className="text-xs text-muted-foreground">
+                      {connectionSummaries.length === 1 ? "1 conexão" : `${connectionIndex + 1}ª conexão`} em {iataToCityName(connection.airport)}
+                      {connection.layoverMinutes ? ` · ${fmtDuration(connection.layoverMinutes)}` : ""}
+                    </p>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-0">
