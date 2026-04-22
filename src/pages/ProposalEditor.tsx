@@ -1338,26 +1338,7 @@ export default function ProposalEditor() {
                             </>
                           )}
 
-                          {/* Hotel Media Browser — sempre visível para troca rápida de fotos */}
-                          {item.item_type === "hotel" && item.title && (
-                            <div className="md:col-span-2 p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5">
-                              <HotelMediaBrowser
-                                hotelName={item.title}
-                                hotelCity={item.data?.location || ""}
-                                hotelCountry=""
-                                onSelectPhotos={(photos) => {
-                                  if (photos.length > 0 && !item.image_url) {
-                                    updateItem(idx, "image_url", photos[0].url);
-                                  }
-                                  const existingPhotos = item.data?.official_photos || [];
-                                  updateItemData(idx, "official_photos", [...existingPhotos, ...photos]);
-                                }}
-                                onSelectRoomBlock={(block) => {
-                                  updateItemData(idx, "room_block", block);
-                                }}
-                              />
-                            </div>
-                          )}
+                          {/* Busca unificada de mídias está acima ("Buscar Mídias" → PlacesSearchCard) */}
                         </div>
                       </div>
                     )}
