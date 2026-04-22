@@ -25,14 +25,150 @@ const WORK_DAYS_OPTIONS = [
   { value: "dom", label: "Dom" },
 ];
 
-const MODULES = ["Vendas", "Viagens", "Clientes", "Financeiro", "Operações", "Relatórios", "Administração", "RH"];
-const PERMISSION_LEVELS = ["sem_acesso", "parcial", "total"];
-const PERMISSION_PRESETS: Record<string, Record<string, string>> = {
-  administrador: Object.fromEntries(MODULES.map(m => [m, "total"])),
-  vendedor: { Vendas: "total", Viagens: "parcial", Clientes: "total", Financeiro: "sem_acesso", Operações: "sem_acesso", Relatórios: "parcial", Administração: "sem_acesso", RH: "sem_acesso" },
-  operacional: { Vendas: "parcial", Viagens: "total", Clientes: "parcial", Financeiro: "sem_acesso", Operações: "total", Relatórios: "parcial", Administração: "sem_acesso", RH: "sem_acesso" },
-  financeiro: { Vendas: "parcial", Viagens: "sem_acesso", Clientes: "parcial", Financeiro: "total", Operações: "sem_acesso", Relatórios: "total", Administração: "sem_acesso", RH: "sem_acesso" },
+// === PERMISSÕES GRANULARES ===
+type PermAction = "view" | "create" | "edit" | "delete" | "export" | "approve";
+const ACTION_META: Record<PermAction, { label: string; icon: any; desc: string }> = {
+  view:    { label: "Visualizar", icon: Eye,          desc: "Pode ver os dados do módulo" },
+  create:  { label: "Criar",      icon: Plus,         desc: "Pode adicionar novos registros" },
+  edit:    { label: "Editar",     icon: Pencil,       desc: "Pode alterar registros existentes" },
+  delete:  { label: "Excluir",    icon: Trash2,       desc: "Pode remover registros" },
+  export:  { label: "Exportar",   icon: Download,     desc: "Pode baixar dados (CSV/PDF)" },
+  approve: { label: "Aprovar",    icon: CheckCircle2, desc: "Pode aprovar/validar fluxos" },
 };
+
+interface ModuleDef {
+  key: string;
+  label: string;
+  description: string;
+  actions: PermAction[];
+  features: { key: string; label: string; description?: string }[];
+}
+
+const MODULE_CATALOG: ModuleDef[] = [
+  { key: "vendas", label: "Vendas", description: "CRM, pipeline e gestão comercial",
+    actions: ["view", "create", "edit", "delete", "export", "approve"],
+    features: [
+      { key: "ver_todas",       label: "Ver vendas de todos", description: "Caso desmarcado, vê apenas as próprias" },
+      { key: "alterar_status",  label: "Alterar status da venda" },
+      { key: "ver_lucro",       label: "Visualizar margem e lucro" },
+      { key: "editar_comissao", label: "Editar valor de comissão" },
+      { key: "cancelar",        label: "Cancelar venda" },
+    ] },
+  { key: "viagens", label: "Viagens", description: "Torre de controle e operações de viagem",
+    actions: ["view", "create", "edit", "delete", "export"],
+    features: [
+      { key: "checkin",              label: "Realizar check-in" },
+      { key: "emissao",              label: "Confirmar emissão" },
+      { key: "alterar_voos",         label: "Alterar segmentos de voo" },
+      { key: "gerenciar_hospedagem", label: "Gerenciar hospedagem" },
+    ] },
+  { key: "clientes", label: "Clientes", description: "Cadastro, perfil 360 e passageiros",
+    actions: ["view", "create", "edit", "delete", "export"],
+    features: [
+      { key: "ver_todos",            label: "Ver clientes de outros vendedores" },
+      { key: "ver_dados_sensiveis",  label: "Ver CPF/Passaporte completos" },
+      { key: "mesclar",              label: "Mesclar duplicados" },
+      { key: "transferir",           label: "Transferir cliente entre vendedores" },
+    ] },
+  { key: "financeiro", label: "Financeiro", description: "Contas a pagar/receber, comissões e DRE",
+    actions: ["view", "create", "edit", "delete", "export", "approve"],
+    features: [
+      { key: "contas_pagar",     label: "Contas a pagar" },
+      { key: "contas_receber",   label: "Contas a receber" },
+      { key: "conciliacao",      label: "Conciliação bancária" },
+      { key: "fechar_comissao",  label: "Fechar/aprovar comissões" },
+      { key: "dre",              label: "DRE e relatórios fiscais" },
+      { key: "plano_contas",     label: "Editar plano de contas" },
+    ] },
+  { key: "operacoes", label: "Operações", description: "Inbox, atendimento e automações",
+    actions: ["view", "create", "edit", "delete"],
+    features: [
+      { key: "inbox",            label: "Atender Inbox WhatsApp" },
+      { key: "responder_lead",   label: "Responder leads de outros" },
+      { key: "fluxos",           label: "Editar fluxos de automação" },
+      { key: "transferir_atend", label: "Transferir atendimento" },
+    ] },
+  { key: "relatorios", label: "Relatórios & BI", description: "Dashboards, métricas e exportações",
+    actions: ["view", "export"],
+    features: [
+      { key: "dashboard_geral",       label: "Dashboard geral" },
+      { key: "dashboard_financeiro",  label: "Dashboard financeiro" },
+      { key: "dashboard_comercial",   label: "Dashboard comercial" },
+      { key: "ranking_vendedores",    label: "Ranking de vendedores" },
+      { key: "ver_metas_outros",      label: "Ver metas de outros vendedores" },
+    ] },
+  { key: "ai_team", label: "Inteligência IA", description: "Agentes, conhecimento e estratégia",
+    actions: ["view", "create", "edit", "delete"],
+    features: [
+      { key: "editar_agentes",     label: "Editar prompts dos agentes" },
+      { key: "base_conhecimento",  label: "Gerenciar base de conhecimento" },
+      { key: "regras_globais",     label: "Editar regras globais da agência" },
+      { key: "simulador",          label: "Acessar simuladores" },
+    ] },
+  { key: "administracao", label: "Administração", description: "Configurações gerais do sistema",
+    actions: ["view", "edit"],
+    features: [
+      { key: "integracoes",     label: "Integrações (Z-API, Amadeus, etc.)" },
+      { key: "config_agencia",  label: "Configurações da agência" },
+      { key: "logs_sistema",    label: "Ver logs do sistema" },
+      { key: "backup",          label: "Backup e restauração" },
+    ] },
+  { key: "rh", label: "Recursos Humanos", description: "Colaboradores, ponto e folha",
+    actions: ["view", "create", "edit", "delete", "export"],
+    features: [
+      { key: "ver_salarios",     label: "Ver salários e remuneração" },
+      { key: "gerenciar_perms",  label: "Gerenciar permissões de outros" },
+      { key: "ponto",            label: "Controle de ponto" },
+      { key: "documentos",       label: "Gerenciar documentos pessoais" },
+    ] },
+];
+
+type ModulePerm = { actions: PermAction[]; features: Record<string, boolean> };
+type PermissionsMap = Record<string, ModulePerm>;
+const emptyModulePerm = (): ModulePerm => ({ actions: [], features: {} });
+const buildPreset = (template: (mod: ModuleDef) => ModulePerm): PermissionsMap =>
+  Object.fromEntries(MODULE_CATALOG.map(m => [m.key, template(m)]));
+
+const PERMISSION_PRESETS: Record<string, { label: string; description: string; build: () => PermissionsMap }> = {
+  administrador: { label: "Administrador", description: "Acesso total a tudo, incluindo configurações sensíveis",
+    build: () => buildPreset(m => ({ actions: [...m.actions], features: Object.fromEntries(m.features.map(f => [f.key, true])) })) },
+  gestor: { label: "Gestor / Gerente", description: "Vê e edita tudo, sem mexer em integrações nem RH sensível",
+    build: () => buildPreset(m => {
+      if (m.key === "administracao") return { actions: ["view"], features: { logs_sistema: true } };
+      if (m.key === "rh") return { actions: ["view", "edit"], features: { ver_salarios: true, ponto: true, documentos: true } };
+      return { actions: m.actions.filter(a => a !== "delete"), features: Object.fromEntries(m.features.map(f => [f.key, true])) };
+    }) },
+  vendedor: { label: "Vendedor", description: "Vê apenas as próprias vendas/clientes; sem financeiro nem admin",
+    build: () => buildPreset(m => {
+      if (m.key === "vendas") return { actions: ["view", "create", "edit", "export"], features: { alterar_status: true, ver_lucro: false, ver_todas: false, editar_comissao: false, cancelar: false } };
+      if (m.key === "clientes") return { actions: ["view", "create", "edit"], features: { ver_todos: false, ver_dados_sensiveis: true, mesclar: false, transferir: false } };
+      if (m.key === "viagens") return { actions: ["view"], features: {} };
+      if (m.key === "relatorios") return { actions: ["view"], features: { dashboard_comercial: true, ranking_vendedores: true } };
+      if (m.key === "operacoes") return { actions: ["view", "create"], features: { inbox: true, responder_lead: false } };
+      return emptyModulePerm();
+    }) },
+  operacional: { label: "Operacional", description: "Foca em viagens, check-in e atendimento",
+    build: () => buildPreset(m => {
+      if (m.key === "viagens") return { actions: ["view", "create", "edit", "export"], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
+      if (m.key === "operacoes") return { actions: ["view", "create", "edit"], features: { inbox: true, responder_lead: true, transferir_atend: true } };
+      if (m.key === "clientes") return { actions: ["view", "edit"], features: { ver_todos: true, ver_dados_sensiveis: true } };
+      if (m.key === "vendas") return { actions: ["view"], features: { ver_todas: true } };
+      if (m.key === "relatorios") return { actions: ["view"], features: { dashboard_geral: true } };
+      return emptyModulePerm();
+    }) },
+  financeiro: { label: "Financeiro", description: "Acesso completo ao financeiro, leitura nas demais áreas",
+    build: () => buildPreset(m => {
+      if (m.key === "financeiro") return { actions: [...m.actions], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
+      if (m.key === "vendas") return { actions: ["view", "export"], features: { ver_todas: true, ver_lucro: true } };
+      if (m.key === "clientes") return { actions: ["view"], features: { ver_todos: true, ver_dados_sensiveis: true } };
+      if (m.key === "relatorios") return { actions: ["view", "export"], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
+      return emptyModulePerm();
+    }) },
+  leitura: { label: "Somente Leitura", description: "Pode ver tudo, não pode alterar nada",
+    build: () => buildPreset(_m => ({ actions: ["view"], features: {} })) },
+};
+
+const MODULES = MODULE_CATALOG.map(m => m.key);
 
 interface EmployeeFormTabsProps {
   form: any;
