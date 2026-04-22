@@ -1339,8 +1339,14 @@ export default function ProposalEditor() {
                   </Card>
                 );
               })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
             </div>
-          )}
+          </Card>
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">
