@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import PanelHelpButton from "./PanelHelpButton";
@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Menu, Maximize, Minimize } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { prefetchAllRoutes } from "@/lib/routePrefetch";
 import logoNatleva from "@/assets/logo-natleva.webp";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
@@ -23,6 +24,12 @@ export default function AppLayout() {
   const location = useLocation();
   const isImmersive = IMMERSIVE_ROUTES.includes(location.pathname);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
+
+  // Em idle, baixa os chunks de TODAS as rotas em background — qualquer clique
+  // no menu vira navegação instantânea, sem spinner intermediário.
+  useEffect(() => {
+    prefetchAllRoutes();
+  }, []);
 
   if (isMobile) {
     return (

@@ -148,9 +148,12 @@ const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60_000,
-      gcTime: 15 * 60_000,
+      // Catálogos e dashboards raramente mudam dentro da mesma sessão de uso.
+      // 10min de staleTime + 30min de gcTime = navegação muito mais fluida.
+      staleTime: 10 * 60_000,
+      gcTime: 30 * 60_000,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       retry: 1,
       refetchOnMount: false,
     },
