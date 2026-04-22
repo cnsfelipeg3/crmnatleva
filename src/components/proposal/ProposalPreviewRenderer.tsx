@@ -127,11 +127,12 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
 }
 
 /* ═══ Photo Gallery (hero + thumbnails) ═══ */
-function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
+function PhotoGallery({ photos, name, captions }: { photos: string[]; name: string; captions?: (string | null)[] }) {
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   if (photos.length === 0) return null;
   const go = (dir: 1 | -1) => setActive((i) => (i + dir + photos.length) % photos.length);
+  const currentCaption = captions?.[active] || null;
   return (
     <>
       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -151,7 +152,7 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
             >
               <SmartImage
                 src={photos[active]}
-                alt={`${name} - ${active + 1}`}
+                alt={`${name} - ${currentCaption || active + 1}`}
                 className="w-full h-full"
                 imgClassName="object-cover"
                 forceProxy
@@ -159,6 +160,12 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
               />
             </motion.div>
           </AnimatePresence>
+          {/* Caption overlay (discrete, only when meaningful) */}
+          {currentCaption && (
+            <div className="absolute bottom-3 left-3 max-w-[60%] px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-sm text-white text-[11px] font-medium truncate pointer-events-none">
+              {currentCaption}
+            </div>
+          )}
           {photos.length > 1 && (
             <>
               <button
@@ -219,6 +226,11 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
                 loading="eager"
               />
             </motion.div>
+            {currentCaption && (
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[80vw] px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-xs sm:text-sm font-medium truncate">
+                {currentCaption}
+              </div>
+            )}
             {photos.length > 1 && (
               <>
                 <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); go(-1); }}><ChevronRight className="w-5 h-5 rotate-180" /></button>
@@ -885,6 +897,19 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
   const photos: string[] = d.photos || (d.selectedPhotos ? d.selectedPhotos : []);
+  // Captions: only show meaningful labels for OFFICIAL site photos (skip generic
+  // Google Places ones to avoid noise like "Foto 1"). Aligned by URL match.
+  const officialPhotos: any[] = Array.isArray(d.official_photos) ? d.official_photos : [];
+  const captions: (string | null)[] = photos.map((url) => {
+    const meta = officialPhotos.find((p) => p?.url === url);
+    if (!meta || meta.source !== "official") return null;
+    const raw = (meta.label || meta.room_name || "").trim();
+    if (!raw) return null;
+    // Skip generic / non-informative labels
+    if (/^(foto|photo|imagem|image)\s*\d*$/i.test(raw)) return null;
+    if (/^foto do site oficial$/i.test(raw)) return null;
+    return raw;
+  });
   const amenities: string[] = d.amenities || [];
   const amenityIcons: Record<string, React.ReactNode> = {
     wifi: <Wifi className="w-3.5 h-3.5" />, "wi-fi": <Wifi className="w-3.5 h-3.5" />,
@@ -969,7 +994,7 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
       {/* Galeria */}
       {photos.length > 0 && (
         <div className="px-6 pt-5">
-          <PhotoGallery photos={photos} name={hotel.title || "Hotel"} />
+          <PhotoGallery photos={photos} name={hotel.title || "Hotel"} captions={captions} />
         </div>
       )}
 

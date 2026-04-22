@@ -84,6 +84,15 @@ export interface PlacesEnrichmentData {
   selectedPhotos: string[];
   mainPhotoIndex: number;
   photoLabels: string[];
+  /** Detailed metadata aligned with selectedPhotos (same length/order). */
+  selectedPhotosDetailed: Array<{
+    url: string;
+    label: string;
+    source: "google" | "official" | "manual";
+    category: string;
+    room_name?: string | null;
+    description?: string;
+  }>;
 }
 
 type PlaceEntityType = "hotel" | "destination" | "experience";
@@ -817,6 +826,14 @@ export default function PlacesSearchCard({
     const allUrls = curatedPhotos.map(p => p.url);
     const selectedUrls = selected.map(p => p.url);
     const labels = selected.map(p => p.label);
+    const selectedDetailed = selected.map(p => ({
+      url: p.url,
+      label: p.label,
+      source: p.source,
+      category: p.category,
+      room_name: p.room_name ?? null,
+      description: p.description || "",
+    }));
 
     onEnrich({
       place_id: selectedPlace.place_id,
@@ -833,6 +850,7 @@ export default function PlacesSearchCard({
       selectedPhotos: selectedUrls,
       mainPhotoIndex: coverIdx >= 0 ? coverIdx : 0,
       photoLabels: labels,
+      selectedPhotosDetailed: selectedDetailed,
     });
   }, [selectedPlace, curatedPhotos, onEnrich]);
 
