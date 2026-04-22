@@ -453,12 +453,12 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
 
       {/* Top route row: origin → destination */}
       <div className="flex items-center gap-2 sm:gap-4 unified-leg-route">
-        {/* Departure (origin) */}
-        <div className="text-left min-w-[56px] sm:min-w-[70px] shrink-0">
+        {/* Departure (origin) — empilhado: hora em cima, IATA embaixo */}
+        <div className="flex flex-col items-center text-center min-w-[56px] sm:min-w-[70px] shrink-0">
           <p className="text-base sm:text-xl font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {firstSeg.departure_time || "—"}
           </p>
-          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {firstSeg.origin_iata || "—"}
           </p>
           {firstSeg.terminal && (
