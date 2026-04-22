@@ -969,12 +969,6 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
         })}
       </div>
 
-      {/* Notes */}
-      {(d.notes || flight.description) && (
-        <p className="text-sm text-muted-foreground leading-relaxed border-l-2 border-accent/30 pl-3 mt-3">
-          {d.notes || flight.description}
-        </p>
-      )}
     </motion.div>
   );
 }
