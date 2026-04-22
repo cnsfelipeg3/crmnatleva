@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { LogOut, Menu, X, User, Home, Map, MessageCircle, Bell, Sun, Moon, Wallet, PlaneTakeoff, Maximize, Minimize, Sparkles } from "lucide-react";
 import { useFullscreen } from "@/hooks/useFullscreen";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 import PortalAssistant from "@/components/portal/PortalAssistant";
 

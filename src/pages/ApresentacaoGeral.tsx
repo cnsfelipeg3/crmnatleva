@@ -9,7 +9,7 @@ import {
   ArrowUpRight, CircleDot, Gauge, HeartPulse, ShieldCheck, Activity
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoNatleva from "@/assets/logo-natleva.png";
+import logoNatleva from "@/assets/logo-natleva.webp";
 import printDashboard from "@/assets/print-dashboard.jpg";
 import printIntelligence from "@/assets/print-intelligence.jpg";
 import printFinanceiro from "@/assets/print-financeiro.jpg";

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Clock, MapPin, Star, Heart, Anchor, Wine, Calendar, Coffee, Utensils, Shield, Camera, Check, ChevronDown, Plane, Luggage, Wifi, Users, CreditCard, Sparkles, Sun } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import { type StylePreviewProps, clickableClass, editOverlay, getRadius, getShadow, isMob, isMobOrTab } from "../TemplatePreview";
 
 const heroImg = "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=1920&h=1080&fit=crop&q=80";

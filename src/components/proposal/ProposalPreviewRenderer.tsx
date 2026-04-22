@@ -9,8 +9,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
-import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
+import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.webp";
 import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
 import { buildFlightTitle } from "@/lib/airportCities";

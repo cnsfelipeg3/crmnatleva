@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, ArrowRight, Sparkles, Globe, Shield } from "lucide-react";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 
 interface Props {
   proposalTitle?: string;

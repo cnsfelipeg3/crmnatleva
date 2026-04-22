@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Menu, Maximize, Minimize } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import logoNatleva from "@/assets/logo-natleva.png";
+import logoNatleva from "@/assets/logo-natleva.webp";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));

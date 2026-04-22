@@ -1,4 +1,4 @@
-import logoImg from "@/assets/logo-natleva-clean.png";
+import logoImg from "@/assets/logo-natleva-clean.webp";
 
 export default function NatLevaLoader() {
   return (

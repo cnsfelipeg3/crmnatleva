@@ -4,7 +4,7 @@ import { FlowMetrics } from "@/components/flow/FlowMetrics";
 import { FlowSimulator } from "@/components/flow/FlowSimulator";
 import { LiveFunnel } from "@/components/flow/LiveFunnel";
 const Funnel3DView = lazy(() => import("@/components/flow/Funnel3DView").then(m => ({ default: m.Funnel3DView })));
-import natlevaLogo from "@/assets/logo-natleva.png";
+import natlevaLogo from "@/assets/logo-natleva.webp";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";

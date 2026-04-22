@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { Calculator, ArrowDownToLine, ArrowUpFromLine, FileDown, ImageDown } from "lucide-react";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 
 interface FeeRule {
   installments: number;

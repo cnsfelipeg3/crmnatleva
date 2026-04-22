@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
-import logoSrc from "@/assets/logo-natleva-clean.png";
+import logoSrc from "@/assets/logo-natleva-clean.webp";
 import { getDestinationImage } from "@/components/travel-ui/JourneyHero";
 
 interface ItineraryData {

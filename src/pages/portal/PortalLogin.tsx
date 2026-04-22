@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Plane, Lock, Mail, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 
 export default function PortalLogin() {
   const navigate = useNavigate();
