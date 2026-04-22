@@ -105,6 +105,8 @@ export function HotelPhotoGallery({
       onCoverChange(firstIncluded?.url || "");
     }
   };
+
+  const handleAddManual = () => {
     const url = manualUrl.trim();
     if (!url) return;
     const next: HotelPhoto[] = [
