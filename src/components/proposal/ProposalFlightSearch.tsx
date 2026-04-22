@@ -11,9 +11,10 @@ import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
 import FlightSegmentForm from "./FlightSegmentForm";
-import ConnectionLayoverBadge, { calcLayoverMinutes } from "./ConnectionLayoverBadge";
+import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
 import { UnifiedLegCard } from "./ProposalPreviewRenderer";
 import { classifyItinerary, type ItineraryClassification } from "@/lib/itineraryClassifier";
+import { calcLayoverMinutes } from "@/lib/flightTiming";
 
 export interface FlightSegmentData {
   airline: string;
@@ -76,6 +77,23 @@ const emptySegment = (isConnection = false): FlightSegmentData => ({
   personal_item_included: true, personal_item_weight_kg: 10,
   carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });
+
+function isRealConnection(prev: FlightSegmentData | null, next: FlightSegmentData | null): boolean {
+  if (!prev || !next) return false;
+  if (!prev.destination_iata || !next.origin_iata) return false;
+  if (prev.destination_iata.toUpperCase() !== next.origin_iata.toUpperCase()) return false;
+
+  const layoverMin = calcLayoverMinutes(prev, next);
+  if (typeof layoverMin === "number") {
+    return layoverMin >= 0 && layoverMin <= 1440;
+  }
+
+  if (prev.departure_date && next.departure_date) {
+    return prev.departure_date.slice(0, 10) === next.departure_date.slice(0, 10);
+  }
+
+  return false;
+}
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
   const [searchForms, setSearchForms] = useState<Record<number, SearchFormData>>({});
@@ -253,24 +271,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
   const legs: { startIdx: number; segments: { seg: FlightSegmentData; idx: number }[] }[] = [];
   segments.forEach((seg, idx) => {
     const prev = idx > 0 ? segments[idx - 1] : null;
-    let isAutoConnection = false;
-    if (prev && prev.destination_iata && seg.origin_iata &&
-        prev.destination_iata.toUpperCase() === seg.origin_iata.toUpperCase()) {
-      // chain by IATA — but require the real layover (respeitando fuso) to be ≤ 24h.
-      // Caso contrário é uma estadia (ex: chega em MLE dia 13, só sai dia 19).
-      const layoverMin = calcLayoverMinutes(prev, seg);
-      if (typeof layoverMin === "number") {
-        // janela típica de conexão: 0 a 1440 min (24h). Acima disso é estadia.
-        if (layoverMin >= 0 && layoverMin <= 1440) isAutoConnection = true;
-      } else if (prev.departure_date && seg.departure_date) {
-        // sem horários — fallback por data: só conecta se mesma data
-        const diffMs = new Date(seg.departure_date + "T00:00:00").getTime() -
-                       new Date(prev.departure_date + "T00:00:00").getTime();
-        const diffDays = Math.round(diffMs / 86400000);
-        if (diffDays === 0) isAutoConnection = true;
-      }
-    }
-    const isConnection = seg.is_connection === true || isAutoConnection;
+    const isConnection = isRealConnection(prev, seg);
 
     if (!isConnection || legs.length === 0) {
       legs.push({ startIdx: idx, segments: [{ seg, idx }] });
@@ -405,14 +406,14 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                 return (
                   <div key={idx}>
                     {/* Connection layover badge */}
-                    {prevInLeg && seg.is_connection && (
+                    {prevInLeg && segInLeg > 0 && (
                       <ConnectionLayoverBadge prevSegment={prevInLeg} nextSegment={seg} />
                     )}
 
                     <div className="relative">
                       {/* Segment actions */}
                       <div className="flex items-center justify-end gap-1 px-2 pt-1">
-                        {seg.is_connection && (
+                        {segInLeg > 0 && (
                           <span className="text-[10px] text-muted-foreground mr-auto pl-1">
                             Segmento {segInLeg + 1}
                           </span>
