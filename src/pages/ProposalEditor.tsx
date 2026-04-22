@@ -167,6 +167,9 @@ export default function ProposalEditor() {
         travel_start_date: existing.travel_start_date || "",
         travel_end_date: existing.travel_end_date || "",
         passenger_count: existing.passenger_count || 1,
+        passengers_adults: (existing as any).passengers_adults ?? existing.passenger_count ?? 1,
+        passengers_children: (existing as any).passengers_children ?? 0,
+        children_ages: ((existing as any).children_ages as number[]) || [],
         consultant_name: existing.consultant_name || "",
         status: existing.status || "draft",
         intro_text: existing.intro_text || "",
@@ -728,62 +731,22 @@ export default function ProposalEditor() {
           <Card>
             <CardHeader><CardTitle className="text-base">Dados da Proposta</CardTitle></CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Nome da viagem *</Label>
-                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Itália Romântica" />
-              </div>
+              {/* 1. Nome do cliente */}
               <div className="space-y-1.5">
                 <Label>Nome do cliente</Label>
                 <Input value={form.client_name} onChange={(e) => setForm((f) => ({ ...f, client_name: e.target.value }))} placeholder="Maria Silva" />
               </div>
+
+              {/* 2. Nome da viagem */}
               <div className="space-y-1.5">
-                <Label>Origem</Label>
-                <Input value={form.origin} onChange={(e) => setForm((f) => ({ ...f, origin: e.target.value }))} placeholder="São Paulo" />
+                <Label>Nome da viagem *</Label>
+                <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Itália Romântica" />
               </div>
-              <div className="space-y-1.5">
-                <Label>Passageiros</Label>
-                <Input type="number" min={1} value={form.passenger_count} onChange={(e) => setForm((f) => ({ ...f, passenger_count: parseInt(e.target.value) || 1 }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Data início</Label>
-                <Input type="date" value={form.travel_start_date} onChange={(e) => setForm((f) => ({ ...f, travel_start_date: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Data fim</Label>
-                <Input type="date" value={form.travel_end_date} onChange={(e) => setForm((f) => ({ ...f, travel_end_date: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Consultor responsável</Label>
-                <Input value={form.consultant_name} onChange={(e) => setForm((f) => ({ ...f, consultant_name: e.target.value }))} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <Select value={form.status} onValueChange={(v) => setForm((f) => ({ ...f, status: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Em elaboração</SelectItem>
-                    <SelectItem value="sent">Enviada</SelectItem>
-                    <SelectItem value="negotiation">Em negociação</SelectItem>
-                    <SelectItem value="approved">Aprovada</SelectItem>
-                    <SelectItem value="lost">Perdida</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Resultado</Label>
-                <Select value={form.proposal_outcome} onValueChange={(v) => setForm((f) => ({ ...f, proposal_outcome: v }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Em aberto</SelectItem>
-                    <SelectItem value="won">✅ Ganha</SelectItem>
-                    <SelectItem value="lost">❌ Perdida</SelectItem>
-                    <SelectItem value="expired">⏰ Expirada</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+              {/* 3. Imagem de capa */}
               <div className="md:col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <Label>URL da imagem de capa</Label>
+                  <Label>Imagem de capa</Label>
                   <Button
                     type="button"
                     variant="ghost"
@@ -802,6 +765,104 @@ export default function ProposalEditor() {
                 )}
               </div>
 
+              {/* 4. Data início */}
+              <div className="space-y-1.5">
+                <Label>Data início</Label>
+                <Input type="date" value={form.travel_start_date} onChange={(e) => setForm((f) => ({ ...f, travel_start_date: e.target.value }))} />
+              </div>
+
+              {/* 5. Data fim */}
+              <div className="space-y-1.5">
+                <Label>Data fim</Label>
+                <Input type="date" value={form.travel_end_date} onChange={(e) => setForm((f) => ({ ...f, travel_end_date: e.target.value }))} />
+              </div>
+
+              {/* 6. Passageiros (adultos / crianças / idades) */}
+              <div className="md:col-span-2 space-y-3 rounded-lg border border-border/30 bg-muted/20 p-3">
+                <Label className="text-sm">Passageiros</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Adultos</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.passengers_adults}
+                      onChange={(e) => {
+                        const adults = Math.max(0, parseInt(e.target.value) || 0);
+                        setForm((f) => ({
+                          ...f,
+                          passengers_adults: adults,
+                          passenger_count: adults + (f.passengers_children || 0),
+                        }));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Crianças</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={form.passengers_children}
+                      onChange={(e) => {
+                        const children = Math.max(0, parseInt(e.target.value) || 0);
+                        setForm((f) => {
+                          const ages = [...(f.children_ages || [])];
+                          if (children > ages.length) {
+                            while (ages.length < children) ages.push(0);
+                          } else {
+                            ages.length = children;
+                          }
+                          return {
+                            ...f,
+                            passengers_children: children,
+                            children_ages: ages,
+                            passenger_count: (f.passengers_adults || 0) + children,
+                          };
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+                {form.passengers_children > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Idades das crianças</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Array.from({ length: form.passengers_children }).map((_, i) => (
+                        <div key={i} className="flex items-center gap-1.5">
+                          <span className="text-xs text-muted-foreground">#{i + 1}</span>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={17}
+                            className="h-9 w-20"
+                            value={form.children_ages?.[i] ?? 0}
+                            onChange={(e) => {
+                              const v = Math.max(0, Math.min(17, parseInt(e.target.value) || 0));
+                              setForm((f) => {
+                                const ages = [...(f.children_ages || [])];
+                                ages[i] = v;
+                                return { ...f, children_ages: ages };
+                              });
+                            }}
+                          />
+                          <span className="text-[10px] text-muted-foreground">anos</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <p className="text-[11px] text-muted-foreground">
+                  Total: {(form.passengers_adults || 0) + (form.passengers_children || 0)} passageiro(s)
+                </p>
+              </div>
+
+              {/* 7. Texto de introdução */}
+              <div className="md:col-span-2 space-y-1.5">
+                <Label>Texto de introdução</Label>
+                <Textarea rows={3} value={form.intro_text} onChange={(e) => setForm((f) => ({ ...f, intro_text: e.target.value }))} />
+              </div>
+
+              {/* 8. Modelo de proposta */}
               <div className="md:col-span-2 space-y-1.5">
                 <Label className="flex items-center gap-2">
                   Modelo de proposta
@@ -835,29 +896,6 @@ export default function ProposalEditor() {
                     </button>
                   </p>
                 )}
-              </div>
-
-              <div className="md:col-span-2 space-y-1.5">
-                <Label>Destinos</Label>
-                <div className="flex gap-2">
-                  <Input value={destInput} onChange={(e) => setDestInput(e.target.value)} placeholder="Roma" onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addDest())} />
-                  <Button type="button" variant="outline" onClick={addDest}>Adicionar</Button>
-                </div>
-                {form.destinations.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {form.destinations.map((d, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 bg-muted px-3 py-1 rounded-full text-sm">
-                        {d}
-                        <button onClick={() => removeDest(i)} className="text-muted-foreground hover:text-destructive">×</button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="md:col-span-2 space-y-1.5">
-                <Label>Texto de introdução</Label>
-                <Textarea rows={3} value={form.intro_text} onChange={(e) => setForm((f) => ({ ...f, intro_text: e.target.value }))} />
               </div>
             </CardContent>
           </Card>
