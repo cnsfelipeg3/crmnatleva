@@ -40,6 +40,11 @@ export interface FlightSegmentData {
   checked_bags_included: number;
   checked_bag_weight_kg: number;
   baggage_notes: string;
+  // Header overrides (only used on the FIRST segment of each leg)
+  leg_title_override?: string;
+  leg_origin_label_override?: string;
+  leg_destination_label_override?: string;
+  leg_date_override?: string;
 }
 
 interface ProposalFlightSearchProps {
