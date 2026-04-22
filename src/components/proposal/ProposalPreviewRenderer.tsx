@@ -190,7 +190,7 @@ function PhotoGallery({ photos, name, captions }: { photos: string[]; name: stri
         </div>
         {/* Thumbnails */}
         {photos.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto py-1.5 scrollbar-thin">
+          <div className="flex gap-1.5 overflow-x-auto px-1 py-2 scrollbar-thin">
             {photos.map((url, i) => (
               <button
                 key={i}
