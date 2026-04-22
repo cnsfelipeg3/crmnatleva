@@ -30,9 +30,21 @@ function isBlockedHost(hostname: string): boolean {
   return isPrivateIPv4(normalized);
 }
 
+function decodeHtmlEntities(raw: string): string {
+  return raw
+    .replace(/&amp;/gi, "&")
+    .replace(/&#38;/g, "&")
+    .replace(/&#x26;/gi, "&")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">");
+}
+
 function getValidatedUrl(raw: string): URL {
+  const cleaned = decodeHtmlEntities(raw.trim());
   let parsed: URL;
-  try { parsed = new URL(raw); } catch { throw new Error("URL de imagem inválida"); }
+  try { parsed = new URL(cleaned); } catch { throw new Error("URL de imagem inválida"); }
   if (!["https:", "http:"].includes(parsed.protocol)) throw new Error("Somente URLs HTTP(S) são aceitas");
   if (isBlockedHost(parsed.hostname)) throw new Error("Host bloqueado");
   return parsed;
