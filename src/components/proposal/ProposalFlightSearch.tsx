@@ -331,7 +331,63 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
               </div>
             </div>
 
-            {/* Preview removido — já há preview ao vivo no painel direito */}
+            {/* Cabeçalho exibido ao cliente (editável) */}
+            {(() => {
+              const headSeg = leg.segments[0].seg;
+              const headIdx = leg.segments[0].idx;
+              const lastSegLeg = leg.segments[leg.segments.length - 1].seg;
+              const autoTitle = `Passagem aérea - ${directionLabel}`;
+              const autoDate = headSeg.departure_date || "";
+              return (
+                <Card className="p-3 mx-1 mb-3 border-dashed border-primary/20 bg-primary/[0.03]">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="text-[10px] uppercase tracking-wider font-semibold text-primary">
+                      Cabeçalho exibido ao cliente
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">— preenchido automaticamente, edite se quiser</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label className="text-[11px]">Título</Label>
+                      <Input
+                        value={headSeg.leg_title_override ?? ""}
+                        onChange={(e) => updateSegment(headIdx, "leg_title_override", e.target.value)}
+                        placeholder={autoTitle}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Origem (cidade)</Label>
+                      <Input
+                        value={headSeg.leg_origin_label_override ?? ""}
+                        onChange={(e) => updateSegment(headIdx, "leg_origin_label_override", e.target.value)}
+                        placeholder={headSeg.origin_iata || "Ex: São Paulo"}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px]">Destino (cidade)</Label>
+                      <Input
+                        value={headSeg.leg_destination_label_override ?? ""}
+                        onChange={(e) => updateSegment(headIdx, "leg_destination_label_override", e.target.value)}
+                        placeholder={lastSegLeg.destination_iata || "Ex: Maldivas"}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-2">
+                      <Label className="text-[11px]">Data exibida</Label>
+                      <Input
+                        type="date"
+                        value={headSeg.leg_date_override ?? ""}
+                        onChange={(e) => updateSegment(headIdx, "leg_date_override", e.target.value)}
+                        placeholder={autoDate}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                </Card>
+              );
+            })()}
 
             {/* Segments within leg */}
             <div className={isMultiSeg ? "border border-border/60 rounded-lg overflow-hidden" : ""}>
