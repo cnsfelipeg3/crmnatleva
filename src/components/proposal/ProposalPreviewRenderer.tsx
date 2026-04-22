@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.png";
+import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
 import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
