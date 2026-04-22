@@ -1404,15 +1404,11 @@ export default function ProposalEditor() {
                 try { localStorage.setItem(visualDraftKey, JSON.stringify(next)); } catch { /* ignore */ }
               }}
             >
-              <ProposalPreviewRenderer
-                proposal={{
-                  ...form,
-                  total_value: form.total_value ? parseFloat(form.total_value) : null,
-                  value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-                }}
-                items={items}
+              <MemoProposalPreviewRenderer
+                proposal={previewProposal}
+                items={debouncedItems}
                 template={selectedTemplate}
-                visualOverrides={visualOverrides}
+                visualOverrides={debouncedVisualOverrides}
                 embedded
               />
             </VisualCanvasOverlay>
