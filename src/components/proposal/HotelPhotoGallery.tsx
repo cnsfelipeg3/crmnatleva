@@ -416,7 +416,8 @@ export function HotelPhotoGallery({
               alt={current.label || "Foto"}
               className="max-h-[82vh] max-w-[88vw] rounded-lg shadow-2xl"
               imgClassName="object-contain max-h-[82vh] max-w-[88vw]"
-              forceProxy={current.source === "official"}
+              eagerMount
+              loading="eager"
             />
           </div>
 
