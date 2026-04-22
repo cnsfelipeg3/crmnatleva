@@ -19,6 +19,7 @@ import {
   GripVertical, Eye, Crown, CheckSquare, Square, Maximize2,
   Info, Sparkles, FolderOpen, Save, Building2, Map as MapIcon,
 } from "lucide-react";
+import SmartImage from "./SmartImage";
 
 /* ═══ Types ═══ */
 interface PlaceResult {
