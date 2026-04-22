@@ -1366,13 +1366,9 @@ export default function ProposalEditor() {
         </TabsContent>
 
         <TabsContent value="preview">
-          <ProposalPreviewRenderer
-            proposal={{
-              ...form,
-              total_value: form.total_value ? parseFloat(form.total_value) : null,
-              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-            }}
-            items={items}
+          <MemoProposalPreviewRenderer
+            proposal={previewProposal}
+            items={debouncedItems}
             template={selectedTemplate}
             embedded
           />
