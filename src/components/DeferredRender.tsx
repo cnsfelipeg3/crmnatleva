@@ -35,11 +35,11 @@ export default function DeferredRender({
     };
 
     const schedule = () => {
-      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-        idleId = window.requestIdleCallback(reveal, { timeout: timeoutMs });
+      if ("requestIdleCallback" in win) {
+        idleId = win.requestIdleCallback(reveal, { timeout: timeoutMs });
         return;
       }
-      fallbackTimer = window.setTimeout(reveal, Math.min(timeoutMs, 250));
+      fallbackTimer = win.setTimeout(reveal, Math.min(timeoutMs, 250));
     };
 
     if (typeof window === "undefined") {
