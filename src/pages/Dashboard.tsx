@@ -133,6 +133,8 @@ export default function Dashboard() {
     }
     let alive = true;
     setDetailLoading(true);
+    let idleId: number | undefined;
+    let phase2Timer: number | undefined;
 
     // Phase 1: lightweight metadata (profiles, clients)
     Promise.all([
@@ -145,23 +147,39 @@ export default function Dashboard() {
     });
 
     // Phase 2: sales + auxiliary tables (deferred, non-blocking for KPIs)
-    Promise.all([
-      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "close_date", ascending: false }, maxRows: 5000 }),
-      fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
-      fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
-      fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
-      fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000, cacheMs: 30000 }),
-    ]).then(([s, seg, ci, ct, lt]) => {
-      if (!alive) return;
-      setSales(s as Sale[]);
-      setSegments(seg as Segment[]);
-      setCostItems(ci as CostItem[]);
-      setCheckinTasks(ct as CheckinTask[]);
-      setLodgingTasks(lt as LodgingTask[]);
-      setDetailLoading(false);
-    }).catch(() => { if (alive) setDetailLoading(false); });
+    const loadDetailData = () => {
+      Promise.all([
+        fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "close_date", ascending: false }, maxRows: 5000 }),
+        fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
+        fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
+        fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
+        fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000, cacheMs: 30000 }),
+      ]).then(([s, seg, ci, ct, lt]) => {
+        if (!alive) return;
+        setSales(s as Sale[]);
+        setSegments(seg as Segment[]);
+        setCostItems(ci as CostItem[]);
+        setCheckinTasks(ct as CheckinTask[]);
+        setLodgingTasks(lt as LodgingTask[]);
+        setDetailLoading(false);
+      }).catch(() => { if (alive) setDetailLoading(false); });
+    };
 
-    return () => { alive = false; };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      idleId = window.requestIdleCallback(loadDetailData, { timeout: 1500 });
+    } else if (typeof window !== "undefined") {
+      phase2Timer = window.setTimeout(loadDetailData, 250);
+    } else {
+      loadDetailData();
+    }
+
+    return () => {
+      alive = false;
+      if (typeof window !== "undefined") {
+        if (idleId && "cancelIdleCallback" in window) window.cancelIdleCallback(idleId);
+        if (phase2Timer) window.clearTimeout(phase2Timer);
+      }
+    };
   }, [authLoading]);
 
   const sellerNames = useMemo(() => {

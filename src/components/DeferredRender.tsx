@@ -23,7 +23,13 @@ export default function DeferredRender({
       return;
     }
 
+    if (typeof window === "undefined") {
+      setReady(true);
+      return;
+    }
+
     setReady(false);
+    const browser = window as Window & typeof globalThis;
 
     let cancelled = false;
     let delayTimer: number | undefined;
@@ -35,29 +41,22 @@ export default function DeferredRender({
     };
 
     const schedule = () => {
-      if ("requestIdleCallback" in win) {
-        idleId = win.requestIdleCallback(reveal, { timeout: timeoutMs });
+      if ("requestIdleCallback" in browser) {
+        idleId = browser.requestIdleCallback(reveal, { timeout: timeoutMs });
         return;
       }
-      fallbackTimer = win.setTimeout(reveal, Math.min(timeoutMs, 250));
+      fallbackTimer = browser.setTimeout(reveal, Math.min(timeoutMs, 250));
     };
 
-    if (typeof window === "undefined") {
-      setReady(true);
-      return;
-    }
-
-    const win = window;
-
-    if (delayMs > 0) delayTimer = win.setTimeout(schedule, delayMs);
+    if (delayMs > 0) delayTimer = browser.setTimeout(schedule, delayMs);
     else schedule();
 
     return () => {
       cancelled = true;
-      if (delayTimer) win.clearTimeout(delayTimer);
-      if (fallbackTimer) win.clearTimeout(fallbackTimer);
-      if (idleId && "cancelIdleCallback" in win) {
-        win.cancelIdleCallback(idleId);
+      if (delayTimer) browser.clearTimeout(delayTimer);
+      if (fallbackTimer) browser.clearTimeout(fallbackTimer);
+      if (idleId && "cancelIdleCallback" in browser) {
+        browser.cancelIdleCallback(idleId);
       }
     };
   }, [delayMs, enabled, timeoutMs]);
