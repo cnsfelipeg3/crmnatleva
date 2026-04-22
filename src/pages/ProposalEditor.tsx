@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
+import FlightCoverPicker from "@/components/proposal/FlightCoverPicker";
 import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
@@ -1159,14 +1160,26 @@ export default function ProposalEditor() {
 
                         {/* Standard form fields */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <div className="space-y-1">
-                            <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
-                            <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${(itemTypeLabels[item.item_type] || "item").toLowerCase()}`} />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs">URL da imagem</Label>
-                            <Input value={item.image_url || ""} onChange={(e) => updateItem(idx, "image_url", e.target.value)} placeholder="https://..." />
-                          </div>
+                          {item.item_type !== "flight" && (
+                            <>
+                              <div className="space-y-1">
+                                <Label className="text-xs">{itemTypeLabels[item.item_type]} — Título</Label>
+                                <Input value={item.title || ""} onChange={(e) => updateItem(idx, "title", e.target.value)} placeholder={`Nome do ${(itemTypeLabels[item.item_type] || "item").toLowerCase()}`} />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-xs">URL da imagem</Label>
+                                <Input value={item.image_url || ""} onChange={(e) => updateItem(idx, "image_url", e.target.value)} placeholder="https://..." />
+                              </div>
+                            </>
+                          )}
+                          {item.item_type === "flight" && (
+                            <FlightCoverPicker
+                              value={item.image_url || ""}
+                              onChange={(url) => updateItem(idx, "image_url", url)}
+                              airlineIata={item.data?.flight_segments?.[0]?.airline}
+                              airlineName={item.data?.flight_segments?.[0]?.airline_name}
+                            />
+                          )}
                           <div className="md:col-span-2 space-y-1">
                             <Label className="text-xs">Descrição</Label>
                             <Textarea rows={2} value={item.description || ""} onChange={(e) => updateItem(idx, "description", e.target.value)} />
