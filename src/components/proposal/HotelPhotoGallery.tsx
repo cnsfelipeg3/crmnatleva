@@ -49,10 +49,52 @@ export function HotelPhotoGallery({
   onPhotosChange,
   onCoverChange,
 }: HotelPhotoGalleryProps) {
-  const cleanPhotos = useMemo(
-    () => (photos || []).filter((p) => typeof p?.url === "string" && p.url.trim().length > 0),
-    [photos],
-  );
+  const cleanPhotos = useMemo(() => {
+    const valid = (photos || []).filter(
+      (p) => typeof p?.url === "string" && p.url.trim().length > 0,
+    );
+
+    // Priority hierarchy:
+    //  1. Official site photos — sorted by category (structure/leisure first, rooms after)
+    //  2. Manual photos
+    //  3. Google Places / others
+    const sourceWeight = (p: HotelPhoto): number => {
+      if (p.source === "official") return 0;
+      if (p.source === "manual") return 1;
+      return 2; // google places, unknown
+    };
+
+    // Within official photos, prioritize structure & amenities, then rooms, then misc.
+    const categoryWeight = (p: HotelPhoto): number => {
+      const haystack = `${p.category || ""} ${p.label || ""} ${p.room_name || ""}`.toLowerCase();
+      // 0 — exterior / structure / lobby
+      if (/(exterior|fachada|facade|aerial|aerea|building|estrutura|lobby|reception|recep|entrada|view|vista|grounds|jardim|garden|architecture|overview|panor)/.test(haystack)) return 0;
+      // 1 — leisure / amenities (pool, spa, beach, restaurant)
+      if (/(pool|piscina|spa|wellness|gym|fitness|beach|praia|restaurant|restaurante|bar|lounge|dining|cafe|breakfast|recrea|leisure|lazer|kids|playground|tennis|golf|deck|terra|garden|jardim|sunset|por.do.sol|activity|atividade|sport|esporte)/.test(haystack)) return 1;
+      // 2 — rooms / suites / villas
+      if (/(room|quarto|suite|villa|apartment|apartamento|bedroom|accommodation|acomoda|bungalow|chal|cabin|cabana|loft|studio)/.test(haystack)) return 2;
+      // 3 — bathroom / details
+      if (/(bath|banheiro|wc|toilet|shower|chuveiro|detail|detalhe|amenity|amenidade)/.test(haystack)) return 3;
+      // 4 — uncategorized
+      return 4;
+    };
+
+    return [...valid]
+      .map((p, originalIdx) => ({ p, originalIdx }))
+      .sort((a, b) => {
+        const sa = sourceWeight(a.p);
+        const sb = sourceWeight(b.p);
+        if (sa !== sb) return sa - sb;
+        // Same source — apply category priority for officials
+        if (a.p.source === "official") {
+          const ca = categoryWeight(a.p);
+          const cb = categoryWeight(b.p);
+          if (ca !== cb) return ca - cb;
+        }
+        return a.originalIdx - b.originalIdx;
+      })
+      .map(({ p }) => p);
+  }, [photos]);
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [manualUrl, setManualUrl] = useState("");
