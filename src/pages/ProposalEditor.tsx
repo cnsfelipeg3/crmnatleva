@@ -1020,18 +1020,7 @@ export default function ProposalEditor() {
                                       )}
                                     </span>
                                   </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <Button
-                                      type="button"
-                                      variant={photoEditorIdx === idx ? "default" : "outline"}
-                                      size="sm"
-                                      className="gap-1.5 text-xs h-7"
-                                      onClick={() => setPhotoEditorIdx(photoEditorIdx === idx ? null : idx)}
-                                    >
-                                      <Pencil className="w-3 h-3" />
-                                      {photoEditorIdx === idx ? "Fechar editor" : "Editar fotos"}
-                                    </Button>
-                                  </div>
+                                </div>
                                 </div>
 
                                 {/* Thumbnails */}
