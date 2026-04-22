@@ -449,15 +449,9 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
 
   return (
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
-      {/* Header: dates + flight numbers */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="text-sm text-foreground">
-          {fmtDateLabel(depDate)}
-          {arrDate && arrDate !== depDate && (
-            <span className="text-foreground"> → {fmtDateLabel(arrDate)}</span>
-          )}
-        </div>
-        {flightNumbers.length > 0 && (
+      {/* Header: flight numbers only (date moved to leg header card) */}
+      {flightNumbers.length > 0 && (
+        <div className="flex flex-wrap items-center justify-end gap-3 mb-5">
           <div className="flex flex-wrap items-center gap-1.5">
             {flightNumbers.map((fn, i) => (
               <span key={i} className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
@@ -465,8 +459,8 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
               </span>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Top route row: origin → destination */}
       <div className="flex items-center gap-2 sm:gap-4 unified-leg-route">
@@ -487,17 +481,6 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
 
         {/* Timeline with stops */}
         <div className="flex-1 flex flex-col items-center gap-1 py-2">
-          <span
-            className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full mb-1 inline-flex items-center gap-1 ${
-              stops === 0
-                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
-                : "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
-            }`}
-          >
-            {stops === 0
-              ? <><Plane className="w-2.5 h-2.5" /> Direto</>
-              : <>{stops} {stops === 1 ? "conexão" : "conexões"}</>}
-          </span>
           {airlineCode && (
             <div className="mb-1">
               <InlineAirlineLogo iata={airlineCode} size={50} />
