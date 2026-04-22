@@ -456,7 +456,7 @@ async function scrapeOfficialSite(
   }
 
   if (secondPassPages.length > 0) {
-    const extraPages = secondPassPages.slice(0, 20);
+    const extraPages = secondPassPages.slice(0, 10);
     console.log(`🔍 SECOND PASS: Found ${secondPassPages.length} new room/gallery links, scraping ${extraPages.length}...`);
     for (let i = 0; i < extraPages.length; i += batchSize) {
       const batch = extraPages.slice(i, i + batchSize);
