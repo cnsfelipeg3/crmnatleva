@@ -17,6 +17,7 @@ import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
 import SmartImage from "./SmartImage";
+import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -1317,7 +1318,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {showHero && (
       <section data-track-section="hero" className={`relative ${embedded ? "aspect-[16/9] max-h-[480px] min-h-[280px]" : "h-screen"} w-full flex items-end justify-center overflow-hidden`}>
         <img
-          src={proposal.cover_image_url?.trim() || orlandoFamilyCover}
+          src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
           alt={proposal.title || "Capa da proposta"}
           className="absolute inset-0 w-full h-full object-cover"
           loading="eager"

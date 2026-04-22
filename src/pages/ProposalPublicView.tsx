@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import ProposalEmailGate from "@/components/proposal/ProposalEmailGate";
 import { useProposalTracking } from "@/hooks/useProposalTracking";
 import { emitLearningEvent } from "@/lib/learningEvents";
+import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
 
 const ProposalPreviewRenderer = lazy(() => import("@/components/proposal/ProposalPreviewRenderer"));
 
@@ -193,6 +194,7 @@ export default function ProposalPublicView() {
   const destination = proposal?.destinations
     || items.find((i: any) => i.item_type === "flight")?.title
     || proposal?.title;
+  const safeCoverImage = sanitizeProposalCoverUrl(proposal?.cover_image_url) || undefined;
 
   if (loading) {
     return (
@@ -232,7 +234,7 @@ export default function ProposalPublicView() {
       <ProposalEmailGate
         proposalTitle={proposal?.title}
         destination={destination}
-        coverImage={proposal?.cover_image_url}
+        coverImage={safeCoverImage}
         onSubmit={handleEmailSubmit}
         loading={gateLoading}
       />
