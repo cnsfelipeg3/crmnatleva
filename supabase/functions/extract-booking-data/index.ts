@@ -389,6 +389,37 @@ Deno.serve(async (req) => {
       return json({ error: "Resposta da IA inválida." }, 422);
     }
 
+    // Defensive post-processing: normalize hotel room_type to its essential core,
+    // dropping marketing perks/promo suffixes the model may still emit.
+    if (item_type === "hotel" && extracted?.data?.room_type) {
+      const sanitizeRoomType = (raw: string): string => {
+        let s = String(raw || "").trim();
+        if (!s) return s;
+        // Cut at first separator that typically introduces perks/promos
+        const cutAt = (re: RegExp) => {
+          const m = s.match(re);
+          if (m && m.index !== undefined && m.index > 2) s = s.slice(0, m.index).trim();
+        };
+        cutAt(/\s[-–—|/]\s/);     // " - ", " | ", " / "
+        cutAt(/\s\+\s/);           // " + "
+        // Drop promo/perk tails even without a separator
+        s = s.replace(
+          /\b(free|gratis|grátis|complimentary|inclusive|incluso|24[- ]?h(our)?|all[- ]?inclusive|welcome|transfer|seaplane|speedboat|breakfast|spa|wifi|wi-?fi|champagne|massage|airport)\b.*$/i,
+          "",
+        ).trim();
+        // Trim trailing punctuation
+        s = s.replace(/[\s\-–—,;:.|/+]+$/g, "").trim();
+        // Hard cap
+        if (s.length > 60) s = s.slice(0, 60).trim();
+        return s || raw;
+      };
+      const cleaned = sanitizeRoomType(extracted.data.room_type);
+      if (cleaned && cleaned !== extracted.data.room_type) {
+        console.log("[extract-booking-data] room_type sanitized:", extracted.data.room_type, "→", cleaned);
+        extracted.data.room_type = cleaned;
+      }
+    }
+
     // Defensive post-processing: bump past dates to current/next year for flights
     if (item_type === "flight" && extracted?.data?.flight_segments) {
       const today = new Date();
