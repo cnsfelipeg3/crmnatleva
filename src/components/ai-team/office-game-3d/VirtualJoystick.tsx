@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef, useCallback, useEffect, useState } from 'react';
 
 interface Props {

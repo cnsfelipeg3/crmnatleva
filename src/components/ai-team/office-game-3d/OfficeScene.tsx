@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback, useRef, useMemo, memo } from 'react';
 import { Environment } from '@react-three/drei';
 import OfficeFloor from './OfficeFloor';

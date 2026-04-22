@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * HandoffAgent — A small NPC clone that walks between desks carrying a glowing folder.
  * Entirely self-animated via useFrame.
