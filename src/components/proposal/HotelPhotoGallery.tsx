@@ -32,6 +32,8 @@ export interface HotelPhoto {
   room_name?: string;
   category?: string;
   source?: "official" | "manual" | string;
+  /** When true, photo stays in the gallery manager but is hidden from the client proposal */
+  excluded?: boolean;
 }
 
 interface HotelPhotoGalleryProps {
@@ -105,6 +107,8 @@ export function HotelPhotoGallery({
       onCoverChange(firstIncluded?.url || "");
     }
   };
+
+  const handleAddManual = () => {
     const url = manualUrl.trim();
     if (!url) return;
     const next: HotelPhoto[] = [
