@@ -587,22 +587,18 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* Reduz custo de transitions globais — animações longas em hover são caras */
-* {
-  transition-duration: 0.15s;
+/* content-visibility: pula renderização de seções fora da viewport.
+   Ganho gigante quando o DOM tem milhares de nodes (dashboard, listas). */
+.cv-auto,
+[data-section],
+section > .glass-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 400px;
 }
 
-/* GPU hint para listas com scroll virtual */
-.glass-card,
-[role="dialog"],
-[role="menu"],
-header,
-nav,
-aside {
-  will-change: auto;
-}
-
-/* Imagens lazy por padrão quando não especificado */
+/* Imagens lazy por padrão quando não especificado.
+   (Apenas via atributo HTML — propriedade CSS 'loading' não existe.) */
 img:not([loading]) {
-  loading: lazy;
+  /* Aplicado pelo browser via DOM mutation seria ideal, mas como fallback
+     reduzimos custo de decode com decoding async via JS futuramente. */
 }
