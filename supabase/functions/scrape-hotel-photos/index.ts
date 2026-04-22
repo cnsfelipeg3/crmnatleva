@@ -412,7 +412,7 @@ async function scrapeOfficialSite(
     ...categorizedPages.priority,
     ...categorizedPages.gallery,
     ...categorizedPages.other,
-  ].slice(0, 50); // Up from 30 → 50 for deeper coverage
+  ].slice(0, 30); // Reduced from 50 → 30 to stay within 150s edge timeout
 
   if (pagesToScrape.length === 0 && mainUrl) {
     pagesToScrape.push({ url: mainUrl, inferredSection: "" });
@@ -456,7 +456,7 @@ async function scrapeOfficialSite(
   }
 
   if (secondPassPages.length > 0) {
-    const extraPages = secondPassPages.slice(0, 20);
+    const extraPages = secondPassPages.slice(0, 10);
     console.log(`🔍 SECOND PASS: Found ${secondPassPages.length} new room/gallery links, scraping ${extraPages.length}...`);
     for (let i = 0; i < extraPages.length; i += batchSize) {
       const batch = extraPages.slice(i, i + batchSize);
