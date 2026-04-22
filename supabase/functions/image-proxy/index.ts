@@ -63,6 +63,12 @@ function parseOptionalReferer(raw: string): URL | undefined {
 function buildCandidateUrls(targetUrl: URL, refererUrl?: URL): URL[] {
   const candidates = new Set<string>([targetUrl.toString()]);
 
+  // Fallback: same URL without query string (many CMS hosts reject malformed/encoded query params)
+  if (targetUrl.search) {
+    const bare = `${targetUrl.protocol}//${targetUrl.host}${targetUrl.pathname}`;
+    candidates.add(bare);
+  }
+
   if (targetUrl.hostname === "s3.amazonaws.com") {
     const parts = targetUrl.pathname.split("/").filter(Boolean);
     if (parts.length > 1) {
