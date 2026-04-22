@@ -226,6 +226,11 @@ function PhotoGallery({ photos, name, captions }: { photos: string[]; name: stri
                 loading="eager"
               />
             </motion.div>
+            {currentCaption && (
+              <div className="absolute bottom-16 left-1/2 -translate-x-1/2 max-w-[80vw] px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm text-white/90 text-xs sm:text-sm font-medium truncate">
+                {currentCaption}
+              </div>
+            )}
             {photos.length > 1 && (
               <>
                 <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); go(-1); }}><ChevronRight className="w-5 h-5 rotate-180" /></button>
@@ -892,6 +897,19 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
   const photos: string[] = d.photos || (d.selectedPhotos ? d.selectedPhotos : []);
+  // Captions: only show meaningful labels for OFFICIAL site photos (skip generic
+  // Google Places ones to avoid noise like "Foto 1"). Aligned by URL match.
+  const officialPhotos: any[] = Array.isArray(d.official_photos) ? d.official_photos : [];
+  const captions: (string | null)[] = photos.map((url) => {
+    const meta = officialPhotos.find((p) => p?.url === url);
+    if (!meta || meta.source !== "official") return null;
+    const raw = (meta.label || meta.room_name || "").trim();
+    if (!raw) return null;
+    // Skip generic / non-informative labels
+    if (/^(foto|photo|imagem|image)\s*\d*$/i.test(raw)) return null;
+    if (/^foto do site oficial$/i.test(raw)) return null;
+    return raw;
+  });
   const amenities: string[] = d.amenities || [];
   const amenityIcons: Record<string, React.ReactNode> = {
     wifi: <Wifi className="w-3.5 h-3.5" />, "wi-fi": <Wifi className="w-3.5 h-3.5" />,
