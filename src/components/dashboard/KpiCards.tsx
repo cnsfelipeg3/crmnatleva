@@ -25,6 +25,7 @@ interface ClientsGrowth {
   previousTotal: number;
   newCurrent: number;
   newPrevious: number;
+  comparisonLabel?: string;
 }
 
 interface Props {
@@ -130,7 +131,7 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
       { label: "Saúde", value: `${healthScore}`, icon: Heart, color: healthColor, change: null as number | null, size: "lg" as const, sales: filtered, extra: healthLabel },
     ] : []),
     { label: "Custo Total", value: fmt(totalCost), icon: DollarSign, color: "text-warning", change: null, size: "sm", sales: filtered.filter(s => (s.total_cost || 0) > 0) },
-    { label: "Clientes Totais", value: clients.length.toString(), icon: Users, color: "text-accent", change: clientsGrowth ? pctChange(clientsGrowth.newCurrent, clientsGrowth.newPrevious) : null, size: "sm", sales: filtered, extra: clientsGrowth && clientsGrowth.newCurrent > 0 ? `+${clientsGrowth.newCurrent} novos` : undefined },
+    { label: "Clientes Totais", value: clients.length.toString(), icon: Users, color: "text-accent", change: clientsGrowth ? pctChange(clientsGrowth.newCurrent, clientsGrowth.newPrevious) : null, size: "sm", sales: filtered, extra: clientsGrowth && clientsGrowth.newCurrent > 0 ? `+${clientsGrowth.newCurrent} novos` : undefined, tooltip: clientsGrowth?.comparisonLabel ? `Novos clientes: ${clientsGrowth.newCurrent} (${clientsGrowth.comparisonLabel}: ${clientsGrowth.newPrevious})` : undefined, footnote: clientsGrowth?.comparisonLabel },
     { label: "Emitidas", value: emittedCount.toString(), icon: CheckCircle, color: "text-success", change: null, size: "sm", sales: emitted },
     { label: "Em Andamento", value: pendingCount.toString(), icon: Clock, color: "text-warning", change: null, size: "sm", sales: pending },
     { label: "Internacional", value: `${intlPct.toFixed(0)}%`, icon: Globe, color: "text-info", change: null, size: "sm", sales: filtered.filter(s => s.is_international) },
@@ -142,6 +143,7 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
         {kpis.map(k => (
           <Card
             key={k.label}
+            title={(k as any).tooltip}
             className="p-3 md:p-4 glass-card group relative overflow-hidden cursor-pointer hover:ring-1 hover:ring-accent/30 transition-all"
             onClick={() => hasDrilldown && k.sales && setDrilldown({ label: k.label, sales: k.sales })}
           >
@@ -163,6 +165,9 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
                 {k.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {Math.abs(k.change).toFixed(1)}%
               </div>
+            )}
+            {(k as any).footnote && (
+              <div className="mt-0.5 text-[9px] text-muted-foreground/70 truncate">{(k as any).footnote}</div>
             )}
           </Card>
         ))}

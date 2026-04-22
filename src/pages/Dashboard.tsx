@@ -306,19 +306,73 @@ export default function Dashboard() {
     return arr;
   }, [clients]);
 
-  // Clients growth: compare new clients in current period vs equivalent previous period.
-  // Uses binary search over the pre-sorted timestamps — O(log n) per period change.
+  // Clients growth: regras específicas por período (todas usam busca binária O(log n)).
+  // - "today": hoje vs ontem
+  // - "yesterday": ontem vs anteontem
+  // - "this_month": mês corrente (parcial) vs mesmo intervalo do mês anterior
+  // - "last_month": mês anterior completo vs mês retrasado
+  // - "7d/30d/90d/12m": janela atual vs janela anterior de mesmo tamanho
+  // - "all": últimos 30d vs 30d anteriores (referência de tendência recente)
   const clientsGrowth = useMemo(() => {
-    const now = Date.now();
-    const windowMs = periodCutoff
-      ? (periodEnd ? periodEnd.getTime() : now) - periodCutoff.getTime()
-      : 30 * 86400000; // default 30d window when "all"
-    const currentStart = periodCutoff ? periodCutoff.getTime() : now - windowMs;
-    const currentEnd = periodEnd ? periodEnd.getTime() : now;
-    const previousStart = currentStart - windowMs;
-    const previousEnd = currentStart;
+    const now = new Date();
+    const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const endOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999).getTime();
+    const addDays = (ts: number, days: number) => ts + days * 86400000;
 
-    // lowerBound: first index where arr[i] >= target
+    let currentStart: number;
+    let currentEnd: number;
+    let previousStart: number;
+    let previousEnd: number;
+    let comparisonLabel: string;
+
+    if (period === "today") {
+      currentStart = startOfDay(now);
+      currentEnd = endOfDay(now);
+      const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+      previousStart = startOfDay(yest);
+      previousEnd = endOfDay(yest);
+      comparisonLabel = "vs ontem";
+    } else if (period === "yesterday") {
+      const yest = new Date(now); yest.setDate(yest.getDate() - 1);
+      currentStart = startOfDay(yest);
+      currentEnd = endOfDay(yest);
+      const day2 = new Date(now); day2.setDate(day2.getDate() - 2);
+      previousStart = startOfDay(day2);
+      previousEnd = endOfDay(day2);
+      comparisonLabel = "vs anteontem";
+    } else if (period === "this_month") {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      currentStart = monthStart.getTime();
+      currentEnd = now.getTime();
+      const elapsedMs = currentEnd - currentStart;
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      previousStart = prevMonthStart;
+      previousEnd = prevMonthStart + elapsedMs;
+      comparisonLabel = "vs mesmo intervalo do mês anterior";
+    } else if (period === "last_month") {
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999).getTime();
+      const prev2Start = new Date(now.getFullYear(), now.getMonth() - 2, 1).getTime();
+      const prev2End = new Date(now.getFullYear(), now.getMonth() - 1, 0, 23, 59, 59, 999).getTime();
+      currentStart = prevMonthStart; currentEnd = prevMonthEnd;
+      previousStart = prev2Start; previousEnd = prev2End;
+      comparisonLabel = "vs mês retrasado";
+    } else if (period === "all") {
+      currentEnd = now.getTime();
+      currentStart = addDays(currentEnd, -30);
+      previousEnd = currentStart;
+      previousStart = addDays(previousEnd, -30);
+      comparisonLabel = "últimos 30d vs 30d anteriores";
+    } else {
+      const daysMap: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
+      const days = daysMap[period] ?? 30;
+      currentEnd = now.getTime();
+      currentStart = addDays(currentEnd, -days);
+      previousEnd = currentStart;
+      previousStart = addDays(previousEnd, -days);
+      comparisonLabel = `vs ${days}d anteriores`;
+    }
+
     const lowerBound = (target: number) => {
       let lo = 0, hi = clientTimestamps.length;
       while (lo < hi) {
@@ -328,7 +382,6 @@ export default function Dashboard() {
       }
       return lo;
     };
-    // upperBound: first index where arr[i] > target
     const upperBound = (target: number) => {
       let lo = 0, hi = clientTimestamps.length;
       while (lo < hi) {
@@ -340,11 +393,17 @@ export default function Dashboard() {
     };
 
     const newCurrent = upperBound(currentEnd) - lowerBound(currentStart);
-    const newPrevious = lowerBound(previousEnd) - lowerBound(previousStart);
+    const newPrevious = upperBound(previousEnd) - lowerBound(previousStart);
     const totalAtPreviousEnd = upperBound(previousEnd);
 
-    return { current: clients.length, previousTotal: totalAtPreviousEnd, newCurrent, newPrevious };
-  }, [clientTimestamps, clients.length, periodCutoff, periodEnd]);
+    return {
+      current: clients.length,
+      previousTotal: totalAtPreviousEnd,
+      newCurrent,
+      newPrevious,
+      comparisonLabel,
+    };
+  }, [clientTimestamps, clients.length, period]);
 
   const activeFilterCount = useMemo(() => {
     let c = 0;
