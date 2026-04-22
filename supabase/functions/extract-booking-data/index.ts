@@ -339,7 +339,7 @@ Deno.serve(async (req) => {
               role: "user",
               content: [
                 { type: "text", text: userText },
-                { type: "image_url", image_url: { url: dataUrl } },
+                ...imageContents,
               ],
             },
           ],
