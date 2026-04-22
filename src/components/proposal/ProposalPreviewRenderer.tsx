@@ -457,11 +457,13 @@ function buildPreviewFlightGrouping(displaySegments: any[]) {
 
       if (segments.length === 0) return null;
 
+      // Priorize the classification result over any pre-existing `direction` on the segment.
+      // Individual flight items often come hardcoded as "ida" — trust the itinerary classifier
+      // for ROUND_TRIP / OPEN_JAW (leg 0 = ida, leg 1 = volta).
       const direction = String(
-        segments[0]?.direction ||
-        ((classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
+        (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
           ? (legIndex === 0 ? "ida" : "volta")
-          : "trecho"),
+          : (segments[0]?.direction || (classification.type === "ONE_WAY" ? "ida" : "trecho")),
       ).toLowerCase();
 
       const label = direction === "volta"
