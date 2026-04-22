@@ -1066,10 +1066,15 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {/* ──── DESTINATIONS ──── */}
       {showDestinations && (destinations.length > 0 || (proposal.destinations?.length > 0 && destinations.length === 0)) && (
         <section data-track-section="destinations" className="py-10 sm:py-14 px-5 sm:px-6">
-          <SectionTitle subtitle="Os lugares que você vai explorar">Seus Destinos</SectionTitle>
           {(() => {
             const destList = destinations.length > 0 ? destinations : (proposal.destinations || []);
             const count = destList.length;
+            const isSingle = count === 1;
+            const titleNode = (
+              <SectionTitle subtitle={isSingle ? "O lugar que você vai explorar" : "Os lugares que você vai explorar"}>
+                {isSingle ? "Seu Destino" : "Seus Destinos"}
+              </SectionTitle>
+            );
             const gridCols = count === 1
               ? "grid-cols-1 max-w-md"
               : count === 2
@@ -1078,6 +1083,8 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                   ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl"
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl";
             return (
+              <>
+                {titleNode}
           <div className={`mx-auto grid ${gridCols} gap-6 ${count === 1 ? "" : "justify-items-center"}`}>
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
               <motion.div key={dest.id || idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} className="group rounded-2xl overflow-hidden relative h-72 cursor-pointer shadow-lg shadow-black/10 w-full">
@@ -1090,6 +1097,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               </motion.div>
             ))}
           </div>
+              </>
             );
           })()}
         </section>
