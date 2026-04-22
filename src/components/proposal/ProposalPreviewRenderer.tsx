@@ -1005,14 +1005,44 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FLIGHTS ──── */}
-      {showFlights && flights.length > 0 && (
-        <section data-track-section="flights" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
-          <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
-          <div className="max-w-3xl mx-auto space-y-8">
-            {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
-          </div>
-        </section>
-      )}
+      {showFlights && flights.length > 0 && (() => {
+        // Aggregate segments across ALL flight items so multi-segment Ida/Volta are
+        // classified as a single itinerary (avoids labeling every flight as "IDA").
+        const allSegments: any[] = [];
+        flights.forEach((f) => {
+          const d = normalizeFlightData(f.data);
+          const segs = d.segments.length > 0 ? d.segments : [{
+            airline: d.airline, airline_name: d.airline_name, airline_iata: d.airline?.substring(0, 2),
+            flight_number: d.flight_number?.replace(/^[A-Z]{2}/, ""),
+            origin_iata: d.origin, destination_iata: d.destination,
+            departure_time: d.departure_time, arrival_time: d.arrival_time,
+            departure_date: d.departure,
+            terminal: d.terminal, arrival_terminal: d.arrival_terminal,
+            duration_minutes: null,
+          }];
+          segs.forEach((s: any) => allSegments.push(s));
+        });
+
+        // If we successfully aggregated segments, render a single classified itinerary card.
+        // Otherwise fall back to the per-item rendering.
+        const useAggregated = allSegments.length >= 2;
+
+        return (
+          <section data-track-section="flights" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
+            <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
+            <div className="max-w-3xl mx-auto space-y-8">
+              {useAggregated ? (
+                <FlightCard
+                  flight={{ data: { segments: allSegments } }}
+                  idx={0}
+                />
+              ) : (
+                flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ──── HOTELS ──── */}
       {showHotels && hotels.length > 0 && (
@@ -1048,14 +1078,14 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
               {proposal.value_per_person && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
-                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
                 </div>
               )}
               {proposal.total_value && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
-                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
+                  <p className="text-3xl sm:text-4xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
                 </div>
               )}
               {proposal.includes_text && (
