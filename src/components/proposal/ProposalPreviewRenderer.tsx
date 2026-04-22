@@ -912,13 +912,25 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               layoverMinutes: calcPreciseLayoverMinutes(previousSeg, seg) ?? undefined,
             };
           });
+          const fmtHeaderDate = (raw: any) => {
+            if (!raw) return "";
+            try {
+              return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM/yyyy", { locale: ptBR });
+            } catch { return String(raw); }
+          };
+          const headerDep = fmtHeaderDate(firstSeg?.departure_date);
+          const headerArr = fmtHeaderDate(lastSeg?.arrival_date || lastSeg?.departure_date);
+          const headerDateLabel = headerDep && headerArr && headerDep !== headerArr
+            ? `${headerDep} → ${headerArr}`
+            : (headerDep || headerArr || "—");
+
           return (
             <div key={li}>
               <div className="mb-4 rounded-2xl border border-border/30 bg-card/60 px-4 py-4 text-center sm:px-6">
                 <p className="text-sm uppercase tracking-[0.2em] text-foreground font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   Passagem aérea - {leg.label}
                 </p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2 sm:gap-4 text-sm">
+                <div className="mt-3 grid gap-2 grid-cols-1 sm:grid-cols-3 sm:gap-4 text-sm">
                   <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
                     <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Origem</span>
                     <span className="block mt-1 font-semibold text-foreground">{originCity}</span>
@@ -926,6 +938,10 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                   <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
                     <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Destino</span>
                     <span className="block mt-1 font-semibold text-foreground">{destinationCity}</span>
+                  </div>
+                  <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
+                    <span className="block text-[10px] uppercase tracking-[0.18em] text-muted-foreground">Data</span>
+                    <span className="block mt-1 font-semibold text-foreground">{headerDateLabel}</span>
                   </div>
                 </div>
               </div>
