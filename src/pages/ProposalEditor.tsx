@@ -34,6 +34,7 @@ import FlightCoverPicker from "@/components/proposal/FlightCoverPicker";
 import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
+import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -831,17 +832,22 @@ export default function ProposalEditor() {
               <div className="md:col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
                   <Label>Imagem de capa</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setCoverDialogOpen(true)}
-                    className="h-7 text-xs text-accent hover:text-accent hover:bg-accent/10"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 mr-1" /> Sugerir capa
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <CoverUploadButton
+                      onUploaded={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setCoverDialogOpen(true)}
+                      className="h-7 text-xs text-accent hover:text-accent hover:bg-accent/10"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 mr-1" /> Sugerir capa
+                    </Button>
+                  </div>
                 </div>
-                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
+                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="Cole uma URL ou clique em Enviar arquivo" />
                 {form.cover_image_url?.trim() && /^https?:\/\//i.test(form.cover_image_url.trim()) && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-border/30 bg-muted/30 aspect-[16/6] max-h-[180px]">
                     <img
