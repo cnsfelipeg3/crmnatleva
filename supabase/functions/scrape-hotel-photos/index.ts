@@ -412,7 +412,7 @@ async function scrapeOfficialSite(
     ...categorizedPages.priority,
     ...categorizedPages.gallery,
     ...categorizedPages.other,
-  ].slice(0, 50); // Up from 30 → 50 for deeper coverage
+  ].slice(0, 30); // Reduced from 50 → 30 to stay within 150s edge timeout
 
   if (pagesToScrape.length === 0 && mainUrl) {
     pagesToScrape.push({ url: mainUrl, inferredSection: "" });
