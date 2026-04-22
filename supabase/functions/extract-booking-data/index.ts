@@ -248,7 +248,7 @@ const SCHEMAS: Record<ItemType, any> = {
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
   flight:
-    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro de cada perna marque is_connection=true. (4) Converta durações como '12h 01m' para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se houver bagagem despachada, preencha checked_bags_included e checked_bag_weight_kg; se não, 0. (8) CLASSIFIQUE o itinerary_type: ROUND_TRIP se há ida E volta entre o mesmo par de cidades; ONE_WAY se só ida sem retorno; OPEN_JAW se a volta sai/chega em cidade diferente; MULTI_CITY se forem 3+ cidades distintas em sequência. (9) Marque cada segmento com direction='ida' ou 'volta' (ou 'trecho' em multi-city). (10) Construa title humano (ex.: 'GRU → FCO · LATAM · Ida e Volta' ou 'GRU → CDG · Air France · Somente Ida'). (11) ATENÇÃO ESPECIAL A CONEXÕES: uma conexão típica dura entre 1h e 12h (no máximo 24h). NUNCA gere uma conexão maior que 24h — se a diferença entre o desembarque do trecho anterior e o embarque do próximo ultrapassa 24h, você está errando a data do segundo trecho. Reveja dia/mês com cuidado. Ex.: se desembarca 01:55 do dia 19 em DXB e o próximo voo é em DXB às 09:05, é quase certo que o embarque é no MESMO dia 19 (conexão ~7h), NÃO no dia 21. Sempre escolha a conexão de menor duração plausível ao decidir a data. (12) Omita campos sem evidência clara em vez de inventar.",
+    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro de cada perna marque is_connection=true. O PRIMEIRO trecho da volta deve ser is_connection=false. (4) Converta durações como '12h 01m' para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se houver bagagem despachada, preencha checked_bags_included e checked_bag_weight_kg; se não, 0. (8) CLASSIFIQUE o itinerary_type: ROUND_TRIP se há ida E volta entre o mesmo par de cidades; ONE_WAY se só ida sem retorno; OPEN_JAW se a volta sai/chega em cidade diferente; MULTI_CITY se forem 3+ cidades distintas em sequência. (9) Marque cada segmento com direction='ida' ou 'volta' (ou 'trecho' em multi-city). (10) Construa title humano (ex.: 'GRU → FCO · LATAM · Ida e Volta' ou 'GRU → CDG · Air France · Somente Ida'). (11) ATENÇÃO ESPECIAL A CONEXÕES: uma conexão típica dura entre 1h e 12h (no máximo 24h). NUNCA gere uma conexão maior que 24h — se a diferença entre o desembarque do trecho anterior e o embarque do próximo ultrapassa 24h, isso normalmente NÃO é conexão e sim início de outra perna da viagem (geralmente a volta). Se o passageiro chegou ao destino, ficou hospedado alguns dias e só depois embarcou de novo, preserve a data real mostrada para a volta e NÃO puxe o próximo voo para o mesmo dia da chegada. Ex.: chegou em MLE em 13/05 e o próximo voo saindo de MLE está em 19/05; isso é volta, não conexão. (12) Se houver conexão curta no mesmo aeroporto, sempre escolha a data que gere a menor conexão plausível. (13) Omita campos sem evidência clara em vez de inventar.",
   hotel:
     "Você é um extrator preciso de reservas e cotações de HOTEL (Booking, Decolar, Expedia, sites de hotéis, e-mails de confirmação). MISSÃO: extrair TODOS os dados visíveis com normalização rigorosa. Regras: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de checkin/checkout se não vier explícito. (3) NORMALIZE meal_plan para um destes valores: 'Sem refeição', 'Café da manhã', 'Meia pensão', 'Pensão completa', 'All inclusive'. Preencha também meal_plan_code (RO/BB/HB/FB/AI). (4) Detecte stars (categoria 1-5) e rating separadamente (nota dos hóspedes 0-10). (5) Identifique se a tarifa é reembolsável (is_refundable) e até quando o cancelamento é gratuito (free_cancellation_until em YYYY-MM-DD). (6) Liste amenities visíveis como array. (7) Construa um description curto e útil: 'Hotel 5★ em Roma · Café da manhã · Quarto Deluxe Vista Cidade'. (8) Identifique adults/children/rooms separadamente quando possível. Omita campos sem evidência em vez de inventar.",
   experience:
@@ -415,12 +415,29 @@ Deno.serve(async (req) => {
         return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
       };
       const dateToISO = (d: Date): string => d.toISOString().slice(0, 10);
+      const normalizeDirection = (value: unknown): "ida" | "volta" | "trecho" | "" => {
+        const dir = String(value || "").trim().toLowerCase();
+        return dir === "ida" || dir === "volta" || dir === "trecho" ? dir : "";
+      };
+      const isConnectionCandidate = (prev: any, next: any): boolean => {
+        if (!prev || !next) return false;
+        if (next.is_connection === true) return true;
+
+        const prevDir = normalizeDirection(prev.direction);
+        const nextDir = normalizeDirection(next.direction);
+
+        if (prevDir && nextDir && prevDir !== nextDir) return false;
+        if (prevDir && nextDir && prevDir === nextDir) return true;
+
+        return false;
+      };
       const MAX_LAYOVER_MIN = 24 * 60;
 
       for (let i = 1; i < segs.length; i++) {
         const prev = segs[i - 1];
         const next = segs[i];
         if (!prev || !next) continue;
+        if (!isConnectionCandidate(prev, next)) continue;
         const prevDest = String(prev.destination_iata || "").toUpperCase();
         const nextOrig = String(next.origin_iata || "").toUpperCase();
         if (!prevDest || prevDest !== nextOrig) continue;
