@@ -93,7 +93,18 @@ export function HotelPhotoGallery({
     }
   };
 
-  const handleAddManual = () => {
+  const toggleExcluded = (idx: number) => {
+    const next = cleanPhotos.map((p, i) =>
+      i === idx ? { ...p, excluded: !p.excluded } : p,
+    );
+    onPhotosChange(next);
+    const becameExcluded = !cleanPhotos[idx]?.excluded;
+    // If excluding the cover, promote first included photo
+    if (becameExcluded && cleanPhotos[idx]?.url === coverUrl) {
+      const firstIncluded = next.find((p) => !p.excluded);
+      onCoverChange(firstIncluded?.url || "");
+    }
+  };
     const url = manualUrl.trim();
     if (!url) return;
     const next: HotelPhoto[] = [
@@ -119,13 +130,13 @@ export function HotelPhotoGallery({
             Galeria de fotos
             {cleanPhotos.length > 0 && (
               <span className="ml-1.5 text-muted-foreground font-normal">
-                ({cleanPhotos.length})
+                ({cleanPhotos.filter((p) => !p.excluded).length} de {cleanPhotos.length} na proposta)
               </span>
             )}
           </span>
         </div>
         <span className="text-[10px] text-muted-foreground hidden sm:block">
-          Clique em uma foto para abrir. Use ⭐ para definir como capa.
+          Clique para abrir · ⭐ define capa · ☑ inclui na proposta
         </span>
       </div>
 
@@ -134,6 +145,7 @@ export function HotelPhotoGallery({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
           {cleanPhotos.map((photo, pIdx) => {
             const isCover = photo.url === coverUrl;
+            const isExcluded = photo.excluded === true;
             const badgeLabel =
               photo.source === "official"
                 ? "Oficial"
@@ -272,6 +284,25 @@ export function HotelPhotoGallery({
               </span>
             </div>
             <div className="flex items-center gap-2">
+              {/* Include-in-proposal toggle */}
+              <button
+                type="button"
+                onClick={() => toggleExcluded(lightboxIndex)}
+                className={cn(
+                  "flex items-center gap-2 h-8 px-3 rounded-md border text-xs font-medium transition-colors",
+                  current.excluded
+                    ? "border-border bg-background text-muted-foreground hover:bg-muted"
+                    : "border-primary/40 bg-primary/10 text-primary hover:bg-primary/20",
+                )}
+              >
+                <Checkbox
+                  checked={!current.excluded}
+                  onCheckedChange={() => toggleExcluded(lightboxIndex)}
+                  className="h-3.5 w-3.5 pointer-events-none"
+                />
+                Incluir na proposta
+              </button>
+
               {currentIsCover ? (
                 <Badge className="gap-1 bg-primary text-primary-foreground">
                   <Check className="h-3 w-3" /> Capa atual
@@ -282,6 +313,8 @@ export function HotelPhotoGallery({
                   variant="default"
                   className="h-8 gap-1.5"
                   onClick={() => handleSetCover(current.url)}
+                  disabled={current.excluded}
+                  title={current.excluded ? "Inclua a foto na proposta para defini-la como capa" : undefined}
                 >
                   <Star className="h-3.5 w-3.5" /> Definir como capa
                 </Button>
