@@ -3,27 +3,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function fetchImageAsBase64(url: string): Promise<{ dataUrl: string; ok: boolean }> {
-  try {
-    const res = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(10000),
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "image/*,*/*;q=0.8",
-      },
-    });
-    if (!res.ok) return { dataUrl: "", ok: false };
-    const contentType = res.headers.get("content-type") || "image/jpeg";
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength < 500) return { dataUrl: "", ok: false };
-    const bytes = new Uint8Array(buf);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return { dataUrl: `data:${contentType};base64,${btoa(binary)}`, ok: true };
-  } catch { return { dataUrl: "", ok: false }; }
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -41,26 +20,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const batchSize = 8;
+    const batchSize = 6;
     const allClassified: any[] = [];
 
     for (let batchStart = 0; batchStart < photo_urls.length; batchStart += batchSize) {
       const batchUrls = photo_urls.slice(batchStart, batchStart + batchSize);
       const batchContexts = contexts.slice(batchStart, batchStart + batchSize);
 
-      console.log(`Converting batch ${batchStart / batchSize + 1} (${batchUrls.length} images)...`);
-      const imageResults = await Promise.all(batchUrls.map((url: string) => fetchImageAsBase64(url)));
+      console.log(`Processing batch ${batchStart / batchSize + 1} (${batchUrls.length} images by URL)...`);
 
-      const validImages: { originalIndex: number; dataUrl: string; context: string }[] = [];
-      for (let i = 0; i < imageResults.length; i++) {
-        if (imageResults[i].ok) {
-          validImages.push({
-            originalIndex: batchStart + i,
-            dataUrl: imageResults[i].dataUrl,
-            context: batchContexts[i] || "",
-          });
-        }
-      }
+      // Skip base64 conversion entirely — pass URLs directly to the AI gateway.
+      // This eliminates the CPU/memory bottleneck that was causing WORKER_RESOURCE_LIMIT.
+      const validImages: { originalIndex: number; dataUrl: string; context: string }[] = batchUrls
+        .map((url: string, i: number) => ({
+          originalIndex: batchStart + i,
+          dataUrl: url,
+          context: batchContexts[i] || "",
+        }))
+        .filter((img) => typeof img.dataUrl === "string" && img.dataUrl.startsWith("http"));
 
       if (validImages.length === 0) continue;
 
