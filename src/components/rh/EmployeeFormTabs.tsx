@@ -480,39 +480,136 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
           )}
         </TabsContent>
 
-        {/* TAB 6: PERMISSÕES */}
+        {/* TAB 6: PERMISSÕES GRANULARES */}
         <TabsContent value="permissoes" className="space-y-4 mt-4">
-          <div>
-            <Label className="text-xs text-muted-foreground">Aplicar perfil pré-configurado:</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {Object.keys(PERMISSION_PRESETS).map(preset => (
-                <Button key={preset} variant="outline" size="sm" className="text-xs capitalize" onClick={() => applyPreset(preset)}>
-                  {preset}
-                </Button>
+          <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Perfis pré-configurados</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Aplica um conjunto base — você pode customizar depois</p>
+              </div>
+              {activePreset && (
+                <Badge variant="outline" className="text-[10px] gap-1">
+                  <Check className="w-3 h-3" /> {PERMISSION_PRESETS[activePreset]?.label}
+                </Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {Object.entries(PERMISSION_PRESETS).map(([key, preset]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => applyPreset(key)}
+                  className={`text-left rounded-md border px-3 py-2 transition-colors hover:border-primary/60 hover:bg-primary/5 ${activePreset === key ? "border-primary bg-primary/10" : "border-border/60 bg-background"}`}
+                >
+                  <p className="text-xs font-semibold">{preset.label}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-2">{preset.description}</p>
+                </button>
               ))}
             </div>
           </div>
-          <div className="border rounded-lg overflow-hidden">
-            <div className="grid grid-cols-4 bg-muted/50 px-4 py-2 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-              <span>Módulo</span><span>Sem Acesso</span><span>Parcial</span><span>Total</span>
-            </div>
-            {MODULES.map(mod => (
-              <div key={mod} className="grid grid-cols-4 items-center px-4 py-2.5 border-t text-sm">
-                <span className="font-medium">{mod}</span>
-                {PERMISSION_LEVELS.map(level => (
-                  <label key={level} className="flex items-center gap-1.5 cursor-pointer">
-                    <input
-                      type="radio"
-                      name={`perm-${mod}`}
-                      checked={(permissions[mod] || "sem_acesso") === level}
-                      onChange={() => setPermission(mod, level)}
-                      className="accent-primary"
-                    />
-                    <Badge variant="outline" className={`text-[9px] ${permLevelColor(level)}`}>{permLevelLabel(level)}</Badge>
-                  </label>
-                ))}
-              </div>
-            ))}
+
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissões por módulo</p>
+            {MODULE_CATALOG.map(mod => {
+              const perm = permissions[mod.key] || emptyModulePerm();
+              const status = moduleStatus(mod.key);
+              const isOpen = expandedModule === mod.key;
+              const statusBadge = {
+                total:    { label: "Acesso total",   className: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
+                custom:   { label: "Personalizado",  className: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
+                readonly: { label: "Somente leitura", className: "bg-amber-500/15 text-amber-600 border-amber-500/30" },
+                none:     { label: "Sem acesso",     className: "bg-muted text-muted-foreground border-border" },
+              }[status];
+              return (
+                <div key={mod.key} className="rounded-lg border border-border/60 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedModule(isOpen ? null : mod.key)}
+                    className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold">{mod.label}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{mod.description}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className={`text-[10px] shrink-0 ${statusBadge.className}`}>{statusBadge.label}</Badge>
+                  </button>
+
+                  {isOpen && (
+                    <div className="border-t border-border/60 bg-muted/10 px-4 py-3 space-y-4">
+                      {/* Atalhos */}
+                      <div className="flex flex-wrap gap-1.5">
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "all")}>
+                          <Check className="w-3 h-3 mr-1" /> Liberar tudo
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "readonly")}>
+                          <Eye className="w-3 h-3 mr-1" /> Somente leitura
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "none")}>
+                          <X className="w-3 h-3 mr-1" /> Bloquear tudo
+                        </Button>
+                      </div>
+
+                      {/* Ações (verbos) */}
+                      <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Ações permitidas</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                          {mod.actions.map(action => {
+                            const meta = ACTION_META[action];
+                            const Icon = meta.icon;
+                            const enabled = perm.actions.includes(action);
+                            return (
+                              <button
+                                key={action}
+                                type="button"
+                                onClick={() => toggleAction(mod.key, action)}
+                                title={meta.desc}
+                                className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${enabled ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 bg-background text-muted-foreground hover:border-primary/40"}`}
+                              >
+                                <Icon className="w-3.5 h-3.5 shrink-0" />
+                                <span className="truncate">{meta.label}</span>
+                                {enabled && <Check className="w-3 h-3 ml-auto shrink-0" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Sub-funcionalidades */}
+                      {mod.features.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Funcionalidades específicas</p>
+                          <div className="space-y-1">
+                            {mod.features.map(feat => {
+                              const enabled = !!perm.features[feat.key];
+                              return (
+                                <label
+                                  key={feat.key}
+                                  className="flex items-start gap-3 rounded-md px-2 py-1.5 hover:bg-muted/40 cursor-pointer"
+                                >
+                                  <Switch checked={enabled} onCheckedChange={() => toggleFeature(mod.key, feat.key)} className="mt-0.5" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-medium">{feat.label}</p>
+                                    {feat.description && <p className="text-[10px] text-muted-foreground">{feat.description}</p>}
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
+            <strong>Dica:</strong> as permissões só passam a valer após o colaborador ter um login criado na aba <em>Acesso</em>. Sem login vinculado, ele aparece no cadastro mas não acessa o sistema.
           </div>
         </TabsContent>
 
