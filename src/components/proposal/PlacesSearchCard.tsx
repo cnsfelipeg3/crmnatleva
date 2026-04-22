@@ -794,6 +794,20 @@ export default function PlacesSearchCard({
     }
   }, [selectedPlace, curatedPhotos]);
 
+  /* ── Auto-disparo: ao selecionar um hotel, busca o site oficial automaticamente ── */
+  const autoFetchedPlaceIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!selectedPlace?.place_id) return;
+    if (entityType !== "hotel") return;
+    if (autoFetchedPlaceIdRef.current === selectedPlace.place_id) return;
+    if (loadingDetails || loadingPhotos) return;
+    autoFetchedPlaceIdRef.current = selectedPlace.place_id;
+    // Pequeno delay para não competir com a classificação inicial das fotos do Google
+    const t = setTimeout(() => { fetchOfficialSitePhotos(false); }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlace?.place_id, entityType, loadingDetails, loadingPhotos]);
+
   /* ── Confirm ── */
   const handleConfirm = useCallback(() => {
     if (!selectedPlace) return;

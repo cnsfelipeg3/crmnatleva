@@ -1104,7 +1104,7 @@ export default function ProposalEditor() {
                     {/* Collapsible content */}
                     {!isCollapsed && (
                       <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
-                        {/* Google Places search button */}
+                        {/* Buscar Mídias (Google Places + Site Oficial unificado) */}
                         {supportsPlaces && !isSearchOpen && (
                           <Button
                             variant={hasPlaceData ? "outline" : "default"}
@@ -1112,8 +1112,8 @@ export default function ProposalEditor() {
                             onClick={() => setPlacesSearchIdx(idx)}
                             className="gap-1.5 text-xs w-full sm:w-auto"
                           >
-                            <Search className="w-3.5 h-3.5" />
-                            {hasPlaceData ? "Buscar outro no Google" : "Buscar no Google Places"}
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {hasPlaceData ? "Buscar outras mídias" : "Buscar Mídias"}
                           </Button>
                         )}
 
@@ -1338,26 +1338,7 @@ export default function ProposalEditor() {
                             </>
                           )}
 
-                          {/* Hotel Media Browser — sempre visível para troca rápida de fotos */}
-                          {item.item_type === "hotel" && item.title && (
-                            <div className="md:col-span-2 p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5">
-                              <HotelMediaBrowser
-                                hotelName={item.title}
-                                hotelCity={item.data?.location || ""}
-                                hotelCountry=""
-                                onSelectPhotos={(photos) => {
-                                  if (photos.length > 0 && !item.image_url) {
-                                    updateItem(idx, "image_url", photos[0].url);
-                                  }
-                                  const existingPhotos = item.data?.official_photos || [];
-                                  updateItemData(idx, "official_photos", [...existingPhotos, ...photos]);
-                                }}
-                                onSelectRoomBlock={(block) => {
-                                  updateItemData(idx, "room_block", block);
-                                }}
-                              />
-                            </div>
-                          )}
+                          {/* Busca unificada de mídias está acima ("Buscar Mídias" → PlacesSearchCard) */}
                         </div>
                       </div>
                     )}
