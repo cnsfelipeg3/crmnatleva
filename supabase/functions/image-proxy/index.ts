@@ -173,7 +173,7 @@ Deno.serve(async (req) => {
 
       const contentType = upstreamResponse.headers.get("content-type") || "image/jpeg";
       const contentLength = Number(upstreamResponse.headers.get("content-length") || "0");
-      if (Number.isFinite(contentLength) && contentLength > 12 * 1024 * 1024) {
+      if (Number.isFinite(contentLength) && contentLength > 25 * 1024 * 1024) {
         return new Response(JSON.stringify({ error: "Imagem muito grande para proxy" }), {
           status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
