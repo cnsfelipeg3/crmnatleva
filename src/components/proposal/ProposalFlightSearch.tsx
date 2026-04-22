@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane } from "lucide-react";
+import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
@@ -307,33 +307,44 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
         const directionLabel = legLabels[legIdx];
         const isReturn = directionLabel === "Volta";
         const isOutbound = directionLabel === "Ida";
+        const accent = isOutbound
+          ? "border-primary/40 bg-primary/[0.04]"
+          : isReturn
+            ? "border-info/40 bg-info/[0.04]"
+            : "border-border/60 bg-muted/30";
+        const banner = isOutbound
+          ? "bg-primary/10 text-primary border-primary/30"
+          : isReturn
+            ? "bg-info/10 text-info border-info/30"
+            : "bg-muted text-muted-foreground border-border/60";
+        const DirIcon = isReturn ? PlaneLanding : PlaneTakeoff;
 
         return (
-          <div key={leg.startIdx} className="space-y-0">
-            {/* Leg header */}
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className={`text-xs font-semibold uppercase tracking-wider ${
-                  isOutbound ? "text-primary" : isReturn ? "text-info" : "text-muted-foreground"
-                }`}>
+          <div key={leg.startIdx} className={`rounded-xl border-2 ${accent} overflow-hidden`}>
+            {/* Leg banner */}
+            <div className={`flex items-center justify-between gap-2 px-3 py-2 border-b ${banner}`}>
+              <div className="flex items-center gap-2 min-w-0">
+                <DirIcon className="w-3.5 h-3.5 shrink-0" />
+                <span className="text-xs font-bold uppercase tracking-wider">
                   {directionLabel}
                 </span>
-                <span className="text-[10px] text-muted-foreground/70">
+                <span className="text-[10px] opacity-70 truncate">
                   {leg.segments[0].seg.origin_iata || "?"} → {leg.segments[leg.segments.length - 1].seg.destination_iata || "?"}
                 </span>
-                {isMultiSeg ? (
-                  <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:bg-amber-950/30">
-                    <ArrowDownUp className="w-2.5 h-2.5" />
-                    {leg.segments.length - 1} conexão{leg.segments.length > 2 ? "ões" : ""}
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-[10px] gap-1 h-5 border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:text-emerald-400 dark:bg-emerald-950/30">
-                    <Plane className="w-2.5 h-2.5" />
-                    Voo direto
-                  </Badge>
-                )}
               </div>
+              {isMultiSeg ? (
+                <Badge variant="outline" className="text-[10px] gap-1 h-5 bg-background/60 shrink-0">
+                  <ArrowDownUp className="w-2.5 h-2.5" />
+                  {leg.segments.length - 1} conexão{leg.segments.length > 2 ? "ões" : ""}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] gap-1 h-5 bg-background/60 shrink-0">
+                  <Plane className="w-2.5 h-2.5" />
+                  Voo direto
+                </Badge>
+              )}
             </div>
+            <div className="p-3 space-y-0">
 
             {/* Cabeçalho exibido ao cliente (editável) */}
             {(() => {
@@ -533,6 +544,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
               >
                 <ArrowDownUp className="w-3 h-3" /> Adicionar conexão
               </Button>
+            </div>
             </div>
           </div>
         );
