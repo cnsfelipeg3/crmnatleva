@@ -34,17 +34,49 @@ const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
   flight: Plane,
   hotel: Hotel,
+  train: Train,
+  car: Car,
+  transfer: Bus,
+  tour: Sparkles,
+  ticket: Ticket,
+  cruise: Ship,
   experience: Sparkles,
-  transfer: MapPin,
+  itinerary: MapIcon,
+  insurance: ShieldCheck,
+  other: Package,
 };
 
 const itemTypeLabels: Record<string, string> = {
   destination: "Destino",
-  flight: "Voo",
-  hotel: "Hotel",
-  experience: "Experiência",
+  flight: "Aéreo",
+  hotel: "Hospedagem",
+  train: "Trem",
+  car: "Carro",
   transfer: "Transfer",
+  tour: "Passeio",
+  ticket: "Ingresso",
+  cruise: "Cruzeiro",
+  experience: "Experiência",
+  itinerary: "Roteiro Personalizado",
+  insurance: "Seguro Viagem",
+  other: "Outros",
 };
+
+// Categorias exibidas como abas verticais dentro de "Itens da Viagem"
+const ITEM_CATEGORIES: { value: string; label: string; icon: any }[] = [
+  { value: "flight", label: "Aéreo", icon: Plane },
+  { value: "hotel", label: "Hospedagens", icon: Hotel },
+  { value: "train", label: "Trens", icon: Train },
+  { value: "car", label: "Carro", icon: Car },
+  { value: "transfer", label: "Transfer", icon: Bus },
+  { value: "tour", label: "Passeios", icon: Sparkles },
+  { value: "ticket", label: "Ingressos", icon: Ticket },
+  { value: "cruise", label: "Cruzeiro", icon: Ship },
+  { value: "experience", label: "Experiências", icon: Sparkles },
+  { value: "itinerary", label: "Roteiro Personalizado", icon: MapIcon },
+  { value: "insurance", label: "Seguro Viagem", icon: ShieldCheck },
+  { value: "other", label: "Outros", icon: Package },
+];
 
 function generateSlug() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
