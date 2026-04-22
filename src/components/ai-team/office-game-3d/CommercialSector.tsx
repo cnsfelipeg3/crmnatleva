@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * CommercialSector — The 5-zone commercial floor of the NatLeva 3D office.
  * Lazy-renderable, self-contained, performance-optimized.

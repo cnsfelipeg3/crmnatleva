@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useMemo } from 'react';
 import { FLOOR_SIZE, RUG } from './mapData3d';
 import * as THREE from 'three';

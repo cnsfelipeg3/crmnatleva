@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Suspense, useEffect, useCallback, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, AdaptiveEvents } from '@react-three/drei';

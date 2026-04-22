@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
 

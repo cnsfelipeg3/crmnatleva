@@ -450,6 +450,7 @@ export default function Passengers() {
                     <TableHead>Passaporte</TableHead>
                     <TableHead>Validade</TableHead>
                     <TableHead>Cidade/UF</TableHead>
+                    <TableHead>Cliente desde</TableHead>
                     <TableHead className="text-center">Viagens</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -498,6 +499,9 @@ export default function Passengers() {
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {p.created_at ? formatDateBR(p.created_at) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {tripCount > 0 ? (
