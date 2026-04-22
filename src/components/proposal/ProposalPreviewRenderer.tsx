@@ -531,7 +531,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
 
           {/* Connection chips inline (one per stop) */}
           {stops > 0 && (
-            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-1.5 mt-2 w-full">
               {segments.slice(1).map((seg: any, i: number) => {
                 const prev = segments[i];
                 const layover = calcPreciseLayoverMinutes(prev, seg);
@@ -539,14 +539,15 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
                 return (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-2.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-2.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300 whitespace-nowrap max-w-full"
                   >
-                    <MapPin className="w-3 h-3" />
-                    Conexão em {iata}
+                    <MapPin className="w-3 h-3 shrink-0" />
+                    <span className="truncate">Conexão em {iata}</span>
                     {typeof layover === "number" && layover > 0 && (
                       <>
-                        <span className="text-amber-400">·</span>
-                        <Clock className="w-3 h-3" /> {fmtDuration(layover)}
+                        <span className="text-amber-400 shrink-0">·</span>
+                        <Clock className="w-3 h-3 shrink-0" />
+                        <span className="shrink-0">{fmtDuration(layover)}</span>
                       </>
                     )}
                   </span>
@@ -557,8 +558,8 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
         </div>
 
         {/* Arrival (final destination) */}
-        <div className="text-right min-w-[70px]">
-          <p className="text-lg sm:text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div className="text-right min-w-[56px] sm:min-w-[70px] shrink-0">
+          <p className="text-base sm:text-xl font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {lastSeg.arrival_time || "—"}
           </p>
           <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
