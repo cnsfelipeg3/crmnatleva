@@ -2374,7 +2374,7 @@ function FlowCanvas({ flows, loadFlows: reloadFlows }: { flows: any[]; loadFlows
       markerEnd: { type: MarkerType.ArrowClosed, color: sh === "yes" ? GREEN : sh === "no" ? RED : "hsl(var(--primary))" },
       style: { strokeWidth: 2 },
       animated: false,
-    }, eds));
+    } as any, eds));
   }, [setEdges]);
 
   const onDragOver = useCallback((event: React.DragEvent) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }, []);
