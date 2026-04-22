@@ -1,4 +1,4 @@
-import { assignDirections, classifyItinerary, type ItineraryType } from "@/lib/itineraryClassifier";
+import { assignDirections, classifyItinerary, type FlightSegmentInput, type ItineraryType } from "@/lib/itineraryClassifier";
 
 export interface FlightLegLike {
   origin_iata?: string | null;
@@ -90,19 +90,23 @@ export function buildFlightLegGroups<T extends FlightLegLike>(inputSegments: T[]
     };
   }
 
-  const classification = classifyItinerary(
-    inputSegments.map((seg, index) => ({
+  const normalizedSegments: FlightSegmentInput[] = inputSegments
+    .filter((seg): seg is T & { origin_iata: string; destination_iata: string } => Boolean(seg.origin_iata && seg.destination_iata))
+    .map((seg, index) => ({
       ...seg,
+      origin_iata: String(seg.origin_iata).toUpperCase(),
+      destination_iata: String(seg.destination_iata).toUpperCase(),
       departure_date: seg.departure_date || null,
       departure_time: seg.departure_time || null,
       arrival_date: seg.arrival_date || null,
       arrival_time: seg.arrival_time || null,
       duration_minutes: Number.isFinite(seg.duration_minutes) ? Number(seg.duration_minutes) : null,
       segment_order: Number.isFinite(seg.segment_order) ? Number(seg.segment_order) : index,
-    })),
-  );
+    }));
 
-  const directedSegments = assignDirections(inputSegments as any, classification) as T[];
+  const classification = classifyItinerary(normalizedSegments);
+
+  const directedSegments = assignDirections(normalizedSegments, classification) as T[];
   const usedIndices = new Set<number>();
 
   const resolvedLegs = classification.legs
