@@ -1232,7 +1232,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
     >
       {/* ──── HERO COVER ──── */}
       {showHero && (
-      <section data-track-section="hero" className={`relative ${embedded ? "h-[50vh] min-h-[320px]" : "h-screen"} flex items-end justify-center overflow-hidden`}>
+      <section data-track-section="hero" className={`relative ${embedded ? "aspect-[16/9] max-h-[480px] min-h-[280px]" : "h-screen"} w-full flex items-end justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${proposal.cover_image_url || fallbackCover})` }} />
         {/* Emerald-tinted gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%)] via-[hsl(158,30%,8%,0.5)] to-[hsl(160,20%,10%,0.15)]" />
