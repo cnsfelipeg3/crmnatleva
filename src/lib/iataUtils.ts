@@ -42,7 +42,13 @@ const IATA_CITY_MAP: Record<string, string> = {
   NRT: "Tóquio (Narita)", HND: "Tóquio (Haneda)", ICN: "Seul", PEK: "Pequim",
   PVG: "Xangai", HKG: "Hong Kong", SIN: "Singapura", BKK: "Bangkok", KUL: "Kuala Lumpur",
   DEL: "Nova Delhi", BOM: "Mumbai", TPE: "Taipei", MNL: "Manila",
-  CGK: "Jacarta", DPS: "Bali",
+  CGK: "Jacarta", DPS: "Bali", MLE: "Maldivas", CMB: "Colombo", KTM: "Katmandu",
+  HAN: "Hanói", SGN: "Ho Chi Minh", PNH: "Phnom Penh", REP: "Siem Reap", MFM: "Macau",
+  CAN: "Cantão", CTU: "Chengdu", XIY: "Xi'an", SZX: "Shenzhen", KIX: "Osaka", NGO: "Nagoya",
+  FUK: "Fukuoka", CJU: "Jeju", GMP: "Seul (Gimpo)", BKI: "Kota Kinabalu", PEN: "Penang",
+  // Oceania
+  SYD: "Sydney", MEL: "Melbourne", BNE: "Brisbane", PER: "Perth", AKL: "Auckland",
+  PPT: "Papeete", NAN: "Nadi",
   // Caribbean
   CUN: "Cancún", PUJ: "Punta Cana", SXM: "St. Maarten", AUA: "Aruba", CUR: "Curaçao",
   NAS: "Nassau", MBJ: "Montego Bay", HAV: "Havana", SJU: "San Juan", BGI: "Barbados",
