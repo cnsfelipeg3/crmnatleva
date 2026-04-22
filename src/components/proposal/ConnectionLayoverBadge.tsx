@@ -63,11 +63,10 @@ function formatLayover(min: number): string {
 }
 
 function getLayoverColor(min: number): string {
-  if (min < 45) return "text-destructive bg-destructive/10 border-destructive/30"; // muito apertada
-  if (min < 90) return "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800";
-  if (min <= 240) return "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950/30 dark:border-emerald-800";
-  if (min <= 720) return "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800";
-  return "text-muted-foreground bg-muted/50 border-border";
+  // Conexão muito apertada (< 45min) → destaque crítico vermelho
+  if (min < 45) return "text-destructive bg-destructive/10 border-destructive/30";
+  // Qualquer outra conexão → padrão amarelo (alinhado ao preview do cliente)
+  return "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950/30 dark:border-amber-800";
 }
 
 interface ConnectionLayoverBadgeProps {
