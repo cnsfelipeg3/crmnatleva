@@ -405,6 +405,176 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
   );
 }
 
+/* ═══ Unified Leg Card (origin → destination with stops in timeline) ═══ */
+function UnifiedLegCard({ segments }: { segments: any[] }) {
+  if (!segments?.length) return null;
+  const firstSeg = segments[0];
+  const lastSeg = segments[segments.length - 1];
+  const stops = segments.length - 1;
+
+  const totalFlightMin = segments.reduce((sum: number, s: any) => sum + (Number(s?.duration_minutes) || 0), 0);
+  const totalLayoverMin = segments.slice(1).reduce((sum: number, s: any, i: number) => {
+    const layover = calcPreciseLayoverMinutes(segments[i], s);
+    return sum + (typeof layover === "number" && layover > 0 ? layover : 0);
+  }, 0);
+  const totalMin = totalFlightMin + totalLayoverMin;
+
+  const depDate = firstSeg.departure_date;
+  const arrDate = lastSeg.arrival_date || lastSeg.departure_date;
+  const fmtDateLabel = (raw: any) => {
+    if (!raw) return "";
+    try {
+      return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd 'de' MMM. 'de' yyyy", { locale: ptBR });
+    } catch { return String(raw); }
+  };
+
+  // Flight numbers list (dedup)
+  const flightNumbers = segments
+    .map((s: any) => {
+      const code = s.airline || s.airline_iata || "";
+      const num = String(s.flight_number || "").trim();
+      const cleanNum = code && num.toUpperCase().startsWith(code.toUpperCase()) ? num.slice(code.length).trim() : num;
+      return code || cleanNum ? `${code}${cleanNum}` : "";
+    })
+    .filter(Boolean);
+
+  const airlineCode = firstSeg.airline || firstSeg.airline_iata || "";
+
+  return (
+    <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
+      {/* Header: dates + flight numbers */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div className="text-sm text-muted-foreground">
+          {fmtDateLabel(depDate)}
+          {arrDate && arrDate !== depDate && (
+            <span className="text-muted-foreground/60"> → {fmtDateLabel(arrDate)}</span>
+          )}
+        </div>
+        {flightNumbers.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {flightNumbers.map((fn, i) => (
+              <span key={i} className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
+                Voo <span className="text-foreground font-semibold normal-case tracking-normal">{fn}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Top route row: origin → destination */}
+      <div className="flex items-center gap-4">
+        {/* Departure (origin) */}
+        <div className="text-left min-w-[70px]">
+          <p className="text-lg sm:text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {firstSeg.departure_time || "—"}
+          </p>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {firstSeg.origin_iata || "—"}
+          </p>
+          {firstSeg.terminal && (
+            <p className="text-[11px] text-muted-foreground/60 flex items-center gap-0.5 mt-0.5">
+              <span className="font-mono">›_</span> T{firstSeg.terminal}
+            </p>
+          )}
+        </div>
+
+        {/* Timeline with stops */}
+        <div className="flex-1 flex flex-col items-center gap-1 py-2">
+          <span
+            className={`text-[9px] sm:text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full mb-1 inline-flex items-center gap-1 ${
+              stops === 0
+                ? "bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400"
+                : "bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400"
+            }`}
+          >
+            {stops === 0
+              ? <><Plane className="w-2.5 h-2.5" /> Direto</>
+              : <>{stops} {stops === 1 ? "conexão" : "conexões"}</>}
+          </span>
+          {airlineCode && (
+            <div className="mb-1">
+              <InlineAirlineLogo iata={airlineCode} size={50} />
+            </div>
+          )}
+
+          {/* Timeline bar with stop dots */}
+          <div className="w-full flex items-center">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 17h20M6 12l3-7 2 3h4l3 4H6z" />
+            </svg>
+            <div className="flex-1 relative mx-1">
+              <div className="h-px bg-muted-foreground/25 w-full" />
+              {/* Connection stop dots */}
+              {segments.slice(0, -1).map((_, i) => {
+                const pos = ((i + 1) / segments.length) * 100;
+                return (
+                  <div
+                    key={i}
+                    className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-amber-400 border-2 border-background"
+                    style={{ left: `${pos}%` }}
+                    aria-hidden
+                  />
+                );
+              })}
+            </div>
+            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M2 17h20M18 12l-3-7-2 3H9L6 12h12z" />
+            </svg>
+          </div>
+
+          {/* Total duration */}
+          {totalMin > 0 && (
+            <span className="text-[11px] text-muted-foreground/60 flex items-center gap-1 mt-1">
+              <Clock className="w-3 h-3" /> {fmtDuration(totalMin)} {stops > 0 && <span className="text-muted-foreground/40">total</span>}
+            </span>
+          )}
+
+          {/* Connection chips inline (one per stop) */}
+          {stops > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-1.5 mt-2">
+              {segments.slice(1).map((seg: any, i: number) => {
+                const prev = segments[i];
+                const layover = calcPreciseLayoverMinutes(prev, seg);
+                const iata = prev?.destination_iata || seg?.origin_iata || "";
+                return (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 rounded-full border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-2.5 py-0.5 text-[11px] text-amber-700 dark:text-amber-300"
+                  >
+                    <MapPin className="w-3 h-3" />
+                    Conexão em {iata}
+                    {typeof layover === "number" && layover > 0 && (
+                      <>
+                        <span className="text-amber-400">·</span>
+                        <Clock className="w-3 h-3" /> {fmtDuration(layover)}
+                      </>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Arrival (final destination) */}
+        <div className="text-right min-w-[70px]">
+          <p className="text-lg sm:text-xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {lastSeg.arrival_time || "—"}
+          </p>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {lastSeg.destination_iata || "—"}
+          </p>
+          {lastSeg.arrival_terminal && (
+            <p className="text-[11px] text-muted-foreground/60 flex items-center justify-end gap-0.5 mt-0.5">
+              <span className="font-mono">›_</span> T{lastSeg.arrival_terminal}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function buildPreviewFlightGrouping(displaySegments: any[]) {
   const fallbackLegs = displaySegments.reduce((acc: { label: string; direction: string; segments: any[] }[], seg, index) => {
     const direction = String(seg.direction || (index === 0 ? "ida" : "trecho")).toLowerCase();
