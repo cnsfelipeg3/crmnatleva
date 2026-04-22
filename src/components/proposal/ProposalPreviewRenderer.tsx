@@ -775,15 +775,6 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                     <span className="block mt-1 font-semibold text-foreground">{destinationCity}</span>
                   </div>
                 </div>
-                <div className="mt-3 space-y-1.5">
-                  <p className="text-sm font-medium text-foreground/90">{routeLabel}</p>
-                  {connectionSummaries.length > 0 && connectionSummaries.map((connection, connectionIndex) => (
-                    <p key={connectionIndex} className="text-xs text-foreground">
-                      {connectionSummaries.length === 1 ? "1 conexão" : `${connectionIndex + 1}ª conexão`} em {iataToCityName(connection.airport)}
-                      {connection.layoverMinutes ? ` · ${fmtDuration(connection.layoverMinutes)}` : ""}
-                    </p>
-                  ))}
-                </div>
               </div>
 
               <UnifiedLegCard segments={leg.segments} />
