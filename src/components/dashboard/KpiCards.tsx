@@ -130,7 +130,7 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
       { label: "Saúde", value: `${healthScore}`, icon: Heart, color: healthColor, change: null as number | null, size: "lg" as const, sales: filtered, extra: healthLabel },
     ] : []),
     { label: "Custo Total", value: fmt(totalCost), icon: DollarSign, color: "text-warning", change: null, size: "sm", sales: filtered.filter(s => (s.total_cost || 0) > 0) },
-    { label: "Clientes Totais", value: clients.length.toString(), icon: Users, color: "text-accent", change: null, size: "sm", sales: filtered },
+    { label: "Clientes Totais", value: clients.length.toString(), icon: Users, color: "text-accent", change: clientsGrowth ? pctChange(clientsGrowth.newCurrent, clientsGrowth.newPrevious) : null, size: "sm", sales: filtered, extra: clientsGrowth && clientsGrowth.newCurrent > 0 ? `+${clientsGrowth.newCurrent} novos` : undefined },
     { label: "Emitidas", value: emittedCount.toString(), icon: CheckCircle, color: "text-success", change: null, size: "sm", sales: emitted },
     { label: "Em Andamento", value: pendingCount.toString(), icon: Clock, color: "text-warning", change: null, size: "sm", sales: pending },
     { label: "Internacional", value: `${intlPct.toFixed(0)}%`, icon: Globe, color: "text-info", change: null, size: "sm", sales: filtered.filter(s => s.is_international) },
