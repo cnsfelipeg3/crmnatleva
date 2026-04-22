@@ -88,7 +88,7 @@ export interface PlacesEnrichmentData {
   selectedPhotosDetailed: Array<{
     url: string;
     label: string;
-    source: "google" | "official";
+    source: "google" | "official" | "manual";
     category: string;
     room_name?: string | null;
     description?: string;
