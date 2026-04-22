@@ -850,6 +850,7 @@ export default function PlacesSearchCard({
       selectedPhotos: selectedUrls,
       mainPhotoIndex: coverIdx >= 0 ? coverIdx : 0,
       photoLabels: labels,
+      selectedPhotosDetailed: selectedDetailed,
     });
   }, [selectedPlace, curatedPhotos, onEnrich]);
 
