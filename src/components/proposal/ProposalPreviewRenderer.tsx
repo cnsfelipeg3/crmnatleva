@@ -881,13 +881,13 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
-      {/* Cover image (aircraft / airline) */}
+      {/* Cover image (aircraft / airline) — responsive aspect ratio */}
       {flight.image_url && (
-        <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 aspect-[16/6] bg-muted">
+        <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 bg-muted aspect-[4/3] sm:aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6]">
           <img
             src={flight.image_url}
             alt={flight.title || "Capa do aéreo"}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-center"
             loading="lazy"
           />
         </div>
