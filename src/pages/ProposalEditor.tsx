@@ -89,6 +89,21 @@ function generateSlug() {
   return result;
 }
 
+// Hook: retorna um valor "atrasado" para evitar re-renderizar componentes pesados
+// (como o ProposalPreviewRenderer) a cada keystroke. Mantém a digitação fluida.
+function useDebouncedValue<T>(value: T, delay = 250): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+// Memoiza o renderer do preview para que ele só re-renderize quando suas props
+// (referência de objeto) realmente mudarem. Combina-se com useMemo nas props.
+const MemoProposalPreviewRenderer = memo(ProposalPreviewRenderer);
+
 export default function ProposalEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
