@@ -278,8 +278,8 @@ Deno.serve(async (req) => {
     if (images.length === 0) {
       return json({ error: "Envie pelo menos uma imagem (image_base64 ou images[])." }, 400);
     }
-    if (images.length > 6) {
-      return json({ error: "Máximo de 6 arquivos por extração." }, 400);
+    if (images.length > 20) {
+      return json({ error: "Máximo de 20 arquivos por extração." }, 400);
     }
     if (!SCHEMAS[item_type]) {
       return json({ error: `item_type inválido: ${item_type}` }, 400);
