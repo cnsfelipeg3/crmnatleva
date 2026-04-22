@@ -164,6 +164,22 @@ export default function ProposalEditor() {
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
+  // ── Debounce para o preview ─────────────────────────────────────────
+  // Form e items são atualizados em todo keystroke, mas o preview à direita
+  // (ProposalPreviewRenderer) é caro. Esperamos 250ms de inatividade antes
+  // de propagar. A digitação no formulário continua imediata.
+  const debouncedForm = useDebouncedValue(form, 250);
+  const debouncedItems = useDebouncedValue(items, 250);
+  const debouncedVisualOverrides = useDebouncedValue(visualOverrides, 250);
+
+  // Memoiza o objeto da proposta passado ao preview para que `React.memo`
+  // no renderer consiga pular re-renders quando nada relevante mudou.
+  const previewProposal = useMemo(() => ({
+    ...debouncedForm,
+    total_value: debouncedForm.total_value ? parseFloat(debouncedForm.total_value as any) : null,
+    value_per_person: debouncedForm.value_per_person ? parseFloat(debouncedForm.value_per_person as any) : null,
+  }), [debouncedForm]);
+
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
     queryFn: async () => {
