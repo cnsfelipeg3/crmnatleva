@@ -19,7 +19,7 @@ import {
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import SplitLayout from "@/components/proposal/editor/SplitLayout";
-import InlineEditOverlay from "@/components/proposal/editor/InlineEditOverlay";
+import VisualCanvasOverlay, { type VisualOverrides } from "@/components/proposal/editor/VisualCanvasOverlay";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
@@ -105,6 +105,8 @@ export default function ProposalEditor() {
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
+  const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
+  const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -173,6 +175,18 @@ export default function ProposalEditor() {
         proposal_outcome: (existing as any).proposal_outcome || "pending",
         template_id: (existing as any).template_id || "",
       });
+      // Hydrate visual overrides: prefer local draft if present, else DB value.
+      try {
+        const draft = localStorage.getItem(visualDraftKey);
+        if (draft) {
+          setVisualOverrides(JSON.parse(draft));
+        } else {
+          const ov = (existing as any).visual_overrides as VisualOverrides | null;
+          if (ov && typeof ov === "object") {
+            setVisualOverrides({ styles: ov.styles ?? {}, groups: ov.groups ?? [] });
+          }
+        }
+      } catch { /* ignore */ }
     }
   }, [existing]);
 
@@ -336,6 +350,7 @@ export default function ProposalEditor() {
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
+        visual_overrides: visualOverrides as any,
       };
 
       let proposalId = id;
@@ -370,6 +385,7 @@ export default function ProposalEditor() {
     },
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
       toast.success("Proposta salva com sucesso!");
 
       // Emit learning events
@@ -1253,9 +1269,13 @@ export default function ProposalEditor() {
                 {inlineEditEnabled ? "Editando visual" : "Editar visual"}
               </Button>
             </div>
-            <InlineEditOverlay
-              storageKey={id || "novo"}
+            <VisualCanvasOverlay
               enabled={inlineEditEnabled}
+              value={visualOverrides}
+              onChange={(next) => {
+                setVisualOverrides(next);
+                try { localStorage.setItem(visualDraftKey, JSON.stringify(next)); } catch { /* ignore */ }
+              }}
             >
               <ProposalPreviewRenderer
                 proposal={{
@@ -1265,9 +1285,10 @@ export default function ProposalEditor() {
                 }}
                 items={items}
                 template={selectedTemplate}
+                visualOverrides={visualOverrides}
                 embedded
               />
-            </InlineEditOverlay>
+            </VisualCanvasOverlay>
           </div>
         }
       />

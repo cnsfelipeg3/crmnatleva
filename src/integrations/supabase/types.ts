@@ -5405,6 +5405,7 @@ export type Database = {
           updated_at: string
           value_per_person: number | null
           views_count: number | null
+          visual_overrides: Json
         }
         Insert: {
           client_id?: string | null
@@ -5438,6 +5439,7 @@ export type Database = {
           updated_at?: string
           value_per_person?: number | null
           views_count?: number | null
+          visual_overrides?: Json
         }
         Update: {
           client_id?: string | null
@@ -5471,6 +5473,7 @@ export type Database = {
           updated_at?: string
           value_per_person?: number | null
           views_count?: number | null
+          visual_overrides?: Json
         }
         Relationships: [
           {

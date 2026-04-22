@@ -1047,6 +1047,8 @@ interface ProposalPreviewRendererProps {
   embedded?: boolean;
   tracking?: ProposalTrackingAPI;
   template?: any;
+  /** Optional visual overrides (signature → style) applied on top of the rendered DOM. */
+  visualOverrides?: { styles?: Record<string, any>; groups?: any[] } | null;
 }
 
 /* ═══ Convert hex (#rrggbb) to "h s% l%" string for CSS HSL variables ═══ */
@@ -1072,12 +1074,60 @@ function hexToHsl(hex?: string | null): string | null {
   return `${Math.round(h)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
 }
 
-export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking, template }: ProposalPreviewRendererProps) {
+export default function ProposalPreviewRenderer({ proposal, items, embedded = false, tracking, template, visualOverrides }: ProposalPreviewRendererProps) {
   const destinations = items.filter((i) => i.item_type === "destination");
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
   const experiences = items.filter((i) => i.item_type === "experience");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
+
+  // Apply visual overrides (signature → style) on top of the rendered DOM. Re-runs after every render.
+  const __overridesRootRef = React.useRef<HTMLDivElement>(null);
+  React.useEffect(() => {
+    const root = __overridesRootRef.current;
+    const ovStyles = visualOverrides?.styles;
+    if (!root || !ovStyles) return;
+    const raf = requestAnimationFrame(() => {
+      Object.entries(ovStyles).forEach(([sig, style]) => {
+        const parts = sig.split(">");
+        let node: HTMLElement | null = root;
+        for (const p of parts) {
+          const [tag, idxStr] = p.split(":");
+          if (!node) break;
+          const child = (Array.from(node.children) as HTMLElement[])[Number(idxStr)];
+          if (!child || child.tagName.toLowerCase() !== tag) { node = null; break; }
+          node = child;
+        }
+        if (!node) return;
+        const s: any = style;
+        if (s.fontFamily !== undefined) node.style.fontFamily = s.fontFamily;
+        if (s.fontSize) node.style.fontSize = `${s.fontSize}px`;
+        if (s.color) node.style.color = s.color;
+        if (s.fontWeight) node.style.fontWeight = s.fontWeight;
+        if (s.fontStyle) node.style.fontStyle = s.fontStyle;
+        if (s.textDecoration) node.style.textDecoration = s.textDecoration;
+        if (s.textAlign) node.style.textAlign = s.textAlign;
+        if (s.text !== undefined) node.textContent = s.text;
+        if (s.width) node.style.width = s.width;
+        if (s.height) node.style.height = s.height;
+        if (s.padding) node.style.padding = s.padding;
+        if (s.margin) node.style.margin = s.margin;
+        if (s.background) node.style.background = s.background;
+        if (s.borderColor) node.style.borderColor = s.borderColor;
+        if (s.borderWidth) { node.style.borderWidth = s.borderWidth; node.style.borderStyle = "solid"; }
+        if (s.borderRadius) node.style.borderRadius = s.borderRadius;
+        if (s.boxShadow) node.style.boxShadow = s.boxShadow;
+        if (typeof s.zIndex === "number") {
+          node.style.zIndex = String(s.zIndex);
+          if (!node.style.position || node.style.position === "static") node.style.position = "relative";
+        }
+        if (s.position) node.style.transform = `translate(${s.position.x}px, ${s.position.y}px)`;
+        if (s.hidden) node.style.display = "none";
+      });
+    });
+    return () => cancelAnimationFrame(raf);
+  });
+
 
   // Resolve template-driven theme (instant preview when user picks a model)
   const headingFont = template?.font_heading ? `'${template.font_heading}', 'Space Grotesk', sans-serif` : "'Space Grotesk', sans-serif";
@@ -1134,6 +1184,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
   return (
     <div
+      ref={__overridesRootRef}
       className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}
       style={themeStyle}
     >
