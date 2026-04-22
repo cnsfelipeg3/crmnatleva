@@ -294,8 +294,6 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
     loadDocuments();
   };
 
-  const permLevelLabel = (l: string) => l === "total" ? "Total" : l === "parcial" ? "Parcial" : "Sem acesso";
-  const permLevelColor = (l: string) => l === "total" ? "bg-emerald-500/15 text-emerald-500 border-emerald-500/30" : l === "parcial" ? "bg-amber-500/15 text-amber-500 border-amber-500/30" : "bg-muted text-muted-foreground border-border";
 
   return (
     <div className="space-y-4">
