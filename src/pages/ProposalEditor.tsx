@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package } from "lucide-react";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -34,17 +34,49 @@ const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
   flight: Plane,
   hotel: Hotel,
+  train: Train,
+  car: Car,
+  transfer: Bus,
+  tour: Sparkles,
+  ticket: Ticket,
+  cruise: Ship,
   experience: Sparkles,
-  transfer: MapPin,
+  itinerary: MapIcon,
+  insurance: ShieldCheck,
+  other: Package,
 };
 
 const itemTypeLabels: Record<string, string> = {
   destination: "Destino",
-  flight: "Voo",
-  hotel: "Hotel",
-  experience: "Experiência",
+  flight: "Aéreo",
+  hotel: "Hospedagem",
+  train: "Trem",
+  car: "Carro",
   transfer: "Transfer",
+  tour: "Passeio",
+  ticket: "Ingresso",
+  cruise: "Cruzeiro",
+  experience: "Experiência",
+  itinerary: "Roteiro Personalizado",
+  insurance: "Seguro Viagem",
+  other: "Outros",
 };
+
+// Categorias exibidas como abas verticais dentro de "Itens da Viagem"
+const ITEM_CATEGORIES: { value: string; label: string; icon: any }[] = [
+  { value: "flight", label: "Aéreo", icon: Plane },
+  { value: "hotel", label: "Hospedagens", icon: Hotel },
+  { value: "train", label: "Trens", icon: Train },
+  { value: "car", label: "Carro", icon: Car },
+  { value: "transfer", label: "Transfer", icon: Bus },
+  { value: "tour", label: "Passeios", icon: Sparkles },
+  { value: "ticket", label: "Ingressos", icon: Ticket },
+  { value: "cruise", label: "Cruzeiro", icon: Ship },
+  { value: "experience", label: "Experiências", icon: Sparkles },
+  { value: "itinerary", label: "Roteiro Personalizado", icon: MapIcon },
+  { value: "insurance", label: "Seguro Viagem", icon: ShieldCheck },
+  { value: "other", label: "Outros", icon: Package },
+];
 
 function generateSlug() {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -110,6 +142,7 @@ export default function ProposalEditor() {
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
+  const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -904,26 +937,99 @@ export default function ProposalEditor() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="items" className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-muted-foreground">Adicionar:</span>
-            {(["destination", "flight", "hotel", "experience"] as const).map((type) => {
-              const Icon = itemTypeIcons[type];
-              return (
-                <Button key={type} variant="outline" size="sm" onClick={() => addItem(type)} className="gap-1.5">
-                  <Icon className="w-4 h-4" /> {itemTypeLabels[type]}
-                </Button>
-              );
-            })}
-          </div>
+        <TabsContent value="items" className="space-y-3">
+          <Card className="p-0 overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-[220px_1fr] min-h-[480px]">
+              {/* Sidebar de categorias */}
+              <div className="border-b md:border-b-0 md:border-r border-border/50 bg-muted/20 p-2 md:p-2.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-2 py-1.5">
+                  Categorias
+                </p>
+                <div className="flex md:flex-col gap-1 overflow-x-auto md:overflow-x-visible">
+                  {ITEM_CATEGORIES.map((cat) => {
+                    const CatIcon = cat.icon;
+                    const count = items.filter((it) => it.item_type === cat.value).length;
+                    const isActive = activeItemCategory === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        onClick={() => setActiveItemCategory(cat.value)}
+                        className={`shrink-0 md:w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          isActive
+                            ? "bg-primary text-primary-foreground shadow-sm"
+                            : "text-foreground/80 hover:bg-muted/60"
+                        }`}
+                      >
+                        <CatIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span className="flex-1 text-left whitespace-nowrap md:whitespace-normal">{cat.label}</span>
+                        {count > 0 && (
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center ${
+                              isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/15 text-primary"
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-          {items.length === 0 ? (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">Adicione destinos, voos, hotéis e experiências à proposta</p>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {items.map((item, idx) => {
+              {/* Conteúdo da categoria ativa */}
+              <div className="p-3 md:p-4 space-y-3 min-w-0">
+                {(() => {
+                  const activeCat = ITEM_CATEGORIES.find((c) => c.value === activeItemCategory)!;
+                  const ActiveIcon = activeCat.icon;
+                  const filteredEntries = items
+                    .map((item, idx) => ({ item, idx }))
+                    .filter(({ item }) => item.item_type === activeItemCategory);
+
+                  return (
+                    <>
+                      <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-border/40">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <ActiveIcon className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-foreground">{activeCat.label}</h3>
+                            <p className="text-[11px] text-muted-foreground">
+                              {filteredEntries.length} item(ns) nesta categoria
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="gap-1.5 h-8"
+                          onClick={() => {
+                            addItem(activeItemCategory);
+                            // garante que o novo item fique aberto
+                            setCollapsedItems((prev) => {
+                              const next = new Set(prev);
+                              next.delete(items.length);
+                              return next;
+                            });
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Adicionar {activeCat.label.toLowerCase()}
+                        </Button>
+                      </div>
+
+                      {filteredEntries.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-center py-12 px-4 bg-muted/20 rounded-xl border border-dashed border-border/50">
+                          <ActiveIcon className="w-10 h-10 text-muted-foreground/40 mb-2" />
+                          <p className="text-sm font-medium text-foreground">Nenhum item de {activeCat.label.toLowerCase()}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Clique em "Adicionar {activeCat.label.toLowerCase()}" para começar
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {filteredEntries.map(({ item, idx }) => {
                 const Icon = itemTypeIcons[item.item_type] || MapPin;
                 const supportsPlaces = ["hotel", "destination", "experience"].includes(item.item_type);
                 const hasPlaceData = !!item.data?.place_id;
@@ -1233,8 +1339,14 @@ export default function ProposalEditor() {
                   </Card>
                 );
               })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
             </div>
-          )}
+          </Card>
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">
