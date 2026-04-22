@@ -449,7 +449,6 @@ export function HotelPhotoGallery({
                         className="absolute inset-0 h-full w-full"
                         imgClassName="object-cover"
                         loading="lazy"
-                        forceProxy={p.source === "official"}
                       />
                       {isCover && (
                         <div className="absolute inset-0 flex items-start justify-start p-0.5">
