@@ -637,7 +637,7 @@ export default function ProposalEditor() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-[1800px] mx-auto">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/propostas")}>
