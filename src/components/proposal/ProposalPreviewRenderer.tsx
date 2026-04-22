@@ -1047,6 +1047,8 @@ interface ProposalPreviewRendererProps {
   embedded?: boolean;
   tracking?: ProposalTrackingAPI;
   template?: any;
+  /** Optional visual overrides (signature → style) applied on top of the rendered DOM. */
+  visualOverrides?: { styles?: Record<string, any>; groups?: any[] } | null;
 }
 
 /* ═══ Convert hex (#rrggbb) to "h s% l%" string for CSS HSL variables ═══ */
