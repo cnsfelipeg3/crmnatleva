@@ -1,7 +1,7 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import logoNatleva from "@/assets/logo-natleva.png";
+import logoNatleva from "@/assets/logo-natleva.webp";
 import {
   LayoutDashboard, Plus, List, Settings, LogOut, Plane, Users,
   ChevronLeft, ChevronRight, ClipboardCheck, Hotel, Sun, Moon, Cake, FileUp,

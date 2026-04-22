@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Send, Loader2, Sparkles, Plane, Hotel, DollarSign, User, CloudSun, MapPin, Trash2, FileText, MessageCircle, ExternalLink, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
-import logoNatleva from "@/assets/logo-natleva-clean.png";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import { supabase } from "@/integrations/supabase/client";
 import { getMockTripDetail } from "@/lib/portalMockTrips";
 

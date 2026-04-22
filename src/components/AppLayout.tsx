@@ -11,7 +11,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Menu, Maximize, Minimize } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import logoNatleva from "@/assets/logo-natleva.png";
+import logoNatleva from "@/assets/logo-natleva.webp";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
@@ -28,7 +28,7 @@ export default function AppLayout() {
     return (
       <div className="flex flex-col h-screen overflow-hidden bg-background">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-4 h-14 border-b border-border/20 bg-card/60 backdrop-blur-xl saturate-[1.8] shrink-0 z-30">
+          <header className="flex items-center justify-between px-4 h-14 border-b border-border/20 bg-card/95 shrink-0 z-30">
             <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-primary/5 transition-colors">
               <Menu className="w-5 h-5 text-foreground" />
             </button>
@@ -99,7 +99,7 @@ export default function AppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isImmersive && (
-          <header className="flex items-center justify-between px-5 h-[3.25rem] border-b border-border/12 bg-card/50 backdrop-blur-lg shrink-0 z-20">
+          <header className="flex items-center justify-between px-5 h-[3.25rem] border-b border-border/12 bg-card/95 shrink-0 z-20">
             <DeferredRender fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
               <Suspense fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
                 <GlobalSearch />

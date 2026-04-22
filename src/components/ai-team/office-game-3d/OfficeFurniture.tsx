@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { DESKS, RECEPTION, SOFAS, PLANTS, WALLS, FLOOR_SIZE, CONFERENCE_TABLE } from './mapData3d';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import natLevaLogo from '@/assets/logo-natleva-wall.png';
+import natLevaLogo from '@/assets/logo-natleva-wall.webp';
 import MonitorModel from './MonitorModel';
 
 /* ── Desk with real Samsung Odyssey G9 49" ── */
