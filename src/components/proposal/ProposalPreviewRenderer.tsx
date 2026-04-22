@@ -889,11 +889,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM/yyyy", { locale: ptBR });
             } catch { return String(raw); }
           };
-          const headerDep = fmtHeaderDate(firstSeg?.departure_date);
-          const headerArr = fmtHeaderDate(lastSeg?.arrival_date || lastSeg?.departure_date);
-          const headerDateLabel = headerDep && headerArr && headerDep !== headerArr
-            ? `${headerDep} → ${headerArr}`
-            : (headerDep || headerArr || "—");
+          const headerDateLabel = fmtHeaderDate(firstSeg?.departure_date) || "—";
 
           return (
             <div key={li}>
