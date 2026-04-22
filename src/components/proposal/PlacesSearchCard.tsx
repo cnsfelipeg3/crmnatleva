@@ -61,7 +61,7 @@ interface CuratedPhoto {
   label: string;
   selected: boolean;
   isCover: boolean;
-  source: "google" | "manual";
+  source: "google" | "manual" | "official";
   description?: string;
   room_type?: string | null;
   category?: string;
@@ -706,6 +706,87 @@ export default function PlacesSearchCard({
     });
     e.target.value = "";
   };
+
+  /* ── Fetch photos from hotel's official website ── */
+  const [loadingOfficial, setLoadingOfficial] = useState(false);
+  const fetchOfficialSitePhotos = useCallback(async (forceRefresh = false) => {
+    if (!selectedPlace) return;
+    setLoadingOfficial(true);
+    try {
+      const addressParts = (selectedPlace.address || "").split(",").map(s => s.trim());
+      const country = addressParts.length >= 2 ? addressParts[addressParts.length - 1] : "";
+      const city = addressParts.length >= 3 ? addressParts[addressParts.length - 2] : (addressParts[0] || "");
+
+      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos no site oficial do hotel...", { duration: 4000 });
+
+      const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
+        body: {
+          hotel_name: selectedPlace.name,
+          hotel_city: city,
+          hotel_country: country,
+          force_refresh: forceRefresh,
+        },
+      });
+      if (error) throw error;
+
+      const rawPhotos: any[] = Array.isArray(data?.photos) ? data.photos : [];
+      if (rawPhotos.length === 0) {
+        toast.info("Nenhuma foto encontrada no site oficial.");
+        return;
+      }
+
+      const existing = new Set(curatedPhotos.map(p => p.url));
+      const newPhotos: CuratedPhoto[] = rawPhotos
+        .map((p: any) => ({
+          url: String(p.url || p.image_url || "").trim(),
+          label: p.label || p.section_name || p.environment_name || "Foto do site oficial",
+          selected: true,
+          isCover: false,
+          source: "official" as const,
+          description: p.description || "",
+          room_type: p.room_type || null,
+          category: p.category || "outro",
+        }))
+        .filter(p => p.url && !existing.has(p.url));
+
+      if (newPhotos.length === 0) {
+        toast.info("Todas as fotos do site oficial já estavam na galeria.");
+        return;
+      }
+
+      setCuratedPhotos(prev => [...prev, ...newPhotos]);
+      toast.success(`${newPhotos.length} foto(s) HD do site oficial adicionadas!`);
+
+      setClassifyingPhotos(true);
+      classifyPhotosWithAI(newPhotos.map(p => p.url), selectedPlace.name)
+        .then((classifications) => {
+          if (classifications.length === 0) return;
+          setCuratedPhotos(prev => {
+            const next = [...prev];
+            const startIdx = next.length - newPhotos.length;
+            classifications.forEach((cls, i) => {
+              const target = next[startIdx + i];
+              if (!target || !cls) return;
+              next[startIdx + i] = {
+                ...target,
+                label: cls.label || target.label,
+                description: cls.description || target.description,
+                room_type: cls.room_type ?? target.room_type,
+                category: cls.category || target.category,
+              };
+            });
+            return next;
+          });
+        })
+        .catch(() => { /* keep fallbacks */ })
+        .finally(() => setClassifyingPhotos(false));
+    } catch (err: any) {
+      console.error("scrape-hotel-photos error:", err);
+      toast.error(err?.message || "Não foi possível buscar fotos no site oficial.");
+    } finally {
+      setLoadingOfficial(false);
+    }
+  }, [selectedPlace, curatedPhotos]);
 
   /* ── Confirm ── */
   const handleConfirm = useCallback(() => {
