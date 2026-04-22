@@ -1076,27 +1076,49 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               </SectionTitle>
             );
             const gridCols = count === 1
-              ? "grid-cols-1 max-w-md"
+              ? "grid-cols-1 max-w-sm"
               : count === 2
                 ? "grid-cols-1 sm:grid-cols-2 max-w-3xl"
                 : count === 3
-                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl";
+                  ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 max-w-5xl"
+                  : "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 max-w-6xl";
             return (
               <>
                 {titleNode}
-          <div className={`mx-auto grid ${gridCols} gap-6 ${count === 1 ? "" : "justify-items-center"}`}>
-            {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
-              <motion.div key={dest.id || idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} className="group rounded-2xl overflow-hidden relative h-72 cursor-pointer shadow-lg shadow-black/10 w-full">
-                <img src={dest.image_url || getDestImage(dest.title || "")} alt={dest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%,0.8)] via-transparent to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-xl font-bold text-white" style={{ fontFamily: headingFont }}>{dest.title}</h3>
-                  {dest.description && <p className="text-sm text-white/60 mt-1">{dest.description}</p>}
+                <div className={`mx-auto grid ${gridCols} gap-5 sm:gap-6 justify-items-center`}>
+                  {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => {
+                    const imgSrc = dest.image_url || getDestImage(dest.title || "");
+                    return (
+                      <motion.div
+                        key={dest.id || idx}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="group rounded-2xl overflow-hidden relative aspect-[4/5] sm:aspect-[3/4] cursor-pointer shadow-lg shadow-black/10 w-full max-w-sm bg-muted"
+                      >
+                        {imgSrc ? (
+                          <img
+                            src={imgSrc}
+                            alt={dest.title}
+                            loading="lazy"
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                            <MapPin className="w-10 h-10 text-muted-foreground/40" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%,0.85)] via-[hsl(158,50%,4%,0.15)] to-transparent" />
+                        <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6">
+                          <h3 className="text-lg sm:text-xl font-bold text-white" style={{ fontFamily: headingFont }}>{dest.title}</h3>
+                          {dest.description && <p className="text-sm text-white/70 mt-1 line-clamp-2">{dest.description}</p>}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-              </motion.div>
-            ))}
-          </div>
               </>
             );
           })()}
