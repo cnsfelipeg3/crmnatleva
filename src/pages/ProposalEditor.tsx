@@ -1143,9 +1143,13 @@ export default function ProposalEditor() {
                         {/* Enrichment preview */}
                         {hasPlaceData && item.image_url && !isSearchOpen && (
                           <div className="flex items-start gap-3 p-2.5 bg-muted/30 rounded-xl border border-border/50">
-                            <div className="w-20 h-14 rounded-lg overflow-hidden shrink-0 bg-muted">
-                              <img src={item.image_url} alt={item.title} className="w-full h-full object-cover" />
-                            </div>
+                            <SmartImage
+                              src={item.image_url}
+                              alt={item.title}
+                              className="w-20 h-14 rounded-lg shrink-0"
+                              imgClassName="object-cover"
+                              forceProxy
+                            />
                             <div className="min-w-0 flex-1">
                               <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
                               {item.data?.location && (
