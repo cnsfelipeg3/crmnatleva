@@ -1078,14 +1078,14 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             <div className="rounded-2xl border border-accent/15 bg-gradient-to-b from-card to-accent/[0.03] p-8 sm:p-10 text-center space-y-6 shadow-xl shadow-accent/5">
               {proposal.value_per_person && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
-                  <p className="text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
                 </div>
               )}
               {proposal.total_value && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/50 mb-1.5" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
-                  <p className="text-4xl sm:text-5xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
+                  <p className="text-3xl sm:text-4xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
                 </div>
               )}
               {proposal.includes_text && (
