@@ -1005,14 +1005,44 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       )}
 
       {/* ──── FLIGHTS ──── */}
-      {showFlights && flights.length > 0 && (
-        <section data-track-section="flights" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
-          <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
-          <div className="max-w-3xl mx-auto space-y-8">
-            {flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)}
-          </div>
-        </section>
-      )}
+      {showFlights && flights.length > 0 && (() => {
+        // Aggregate segments across ALL flight items so multi-segment Ida/Volta are
+        // classified as a single itinerary (avoids labeling every flight as "IDA").
+        const allSegments: any[] = [];
+        flights.forEach((f) => {
+          const d = normalizeFlightData(f.data);
+          const segs = d.segments.length > 0 ? d.segments : [{
+            airline: d.airline, airline_name: d.airline_name, airline_iata: d.airline?.substring(0, 2),
+            flight_number: d.flight_number?.replace(/^[A-Z]{2}/, ""),
+            origin_iata: d.origin, destination_iata: d.destination,
+            departure_time: d.departure_time, arrival_time: d.arrival_time,
+            departure_date: d.departure,
+            terminal: d.terminal, arrival_terminal: d.arrival_terminal,
+            duration_minutes: null,
+          }];
+          segs.forEach((s: any) => allSegments.push(s));
+        });
+
+        // If we successfully aggregated segments, render a single classified itinerary card.
+        // Otherwise fall back to the per-item rendering.
+        const useAggregated = allSegments.length >= 2;
+
+        return (
+          <section data-track-section="flights" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
+            <SectionTitle subtitle="Seus voos com todos os detalhes">Voos</SectionTitle>
+            <div className="max-w-3xl mx-auto space-y-8">
+              {useAggregated ? (
+                <FlightCard
+                  flight={{ data: { segments: allSegments } }}
+                  idx={0}
+                />
+              ) : (
+                flights.map((f, idx) => <FlightCard key={f.id || idx} flight={f} idx={idx} />)
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* ──── HOTELS ──── */}
       {showHotels && hotels.length > 0 && (
