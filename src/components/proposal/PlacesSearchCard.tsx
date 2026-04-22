@@ -64,6 +64,7 @@ interface CuratedPhoto {
   source: "google" | "manual" | "official";
   description?: string;
   room_type?: string | null;
+  room_name?: string | null;
   category?: string;
 }
 
@@ -737,16 +738,21 @@ export default function PlacesSearchCard({
 
       const existing = new Set(curatedPhotos.map(p => p.url));
       const newPhotos: CuratedPhoto[] = rawPhotos
-        .map((p: any) => ({
-          url: String(p.url || p.image_url || "").trim(),
-          label: p.label || p.section_name || p.environment_name || "Foto do site oficial",
-          selected: true,
-          isCover: false,
-          source: "official" as const,
-          description: p.description || "",
-          room_type: p.room_type || null,
-          category: p.category || "outro",
-        }))
+        .map((p: any) => {
+          const sectionName = p.section_name || p.environment_name || "";
+          const isRoomSection = /quarto|suite|suíte|room|apartamento|apto|chalé|chale|bangalô|bangalo|villa/i.test(sectionName);
+          return {
+            url: String(p.url || p.image_url || "").trim(),
+            label: p.label || sectionName || "Foto do site oficial",
+            selected: true,
+            isCover: false,
+            source: "official" as const,
+            description: p.description || "",
+            room_type: p.room_type || null,
+            room_name: isRoomSection ? sectionName : (p.room_name || null),
+            category: p.category || (isRoomSection ? "quarto" : "outro"),
+          };
+        })
         .filter(p => p.url && !existing.has(p.url));
 
       if (newPhotos.length === 0) {
@@ -998,15 +1004,15 @@ export default function PlacesSearchCard({
               )}
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={() => fetchOfficialSitePhotos(false)}
                 disabled={loadingOfficial || !selectedPlace?.name}
-                className="h-7 px-2 text-[10px] gap-1"
-                title="Buscar fotos HD direto do site oficial do hotel"
+                className="h-7 px-3 text-[10px] gap-1"
+                title="Busca fotos HD no site oficial do hotel e organiza por quarto/categoria"
               >
-                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                {loadingOfficial ? "Buscando…" : "Site Oficial (HD)"}
+                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {loadingOfficial ? "Buscando mídias…" : "Buscar Mídias"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 px-2 text-[10px] gap-1">
                 <Upload className="h-3 w-3" /> Upload
@@ -1021,9 +1027,59 @@ export default function PlacesSearchCard({
               <span className="text-sm text-muted-foreground">Carregando fotos do Google...</span>
             </div>
           ) : curatedPhotos.length > 0 ? (
-            <div className="max-h-[520px] overflow-y-auto pr-1">
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {curatedPhotos.map((photo, i) => (
+            <div className="max-h-[520px] overflow-y-auto pr-1 space-y-4">
+              {(() => {
+                // Agrupar fotos por seção: quartos nomeados → categorias → outros
+                const CATEGORY_LABELS: Record<string, string> = {
+                  fachada: "🏨 Fachada", lobby: "🛋️ Lobby", piscina: "🏊 Piscina",
+                  restaurante: "🍽️ Restaurante", bar: "🍸 Bar", spa: "💆 Spa",
+                  academia: "💪 Academia", jardim: "🌿 Jardim", praia: "🏖️ Praia",
+                  vista: "🌅 Vista", area_comum: "✨ Áreas Comuns", banheiro: "🚿 Banheiros",
+                  quarto: "🛏️ Quartos", suite: "🛏️ Suítes", outro: "📷 Outras",
+                };
+
+                const indexed = curatedPhotos.map((p, idx) => ({ photo: p, idx }));
+                const groups: { key: string; title: string; items: { photo: CuratedPhoto; idx: number }[] }[] = [];
+                const used = new Set<number>();
+
+                // 1) Quartos nomeados (do site oficial)
+                const roomNamedMap = new Map<string, { photo: CuratedPhoto; idx: number }[]>();
+                indexed.forEach(item => {
+                  const name = item.photo.room_name?.trim();
+                  if (name) {
+                    if (!roomNamedMap.has(name)) roomNamedMap.set(name, []);
+                    roomNamedMap.get(name)!.push(item);
+                    used.add(item.idx);
+                  }
+                });
+                Array.from(roomNamedMap.entries())
+                  .sort((a, b) => b[1].length - a[1].length)
+                  .forEach(([name, items]) => {
+                    groups.push({ key: `room:${name}`, title: `🛏️ ${name}`, items });
+                  });
+
+                // 2) Por categoria (fotos restantes)
+                const catMap = new Map<string, { photo: CuratedPhoto; idx: number }[]>();
+                indexed.forEach(item => {
+                  if (used.has(item.idx)) return;
+                  const cat = item.photo.category || "outro";
+                  if (!catMap.has(cat)) catMap.set(cat, []);
+                  catMap.get(cat)!.push(item);
+                });
+                const catOrder = ["fachada", "lobby", "quarto", "suite", "piscina", "restaurante", "bar", "spa", "academia", "vista", "praia", "jardim", "area_comum", "banheiro", "outro"];
+                catOrder.forEach(cat => {
+                  const items = catMap.get(cat);
+                  if (items && items.length > 0) {
+                    groups.push({ key: `cat:${cat}`, title: CATEGORY_LABELS[cat] || cat, items });
+                    catMap.delete(cat);
+                  }
+                });
+                // Categorias não previstas
+                Array.from(catMap.entries()).forEach(([cat, items]) => {
+                  groups.push({ key: `cat:${cat}`, title: CATEGORY_LABELS[cat] || cat, items });
+                });
+
+                const renderCard = (photo: CuratedPhoto, i: number) => (
                   <div
                     key={i}
                     draggable
@@ -1040,26 +1096,12 @@ export default function PlacesSearchCard({
                       dragIdx === i && "scale-95 opacity-70"
                     )}
                   >
-                    {/* Image */}
                     <div className="aspect-[4/3] bg-muted/20 relative flex items-center justify-center">
                       <img src={photo.url} alt={photo.label} className="max-w-full max-h-full object-contain" loading="lazy" />
-
-                      {/* Overlay actions */}
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-                      {/* Top-left: Selection checkbox */}
-                      <button
-                        onClick={() => toggleSelect(i)}
-                        className="absolute top-1.5 left-1.5 z-10"
-                      >
-                        {photo.selected ? (
-                          <CheckSquare className="h-5 w-5 text-primary drop-shadow-md" />
-                        ) : (
-                          <Square className="h-5 w-5 text-white/80 drop-shadow-md" />
-                        )}
+                      <button onClick={() => toggleSelect(i)} className="absolute top-1.5 left-1.5 z-10">
+                        {photo.selected ? <CheckSquare className="h-5 w-5 text-primary drop-shadow-md" /> : <Square className="h-5 w-5 text-white/80 drop-shadow-md" />}
                       </button>
-
-                      {/* Top-right: Drag handle + actions */}
                       <div className="absolute top-1.5 right-1.5 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                         <button onClick={() => setLightboxIdx(i)} className="w-6 h-6 rounded-md bg-black/40 backdrop-blur-sm flex items-center justify-center hover:bg-black/60">
                           <Maximize2 className="h-3 w-3 text-white" />
@@ -1068,8 +1110,6 @@ export default function PlacesSearchCard({
                           <X className="h-3 w-3 text-white" />
                         </button>
                       </div>
-
-                      {/* Cover badge */}
                       {photo.isCover && photo.selected && (
                         <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-10">
                           <Badge className="bg-primary text-primary-foreground text-[8px] h-4 px-1.5 gap-0.5 shadow-md">
@@ -1077,13 +1117,9 @@ export default function PlacesSearchCard({
                           </Badge>
                         </div>
                       )}
-
-                      {/* Source badge */}
                       {photo.source === "manual" && (
                         <div className="absolute bottom-1.5 right-1.5 z-10">
-                          <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-background/80 backdrop-blur-sm">
-                            Upload
-                          </Badge>
+                          <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-background/80 backdrop-blur-sm">Upload</Badge>
                         </div>
                       )}
                       {photo.source === "official" && (
@@ -1093,14 +1129,9 @@ export default function PlacesSearchCard({
                           </Badge>
                         </div>
                       )}
-
-                      {/* Bottom: Label + Set as cover */}
                       <div className="absolute bottom-0 left-0 right-0 p-1.5 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-end justify-between gap-1">
                         {photo.selected && !photo.isCover && (
-                          <button
-                            onClick={() => setCover(i)}
-                            className="text-[9px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md hover:bg-primary/80 transition-colors flex items-center gap-1 whitespace-nowrap"
-                          >
+                          <button onClick={() => setCover(i)} className="text-[9px] font-medium text-white bg-black/40 backdrop-blur-sm px-2 py-0.5 rounded-md hover:bg-primary/80 transition-colors flex items-center gap-1 whitespace-nowrap">
                             <Crown className="h-2.5 w-2.5" /> Definir capa
                           </button>
                         )}
@@ -1108,8 +1139,6 @@ export default function PlacesSearchCard({
                         <GripVertical className="h-4 w-4 text-white/60" />
                       </div>
                     </div>
-
-                    {/* Label + Description */}
                     <div className="px-2 py-1.5 bg-card">
                       <input
                         type="text"
@@ -1119,19 +1148,41 @@ export default function PlacesSearchCard({
                         placeholder="Legenda..."
                       />
                       {photo.description && (
-                        <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">
-                          {photo.description}
-                        </p>
+                        <p className="text-[9px] text-muted-foreground mt-0.5 line-clamp-2 leading-tight">{photo.description}</p>
                       )}
                       {photo.room_type && (
-                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 mt-0.5">
-                          {photo.room_type}
-                        </Badge>
+                        <Badge variant="secondary" className="text-[8px] h-3.5 px-1 mt-0.5">{photo.room_type}</Badge>
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+
+                return groups.map(group => (
+                  <div key={group.key}>
+                    <div className="flex items-center gap-2 mb-1.5 sticky top-0 bg-card/95 backdrop-blur-sm py-1 z-20">
+                      <span className="text-[11px] font-bold text-foreground">{group.title}</span>
+                      <Badge variant="outline" className="text-[9px] h-4 px-1.5">{group.items.length}</Badge>
+                      <div className="flex-1 h-px bg-border/40" />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const allSelected = group.items.every(it => it.photo.selected);
+                          setCuratedPhotos(prev => prev.map((p, idx) => {
+                            const inGroup = group.items.some(it => it.idx === idx);
+                            return inGroup ? { ...p, selected: !allSelected } : p;
+                          }));
+                        }}
+                        className="text-[9px] text-muted-foreground hover:text-primary transition-colors"
+                      >
+                        {group.items.every(it => it.photo.selected) ? "Desmarcar grupo" : "Selecionar grupo"}
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {group.items.map(({ photo, idx }) => renderCard(photo, idx))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           ) : (
             <div className="text-center py-8">
