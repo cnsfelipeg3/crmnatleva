@@ -175,6 +175,18 @@ export default function ProposalEditor() {
         proposal_outcome: (existing as any).proposal_outcome || "pending",
         template_id: (existing as any).template_id || "",
       });
+      // Hydrate visual overrides: prefer local draft if present, else DB value.
+      try {
+        const draft = localStorage.getItem(visualDraftKey);
+        if (draft) {
+          setVisualOverrides(JSON.parse(draft));
+        } else {
+          const ov = (existing as any).visual_overrides as VisualOverrides | null;
+          if (ov && typeof ov === "object") {
+            setVisualOverrides({ styles: ov.styles ?? {}, groups: ov.groups ?? [] });
+          }
+        }
+      } catch { /* ignore */ }
     }
   }, [existing]);
 
@@ -338,6 +350,7 @@ export default function ProposalEditor() {
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
+        visual_overrides: visualOverrides as any,
       };
 
       let proposalId = id;
