@@ -11,6 +11,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.png";
+import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
 import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
@@ -1234,11 +1235,15 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {showHero && (
       <section data-track-section="hero" className={`relative ${embedded ? "aspect-[16/9] max-h-[480px] min-h-[280px]" : "h-screen"} w-full flex items-end justify-center overflow-hidden`}>
         <img
-          src={proposal.cover_image_url || fallbackCover}
+          src={proposal.cover_image_url?.trim() || orlandoFamilyCover}
           alt={proposal.title || "Capa da proposta"}
           className="absolute inset-0 w-full h-full object-cover"
           loading="eager"
           decoding="async"
+          onError={(e) => {
+            const t = e.currentTarget as HTMLImageElement;
+            if (t.src !== orlandoFamilyCover) t.src = orlandoFamilyCover;
+          }}
         />
         {/* Subtle gradient overlay - keeps image visible */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
