@@ -222,13 +222,49 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
     set("work_days", days.includes(day) ? days.filter(d => d !== day) : [...days, day]);
   };
 
-  const setPermission = (mod: string, level: string) => {
-    set("permissions", { ...permissions, [mod]: level });
+  const setModulePerm = (modKey: string, next: ModulePerm) => {
+    set("permissions", { ...permissions, [modKey]: next });
+    setActivePreset(null);
   };
 
-  const applyPreset = (preset: string) => {
-    set("permissions", { ...PERMISSION_PRESETS[preset] });
-    toast.success(`Perfil "${preset}" aplicado`);
+  const toggleAction = (modKey: string, action: PermAction) => {
+    const current = permissions[modKey] || emptyModulePerm();
+    const has = current.actions.includes(action);
+    let nextActions = has ? current.actions.filter(a => a !== action) : [...current.actions, action];
+    // Regra: se ativar qualquer ação, garante "view" também
+    if (!has && action !== "view" && !nextActions.includes("view")) nextActions = ["view", ...nextActions];
+    // Regra: se remover "view", remove tudo
+    if (has && action === "view") nextActions = [];
+    setModulePerm(modKey, { ...current, actions: nextActions });
+  };
+
+  const toggleFeature = (modKey: string, featKey: string) => {
+    const current = permissions[modKey] || emptyModulePerm();
+    setModulePerm(modKey, { ...current, features: { ...current.features, [featKey]: !current.features[featKey] } });
+  };
+
+  const setAllActions = (modKey: string, mode: "all" | "none" | "readonly") => {
+    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
+    if (mode === "all") setModulePerm(modKey, { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) });
+    else if (mode === "readonly") setModulePerm(modKey, { actions: ["view"], features: {} });
+    else setModulePerm(modKey, emptyModulePerm());
+  };
+
+  const applyPreset = (presetKey: string) => {
+    const preset = PERMISSION_PRESETS[presetKey];
+    if (!preset) return;
+    set("permissions", preset.build());
+    setActivePreset(presetKey);
+    toast.success(`Perfil "${preset.label}" aplicado`);
+  };
+
+  const moduleStatus = (modKey: string): "total" | "custom" | "readonly" | "none" => {
+    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
+    const p = permissions[modKey] || emptyModulePerm();
+    if (p.actions.length === 0) return "none";
+    if (p.actions.length === 1 && p.actions[0] === "view" && Object.values(p.features).every(v => !v)) return "readonly";
+    if (p.actions.length === mod.actions.length && mod.features.every(f => p.features[f.key])) return "total";
+    return "custom";
   };
 
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
