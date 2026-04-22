@@ -32,6 +32,15 @@
 
   <body>
     <script>if(localStorage.getItem('theme')==='dark')document.documentElement.classList.add('dark')</script>
+    <style>
+      /* Instant pre-React loader — paints before any JS runs */
+      #boot-loader{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(to top,hsl(158,50%,6%),hsl(158,40%,10%) 60%,hsl(210,30%,12%));font-family:system-ui,-apple-system,sans-serif;transition:opacity .35s ease}
+      #boot-loader.hide{opacity:0;pointer-events:none}
+      #boot-loader .ring{width:42px;height:42px;border:3px solid hsla(160,60%,50%,.2);border-top-color:hsl(160,60%,50%);border-radius:50%;animation:bl-spin .9s linear infinite}
+      #boot-loader .txt{margin-top:18px;color:hsl(158,12%,70%);font-size:13px;letter-spacing:.18em;text-transform:uppercase}
+      @keyframes bl-spin{to{transform:rotate(360deg)}}
+    </style>
+    <div id="boot-loader"><div class="ring"></div><div class="txt">NatLeva</div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
