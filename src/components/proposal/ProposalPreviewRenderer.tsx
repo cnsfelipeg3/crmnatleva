@@ -579,6 +579,151 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
           )}
         </div>
       </div>
+
+      {/* ─── Ver detalhes (timeline completa do itinerário) ─── */}
+      <div className="mt-4 pt-4 border-t border-border/40">
+        <button
+          type="button"
+          onClick={() => setShowDetails((v) => !v)}
+          className="flex items-center justify-center gap-1.5 w-full text-xs font-medium text-foreground/70 hover:text-foreground transition-colors"
+        >
+          <Clock className="w-3.5 h-3.5" />
+          {showDetails ? "Ocultar detalhes do itinerário" : "Ver detalhes do itinerário"}
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition-transform ${showDetails ? "rotate-180" : ""}`}
+          />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {showDetails && (
+            <motion.div
+              key="timeline"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 space-y-0">
+                {segments.map((seg: any, idx: number) => {
+                  const prev = idx > 0 ? segments[idx - 1] : null;
+                  const layover = prev ? calcPreciseLayoverMinutes(prev, seg) : null;
+                  const segCode = seg.airline || seg.airline_iata || "";
+                  const segNum = String(seg.flight_number || "").trim();
+                  const cleanNum = segCode && segNum.toUpperCase().startsWith(segCode.toUpperCase())
+                    ? segNum.slice(segCode.length).trim()
+                    : segNum;
+                  const flightLabel = segCode || cleanNum ? `${segCode}${cleanNum}` : "";
+                  const depCity = iataToCityName(seg.origin_iata) || seg.origin_iata;
+                  const arrCity = iataToCityName(seg.destination_iata) || seg.destination_iata;
+
+                  return (
+                    <React.Fragment key={idx}>
+                      {/* Layover row (between segments) */}
+                      {layover !== null && layover > 0 && (
+                        <div className="relative flex gap-3 pb-3">
+                          <div className="flex flex-col items-center">
+                            <div className="w-px flex-1 border-l-2 border-dashed border-amber-300 dark:border-amber-700" />
+                          </div>
+                          <div className="flex-1 py-2">
+                            <div className="inline-flex items-center gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-3 py-1.5 text-xs">
+                              <MapPin className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+                              <span className="text-amber-800 dark:text-amber-300 font-medium">
+                                Conexão em {prev?.destination_iata}
+                              </span>
+                              <span className="text-amber-400">·</span>
+                              <Clock className="w-3 h-3 text-amber-700 dark:text-amber-400" />
+                              <span className="text-amber-800 dark:text-amber-300">{fmtDuration(layover)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Departure event */}
+                      <div className="relative flex gap-3 pb-3">
+                        <div className="flex flex-col items-center pt-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background ring-1 ring-primary/40" />
+                          <div className="w-px flex-1 bg-border mt-1" />
+                        </div>
+                        <div className="flex-1 -mt-0.5">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-base font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                              {seg.departure_time || "—"}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {fmtDateShort(seg.departure_date)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-foreground mt-0.5">
+                            <span className="font-semibold">Embarque em {depCity}</span>
+                            <span className="text-muted-foreground"> ({seg.origin_iata})</span>
+                          </p>
+                          {seg.terminal && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">Terminal {seg.terminal}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* In-flight row */}
+                      <div className="relative flex gap-3 pb-3">
+                        <div className="flex flex-col items-center">
+                          <div className="w-px flex-1 bg-border" />
+                        </div>
+                        <div className="flex-1 py-1">
+                          <div className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                            <Plane className="w-3 h-3" />
+                            <span>
+                              Voo {flightLabel}
+                              {seg.duration_minutes > 0 && (
+                                <> · {fmtDuration(seg.duration_minutes)} de duração</>
+                              )}
+                              {seg.aircraft && <> · {seg.aircraft}</>}
+                              {seg.flight_class && <> · {seg.flight_class}</>}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Arrival event */}
+                      <div className="relative flex gap-3 pb-3">
+                        <div className="flex flex-col items-center pt-1">
+                          <div className="w-2.5 h-2.5 rounded-full bg-primary border-2 border-background ring-1 ring-primary/40" />
+                          {idx < segments.length - 1 && <div className="w-px flex-1 bg-border mt-1" />}
+                        </div>
+                        <div className="flex-1 -mt-0.5">
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            <span className="text-base font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                              {seg.arrival_time || "—"}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {fmtDateShort(seg.arrival_date || seg.departure_date)}
+                            </span>
+                          </div>
+                          <p className="text-sm text-foreground mt-0.5">
+                            <span className="font-semibold">Desembarque em {arrCity}</span>
+                            <span className="text-muted-foreground"> ({seg.destination_iata})</span>
+                          </p>
+                          {seg.arrival_terminal && (
+                            <p className="text-[11px] text-muted-foreground mt-0.5">Terminal {seg.arrival_terminal}</p>
+                          )}
+                        </div>
+                      </div>
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Total summary */}
+                {totalMin > 0 && (
+                  <div className="mt-2 pt-3 border-t border-border/40 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="w-3 h-3" />
+                    Tempo total da viagem: <span className="font-semibold text-foreground">{fmtDuration(totalMin)}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
