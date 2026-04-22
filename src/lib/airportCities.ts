@@ -313,8 +313,10 @@ function originPreposition(country: string): string {
 }
 
 /**
- * Constrói título descritivo de hotel no padrão NatLeva:
- * "Hospedagem em Santiago no Chile · Hotel El Rosedal · 3★ · Café da manhã"
+ * Retorna o título da hospedagem para o preview da proposta.
+ * Política: APENAS o nome do hotel (ex.: "Siyam World Maldives - All Inclusive").
+ * Cidade/país, estrelas e regime são exibidos em outros campos do card e
+ * NÃO devem poluir o título.
  */
 export function buildHotelTitle(opts: {
   hotelName?: string;
@@ -324,31 +326,14 @@ export function buildHotelTitle(opts: {
   mealPlan?: string;
   iata?: string;
 }): string {
-  const { hotelName, city: cityRaw, country: countryRaw, stars, mealPlan, iata } = opts;
+  const name = opts.hotelName?.trim();
+  if (name) return name;
 
-  // Tenta inferir cidade/país pelo IATA se ausente
-  let city = cityRaw?.trim() || "";
-  let country = countryRaw?.trim() || "";
-  if ((!city || !country) && iata) {
-    const info = getAirportInfo(iata);
-    if (info) {
-      if (!city) city = info.city;
-      if (!country) country = info.country;
-    }
+  // Fallback amigável quando o nome do hotel ainda não foi extraído
+  let city = opts.city?.trim() || "";
+  if (!city && opts.iata) {
+    const info = getAirportInfo(opts.iata);
+    if (info) city = info.city;
   }
-
-  const parts: string[] = [];
-  if (city) {
-    const prep = country ? countryPreposition(country) : "em";
-    const local = country ? `${city} ${prep} ${country}` : city;
-    parts.push(`Hospedagem em ${local}`);
-  } else {
-    parts.push("Hospedagem");
-  }
-
-  if (hotelName) parts.push(hotelName);
-  if (stars) parts.push(`${stars}★`);
-  if (mealPlan) parts.push(mealPlan);
-
-  return parts.join(" · ");
+  return city ? `Hospedagem em ${city}` : "Hospedagem";
 }
