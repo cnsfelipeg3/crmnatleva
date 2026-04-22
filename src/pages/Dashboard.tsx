@@ -293,7 +293,21 @@ export default function Dashboard() {
     });
   }, [sales, periodCutoff]);
 
-  // Clients growth: compare new clients in current period vs equivalent previous period
+  // Pre-sort client creation timestamps ONCE per clients array change.
+  // Subsequent period changes use O(log n) binary search instead of O(n) scans.
+  const clientTimestamps = useMemo(() => {
+    const arr: number[] = [];
+    for (const c of clients) {
+      if (!c.created_at) continue;
+      const t = new Date(c.created_at).getTime();
+      if (!Number.isNaN(t)) arr.push(t);
+    }
+    arr.sort((a, b) => a - b);
+    return arr;
+  }, [clients]);
+
+  // Clients growth: compare new clients in current period vs equivalent previous period.
+  // Uses binary search over the pre-sorted timestamps — O(log n) per period change.
   const clientsGrowth = useMemo(() => {
     const now = Date.now();
     const windowMs = periodCutoff
@@ -304,18 +318,33 @@ export default function Dashboard() {
     const previousStart = currentStart - windowMs;
     const previousEnd = currentStart;
 
-    let newCurrent = 0;
-    let newPrevious = 0;
-    let totalAtPreviousEnd = 0;
-    for (const c of clients) {
-      if (!c.created_at) continue;
-      const t = new Date(c.created_at).getTime();
-      if (t >= currentStart && t <= currentEnd) newCurrent++;
-      if (t >= previousStart && t < previousEnd) newPrevious++;
-      if (t <= previousEnd) totalAtPreviousEnd++;
-    }
+    // lowerBound: first index where arr[i] >= target
+    const lowerBound = (target: number) => {
+      let lo = 0, hi = clientTimestamps.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (clientTimestamps[mid] < target) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    };
+    // upperBound: first index where arr[i] > target
+    const upperBound = (target: number) => {
+      let lo = 0, hi = clientTimestamps.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (clientTimestamps[mid] <= target) lo = mid + 1;
+        else hi = mid;
+      }
+      return lo;
+    };
+
+    const newCurrent = upperBound(currentEnd) - lowerBound(currentStart);
+    const newPrevious = lowerBound(previousEnd) - lowerBound(previousStart);
+    const totalAtPreviousEnd = upperBound(previousEnd);
+
     return { current: clients.length, previousTotal: totalAtPreviousEnd, newCurrent, newPrevious };
-  }, [clients, periodCutoff, periodEnd]);
+  }, [clientTimestamps, clients.length, periodCutoff, periodEnd]);
 
   const activeFilterCount = useMemo(() => {
     let c = 0;
