@@ -1085,9 +1085,6 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             return (
               <>
                 {titleNode}
-                {(() => {
-                  return null;
-                })()}
           <div className={`mx-auto grid ${gridCols} gap-6 ${count === 1 ? "" : "justify-items-center"}`}>
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
               <motion.div key={dest.id || idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} className="group rounded-2xl overflow-hidden relative h-72 cursor-pointer shadow-lg shadow-black/10 w-full">
@@ -1100,6 +1097,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               </motion.div>
             ))}
           </div>
+              </>
             );
           })()}
         </section>
