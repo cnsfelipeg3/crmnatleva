@@ -517,9 +517,39 @@
 
 /* Cards / boxes inside flight section */
 .proposal-mobile-frame [data-track-section="flights"] .min-w-\[70px\] {
-  min-width: 56px !important;
+  min-width: 52px !important;
 }
 .proposal-mobile-frame [data-track-section="flights"] .text-xl,
 .proposal-mobile-frame [data-track-section="flights"] .sm\:text-xl {
   font-size: 1rem !important;
+}
+
+/* Connection pills must stay on a single line — no broken "Conexão em / DXB" */
+.proposal-mobile-frame [data-track-section="flights"] .rounded-full {
+  white-space: nowrap !important;
+}
+/* The big top "Conexão em DXB · 3h 30min" pill: shrink padding so it fits */
+.proposal-mobile-frame [data-track-section="flights"] .rounded-full.px-4 {
+  padding-left: 0.625rem !important;
+  padding-right: 0.625rem !important;
+  font-size: 0.7rem !important;
+  gap: 0.375rem !important;
+}
+/* Inline connection chips inside the leg card: stack vertically, full width */
+.proposal-mobile-frame [data-track-section="flights"] .unified-leg-route .flex-col > .rounded-full {
+  font-size: 0.65rem !important;
+  padding: 0.125rem 0.5rem !important;
+}
+/* Cap the leg card padding so it has more breathing room for the timeline */
+.proposal-mobile-frame [data-track-section="flights"] .p-5,
+.proposal-mobile-frame [data-track-section="flights"] .sm\:p-6 {
+  padding: 0.875rem !important;
+}
+/* Origin/Destination columns + timeline: keep the row tight */
+.proposal-mobile-frame [data-track-section="flights"] .unified-leg-route {
+  gap: 0.5rem !important;
+}
+/* Header (date + flight numbers) wraps cleanly */
+.proposal-mobile-frame [data-track-section="flights"] .flex-wrap {
+  row-gap: 0.375rem !important;
 }
