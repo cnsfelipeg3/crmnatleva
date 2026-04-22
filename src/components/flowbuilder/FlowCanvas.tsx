@@ -117,7 +117,7 @@ export function FlowCanvas({ flowId, flowName, flowStatus, onBack, onSimulate }:
       animated: true,
       type: "deletable",
       style: { stroke: "hsl(var(--primary))", strokeWidth: 2 },
-    }, eds));
+    } as any, eds));
     setHasChanges(true);
     scheduleAutoSave();
   }, []);

@@ -501,7 +501,7 @@ export default function Passengers() {
                           {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {p.created_at ? formatDateBR(p.created_at) : "—"}
+                          {(p as any).created_at ? formatDateBR((p as any).created_at) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {tripCount > 0 ? (
