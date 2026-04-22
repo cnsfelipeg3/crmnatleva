@@ -245,6 +245,30 @@ export default function Dashboard() {
     });
   }, [sales, periodCutoff]);
 
+  // Clients growth: compare new clients in current period vs equivalent previous period
+  const clientsGrowth = useMemo(() => {
+    const now = Date.now();
+    const windowMs = periodCutoff
+      ? (periodEnd ? periodEnd.getTime() : now) - periodCutoff.getTime()
+      : 30 * 86400000; // default 30d window when "all"
+    const currentStart = periodCutoff ? periodCutoff.getTime() : now - windowMs;
+    const currentEnd = periodEnd ? periodEnd.getTime() : now;
+    const previousStart = currentStart - windowMs;
+    const previousEnd = currentStart;
+
+    let newCurrent = 0;
+    let newPrevious = 0;
+    let totalAtPreviousEnd = 0;
+    for (const c of clients) {
+      if (!c.created_at) continue;
+      const t = new Date(c.created_at).getTime();
+      if (t >= currentStart && t <= currentEnd) newCurrent++;
+      if (t >= previousStart && t < previousEnd) newPrevious++;
+      if (t <= previousEnd) totalAtPreviousEnd++;
+    }
+    return { current: clients.length, previousTotal: totalAtPreviousEnd, newCurrent, newPrevious };
+  }, [clients, periodCutoff, periodEnd]);
+
   const activeFilterCount = useMemo(() => {
     let c = 0;
     if (period !== "all") c++;
