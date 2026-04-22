@@ -327,20 +327,6 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
         </div>
       </div>
 
-      {/* Amadeus search button */}
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={!canSearch || searching}
-        onClick={handleAmadeusSearch}
-        className="gap-2 w-full sm:w-auto border-primary/30 text-primary hover:bg-primary/5"
-      >
-        {searching ? (
-          <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Buscando no Amadeus...</>
-        ) : (
-          <><Sparkles className="w-3.5 h-3.5" /> Completar dados via Amadeus</>
-        )}
-      </Button>
     </div>
   );
 }
