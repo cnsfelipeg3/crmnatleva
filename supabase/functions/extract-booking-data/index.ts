@@ -169,7 +169,11 @@ const HOTEL_SCHEMA = {
           rating: { type: "number", description: "Nota de avaliação dos hóspedes (0-10)" },
           rating_source: { type: "string", description: "Fonte da nota (Booking, Google, TripAdvisor, etc.)" },
           reviews_count: { type: "number" },
-          room_type: { type: "string", description: "Tipo de quarto (ex.: Deluxe Double, Suite Vista Mar)" },
+          room_type: {
+            type: "string",
+            description:
+              "Nome ESSENCIAL da categoria do quarto/acomodação, somente o núcleo identificador (ex.: 'Lagoon Villa with Pool', 'Deluxe Double', 'Suite Vista Mar', 'Beach Bungalow'). PROIBIDO incluir: perks/cortesias ('Free seaplane', 'Free transfer', 'Welcome drink'), campanhas ('24h All Inclusive'), número de hóspedes, área em m², regime alimentar, vista (a menos que faça parte do nome oficial curto, ex.: 'Suite Vista Mar'), código tarifário, ou qualquer texto após hífen/'+' que descreva benefícios. Se o nome original tiver separadores como ' - ', ' + ', ' | ' ou ' / ', mantenha apenas o segmento principal antes deles. Máx. ~40 caracteres.",
+          },
           bed_configuration: { type: "string", description: "Configuração de camas (1 King, 2 Twin, etc.)" },
           view: { type: "string", description: "Vista do quarto (mar, cidade, jardim, etc.)" },
           meal_plan: {
@@ -383,6 +387,37 @@ Deno.serve(async (req) => {
     } catch (e) {
       console.error("JSON parse fail", e, argsRaw);
       return json({ error: "Resposta da IA inválida." }, 422);
+    }
+
+    // Defensive post-processing: normalize hotel room_type to its essential core,
+    // dropping marketing perks/promo suffixes the model may still emit.
+    if (item_type === "hotel" && extracted?.data?.room_type) {
+      const sanitizeRoomType = (raw: string): string => {
+        let s = String(raw || "").trim();
+        if (!s) return s;
+        // Cut at first separator that typically introduces perks/promos
+        const cutAt = (re: RegExp) => {
+          const m = s.match(re);
+          if (m && m.index !== undefined && m.index > 2) s = s.slice(0, m.index).trim();
+        };
+        cutAt(/\s[-–—|/]\s/);     // " - ", " | ", " / "
+        cutAt(/\s\+\s/);           // " + "
+        // Drop promo/perk tails even without a separator
+        s = s.replace(
+          /\b(free|gratis|grátis|complimentary|inclusive|incluso|24[- ]?h(our)?|all[- ]?inclusive|welcome|transfer|seaplane|speedboat|breakfast|spa|wifi|wi-?fi|champagne|massage|airport)\b.*$/i,
+          "",
+        ).trim();
+        // Trim trailing punctuation
+        s = s.replace(/[\s\-–—,;:.|/+]+$/g, "").trim();
+        // Hard cap
+        if (s.length > 60) s = s.slice(0, 60).trim();
+        return s || raw;
+      };
+      const cleaned = sanitizeRoomType(extracted.data.room_type);
+      if (cleaned && cleaned !== extracted.data.room_type) {
+        console.log("[extract-booking-data] room_type sanitized:", extracted.data.room_type, "→", cleaned);
+        extracted.data.room_type = cleaned;
+      }
     }
 
     // Defensive post-processing: bump past dates to current/next year for flights
