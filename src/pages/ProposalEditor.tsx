@@ -1008,6 +1008,11 @@ export default function ProposalEditor() {
                           size="sm"
                           className="gap-1.5 h-8"
                           onClick={() => {
+                            // Aéreo abre wizard guiado; demais categorias criam item direto
+                            if (activeItemCategory === "flight") {
+                              setFlightWizardOpen(true);
+                              return;
+                            }
                             addItem(activeItemCategory);
                             // garante que o novo item fique aberto
                             setCollapsedItems((prev) => {
