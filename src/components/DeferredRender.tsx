@@ -8,6 +8,11 @@ interface DeferredRenderProps {
   enabled?: boolean;
 }
 
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 export default function DeferredRender({
   children,
   fallback = null,
@@ -29,7 +34,7 @@ export default function DeferredRender({
     }
 
     setReady(false);
-    const browser = window as Window & typeof globalThis;
+    const browser = window as IdleCapableWindow;
 
     let cancelled = false;
     let delayTimer: number | undefined;
@@ -41,21 +46,21 @@ export default function DeferredRender({
     };
 
     const schedule = () => {
-      if ("requestIdleCallback" in browser) {
+      if (typeof browser.requestIdleCallback === "function") {
         idleId = browser.requestIdleCallback(reveal, { timeout: timeoutMs });
         return;
       }
-      fallbackTimer = browser.setTimeout(reveal, Math.min(timeoutMs, 250));
+      fallbackTimer = window.setTimeout(reveal, Math.min(timeoutMs, 250));
     };
 
-    if (delayMs > 0) delayTimer = browser.setTimeout(schedule, delayMs);
+    if (delayMs > 0) delayTimer = window.setTimeout(schedule, delayMs);
     else schedule();
 
     return () => {
       cancelled = true;
-      if (delayTimer) browser.clearTimeout(delayTimer);
-      if (fallbackTimer) browser.clearTimeout(fallbackTimer);
-      if (idleId && "cancelIdleCallback" in browser) {
+      if (delayTimer) window.clearTimeout(delayTimer);
+      if (fallbackTimer) window.clearTimeout(fallbackTimer);
+      if (idleId && typeof browser.cancelIdleCallback === "function") {
         browser.cancelIdleCallback(idleId);
       }
     };

@@ -54,6 +54,11 @@ interface LodgingTask {
   scheduled_at_utc: string | null; issue_type: string | null;
 }
 
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 function SectionSkeleton({ tall = false }: { tall?: boolean }) {
   return <Skeleton className={tall ? "h-80 rounded-xl" : "h-72 rounded-xl"} />;
 }
@@ -135,6 +140,7 @@ export default function Dashboard() {
     setDetailLoading(true);
     let idleId: number | undefined;
     let phase2Timer: number | undefined;
+    const browser = typeof window !== "undefined" ? (window as IdleCapableWindow) : undefined;
 
     // Phase 1: lightweight metadata (profiles, clients)
     Promise.all([
@@ -165,8 +171,8 @@ export default function Dashboard() {
       }).catch(() => { if (alive) setDetailLoading(false); });
     };
 
-    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
-      idleId = window.requestIdleCallback(loadDetailData, { timeout: 1500 });
+    if (typeof browser?.requestIdleCallback === "function") {
+      idleId = browser.requestIdleCallback(loadDetailData, { timeout: 1500 });
     } else if (typeof window !== "undefined") {
       phase2Timer = window.setTimeout(loadDetailData, 250);
     } else {
@@ -176,7 +182,7 @@ export default function Dashboard() {
     return () => {
       alive = false;
       if (typeof window !== "undefined") {
-        if (idleId && "cancelIdleCallback" in window) window.cancelIdleCallback(idleId);
+        if (idleId && typeof browser?.cancelIdleCallback === "function") browser.cancelIdleCallback(idleId);
         if (phase2Timer) window.clearTimeout(phase2Timer);
       }
     };
