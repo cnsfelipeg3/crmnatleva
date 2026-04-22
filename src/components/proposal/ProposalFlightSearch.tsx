@@ -13,8 +13,7 @@ import FlightSegmentCard from "./FlightSegmentCard";
 import FlightSegmentForm from "./FlightSegmentForm";
 import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
 import { UnifiedLegCard } from "./ProposalPreviewRenderer";
-import { classifyItinerary, type ItineraryClassification } from "@/lib/itineraryClassifier";
-import { calcLayoverMinutes } from "@/lib/flightTiming";
+import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
 
 export interface FlightSegmentData {
   airline: string;
@@ -77,23 +76,6 @@ const emptySegment = (isConnection = false): FlightSegmentData => ({
   personal_item_included: true, personal_item_weight_kg: 10,
   carry_on_included: true, carry_on_weight_kg: 10, checked_bags_included: 0, checked_bag_weight_kg: 23, baggage_notes: "",
 });
-
-function isRealConnection(prev: FlightSegmentData | null, next: FlightSegmentData | null): boolean {
-  if (!prev || !next) return false;
-  if (!prev.destination_iata || !next.origin_iata) return false;
-  if (prev.destination_iata.toUpperCase() !== next.origin_iata.toUpperCase()) return false;
-
-  const layoverMin = calcLayoverMinutes(prev, next);
-  if (typeof layoverMin === "number") {
-    return layoverMin >= 0 && layoverMin <= 1440;
-  }
-
-  if (prev.departure_date && next.departure_date) {
-    return prev.departure_date.slice(0, 10) === next.departure_date.slice(0, 10);
-  }
-
-  return false;
-}
 
 export default function ProposalFlightSearch({ segments, onSegmentsChange }: ProposalFlightSearchProps) {
   const [searchForms, setSearchForms] = useState<Record<number, SearchFormData>>({});
@@ -255,39 +237,36 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     onSegmentsChange(segments.map((s, i) => (i === idx ? updated : s)));
   };
 
-  // Group segments into legs (a leg = first segment + its connections).
-  // First, classify the full itinerary to detect IDA / VOLTA / MULTI_CITY automatically.
-  const classification: ItineraryClassification = classifyItinerary(
-    segments.map((s) => ({
-      origin_iata: s.origin_iata,
-      destination_iata: s.destination_iata,
-      departure_date: s.departure_date || null,
-      departure_time: s.departure_time || null,
-    }))
-  );
+  const grouped = buildFlightLegGroups(segments);
+  const usedIndices = new Set<number>();
+  const legs = grouped.legs
+    .map((leg) => {
+      const resolvedSegments = leg.segments
+        .map((legSeg) => {
+          const matchedIdx = segments.findIndex((seg, idx) => (
+            !usedIndices.has(idx) &&
+            seg.origin_iata === legSeg.origin_iata &&
+            seg.destination_iata === legSeg.destination_iata &&
+            seg.departure_date === legSeg.departure_date &&
+            (seg.departure_time || "") === (legSeg.departure_time || "")
+          ));
 
-  // Build legs respecting both manual `is_connection` flag AND auto-classification.
-  // Auto rule: if previous segment's destination == current's origin AND date diff <= 1 day, treat as connection.
-  const legs: { startIdx: number; segments: { seg: FlightSegmentData; idx: number }[] }[] = [];
-  segments.forEach((seg, idx) => {
-    const prev = idx > 0 ? segments[idx - 1] : null;
-    const isConnection = isRealConnection(prev, seg);
+          if (matchedIdx === -1) return null;
+          usedIndices.add(matchedIdx);
+          return { seg: segments[matchedIdx], idx: matchedIdx };
+        })
+        .filter(Boolean) as { seg: FlightSegmentData; idx: number }[];
 
-    if (!isConnection || legs.length === 0) {
-      legs.push({ startIdx: idx, segments: [{ seg, idx }] });
-    } else {
-      legs[legs.length - 1].segments.push({ seg, idx });
-    }
-  });
+      if (resolvedSegments.length === 0) return null;
 
-  // Map each leg to its direction label based on the global classification.
-  const legLabels: string[] = legs.map((_, i) => {
-    if (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW") {
-      return i === 0 ? "Ida" : i === legs.length - 1 ? "Volta" : `Trecho ${i + 1}`;
-    }
-    if (classification.type === "ONE_WAY") return "Ida";
-    return `Trecho ${i + 1}`;
-  });
+      return {
+        startIdx: resolvedSegments[0].idx,
+        label: leg.label,
+        direction: leg.direction,
+        segments: resolvedSegments,
+      };
+    })
+    .filter(Boolean) as { startIdx: number; label: string; direction: string; segments: { seg: FlightSegmentData; idx: number }[] }[];
 
   if (segments.length === 0) {
     return (
@@ -302,9 +281,9 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
 
   return (
     <div className="space-y-5">
-      {legs.map((leg, legIdx) => {
+      {legs.map((leg) => {
         const isMultiSeg = leg.segments.length > 1;
-        const directionLabel = legLabels[legIdx];
+        const directionLabel = leg.label;
         const isReturn = directionLabel === "Volta";
         const isOutbound = directionLabel === "Ida";
         const accent = isOutbound

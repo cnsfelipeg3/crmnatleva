@@ -12,7 +12,6 @@ import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.png";
 import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.png";
 import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
-import { assignDirections, classifyItinerary } from "@/lib/itineraryClassifier";
 import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
