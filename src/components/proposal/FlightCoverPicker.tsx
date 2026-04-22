@@ -1,64 +1,16 @@
-import { useMemo, useState } from "react";
-import { Input } from "@/components/ui/input";
+import { useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plane, Check, X } from "lucide-react";
+import { Plane, Check, Sparkles, Upload, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
-// ───────────────────────────────────────────────
-// Curated airline aircraft cover photos (Wikimedia Commons – public domain / CC).
-// Add more as needed. Keys are uppercase IATA codes.
-// ───────────────────────────────────────────────
-const AIRLINE_COVERS: Record<string, { url: string; label: string }[]> = {
-  LA: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1f/LATAM_Airlines_Boeing_787-9_Dreamliner_CC-BGK.jpg/1600px-LATAM_Airlines_Boeing_787-9_Dreamliner_CC-BGK.jpg", label: "LATAM 787-9" },
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/LATAM_Airlines_Brasil_Airbus_A320-214_PR-MHU.jpg/1600px-LATAM_Airlines_Brasil_Airbus_A320-214_PR-MHU.jpg", label: "LATAM A320" },
-  ],
-  AD: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/Azul_Linhas_A%C3%A9reas_Brasileiras_Airbus_A330-941_PR-ANY.jpg/1600px-Azul_Linhas_A%C3%A9reas_Brasileiras_Airbus_A330-941_PR-ANY.jpg", label: "Azul A330neo" },
-  ],
-  G3: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4f/Gol_Linhas_A%C3%A9reas_Boeing_737-8EH_PR-GUK.jpg/1600px-Gol_Linhas_A%C3%A9reas_Boeing_737-8EH_PR-GUK.jpg", label: "GOL 737" },
-  ],
-  EK: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/79/Emirates_Airbus_A380-861_A6-EER.jpg/1600px-Emirates_Airbus_A380-861_A6-EER.jpg", label: "Emirates A380" },
-  ],
-  QR: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/0/05/Qatar_Airways_Boeing_777-300ER_A7-BAC.jpg/1600px-Qatar_Airways_Boeing_777-300ER_A7-BAC.jpg", label: "Qatar 777" },
-  ],
-  AF: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/86/Air_France_Boeing_777-328ER_F-GZNU.jpg/1600px-Air_France_Boeing_777-328ER_F-GZNU.jpg", label: "Air France 777" },
-  ],
-  KL: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/KLM_Boeing_787-9_Dreamliner_PH-BHA.jpg/1600px-KLM_Boeing_787-9_Dreamliner_PH-BHA.jpg", label: "KLM 787" },
-  ],
-  TP: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/TAP_Air_Portugal_Airbus_A330-941_CS-TUA.jpg/1600px-TAP_Air_Portugal_Airbus_A330-941_CS-TUA.jpg", label: "TAP A330neo" },
-  ],
-  IB: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/Iberia_Airbus_A350-941_EC-MXV.jpg/1600px-Iberia_Airbus_A350-941_EC-MXV.jpg", label: "Iberia A350" },
-  ],
-  AA: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/45/American_Airlines_Boeing_777-300ER_N729AN.jpg/1600px-American_Airlines_Boeing_777-300ER_N729AN.jpg", label: "American 777" },
-  ],
-  UA: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/77/United_Airlines_Boeing_787-9_Dreamliner_N38950.jpg/1600px-United_Airlines_Boeing_787-9_Dreamliner_N38950.jpg", label: "United 787" },
-  ],
-  DL: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Delta_Air_Lines_Airbus_A350-941_N502DN.jpg/1600px-Delta_Air_Lines_Airbus_A350-941_N502DN.jpg", label: "Delta A350" },
-  ],
-  TK: [
-    { url: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/Turkish_Airlines_Boeing_777-3F2ER_TC-JJI.jpg/1600px-Turkish_Airlines_Boeing_777-3F2ER_TC-JJI.jpg", label: "Turkish 777" },
-  ],
-};
-
-// Generic fallback covers (no airline detected)
-const GENERIC_COVERS: { url: string; label: string }[] = [
-  { url: "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?auto=format&fit=crop&w=1600&q=80", label: "Avião decolando" },
-  { url: "https://images.unsplash.com/photo-1542296332-2e4473faf563?auto=format&fit=crop&w=1600&q=80", label: "Asa em voo" },
-  { url: "https://images.unsplash.com/photo-1569154941061-e231b4725ef1?auto=format&fit=crop&w=1600&q=80", label: "Cabine de comando" },
-  { url: "https://images.unsplash.com/photo-1583416750470-965b2707b355?auto=format&fit=crop&w=1600&q=80", label: "Aeronave na pista" },
-];
+interface CoverImage {
+  url: string;
+  source: "wikimedia" | "ai" | "upload";
+  title?: string;
+}
 
 interface FlightCoverPickerProps {
   value: string;
@@ -67,16 +19,73 @@ interface FlightCoverPickerProps {
   airlineName?: string;
 }
 
-export default function FlightCoverPicker({ value, onChange, airlineIata, airlineName }: FlightCoverPickerProps) {
-  const [showUrlInput, setShowUrlInput] = useState(false);
+export default function FlightCoverPicker({
+  value,
+  onChange,
+  airlineIata,
+  airlineName,
+}: FlightCoverPickerProps) {
+  const [results, setResults] = useState<CoverImage[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { covers, source } = useMemo(() => {
-    const code = (airlineIata || "").trim().toUpperCase();
-    if (code && AIRLINE_COVERS[code]) {
-      return { covers: AIRLINE_COVERS[code], source: "airline" as const };
+  const buildSearchTerm = () => {
+    const parts: string[] = [];
+    if (airlineName) parts.push(airlineName);
+    else if (airlineIata) parts.push(airlineIata);
+    parts.push("aircraft airplane");
+    return parts.join(" ");
+  };
+
+  const handleSearch = async () => {
+    setSearching(true);
+    try {
+      const term = buildSearchTerm();
+      const { data, error } = await supabase.functions.invoke("cover-image-search", {
+        body: { destination: term },
+      });
+      if (error) throw error;
+      const imgs = (data?.images || []) as CoverImage[];
+      if (imgs.length === 0) {
+        toast.warning("Nenhuma imagem encontrada. Tente fazer upload.");
+      }
+      setResults(imgs);
+    } catch (e: any) {
+      toast.error("Erro ao buscar imagens", { description: e?.message });
+    } finally {
+      setSearching(false);
     }
-    return { covers: GENERIC_COVERS, source: "generic" as const };
-  }, [airlineIata]);
+  };
+
+  const handleUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione uma imagem (JPG, PNG, WEBP)");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Imagem muito grande (máx 10MB)");
+      return;
+    }
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `flight-covers/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("media").upload(path, file, {
+        contentType: file.type,
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("media").getPublicUrl(path);
+      onChange(data.publicUrl);
+      toast.success("Imagem enviada!");
+    } catch (e: any) {
+      toast.error("Erro ao enviar imagem", { description: e?.message });
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   return (
     <div className="md:col-span-2 space-y-2">
@@ -84,103 +93,136 @@ export default function FlightCoverPicker({ value, onChange, airlineIata, airlin
         <Label className="text-xs flex items-center gap-1.5">
           <Plane className="w-3.5 h-3.5 text-primary" />
           Imagem de capa do aéreo
-          {source === "airline" && airlineName && (
+          {airlineName && (
             <span className="text-[10px] text-muted-foreground font-normal">
-              · sugestões para {airlineName}
-            </span>
-          )}
-          {source === "generic" && (
-            <span className="text-[10px] text-muted-foreground font-normal">
-              · sugestões genéricas (defina a companhia para fotos da frota)
+              · {airlineName}
             </span>
           )}
         </Label>
-        <button
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button
           type="button"
-          onClick={() => setShowUrlInput((v) => !v)}
-          className="text-[10px] text-primary hover:underline"
+          size="sm"
+          variant="outline"
+          onClick={handleSearch}
+          disabled={searching}
+          className="gap-1.5 h-8 text-xs"
         >
-          {showUrlInput ? "Ocultar URL manual" : "Colar URL manual"}
-        </button>
-      </div>
-
-      {/* Thumbnail grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {covers.map((c) => {
-          const selected = value === c.url;
-          return (
-            <button
-              key={c.url}
-              type="button"
-              onClick={() => onChange(c.url)}
-              className={cn(
-                "relative aspect-[4/3] rounded-lg overflow-hidden border bg-muted group transition-all",
-                selected
-                  ? "border-primary ring-2 ring-primary/30"
-                  : "border-border/40 hover:border-border"
-              )}
-            >
-              <img
-                src={c.url}
-                alt={c.label}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-              {selected && (
-                <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
-                  <Check className="w-3 h-3" />
-                </div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1">
-                <p className="text-[9px] text-white font-medium truncate">{c.label}</p>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Manual URL input (collapsible) */}
-      {showUrlInput && (
-        <div className="flex items-center gap-2">
-          <Input
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="https://..."
-            className="h-8 text-xs"
-          />
-          {value && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => onChange("")}
-              className="h-8 px-2"
-            >
-              <X className="w-3.5 h-3.5" />
-            </Button>
+          {searching ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="w-3.5 h-3.5 text-primary" />
           )}
-        </div>
-      )}
+          {searching ? "Buscando..." : "Buscar com IA"}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          className="gap-1.5 h-8 text-xs"
+        >
+          {uploading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Upload className="w-3.5 h-3.5 text-primary" />
+          )}
+          {uploading ? "Enviando..." : "Fazer upload"}
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleUpload(f);
+          }}
+        />
+        {!airlineIata && !airlineName && (
+          <span className="text-[10px] text-muted-foreground">
+            Defina a companhia aérea para melhores resultados
+          </span>
+        )}
+      </div>
 
-      {/* Preview if custom URL not in grid */}
-      {value && !covers.some((c) => c.url === value) && (
+      {/* Currently selected preview */}
+      {value && (
         <div className="flex items-start gap-2 p-2 bg-muted/30 rounded-lg border border-border/40">
-          <div className="w-16 h-12 rounded overflow-hidden shrink-0 bg-muted">
-            <img src={value} alt="Capa" className="w-full h-full object-cover" />
+          <div className="w-24 h-16 rounded overflow-hidden shrink-0 bg-muted">
+            <img
+              src={value}
+              alt="Capa selecionada"
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] text-muted-foreground">Capa personalizada</p>
-            <p className="text-[10px] text-foreground/70 truncate">{value}</p>
+            <p className="text-[10px] font-semibold text-foreground">Capa atual</p>
+            <p className="text-[10px] text-muted-foreground truncate">
+              Esta imagem aparecerá no topo do card de aéreo na proposta
+            </p>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => onChange("")}
-            className="h-7 px-2 text-[10px]"
+            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+            title="Remover capa"
           >
-            Remover
+            <X className="w-3.5 h-3.5" />
           </Button>
+        </div>
+      )}
+
+      {/* Search results grid */}
+      {results.length > 0 && (
+        <div className="space-y-1.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+            Resultados ({results.length})
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {results.map((c, i) => {
+              const selected = value === c.url;
+              return (
+                <button
+                  key={`${c.url}-${i}`}
+                  type="button"
+                  onClick={() => onChange(c.url)}
+                  className={cn(
+                    "relative aspect-[4/3] rounded-lg overflow-hidden border bg-muted group transition-all",
+                    selected
+                      ? "border-primary ring-2 ring-primary/30"
+                      : "border-border/40 hover:border-border"
+                  )}
+                >
+                  <img
+                    src={c.url}
+                    alt={c.title || "Sugestão"}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    onError={(e) => {
+                      (e.currentTarget.parentElement as HTMLElement).style.display = "none";
+                    }}
+                  />
+                  {selected && (
+                    <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5">
+                      <Check className="w-3 h-3" />
+                    </div>
+                  )}
+                  {c.source === "ai" && (
+                    <div className="absolute top-1 left-1 bg-primary/90 text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                      <Sparkles className="w-2 h-2" /> IA
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
     </div>
