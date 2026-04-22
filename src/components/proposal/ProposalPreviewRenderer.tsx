@@ -444,10 +444,10 @@ function UnifiedLegCard({ segments }: { segments: any[] }) {
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
       {/* Header: dates + flight numbers */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-secondary">
           {fmtDateLabel(depDate)}
           {arrDate && arrDate !== depDate && (
-            <span className="text-muted-foreground/60"> → {fmtDateLabel(arrDate)}</span>
+            <span className="text-secondary"> → {fmtDateLabel(arrDate)}</span>
           )}
         </div>
         {flightNumbers.length > 0 && (
@@ -524,8 +524,8 @@ function UnifiedLegCard({ segments }: { segments: any[] }) {
 
           {/* Total duration */}
           {totalMin > 0 && (
-            <span className="text-[11px] text-muted-foreground/60 flex items-center gap-1 mt-1">
-              <Clock className="w-3 h-3" /> {fmtDuration(totalMin)} {stops > 0 && <span className="text-muted-foreground/40">total</span>}
+            <span className="text-[11px] flex items-center gap-1 mt-1 text-secondary">
+              <Clock className="w-3 h-3" /> {fmtDuration(totalMin)} {stops > 0 && <span className="text-secondary">total</span>}
             </span>
           )}
 
@@ -778,7 +778,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                 <div className="mt-3 space-y-1.5">
                   <p className="text-sm font-medium text-foreground/90">{routeLabel}</p>
                   {connectionSummaries.length > 0 && connectionSummaries.map((connection, connectionIndex) => (
-                    <p key={connectionIndex} className="text-xs text-muted-foreground">
+                    <p key={connectionIndex} className="text-xs text-secondary">
                       {connectionSummaries.length === 1 ? "1 conexão" : `${connectionIndex + 1}ª conexão`} em {iataToCityName(connection.airport)}
                       {connection.layoverMinutes ? ` · ${fmtDuration(connection.layoverMinutes)}` : ""}
                     </p>
@@ -795,12 +795,12 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               return (
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
                   {d.cabin && (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-secondary">
                       <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
                     </span>
                   )}
                   {legBadges.map((b, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full">
+                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-secondary">
                       <Luggage className="w-3 h-3 text-accent" /> {b}
                     </span>
                   ))}
@@ -1175,7 +1175,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           )}
           <div className="flex items-center justify-center gap-3 mt-7 opacity-40">
             <div className="h-px w-8 bg-white/50" />
-            <span className="text-[10px] tracking-[0.3em] uppercase" style={{ fontFamily: headingFont }}>
+            <span className="text-[10px] tracking-[0.3em] uppercase text-muted" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
             <div className="h-px w-8 bg-white/50" />
