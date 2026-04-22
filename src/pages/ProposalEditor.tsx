@@ -1021,7 +1021,6 @@ export default function ProposalEditor() {
                                     </span>
                                   </div>
                                 </div>
-                                </div>
 
                                 {/* Thumbnails */}
                                 {(item.data?.official_photos?.length || 0) > 0 ? (
