@@ -105,6 +105,8 @@ export default function ProposalEditor() {
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
+  const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
+  const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -1253,9 +1255,13 @@ export default function ProposalEditor() {
                 {inlineEditEnabled ? "Editando visual" : "Editar visual"}
               </Button>
             </div>
-            <InlineEditOverlay
-              storageKey={id || "novo"}
+            <VisualCanvasOverlay
               enabled={inlineEditEnabled}
+              value={visualOverrides}
+              onChange={(next) => {
+                setVisualOverrides(next);
+                try { localStorage.setItem(visualDraftKey, JSON.stringify(next)); } catch { /* ignore */ }
+              }}
             >
               <ProposalPreviewRenderer
                 proposal={{
@@ -1265,9 +1271,10 @@ export default function ProposalEditor() {
                 }}
                 items={items}
                 template={selectedTemplate}
+                visualOverrides={visualOverrides}
                 embedded
               />
-            </InlineEditOverlay>
+            </VisualCanvasOverlay>
           </div>
         }
       />
