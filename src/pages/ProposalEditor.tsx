@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
+import FlightCoverPicker from "@/components/proposal/FlightCoverPicker";
 import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
