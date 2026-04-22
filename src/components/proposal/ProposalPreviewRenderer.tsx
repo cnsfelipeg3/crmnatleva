@@ -406,7 +406,7 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
 }
 
 /* ═══ Unified Leg Card (origin → destination with stops in timeline) ═══ */
-function UnifiedLegCard({ segments }: { segments: any[] }) {
+export function UnifiedLegCard({ segments }: { segments: any[] }) {
   if (!segments?.length) return null;
   const firstSeg = segments[0];
   const lastSeg = segments[segments.length - 1];

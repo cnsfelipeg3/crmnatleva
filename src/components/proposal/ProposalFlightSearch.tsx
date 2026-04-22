@@ -12,6 +12,7 @@ import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
 import FlightSegmentForm from "./FlightSegmentForm";
 import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
+import { UnifiedLegCard } from "./ProposalPreviewRenderer";
 import { classifyItinerary, type ItineraryClassification } from "@/lib/itineraryClassifier";
 
 export interface FlightSegmentData {
@@ -325,6 +326,15 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
               </div>
             </div>
 
+            {/* ✨ Live preview do trecho — espelha exatamente o card final do cliente */}
+            {leg.segments.some(({ seg }) => seg.origin_iata && seg.destination_iata) && (
+              <div className="mb-3 rounded-xl border border-dashed border-primary/30 bg-muted/30 p-2">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 px-1 flex items-center gap-1">
+                  <Plane className="w-3 h-3" /> Pré-visualização (cliente verá assim)
+                </p>
+                <UnifiedLegCard segments={leg.segments.map(({ seg }) => seg)} />
+              </div>
+            )}
 
             {/* Segments within leg */}
             <div className={isMultiSeg ? "border border-border/60 rounded-lg overflow-hidden" : ""}>
