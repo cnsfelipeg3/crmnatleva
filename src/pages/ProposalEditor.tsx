@@ -633,6 +633,16 @@ export default function ProposalEditor() {
       prev.map((item, i) => {
         if (i !== idx) return item;
         const coverUrl = data.selectedPhotos[data.mainPhotoIndex] || data.selectedPhotos[0] || item.image_url || "";
+        // Build official_photos from detailed metadata so the in-editor gallery manager
+        // (thumbnails grid with "set as cover" / "remove") shows up immediately.
+        const officialPhotos = (data.selectedPhotosDetailed || []).map((p) => ({
+          url: p.url,
+          label: p.label,
+          category: p.category,
+          source: p.source,
+          room_name: p.room_name ?? null,
+          description: p.description || "",
+        }));
         return {
           ...item,
           title: data.name,
@@ -652,6 +662,7 @@ export default function ProposalEditor() {
             allPhotos: data.photos,
             mainPhotoIndex: data.mainPhotoIndex,
             photoLabels: data.photoLabels,
+            official_photos: officialPhotos,
           },
         };
       })
