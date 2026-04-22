@@ -1004,15 +1004,15 @@ export default function PlacesSearchCard({
               )}
               <Button
                 type="button"
-                variant="outline"
+                variant="default"
                 size="sm"
                 onClick={() => fetchOfficialSitePhotos(false)}
                 disabled={loadingOfficial || !selectedPlace?.name}
-                className="h-7 px-2 text-[10px] gap-1"
-                title="Buscar fotos HD direto do site oficial do hotel"
+                className="h-7 px-3 text-[10px] gap-1"
+                title="Busca fotos HD no site oficial do hotel e organiza por quarto/categoria"
               >
-                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-                {loadingOfficial ? "Buscando…" : "Site Oficial (HD)"}
+                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {loadingOfficial ? "Buscando mídias…" : "Buscar Mídias"}
               </Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 px-2 text-[10px] gap-1">
                 <Upload className="h-3 w-3" /> Upload
