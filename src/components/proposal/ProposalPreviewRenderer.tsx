@@ -1334,28 +1334,28 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.3 }}
-          className="relative z-10 text-center text-white pb-6 sm:pb-10 px-6 max-w-3xl"
+          className="relative z-10 text-center text-white pb-5 sm:pb-10 px-4 sm:px-6 max-w-3xl w-full"
         >
           {proposal.client_name && (
-            <p className="text-xs tracking-[0.35em] uppercase opacity-60 mb-4" style={{ fontFamily: headingFont }}>
+            <p className="text-[10px] sm:text-xs tracking-[0.25em] sm:tracking-[0.35em] uppercase opacity-70 mb-2 sm:mb-4 truncate" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
-            className={`${embedded ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl md:text-5xl"} font-bold leading-tight mb-4`}
+            className={`${embedded ? "text-xl sm:text-3xl" : "text-2xl sm:text-4xl md:text-5xl"} font-bold leading-tight mb-2 sm:mb-4 break-words`}
             style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
           {dateRange && (
-            <p className="text-base sm:text-lg opacity-70 font-light tracking-wide">{dateRange}</p>
+            <p className="text-xs sm:text-lg opacity-80 font-light tracking-wide">{dateRange}</p>
           )}
-          <div className="flex items-center justify-center gap-3 mt-7 opacity-40">
-            <div className="h-px w-8 bg-white/50" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-muted" style={{ fontFamily: headingFont }}>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 sm:mt-7 opacity-50">
+            <div className="h-px w-5 sm:w-8 bg-white/50" />
+            <span className="text-[8px] sm:text-[10px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-white/80" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
-            <div className="h-px w-8 bg-white/50" />
+            <div className="h-px w-5 sm:w-8 bg-white/50" />
           </div>
 
           {/* NatLeva Logo - centered below "Proposta exclusiva" */}
@@ -1365,7 +1365,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             transition={{ duration: 0.8, delay: 0.6 }}
             src={logoNatlevaChampagne}
             alt="NatLeva Viagens"
-            className="h-6 sm:h-7 mx-auto mt-10 sm:mt-14"
+            className="h-4 sm:h-7 w-auto mx-auto mt-5 sm:mt-14"
             style={{
               filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
             }}
