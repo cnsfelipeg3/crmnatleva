@@ -143,6 +143,7 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
         {kpis.map(k => (
           <Card
             key={k.label}
+            title={(k as any).tooltip}
             className="p-3 md:p-4 glass-card group relative overflow-hidden cursor-pointer hover:ring-1 hover:ring-accent/30 transition-all"
             onClick={() => hasDrilldown && k.sales && setDrilldown({ label: k.label, sales: k.sales })}
           >
@@ -164,6 +165,9 @@ export default function KpiCards({ kpiData, filtered = [], previous = [], client
                 {k.change >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                 {Math.abs(k.change).toFixed(1)}%
               </div>
+            )}
+            {(k as any).footnote && (
+              <div className="mt-0.5 text-[9px] text-muted-foreground/70 truncate">{(k as any).footnote}</div>
             )}
           </Card>
         ))}
