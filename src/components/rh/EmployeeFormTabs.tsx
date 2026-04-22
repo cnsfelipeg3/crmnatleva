@@ -184,7 +184,25 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
 
-  const permissions: Record<string, string> = form.permissions || {};
+  // Migra permissões antigas (string por módulo) para o novo formato granular
+  const rawPermissions = form.permissions || {};
+  const permissions: PermissionsMap = MODULE_CATALOG.reduce((acc, mod) => {
+    const existing = rawPermissions[mod.key];
+    if (existing && typeof existing === "object" && "actions" in existing) {
+      acc[mod.key] = existing as ModulePerm;
+    } else if (typeof existing === "string") {
+      // legacy: "total" | "parcial" | "sem_acesso"
+      if (existing === "total") acc[mod.key] = { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) };
+      else if (existing === "parcial") acc[mod.key] = { actions: ["view"], features: {} };
+      else acc[mod.key] = emptyModulePerm();
+    } else {
+      acc[mod.key] = emptyModulePerm();
+    }
+    return acc;
+  }, {} as PermissionsMap);
+
+  const [expandedModule, setExpandedModule] = useState<string | null>(null);
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   useEffect(() => {
     if (form.id) loadDocuments();
