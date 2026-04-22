@@ -11,6 +11,7 @@ import { countProposalCompleteness, PROPOSAL_TOTAL_FIELDS } from "@/lib/briefing
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { getPublicProposalUrl } from "@/lib/publicUrl";
 import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import {
   DropdownMenu,
@@ -105,7 +106,7 @@ export default function Proposals() {
   );
 
   const copyLink = (slug: string) => {
-    const url = `${window.location.origin}/proposta/${slug}`;
+    const url = getPublicProposalUrl(slug);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado!");
   };

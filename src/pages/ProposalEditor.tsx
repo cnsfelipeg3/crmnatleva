@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package } from "lucide-react";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
+import { getPublicProposalUrl } from "@/lib/publicUrl";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -707,7 +708,7 @@ export default function ProposalEditor() {
   const copyLink = () => {
     const slug = existing?.slug;
     if (slug) {
-      navigator.clipboard.writeText(`${window.location.origin}/proposta/${slug}`);
+      navigator.clipboard.writeText(getPublicProposalUrl(slug));
       toast.success("Link copiado!");
     }
   };

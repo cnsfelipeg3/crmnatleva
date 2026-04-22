@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Globe, Loader2, CheckCircle2, ExternalLink } from "lucide-react";
+import { getPublicPortalLoginUrl } from "@/lib/publicUrl";
 
 interface Props {
   open: boolean;
@@ -76,7 +77,7 @@ export default function PublishToPortalDialog({ open, onOpenChange, saleId, clie
     }
   };
 
-  const portalUrl = `${window.location.origin}/portal/login`;
+  const portalUrl = getPublicPortalLoginUrl();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
