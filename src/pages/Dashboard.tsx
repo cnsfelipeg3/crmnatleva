@@ -334,6 +334,7 @@ export default function Dashboard() {
         filtered={filtered}
         previous={previous}
         clients={clients}
+        clientsGrowth={clientsGrowth}
         ceoMode={ceoMode}
       />
 
