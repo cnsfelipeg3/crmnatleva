@@ -867,9 +867,9 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   const getBaggageBadgesForLeg = (legSegments: any[]): string[] => {
     const seg = legSegments?.[0];
     const badges: string[] = [];
-    if (seg?.personal_item_included) badges.push(`Item pessoal - ${seg.personal_item_weight_kg || 10}kg`);
-    if (seg?.carry_on_included) badges.push(`Bagagem de mão - ${seg.carry_on_weight_kg || 10}kg`);
-    if (seg?.checked_bags_included > 0) badges.push(`${seg.checked_bags_included}x ${seg.checked_bag_weight_kg || 23}kg`);
+    if (seg?.personal_item_included) badges.push(`1 item pessoal - ${seg.personal_item_weight_kg || 10}kg`);
+    if (seg?.carry_on_included) badges.push(`1 bagagem de mão - ${seg.carry_on_weight_kg || 10}kg`);
+    if (seg?.checked_bags_included > 0) badges.push(`${seg.checked_bags_included} ${seg.checked_bags_included > 1 ? "bagagens despachadas" : "bagagem despachada"} - ${seg.checked_bag_weight_kg || 23}kg${seg.checked_bags_included > 1 ? " cada" : ""}`);
     if (badges.length === 0 && d.baggage) badges.push(d.baggage);
     return badges;
   };
