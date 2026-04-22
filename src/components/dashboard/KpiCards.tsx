@@ -20,6 +20,13 @@ interface Sale {
   client_id: string | null; seller_id?: string | null;
 }
 
+interface ClientsGrowth {
+  current: number;
+  previousTotal: number;
+  newCurrent: number;
+  newPrevious: number;
+}
+
 interface Props {
   /** Pre-aggregated data from the dashboard_kpis RPC */
   kpiData?: DashboardKpisResult | null;
@@ -27,6 +34,7 @@ interface Props {
   filtered?: Sale[];
   previous?: Sale[];
   clients?: { id: string }[];
+  clientsGrowth?: ClientsGrowth;
   ceoMode?: boolean;
 }
 
@@ -35,7 +43,7 @@ function pctChange(current: number, prev: number) {
   return ((current - prev) / Math.abs(prev)) * 100;
 }
 
-export default function KpiCards({ kpiData, filtered = [], previous = [], clients = [], ceoMode }: Props) {
+export default function KpiCards({ kpiData, filtered = [], previous = [], clients = [], clientsGrowth, ceoMode }: Props) {
   const navigate = useNavigate();
   const [drilldown, setDrilldown] = useState<{ label: string; sales: Sale[] } | null>(null);
 
