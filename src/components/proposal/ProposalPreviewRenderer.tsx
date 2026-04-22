@@ -896,7 +896,8 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 /* ═══ Hotel Card ═══ */
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
-  const officialPhotos: any[] = Array.isArray(d.official_photos) ? d.official_photos : [];
+  const officialPhotos: any[] = (Array.isArray(d.official_photos) ? d.official_photos : [])
+    .filter((p: any) => p && p.excluded !== true);
   const orderedPhotos = [
     hotel.image_url,
     ...officialPhotos.map((p) => p?.url),
