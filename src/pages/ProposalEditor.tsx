@@ -797,9 +797,14 @@ export default function ProposalEditor() {
                   </Button>
                 </div>
                 <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="https://images.unsplash.com/..." />
-                {form.cover_image_url && (
-                  <div className="mt-2 rounded-lg overflow-hidden border border-border/30 aspect-[16/6]">
-                    <img src={form.cover_image_url} alt="Pré-visualização da capa" className="w-full h-full object-cover" />
+                {form.cover_image_url?.trim() && /^https?:\/\//i.test(form.cover_image_url.trim()) && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border/30 bg-muted/30 aspect-[16/6] max-h-[180px]">
+                    <img
+                      src={form.cover_image_url}
+                      alt="Pré-visualização da capa"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { (e.currentTarget.parentElement as HTMLElement).style.display = "none"; }}
+                    />
                   </div>
                 )}
               </div>
