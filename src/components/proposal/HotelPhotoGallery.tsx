@@ -217,7 +217,6 @@ export function HotelPhotoGallery({
                     className="absolute inset-0 h-full w-full"
                     imgClassName="object-cover"
                     loading="lazy"
-                    forceProxy={photo.source === "official"}
                   />
 
                   {/* Cover badge */}
