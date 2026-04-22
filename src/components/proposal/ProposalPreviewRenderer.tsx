@@ -449,18 +449,6 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
 
   return (
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
-      {/* Header: flight numbers only (date moved to leg header card) */}
-      {flightNumbers.length > 0 && (
-        <div className="flex flex-wrap items-center justify-end gap-3 mb-5">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {flightNumbers.map((fn, i) => (
-              <span key={i} className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-mono">
-                Voo <span className="text-foreground font-semibold normal-case tracking-normal">{fn}</span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Top route row: origin → destination */}
       <div className="flex items-center gap-2 sm:gap-4 unified-leg-route">
