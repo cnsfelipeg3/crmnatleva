@@ -103,7 +103,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col bg-background">
       {/* Floating Navbar */}
       <div className="sticky top-0 z-50 px-3 sm:px-5 pt-3">
-        <header className="max-w-6xl mx-auto rounded-2xl bg-card/60 backdrop-blur-2xl border border-border/30 shadow-[0_8px_32px_-8px_hsl(var(--foreground)/0.08)]">
+        <header className="max-w-7xl mx-auto rounded-2xl bg-card/60 backdrop-blur-2xl border border-border/30 shadow-[0_8px_32px_-8px_hsl(var(--foreground)/0.08)]">
           <div className="px-4 sm:px-6">
             <div className="flex items-center justify-between h-14">
               {/* Logo */}
@@ -119,7 +119,7 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200 ${
+                      className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200 ${
                         isActive
                           ? "bg-card text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
