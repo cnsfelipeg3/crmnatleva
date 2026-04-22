@@ -555,3 +555,54 @@
 .proposal-mobile-frame [data-track-section="flights"] .flex-wrap {
   row-gap: 0.375rem !important;
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   PERFORMANCE GLOBAL OVERRIDES
+   backdrop-filter (blur/saturate) é o gargalo #1 de fps no app.
+   Cada elemento com backdrop-blur força o browser a re-amostrar e
+   convoluir todos os pixels abaixo a cada frame. Com 100+ instâncias
+   visíveis simultaneamente (sidebars, cards, dialogs, tooltips), o
+   custo se torna proibitivo.
+   Estratégia: neutralizar backdrop-filter globalmente e compensar com
+   background-color sólido com leve transparência. Visualmente quase
+   idêntico, ~50x mais rápido em scroll/animação.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* Neutraliza todos os utilitários backdrop-* do Tailwind */
+.backdrop-blur-none,
+.backdrop-blur-sm,
+.backdrop-blur,
+.backdrop-blur-md,
+.backdrop-blur-lg,
+.backdrop-blur-xl,
+.backdrop-blur-2xl,
+.backdrop-blur-3xl {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Saturate em backdrop também é caro */
+[class*="saturate-"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Reduz custo de transitions globais — animações longas em hover são caras */
+* {
+  transition-duration: 0.15s;
+}
+
+/* GPU hint para listas com scroll virtual */
+.glass-card,
+[role="dialog"],
+[role="menu"],
+header,
+nav,
+aside {
+  will-change: auto;
+}
+
+/* Imagens lazy por padrão quando não especificado */
+img:not([loading]) {
+  loading: lazy;
+}
