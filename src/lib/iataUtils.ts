@@ -46,7 +46,6 @@ const IATA_CITY_MAP: Record<string, string> = {
   HAN: "Hanói", SGN: "Ho Chi Minh", PNH: "Phnom Penh", REP: "Siem Reap", MFM: "Macau",
   CAN: "Cantão", CTU: "Chengdu", XIY: "Xi'an", SZX: "Shenzhen", KIX: "Osaka", NGO: "Nagoya",
   FUK: "Fukuoka", CJU: "Jeju", GMP: "Seul (Gimpo)", BKI: "Kota Kinabalu", PEN: "Penang",
-  MLE_BACKUP: "Maldivas",
   // Oceania
   SYD: "Sydney", MEL: "Melbourne", BNE: "Brisbane", PER: "Perth", AKL: "Auckland",
   PPT: "Papeete", NAN: "Nadi",
