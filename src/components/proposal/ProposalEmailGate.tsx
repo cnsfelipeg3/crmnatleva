@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Mail, ArrowRight, Sparkles, Globe, Shield } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.webp";
+import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
 
 interface Props {
   proposalTitle?: string;
@@ -27,7 +28,8 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
     onSubmit(trimmed, name.trim() || undefined);
   };
 
-  const bgImage = coverImage || "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
+  const safeCover = sanitizeProposalCoverUrl(coverImage);
+  const bgImage = safeCover || "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
   return (
     <div className="min-h-screen relative flex items-center justify-center overflow-hidden">
