@@ -1473,3 +1473,51 @@ export default function ProposalEditor() {
     </div>
   );
 }
+
+function CoverUploadButton({ onUploaded }: { onUploaded: (url: string) => void }) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const handleFile = async (file: File | null | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    try {
+      const result = await uploadCompressedImage(file, "media", "proposal-covers", {
+        maxWidth: 2400,
+        maxHeight: 1600,
+        quality: 0.85,
+        mimeType: "image/webp",
+      });
+      onUploaded(result.url);
+      toast.success(`Capa enviada (${(result.size / 1024).toFixed(0)} KB)`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Falha ao enviar imagem");
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => inputRef.current?.click()}
+        disabled={busy}
+        className="h-7 text-xs"
+      >
+        {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1" />}
+        {busy ? "Enviando…" : "Enviar arquivo"}
+      </Button>
+    </>
+  );
+}
