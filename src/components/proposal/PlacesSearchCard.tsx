@@ -738,16 +738,21 @@ export default function PlacesSearchCard({
 
       const existing = new Set(curatedPhotos.map(p => p.url));
       const newPhotos: CuratedPhoto[] = rawPhotos
-        .map((p: any) => ({
-          url: String(p.url || p.image_url || "").trim(),
-          label: p.label || p.section_name || p.environment_name || "Foto do site oficial",
-          selected: true,
-          isCover: false,
-          source: "official" as const,
-          description: p.description || "",
-          room_type: p.room_type || null,
-          category: p.category || "outro",
-        }))
+        .map((p: any) => {
+          const sectionName = p.section_name || p.environment_name || "";
+          const isRoomSection = /quarto|suite|suíte|room|apartamento|apto|chalé|chale|bangalô|bangalo|villa/i.test(sectionName);
+          return {
+            url: String(p.url || p.image_url || "").trim(),
+            label: p.label || sectionName || "Foto do site oficial",
+            selected: true,
+            isCover: false,
+            source: "official" as const,
+            description: p.description || "",
+            room_type: p.room_type || null,
+            room_name: isRoomSection ? sectionName : (p.room_name || null),
+            category: p.category || (isRoomSection ? "quarto" : "outro"),
+          };
+        })
         .filter(p => p.url && !existing.has(p.url));
 
       if (newPhotos.length === 0) {
