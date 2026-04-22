@@ -42,6 +42,11 @@ export default function DeferredRender({
       }
     };
 
+    if (typeof window === "undefined") {
+      setReady(true);
+      return;
+    }
+
     if (delayMs > 0) delayTimer = window.setTimeout(schedule, delayMs);
     else schedule();
 
