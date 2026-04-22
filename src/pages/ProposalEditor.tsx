@@ -144,6 +144,7 @@ export default function ProposalEditor() {
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
+  const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
