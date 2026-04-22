@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
+import SplitLayout from "@/components/proposal/editor/SplitLayout";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
@@ -636,7 +637,7 @@ export default function ProposalEditor() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-[1800px] mx-auto">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/propostas")}>
@@ -685,20 +686,22 @@ export default function ProposalEditor() {
         </div>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
-          <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
-          <TabsTrigger value="preview" className="gap-1.5">
-            <Eye className="w-3.5 h-3.5" /> Preview
-          </TabsTrigger>
-          {!isNew && (
-            <TabsTrigger value="analytics" className="gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5" /> Analytics
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <SplitLayout
+        left={
+          <Tabs defaultValue="info" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="info">Informações</TabsTrigger>
+              <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
+              <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
+              <TabsTrigger value="preview" className="gap-1.5 xl:hidden">
+                <Eye className="w-3.5 h-3.5" /> Preview
+              </TabsTrigger>
+              {!isNew && (
+                <TabsTrigger value="analytics" className="gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5" /> Analytics
+                </TabsTrigger>
+              )}
+            </TabsList>
 
         <TabsContent value="info" className="space-y-4">
           <Card>
@@ -1226,12 +1229,26 @@ export default function ProposalEditor() {
           />
         </TabsContent>
 
-        {!isNew && id && (
-          <TabsContent value="analytics">
-            <ProposalAnalyticsPanel proposalId={id} />
-          </TabsContent>
-        )}
-      </Tabs>
+            {!isNew && id && (
+              <TabsContent value="analytics">
+                <ProposalAnalyticsPanel proposalId={id} />
+              </TabsContent>
+            )}
+          </Tabs>
+        }
+        preview={
+          <ProposalPreviewRenderer
+            proposal={{
+              ...form,
+              total_value: form.total_value ? parseFloat(form.total_value) : null,
+              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+            }}
+            items={items}
+            template={selectedTemplate}
+            embedded
+          />
+        }
+      />
       <CoverImageSuggestDialog
         open={coverDialogOpen}
         onOpenChange={setCoverDialogOpen}
