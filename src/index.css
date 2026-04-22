@@ -427,3 +427,99 @@
   overflow: hidden !important;
   padding: 0 !important;
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Mobile preview frame for ProposalPreviewRenderer
+   The renderer uses Tailwind responsive classes (sm:, md:) that
+   trigger from window width — but inside the editor's mobile
+   frame the window is still desktop. These rules force the
+   mobile-friendly tokens regardless of viewport so the preview
+   actually looks like a phone.
+   ───────────────────────────────────────────────────────────── */
+.proposal-mobile-frame {
+  /* Hard cap so nothing overflows the device frame */
+  max-width: 390px;
+}
+.proposal-mobile-frame * {
+  /* Prevent horizontal overflow from long words / IATAs / titles */
+  min-width: 0;
+}
+.proposal-mobile-frame img,
+.proposal-mobile-frame svg,
+.proposal-mobile-frame video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Hero typography scales down */
+.proposal-mobile-frame h1 {
+  font-size: 1.5rem !important;   /* ~text-2xl */
+  line-height: 1.2 !important;
+  letter-spacing: -0.01em !important;
+}
+.proposal-mobile-frame h2 {
+  font-size: 1.375rem !important; /* ~text-[22px] */
+  line-height: 1.25 !important;
+}
+.proposal-mobile-frame h3 {
+  font-size: 1.05rem !important;
+  line-height: 1.3 !important;
+}
+
+/* Section paddings get tighter */
+.proposal-mobile-frame section {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+}
+/* Hero already has padding via px-6 — keep it but cap it */
+.proposal-mobile-frame [data-track-section="hero"] {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.proposal-mobile-frame [data-track-section="hero"] > div.relative {
+  padding-left: 1.25rem !important;
+  padding-right: 1.25rem !important;
+}
+
+/* Force two-col grids that only break at sm: into a single column */
+.proposal-mobile-frame .sm\:grid-cols-2,
+.proposal-mobile-frame .md\:grid-cols-2,
+.proposal-mobile-frame .md\:grid-cols-3,
+.proposal-mobile-frame .lg\:grid-cols-3,
+.proposal-mobile-frame .sm\:grid-cols-3 {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+/* Flex rows of flight info: allow wrap so origem/destino não somem */
+.proposal-mobile-frame .flex.items-center.gap-4 {
+  flex-wrap: wrap;
+  row-gap: 0.5rem;
+}
+
+/* Anything explicitly capped at narrow widths inside hero (logo etc.) */
+.proposal-mobile-frame .max-w-3xl,
+.proposal-mobile-frame .max-w-2xl,
+.proposal-mobile-frame .max-w-xl {
+  max-width: 100% !important;
+}
+
+/* Long-form text: prevent giant line-heights leaking from sm: */
+.proposal-mobile-frame p {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* The intro quote (italic) was being clipped on the right */
+.proposal-mobile-frame [data-track-section="intro"] p {
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+}
+
+/* Cards / boxes inside flight section */
+.proposal-mobile-frame [data-track-section="flights"] .min-w-\[70px\] {
+  min-width: 56px !important;
+}
+.proposal-mobile-frame [data-track-section="flights"] .text-xl,
+.proposal-mobile-frame [data-track-section="flights"] .sm\:text-xl {
+  font-size: 1rem !important;
+}
