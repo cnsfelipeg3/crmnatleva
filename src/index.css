@@ -1,8 +1,8 @@
+/* Fonts are loaded via <link> in index.html to avoid render-blocking CSS @import.
+   This also fixes the Vite warning about @import order vs @tailwind. */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Instrument+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   :root {
