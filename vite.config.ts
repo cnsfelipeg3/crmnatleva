@@ -52,9 +52,13 @@ export default defineConfig(({ mode }) => ({
           // Supabase SDK.
           if (/[\\/]node_modules[\\/]@supabase[\\/]/.test(id)) return "vendor-supabase";
 
-          // Charts.
+          // Charts. Keep recharts isolated and let each d3-* stay in its own
+          // chunk to avoid top-level temporal-dead-zone errors caused by
+          // circular module init when all d3 sub-packages are merged.
           if (/[\\/]node_modules[\\/]recharts[\\/]/.test(id)) return "vendor-charts";
-          if (/[\\/]node_modules[\\/]d3-/.test(id)) return "vendor-charts";
+          // Do NOT group d3-* into a single chunk — return undefined so Rollup
+          // keeps Rollup's default per-package splitting, which preserves the
+          // correct module-init order between d3 packages.
 
           // Animation.
           if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return "vendor-motion";
