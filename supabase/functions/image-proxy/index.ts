@@ -75,51 +75,46 @@ function buildCandidateUrls(targetUrl: URL, refererUrl?: URL): URL[] {
 }
 
 async function fetchImageCandidate(candidate: URL, refererUrl?: URL): Promise<Response | null> {
-  const referers = Array.from(
-    new Set(
-      [refererUrl?.toString(), `${candidate.protocol}//${candidate.hostname}/`, undefined]
-        .filter((v) => typeof v === "string" || v === undefined)
-    )
-  ) as Array<string | undefined>;
+  // Single attempt with the most likely-to-succeed referer (origin of the image itself).
+  // Multiple retries were causing 100s+ stalls on hostile hosts that always return 500.
+  const referer = refererUrl?.toString() || `${candidate.protocol}//${candidate.hostname}/`;
 
-  for (const referer of referers) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 15000);
-      const response = await fetch(candidate.toString(), {
-        method: "GET",
-        redirect: "follow",
-        signal: controller.signal,
-        headers: {
-          Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          ...(referer ? { Referer: referer, Origin: new URL(referer).origin } : {}),
-        },
-      });
-      clearTimeout(timeout);
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000); // 6s hard cap per image
+    const response = await fetch(candidate.toString(), {
+      method: "GET",
+      redirect: "follow",
+      signal: controller.signal,
+      headers: {
+        Accept: "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        Referer: referer,
+        Origin: new URL(referer).origin,
+      },
+    });
+    clearTimeout(timeout);
 
-      if (!response.ok || !response.body) {
-        console.warn(`[image-proxy] ${candidate} → ${response.status} (referer: ${referer || 'none'})`);
-        await response.text().catch(() => {});
-        continue;
-      }
-
-      const contentType = response.headers.get("content-type") || "";
-      const isImageLike = contentType.toLowerCase().startsWith("image/") || 
-                          contentType.includes("octet-stream") ||
-                          !contentType;
-      if (!isImageLike) {
-        console.warn(`[image-proxy] ${candidate} → non-image content-type: ${contentType}`);
-        await response.text().catch(() => {});
-        continue;
-      }
-
-      return response;
-    } catch (err) {
-      console.warn(`[image-proxy] fetch error for ${candidate}:`, err instanceof Error ? err.message : err);
+    if (!response.ok || !response.body) {
+      console.warn(`[image-proxy] ${candidate} → ${response.status}`);
+      await response.text().catch(() => {});
+      return null;
     }
+
+    const contentType = response.headers.get("content-type") || "";
+    const isImageLike = contentType.toLowerCase().startsWith("image/") ||
+                        contentType.includes("octet-stream") ||
+                        !contentType;
+    if (!isImageLike) {
+      await response.text().catch(() => {});
+      return null;
+    }
+
+    return response;
+  } catch (err) {
+    console.warn(`[image-proxy] fetch error for ${candidate}:`, err instanceof Error ? err.message : err);
+    return null;
   }
-  return null;
 }
 
 function getExtFromContentType(ct: string): string {
