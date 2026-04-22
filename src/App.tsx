@@ -52,6 +52,7 @@ const TripDetail = lazy(() => import("@/pages/TripDetail"));
 const TripAlterations = lazy(() => import("@/pages/TripAlterations"));
 const Itinerary = lazy(() => import("@/pages/Itinerary"));
 const SupplierRegistration = lazy(() => import("@/pages/SupplierRegistration"));
+const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 
 // RH
 const RHIndex = lazy(() => import("@/pages/rh/RHIndex"));
@@ -329,6 +330,9 @@ function AppRoutes() {
 
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
+
+        {/* Diagnóstico de performance — rota leve fora do layout pesado */}
+        <Route path="/diagnostico" element={<Suspense fallback={<MinimalLoader />}><Diagnostico /></Suspense>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
