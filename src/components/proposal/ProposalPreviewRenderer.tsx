@@ -1033,7 +1033,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             <div className="max-w-3xl mx-auto space-y-8">
               {useAggregated ? (
                 <FlightCard
-                  flight={{ data: { segments: allSegments } }}
+                  flight={{ data: { flight_segments: allSegments } }}
                   idx={0}
                 />
               ) : (
