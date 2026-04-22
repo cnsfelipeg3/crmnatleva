@@ -539,6 +539,20 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
         <div className="text-right min-w-[56px] sm:min-w-[70px] shrink-0">
           <p className="text-base sm:text-xl font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {lastSeg.arrival_time || "—"}
+            {(() => {
+              const dep = firstSeg?.departure_date;
+              const arr = lastSeg?.arrival_date || lastSeg?.departure_date;
+              if (!dep || !arr) return null;
+              try {
+                const d1 = new Date(String(dep).length <= 10 ? `${dep}T00:00:00` : dep);
+                const d2 = new Date(String(arr).length <= 10 ? `${arr}T00:00:00` : arr);
+                const diff = Math.round((d2.getTime() - d1.getTime()) / 86400000);
+                if (diff > 0) {
+                  return <sup className="ml-1 text-[10px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400">+{diff}</sup>;
+                }
+              } catch { /* noop */ }
+              return null;
+            })()}
           </p>
           <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {lastSeg.destination_iata || "—"}
@@ -889,11 +903,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM/yyyy", { locale: ptBR });
             } catch { return String(raw); }
           };
-          const headerDep = fmtHeaderDate(firstSeg?.departure_date);
-          const headerArr = fmtHeaderDate(lastSeg?.arrival_date || lastSeg?.departure_date);
-          const headerDateLabel = headerDep && headerArr && headerDep !== headerArr
-            ? `${headerDep} → ${headerArr}`
-            : (headerDep || headerArr || "—");
+          const headerDateLabel = fmtHeaderDate(firstSeg?.departure_date) || "—";
 
           return (
             <div key={li}>
