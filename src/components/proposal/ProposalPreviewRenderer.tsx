@@ -127,11 +127,12 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
 }
 
 /* ═══ Photo Gallery (hero + thumbnails) ═══ */
-function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
+function PhotoGallery({ photos, name, captions }: { photos: string[]; name: string; captions?: (string | null)[] }) {
   const [active, setActive] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   if (photos.length === 0) return null;
   const go = (dir: 1 | -1) => setActive((i) => (i + dir + photos.length) % photos.length);
+  const currentCaption = captions?.[active] || null;
   return (
     <>
       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -151,7 +152,7 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
             >
               <SmartImage
                 src={photos[active]}
-                alt={`${name} - ${active + 1}`}
+                alt={`${name} - ${currentCaption || active + 1}`}
                 className="w-full h-full"
                 imgClassName="object-cover"
                 forceProxy
@@ -159,6 +160,12 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
               />
             </motion.div>
           </AnimatePresence>
+          {/* Caption overlay (discrete, only when meaningful) */}
+          {currentCaption && (
+            <div className="absolute bottom-3 left-3 max-w-[60%] px-2.5 py-1 rounded-full bg-black/45 backdrop-blur-sm text-white text-[11px] font-medium truncate pointer-events-none">
+              {currentCaption}
+            </div>
+          )}
           {photos.length > 1 && (
             <>
               <button
