@@ -1229,12 +1229,26 @@ export default function ProposalEditor() {
           />
         </TabsContent>
 
-        {!isNew && id && (
-          <TabsContent value="analytics">
-            <ProposalAnalyticsPanel proposalId={id} />
-          </TabsContent>
-        )}
-      </Tabs>
+            {!isNew && id && (
+              <TabsContent value="analytics">
+                <ProposalAnalyticsPanel proposalId={id} />
+              </TabsContent>
+            )}
+          </Tabs>
+        }
+        preview={
+          <ProposalPreviewRenderer
+            proposal={{
+              ...form,
+              total_value: form.total_value ? parseFloat(form.total_value) : null,
+              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+            }}
+            items={items}
+            template={selectedTemplate}
+            embedded
+          />
+        }
+      />
       <CoverImageSuggestDialog
         open={coverDialogOpen}
         onOpenChange={setCoverDialogOpen}
