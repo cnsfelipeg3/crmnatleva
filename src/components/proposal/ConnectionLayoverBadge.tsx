@@ -104,5 +104,3 @@ export default function ConnectionLayoverBadge({ prevSegment, nextSegment }: Con
     </div>
   );
 }
-
-export { calcLayoverMinutes };
