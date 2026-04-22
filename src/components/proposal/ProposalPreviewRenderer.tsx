@@ -16,6 +16,7 @@ import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTim
 import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
+import SmartImage from "./SmartImage";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -135,19 +136,28 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
     <>
       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
         {/* Hero */}
-        <div className="relative aspect-[16/10] sm:aspect-[16/9] rounded-xl overflow-hidden bg-muted group/hero">
+        <div
+          className="relative aspect-[16/10] sm:aspect-[16/9] rounded-xl overflow-hidden bg-muted group/hero cursor-zoom-in"
+          onClick={() => setLightbox(true)}
+        >
           <AnimatePresence mode="wait">
-            <motion.img
+            <motion.div
               key={active}
-              src={photos[active]}
-              alt={`${name} - ${active + 1}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
-              className="absolute inset-0 w-full h-full object-cover cursor-zoom-in"
-              onClick={() => setLightbox(true)}
-            />
+              className="absolute inset-0"
+            >
+              <SmartImage
+                src={photos[active]}
+                alt={`${name} - ${active + 1}`}
+                className="w-full h-full"
+                imgClassName="object-cover"
+                forceProxy
+                loading="eager"
+              />
+            </motion.div>
           </AnimatePresence>
           {photos.length > 1 && (
             <>
@@ -183,7 +193,13 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
                 }`}
                 aria-label={`Foto ${i + 1}`}
               >
-                <img src={url} alt={`${name} miniatura ${i + 1}`} className="w-full h-full object-cover" />
+                <SmartImage
+                  src={url}
+                  alt={`${name} miniatura ${i + 1}`}
+                  className="w-full h-full"
+                  imgClassName="object-cover"
+                  forceProxy
+                />
               </button>
             ))}
           </div>
@@ -193,7 +209,16 @@ function PhotoGallery({ photos, name }: { photos: string[]; name: string }) {
         {lightbox && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={() => setLightbox(false)}>
             <button className="absolute top-6 right-6 text-white/60 hover:text-white z-10" onClick={() => setLightbox(false)}><X className="w-6 h-6" /></button>
-            <motion.img key={active} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} src={photos[active]} alt="" className="max-w-[90vw] max-h-[85vh] object-contain rounded-lg" />
+            <motion.div key={active} initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="max-w-[90vw] max-h-[85vh] w-[90vw] h-[85vh]">
+              <SmartImage
+                src={photos[active]}
+                alt=""
+                className="w-full h-full rounded-lg"
+                imgClassName="object-contain"
+                forceProxy
+                loading="eager"
+              />
+            </motion.div>
             {photos.length > 1 && (
               <>
                 <button className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); go(-1); }}><ChevronRight className="w-5 h-5 rotate-180" /></button>
