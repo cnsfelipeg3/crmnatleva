@@ -61,7 +61,7 @@ interface CuratedPhoto {
   label: string;
   selected: boolean;
   isCover: boolean;
-  source: "google" | "manual";
+  source: "google" | "manual" | "official";
   description?: string;
   room_type?: string | null;
   category?: string;
@@ -707,6 +707,87 @@ export default function PlacesSearchCard({
     e.target.value = "";
   };
 
+  /* ── Fetch photos from hotel's official website ── */
+  const [loadingOfficial, setLoadingOfficial] = useState(false);
+  const fetchOfficialSitePhotos = useCallback(async (forceRefresh = false) => {
+    if (!selectedPlace) return;
+    setLoadingOfficial(true);
+    try {
+      const addressParts = (selectedPlace.address || "").split(",").map(s => s.trim());
+      const country = addressParts.length >= 2 ? addressParts[addressParts.length - 1] : "";
+      const city = addressParts.length >= 3 ? addressParts[addressParts.length - 2] : (addressParts[0] || "");
+
+      toast.info(forceRefresh ? "🔄 Re-buscando fotos do site oficial..." : "🕷️ Buscando fotos no site oficial do hotel...", { duration: 4000 });
+
+      const { data, error } = await supabase.functions.invoke("scrape-hotel-photos", {
+        body: {
+          hotel_name: selectedPlace.name,
+          hotel_city: city,
+          hotel_country: country,
+          force_refresh: forceRefresh,
+        },
+      });
+      if (error) throw error;
+
+      const rawPhotos: any[] = Array.isArray(data?.photos) ? data.photos : [];
+      if (rawPhotos.length === 0) {
+        toast.info("Nenhuma foto encontrada no site oficial.");
+        return;
+      }
+
+      const existing = new Set(curatedPhotos.map(p => p.url));
+      const newPhotos: CuratedPhoto[] = rawPhotos
+        .map((p: any) => ({
+          url: String(p.url || p.image_url || "").trim(),
+          label: p.label || p.section_name || p.environment_name || "Foto do site oficial",
+          selected: true,
+          isCover: false,
+          source: "official" as const,
+          description: p.description || "",
+          room_type: p.room_type || null,
+          category: p.category || "outro",
+        }))
+        .filter(p => p.url && !existing.has(p.url));
+
+      if (newPhotos.length === 0) {
+        toast.info("Todas as fotos do site oficial já estavam na galeria.");
+        return;
+      }
+
+      setCuratedPhotos(prev => [...prev, ...newPhotos]);
+      toast.success(`${newPhotos.length} foto(s) HD do site oficial adicionadas!`);
+
+      setClassifyingPhotos(true);
+      classifyPhotosWithAI(newPhotos.map(p => p.url), selectedPlace.name)
+        .then((classifications) => {
+          if (classifications.length === 0) return;
+          setCuratedPhotos(prev => {
+            const next = [...prev];
+            const startIdx = next.length - newPhotos.length;
+            classifications.forEach((cls, i) => {
+              const target = next[startIdx + i];
+              if (!target || !cls) return;
+              next[startIdx + i] = {
+                ...target,
+                label: cls.label || target.label,
+                description: cls.description || target.description,
+                room_type: cls.room_type ?? target.room_type,
+                category: cls.category || target.category,
+              };
+            });
+            return next;
+          });
+        })
+        .catch(() => { /* keep fallbacks */ })
+        .finally(() => setClassifyingPhotos(false));
+    } catch (err: any) {
+      console.error("scrape-hotel-photos error:", err);
+      toast.error(err?.message || "Não foi possível buscar fotos no site oficial.");
+    } finally {
+      setLoadingOfficial(false);
+    }
+  }, [selectedPlace, curatedPhotos]);
+
   /* ── Confirm ── */
   const handleConfirm = useCallback(() => {
     if (!selectedPlace) return;
@@ -915,6 +996,18 @@ export default function PlacesSearchCard({
                   <Info className="h-3 w-3" /> Ideal: 5–8 fotos
                 </span>
               )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchOfficialSitePhotos(false)}
+                disabled={loadingOfficial || !selectedPlace?.name}
+                className="h-7 px-2 text-[10px] gap-1"
+                title="Buscar fotos HD direto do site oficial do hotel"
+              >
+                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+                {loadingOfficial ? "Buscando…" : "Site Oficial (HD)"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 px-2 text-[10px] gap-1">
                 <Upload className="h-3 w-3" /> Upload
               </Button>
@@ -990,6 +1083,13 @@ export default function PlacesSearchCard({
                         <div className="absolute bottom-1.5 right-1.5 z-10">
                           <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-background/80 backdrop-blur-sm">
                             Upload
+                          </Badge>
+                        </div>
+                      )}
+                      {photo.source === "official" && (
+                        <div className="absolute bottom-1.5 right-1.5 z-10">
+                          <Badge className="text-[8px] h-4 px-1.5 bg-primary/90 text-primary-foreground backdrop-blur-sm gap-0.5">
+                            <Globe className="h-2.5 w-2.5" /> Oficial
                           </Badge>
                         </div>
                       )}
