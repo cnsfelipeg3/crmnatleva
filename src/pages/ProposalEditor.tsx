@@ -385,6 +385,7 @@ export default function ProposalEditor() {
     },
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
       toast.success("Proposta salva com sucesso!");
 
       // Emit learning events
