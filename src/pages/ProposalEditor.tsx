@@ -1481,9 +1481,11 @@ export default function ProposalEditor() {
           setActiveItemCategory("flight");
         }}
         onCreateFromExtraction={(itineraryType, extracted) => {
-          // Cria item vazio e aplica a extração reusando applyExtractedItem
+          // 1) Cria o item vazio e captura o índice resultante
+          let newIndex = -1;
           setItems((prev) => {
-            const next = [
+            newIndex = prev.length;
+            return [
               ...prev,
               {
                 item_type: "flight",
@@ -1493,19 +1495,12 @@ export default function ProposalEditor() {
                 data: { itinerary_type: itineraryType, flight_segments: [] },
               },
             ];
-            return next;
           });
-          // Aplica no próximo tick para garantir que o índice exista
-          setTimeout(() => {
-            setItems((curr) => {
-              const newIdx = curr.length - 1;
-              if (newIdx < 0) return curr;
-              // Reaproveita applyExtractedItem (que usa setItems internamente)
-              applyExtractedItem(newIdx, extracted);
-              return curr;
-            });
-          }, 0);
           setActiveItemCategory("flight");
+          // 2) No próximo tick, aplica a extração no índice recém-criado
+          setTimeout(() => {
+            if (newIndex >= 0) applyExtractedItem(newIndex, extracted);
+          }, 0);
         }}
       />
     </div>
