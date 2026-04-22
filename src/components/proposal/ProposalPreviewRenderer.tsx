@@ -896,12 +896,32 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 /* ═══ Hotel Card ═══ */
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
-  const officialPhotos: any[] = (Array.isArray(d.official_photos) ? d.official_photos : [])
+  const officialPhotosRaw: any[] = (Array.isArray(d.official_photos) ? d.official_photos : [])
     .filter((p: any) => p && p.excluded !== true);
+
+  // Hierarchy within official photos: structure/leisure first, rooms after.
+  const officialCategoryWeight = (p: any): number => {
+    const haystack = `${p?.category || ""} ${p?.label || ""} ${p?.room_name || ""}`.toLowerCase();
+    if (/(exterior|fachada|facade|aerial|aerea|building|estrutura|lobby|reception|recep|entrada|view|vista|grounds|architecture|overview|panor)/.test(haystack)) return 0;
+    if (/(pool|piscina|spa|wellness|gym|fitness|beach|praia|restaurant|restaurante|bar|lounge|dining|cafe|breakfast|recrea|leisure|lazer|kids|playground|tennis|golf|deck|terra|garden|jardim|sunset|por.do.sol|activity|atividade|sport|esporte)/.test(haystack)) return 1;
+    if (/(room|quarto|suite|villa|apartment|apartamento|bedroom|accommodation|acomoda|bungalow|chal|cabin|cabana|loft|studio)/.test(haystack)) return 2;
+    if (/(bath|banheiro|wc|toilet|shower|chuveiro|detail|detalhe|amenity|amenidade)/.test(haystack)) return 3;
+    return 4;
+  };
+  const officialPhotos: any[] = [...officialPhotosRaw]
+    .map((p, i) => ({ p, i }))
+    .sort((a, b) => {
+      const ca = officialCategoryWeight(a.p);
+      const cb = officialCategoryWeight(b.p);
+      if (ca !== cb) return ca - cb;
+      return a.i - b.i;
+    })
+    .map(({ p }) => p);
+
   const orderedPhotos = [
-    hotel.image_url,
-    ...officialPhotos.map((p) => p?.url),
-    ...(Array.isArray(d.photos) ? d.photos : []),
+    hotel.image_url,                                    // 1. Cover (chosen by user)
+    ...officialPhotos.map((p) => p?.url),               // 2. Official site, sorted by category
+    ...(Array.isArray(d.photos) ? d.photos : []),       // 3. Google Places (last)
     ...(Array.isArray(d.selectedPhotos) ? d.selectedPhotos : []),
   ]
     .filter((url): url is string => typeof url === "string" && url.trim().length > 0)
