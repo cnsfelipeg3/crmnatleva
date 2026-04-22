@@ -165,7 +165,7 @@ function Metric({ label, value }: { label: string; value?: number }) {
   return (
     <div className="rounded-md border border-border/30 bg-muted/30 px-2 py-1.5">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-sm font-mono font-semibold ${value && value > 2500 ? "text-destructive" : value && value > 1500 ? "text-amber-500" : "text-foreground"}`}>
+      <div className={`text-sm font-mono font-semibold ${value && value > 2500 ? "text-destructive" : value && value > 1500 ? "text-warning" : "text-foreground"}`}>
         {value !== undefined ? `${value}ms` : "—"}
       </div>
     </div>
