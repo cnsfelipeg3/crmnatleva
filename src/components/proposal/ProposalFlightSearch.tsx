@@ -256,15 +256,18 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
     let isAutoConnection = false;
     if (prev && prev.destination_iata && seg.origin_iata &&
         prev.destination_iata.toUpperCase() === seg.origin_iata.toUpperCase()) {
-      // chain by IATA — check date proximity (same day or next day with short time gap)
-      if (prev.departure_date && seg.departure_date) {
+      // chain by IATA — but require the real layover (respeitando fuso) to be ≤ 24h.
+      // Caso contrário é uma estadia (ex: chega em MLE dia 13, só sai dia 19).
+      const layoverMin = calcLayoverMinutes(prev, seg);
+      if (typeof layoverMin === "number") {
+        // janela típica de conexão: 0 a 1440 min (24h). Acima disso é estadia.
+        if (layoverMin >= 0 && layoverMin <= 1440) isAutoConnection = true;
+      } else if (prev.departure_date && seg.departure_date) {
+        // sem horários — fallback por data: só conecta se mesma data
         const diffMs = new Date(seg.departure_date + "T00:00:00").getTime() -
                        new Date(prev.departure_date + "T00:00:00").getTime();
         const diffDays = Math.round(diffMs / 86400000);
-        // ≤1 day apart counts as natural connection
-        if (diffDays >= 0 && diffDays <= 1) isAutoConnection = true;
-      } else {
-        isAutoConnection = true;
+        if (diffDays === 0) isAutoConnection = true;
       }
     }
     const isConnection = seg.is_connection === true || isAutoConnection;
