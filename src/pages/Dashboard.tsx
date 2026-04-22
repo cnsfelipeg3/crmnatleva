@@ -1,26 +1,28 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardKpis } from "@/hooks/useDashboardKpis";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import KpiCards from "@/components/dashboard/KpiCards";
-import FinancialSection from "@/components/dashboard/FinancialSection";
-import CommercialSection from "@/components/dashboard/CommercialSection";
-import OperationalSection from "@/components/dashboard/OperationalSection";
-import ClientsSection from "@/components/dashboard/ClientsSection";
-import GeographicSection from "@/components/dashboard/GeographicSection";
-import MilesSection from "@/components/dashboard/MilesSection";
-import AlertsSection from "@/components/dashboard/AlertsSection";
-import ValueRangeSection from "@/components/dashboard/ValueRangeSection";
-import FunnelSection from "@/components/dashboard/FunnelSection";
-import SeasonalitySection from "@/components/dashboard/SeasonalitySection";
-import RegionSection from "@/components/dashboard/RegionSection";
-import MarginAnalysisSection from "@/components/dashboard/MarginAnalysisSection";
-import SellerRankingSection from "@/components/dashboard/SellerRankingSection";
-import GoalProjectionSection from "@/components/dashboard/GoalProjectionSection";
-import HeatmapSection from "@/components/dashboard/HeatmapSection";
-import OriginSection from "@/components/dashboard/OriginSection";
+import DeferredRender from "@/components/DeferredRender";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const FinancialSection = lazy(() => import("@/components/dashboard/FinancialSection"));
+const CommercialSection = lazy(() => import("@/components/dashboard/CommercialSection"));
+const OperationalSection = lazy(() => import("@/components/dashboard/OperationalSection"));
+const ClientsSection = lazy(() => import("@/components/dashboard/ClientsSection"));
+const GeographicSection = lazy(() => import("@/components/dashboard/GeographicSection"));
+const MilesSection = lazy(() => import("@/components/dashboard/MilesSection"));
+const AlertsSection = lazy(() => import("@/components/dashboard/AlertsSection"));
+const ValueRangeSection = lazy(() => import("@/components/dashboard/ValueRangeSection"));
+const FunnelSection = lazy(() => import("@/components/dashboard/FunnelSection"));
+const SeasonalitySection = lazy(() => import("@/components/dashboard/SeasonalitySection"));
+const RegionSection = lazy(() => import("@/components/dashboard/RegionSection"));
+const MarginAnalysisSection = lazy(() => import("@/components/dashboard/MarginAnalysisSection"));
+const SellerRankingSection = lazy(() => import("@/components/dashboard/SellerRankingSection"));
+const GoalProjectionSection = lazy(() => import("@/components/dashboard/GoalProjectionSection"));
+const HeatmapSection = lazy(() => import("@/components/dashboard/HeatmapSection"));
+const OriginSection = lazy(() => import("@/components/dashboard/OriginSection"));
 
 interface Sale {
   id: string; name: string; display_id: string; status: string;
@@ -50,6 +52,33 @@ interface CheckinTask {
 interface LodgingTask {
   status: string; milestone: string;
   scheduled_at_utc: string | null; issue_type: string | null;
+}
+
+type IdleCapableWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+function SectionSkeleton({ tall = false }: { tall?: boolean }) {
+  return <Skeleton className={tall ? "h-80 rounded-xl" : "h-72 rounded-xl"} />;
+}
+
+function DeferredDashboardSection({
+  children,
+  delayMs = 0,
+  tall = false,
+}: {
+  children: React.ReactNode;
+  delayMs?: number;
+  tall?: boolean;
+}) {
+  return (
+    <DeferredRender delayMs={delayMs} fallback={<SectionSkeleton tall={tall} />}>
+      <Suspense fallback={<SectionSkeleton tall={tall} />}>
+        {children}
+      </Suspense>
+    </DeferredRender>
+  );
 }
 
 // Map UI period to RPC period param
@@ -109,6 +138,9 @@ export default function Dashboard() {
     }
     let alive = true;
     setDetailLoading(true);
+    let idleId: number | undefined;
+    let phase2Timer: number | undefined;
+    const browser = typeof window !== "undefined" ? (window as IdleCapableWindow) : undefined;
 
     // Phase 1: lightweight metadata (profiles, clients)
     Promise.all([
@@ -121,23 +153,39 @@ export default function Dashboard() {
     });
 
     // Phase 2: sales + auxiliary tables (deferred, non-blocking for KPIs)
-    Promise.all([
-      fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "close_date", ascending: false }, maxRows: 5000 }),
-      fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
-      fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
-      fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
-      fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000, cacheMs: 30000 }),
-    ]).then(([s, seg, ci, ct, lt]) => {
-      if (!alive) return;
-      setSales(s as Sale[]);
-      setSegments(seg as Segment[]);
-      setCostItems(ci as CostItem[]);
-      setCheckinTasks(ct as CheckinTask[]);
-      setLodgingTasks(lt as LodgingTask[]);
-      setDetailLoading(false);
-    }).catch(() => { if (alive) setDetailLoading(false); });
+    const loadDetailData = () => {
+      Promise.all([
+        fetchAllRows("sales", "id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id", { order: { column: "close_date", ascending: false }, maxRows: 5000 }),
+        fetchAllRows("flight_segments", "sale_id, origin_iata, destination_iata", { maxRows: 10000, cacheMs: 30000 }),
+        fetchAllRows("cost_items", "sale_id, category, miles_quantity, miles_price_per_thousand, miles_program, cash_value, total_item_cost", { maxRows: 10000, cacheMs: 30000 }),
+        fetchAllRows("checkin_tasks", "status, checkin_open_datetime_utc, completed_at, created_at", { maxRows: 5000, cacheMs: 30000 }),
+        fetchAllRows("lodging_confirmation_tasks", "status, milestone, scheduled_at_utc, issue_type", { maxRows: 5000, cacheMs: 30000 }),
+      ]).then(([s, seg, ci, ct, lt]) => {
+        if (!alive) return;
+        setSales(s as Sale[]);
+        setSegments(seg as Segment[]);
+        setCostItems(ci as CostItem[]);
+        setCheckinTasks(ct as CheckinTask[]);
+        setLodgingTasks(lt as LodgingTask[]);
+        setDetailLoading(false);
+      }).catch(() => { if (alive) setDetailLoading(false); });
+    };
 
-    return () => { alive = false; };
+    if (typeof browser?.requestIdleCallback === "function") {
+      idleId = browser.requestIdleCallback(loadDetailData, { timeout: 1500 });
+    } else if (typeof window !== "undefined") {
+      phase2Timer = window.setTimeout(loadDetailData, 250);
+    } else {
+      loadDetailData();
+    }
+
+    return () => {
+      alive = false;
+      if (typeof window !== "undefined") {
+        if (idleId && typeof browser?.cancelIdleCallback === "function") browser.cancelIdleCallback(idleId);
+        if (phase2Timer) window.clearTimeout(phase2Timer);
+      }
+    };
   }, [authLoading]);
 
   const sellerNames = useMemo(() => {
@@ -348,43 +396,83 @@ export default function Dashboard() {
         <>
           {ceoMode ? (
             <>
-              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection>
+                <GoalProjectionSection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={120}>
+                <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={240}>
+                <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              <DeferredDashboardSection delayMs={360}>
+                <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              </DeferredDashboardSection>
             </>
           ) : (
             <>
               <div className="glow-line" />
-              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-              <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+              <DeferredDashboardSection>
+                <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={100}>
+                <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <FunnelSection filtered={filtered} />
-                <ValueRangeSection filtered={filtered} />
+                <DeferredDashboardSection delayMs={180}>
+                  <FunnelSection filtered={filtered} />
+                </DeferredDashboardSection>
+                <DeferredDashboardSection delayMs={220}>
+                  <ValueRangeSection filtered={filtered} />
+                </DeferredDashboardSection>
               </div>
-              <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
-              <RegionSection filtered={filtered} getRegion={getRegion} />
+              <DeferredDashboardSection delayMs={300}>
+                <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={380}>
+                <RegionSection filtered={filtered} getRegion={getRegion} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <OriginSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={460}>
+                <OriginSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={540}>
+                <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SeasonalitySection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection delayMs={620}>
+                <SeasonalitySection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection delayMs={700}>
+                <GoalProjectionSection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <HeatmapSection filtered={filtered} />
+              <DeferredDashboardSection delayMs={780}>
+                <HeatmapSection filtered={filtered} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
-              <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
-              <GeographicSection filtered={filtered} />
-              <MilesSection filtered={filtered} costItems={costItems} />
+              <DeferredDashboardSection delayMs={860}>
+                <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={940}>
+                <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={1020}>
+                <GeographicSection filtered={filtered} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={1100}>
+                <MilesSection filtered={filtered} costItems={costItems} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              <DeferredDashboardSection delayMs={1180}>
+                <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              </DeferredDashboardSection>
             </>
           )}
         </>

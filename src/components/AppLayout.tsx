@@ -1,10 +1,9 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
-import GlobalSearch from "./GlobalSearch";
-import AIPageSummaryButton from "./AIPageSummaryButton";
 import PanelHelpButton from "./PanelHelpButton";
 import { MinimalLoader } from "./AppLoaders";
+import DeferredRender from "./DeferredRender";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
@@ -15,6 +14,8 @@ import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.png";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
+const GlobalSearch = lazy(() => import("./GlobalSearch"));
+const AIPageSummaryButton = lazy(() => import("./AIPageSummaryButton"));
 
 export default function AppLayout() {
   const isMobile = useIsMobile();
@@ -31,9 +32,17 @@ export default function AppLayout() {
             <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-primary/5 transition-colors">
               <Menu className="w-5 h-5 text-foreground" />
             </button>
-            <GlobalSearch />
+            <DeferredRender fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
+              <Suspense fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
+                <GlobalSearch />
+              </Suspense>
+            </DeferredRender>
             <div className="flex items-center gap-2">
-              <AIPageSummaryButton />
+              <DeferredRender>
+                <Suspense fallback={null}>
+                  <AIPageSummaryButton />
+                </Suspense>
+              </DeferredRender>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -91,9 +100,17 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {!isImmersive && (
           <header className="flex items-center justify-between px-5 h-[3.25rem] border-b border-border/12 bg-card/50 backdrop-blur-lg shrink-0 z-20">
-            <GlobalSearch />
+            <DeferredRender fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
+              <Suspense fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
+                <GlobalSearch />
+              </Suspense>
+            </DeferredRender>
             <div className="flex items-center gap-3">
-              <AIPageSummaryButton />
+              <DeferredRender>
+                <Suspense fallback={null}>
+                  <AIPageSummaryButton />
+                </Suspense>
+              </DeferredRender>
               <TooltipProvider delayDuration={300}>
                 <Tooltip>
                   <TooltipTrigger asChild>
