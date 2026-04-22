@@ -85,6 +85,7 @@ export default function Passengers() {
   const [bulkMode, setBulkMode] = useState(false);
   const [editingDetail, setEditingDetail] = useState(false);
   const [visibleCount, setVisibleCount] = useState(60);
+  const [sortBy, setSortBy] = useState<"created_desc" | "created_asc" | null>("created_desc");
   const [editForm, setEditForm] = useState<Partial<Passenger>>({});
   const [savingEdit, setSavingEdit] = useState(false);
   const { toast } = useToast();
@@ -284,6 +285,11 @@ export default function Passengers() {
       (docFilter === "sem-passaporte" && !p.passport_number) ||
       (docFilter === "passaporte-vencendo" && isPassportExpiringSoon(p.passport_expiry));
     return matchSearch && matchState && matchDoc;
+  }).sort((a, b) => {
+    if (!sortBy) return 0;
+    const da = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
+    const db = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+    return sortBy === "created_desc" ? db - da : da - db;
   });
 
   const navigateToNewSaleWithPassengers = (paxIds: string[]) => {
@@ -450,7 +456,13 @@ export default function Passengers() {
                     <TableHead>Passaporte</TableHead>
                     <TableHead>Validade</TableHead>
                     <TableHead>Cidade/UF</TableHead>
-                    <TableHead>Cliente desde</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none hover:text-foreground transition-colors"
+                      onClick={() => setSortBy(sortBy === "created_desc" ? "created_asc" : "created_desc")}
+                      title="Ordenar por data de cadastro"
+                    >
+                      Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : ""}
+                    </TableHead>
                     <TableHead className="text-center">Viagens</TableHead>
                   </TableRow>
                 </TableHeader>
