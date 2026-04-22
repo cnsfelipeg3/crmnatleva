@@ -172,8 +172,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
 
-  if (isLoading) return <ScreenLoader />;
+  const isPublicRoute =
+    location.pathname.startsWith("/proposta/") ||
+    location.pathname.startsWith("/portal/") ||
+    location.pathname === "/cadastro-fornecedor";
+
+  if (isLoading && !isPublicRoute) return <ScreenLoader />;
 
   return (
     <SmartSuspense>

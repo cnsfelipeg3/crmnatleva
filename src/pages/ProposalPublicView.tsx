@@ -1,11 +1,12 @@
-import { useEffect, useState, useCallback } from "react";
+import { lazy, Suspense, useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
-import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import ProposalEmailGate from "@/components/proposal/ProposalEmailGate";
 import { useProposalTracking } from "@/hooks/useProposalTracking";
 import { emitLearningEvent } from "@/lib/learningEvents";
+
+const ProposalPreviewRenderer = lazy(() => import("@/components/proposal/ProposalPreviewRenderer"));
 
 export default function ProposalPublicView() {
   const { slug } = useParams();
@@ -13,6 +14,7 @@ export default function ProposalPublicView() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
   // Print mode bypasses the email gate (used by PDF export)
   const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
@@ -37,23 +39,50 @@ export default function ProposalPublicView() {
   // Load proposal data
   useEffect(() => {
     if (!slug) return;
-    (async () => {
-      const { data, error } = await supabase
-        .from("proposals")
-        .select("*")
-        .eq("slug", slug)
-        .single();
-      if (error || !data) { setNotFound(true); setLoading(false); return; }
-      setProposal(data);
+    let active = true;
 
-      const { data: itemsData } = await supabase
-        .from("proposal_items")
-        .select("*")
-        .eq("proposal_id", data.id)
-        .order("position");
-      setItems(itemsData || []);
-      setLoading(false);
+    (async () => {
+      try {
+        setLoadError(false);
+        const { data, error } = await supabase
+          .from("proposals")
+          .select("*")
+          .eq("slug", slug)
+          .single();
+
+        if (!active) return;
+        if (error || !data) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        setProposal(data);
+
+        const { data: itemsData, error: itemsError } = await supabase
+          .from("proposal_items")
+          .select("*")
+          .eq("proposal_id", data.id)
+          .order("position");
+
+        if (!active) return;
+        if (itemsError) {
+          console.error("[ProposalView] Failed to load proposal items", itemsError);
+        }
+
+        setItems(itemsData || []);
+        setLoading(false);
+      } catch (error) {
+        console.error("[ProposalView] Failed to load public proposal", error);
+        if (!active) return;
+        setLoadError(true);
+        setLoading(false);
+      }
     })();
+
+    return () => {
+      active = false;
+    };
   }, [slug]);
 
   // Handle email submission
@@ -186,6 +215,17 @@ export default function ProposalPublicView() {
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="max-w-md text-center space-y-3">
+          <p className="text-2xl font-serif text-foreground">Não foi possível abrir a proposta</p>
+          <p className="text-muted-foreground">Tente recarregar a página em alguns segundos. Se o problema continuar, o link público precisa de ajuste.</p>
+        </div>
+      </div>
+    );
+  }
+
   // Show email gate if not unlocked (skipped in print mode)
   if (!unlocked && !isPrintMode) {
     return (
@@ -201,14 +241,37 @@ export default function ProposalPublicView() {
 
   return (
     <>
-      <ProposalPreviewRenderer
-        proposal={proposal}
-        items={items}
-        tracking={tracking}
-      />
+      <Suspense fallback={<PublicProposalStageLoader message="Montando sua proposta..." />}>
+        <ProposalPreviewRenderer
+          proposal={proposal}
+          items={items}
+          tracking={tracking}
+        />
+      </Suspense>
       {/* Ready signal for the PDF exporter */}
       <PrintReadyMarker />
     </>
+  );
+}
+
+function PublicProposalStageLoader({ message }: { message: string }) {
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center px-6">
+      <div className="w-full max-w-xl space-y-6">
+        <div className="space-y-3 text-center">
+          <div className="mx-auto h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">{message}</p>
+        </div>
+
+        <div className="space-y-4">
+          <div className="h-64 rounded-xl bg-muted/60 animate-pulse" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="h-40 rounded-xl bg-muted/50 animate-pulse" />
+            <div className="h-40 rounded-xl bg-muted/50 animate-pulse" />
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
