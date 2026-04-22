@@ -248,7 +248,7 @@ const SCHEMAS: Record<ItemType, any> = {
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
   flight:
-    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro de cada perna marque is_connection=true. (4) Converta durações como '12h 01m' para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se houver bagagem despachada, preencha checked_bags_included e checked_bag_weight_kg; se não, 0. (8) CLASSIFIQUE o itinerary_type: ROUND_TRIP se há ida E volta entre o mesmo par de cidades; ONE_WAY se só ida sem retorno; OPEN_JAW se a volta sai/chega em cidade diferente; MULTI_CITY se forem 3+ cidades distintas em sequência. (9) Marque cada segmento com direction='ida' ou 'volta' (ou 'trecho' em multi-city). (10) Construa title humano (ex.: 'GRU → FCO · LATAM · Ida e Volta' ou 'GRU → CDG · Air France · Somente Ida'). Omita campos sem evidência clara em vez de inventar.",
+    "Você é um extrator preciso de dados de voos para um sistema de propostas de viagem. Sua MISSÃO é destrinchar a imagem/PDF e listar TODOS os trechos (ida + volta + conexões) como segmentos separados em flight_segments, na ordem cronológica. Regras: (1) Cada conexão é um segmento próprio; nunca agrupe origem-destino final ignorando paradas. (2) Sempre normalize horários para HH:MM 24h e datas para YYYY-MM-DD no fuso LOCAL de cada aeroporto exibido. (3) Para cada trecho posterior ao primeiro de cada perna marque is_connection=true. (4) Converta durações como '12h 01m' para minutos (721). (5) Códigos IATA SEMPRE em 3 letras maiúsculas. (6) flight_number sem o prefixo IATA (ex.: para 'LA8084' devolva '8084' e airline='LA'). (7) Se houver bagagem despachada, preencha checked_bags_included e checked_bag_weight_kg; se não, 0. (8) CLASSIFIQUE o itinerary_type: ROUND_TRIP se há ida E volta entre o mesmo par de cidades; ONE_WAY se só ida sem retorno; OPEN_JAW se a volta sai/chega em cidade diferente; MULTI_CITY se forem 3+ cidades distintas em sequência. (9) Marque cada segmento com direction='ida' ou 'volta' (ou 'trecho' em multi-city). (10) Construa title humano (ex.: 'GRU → FCO · LATAM · Ida e Volta' ou 'GRU → CDG · Air France · Somente Ida'). (11) ATENÇÃO ESPECIAL A CONEXÕES: uma conexão típica dura entre 1h e 12h (no máximo 24h). NUNCA gere uma conexão maior que 24h — se a diferença entre o desembarque do trecho anterior e o embarque do próximo ultrapassa 24h, você está errando a data do segundo trecho. Reveja dia/mês com cuidado. Ex.: se desembarca 01:55 do dia 19 em DXB e o próximo voo é em DXB às 09:05, é quase certo que o embarque é no MESMO dia 19 (conexão ~7h), NÃO no dia 21. Sempre escolha a conexão de menor duração plausível ao decidir a data. (12) Omita campos sem evidência clara em vez de inventar.",
   hotel:
     "Você é um extrator preciso de reservas e cotações de HOTEL (Booking, Decolar, Expedia, sites de hotéis, e-mails de confirmação). MISSÃO: extrair TODOS os dados visíveis com normalização rigorosa. Regras: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de checkin/checkout se não vier explícito. (3) NORMALIZE meal_plan para um destes valores: 'Sem refeição', 'Café da manhã', 'Meia pensão', 'Pensão completa', 'All inclusive'. Preencha também meal_plan_code (RO/BB/HB/FB/AI). (4) Detecte stars (categoria 1-5) e rating separadamente (nota dos hóspedes 0-10). (5) Identifique se a tarifa é reembolsável (is_refundable) e até quando o cancelamento é gratuito (free_cancellation_until em YYYY-MM-DD). (6) Liste amenities visíveis como array. (7) Construa um description curto e útil: 'Hotel 5★ em Roma · Café da manhã · Quarto Deluxe Vista Cidade'. (8) Identifique adults/children/rooms separadamente quando possível. Omita campos sem evidência em vez de inventar.",
   experience:
@@ -391,7 +391,6 @@ Deno.serve(async (req) => {
         const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (!m) return iso;
         if (iso >= todayISO) return iso;
-        // Date is in the past — try current year, then next
         const candidate = `${curYear}-${m[2]}-${m[3]}`;
         if (candidate >= todayISO) return candidate;
         return `${curYear + 1}-${m[2]}-${m[3]}`;
@@ -399,6 +398,81 @@ Deno.serve(async (req) => {
       for (const seg of extracted.data.flight_segments) {
         seg.departure_date = bumpYear(seg.departure_date);
         if (seg.arrival_date) seg.arrival_date = bumpYear(seg.arrival_date);
+      }
+
+      // Sanity-check connection layovers. If two consecutive segments share an airport
+      // (prev.destination == next.origin) and the implied layover is > 24h or negative,
+      // the AI likely mis-read the date. Snap next.departure_date so layover ∈ [0, 24h].
+      const segs = extracted.data.flight_segments as any[];
+      const toMin = (t: string): number => {
+        if (!t || typeof t !== "string") return NaN;
+        const [h, m] = t.split(":").map(Number);
+        return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+      };
+      const isoToDate = (iso: string | undefined): Date | null => {
+        const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+      };
+      const dateToISO = (d: Date): string => d.toISOString().slice(0, 10);
+      const MAX_LAYOVER_MIN = 24 * 60;
+
+      for (let i = 1; i < segs.length; i++) {
+        const prev = segs[i - 1];
+        const next = segs[i];
+        if (!prev || !next) continue;
+        const prevDest = String(prev.destination_iata || "").toUpperCase();
+        const nextOrig = String(next.origin_iata || "").toUpperCase();
+        if (!prevDest || prevDest !== nextOrig) continue;
+
+        const prevArrTime = toMin(prev.arrival_time);
+        const nextDepTime = toMin(next.departure_time);
+        if (!Number.isFinite(prevArrTime) || !Number.isFinite(nextDepTime)) continue;
+
+        const prevDepDate = isoToDate(prev.departure_date);
+        let prevArrDate = isoToDate(prev.arrival_date) || prevDepDate;
+        if (!prev.arrival_date && prevDepDate && prev.departure_time) {
+          const prevDepTime = toMin(prev.departure_time);
+          if (Number.isFinite(prevDepTime) && prevArrTime < prevDepTime) {
+            const d = new Date(prevDepDate);
+            d.setUTCDate(d.getUTCDate() + 1);
+            prevArrDate = d;
+          }
+        }
+        const nextDepDate = isoToDate(next.departure_date);
+        if (!prevArrDate || !nextDepDate) continue;
+
+        const layoverMin =
+          (nextDepDate.getTime() - prevArrDate.getTime()) / 60_000 +
+          (nextDepTime - prevArrTime);
+
+        if (layoverMin < 0 || layoverMin > MAX_LAYOVER_MIN) {
+          // Snap to plausible window: same day as prev arrival, +1 day if depart time < arrival time
+          const candidate = new Date(prevArrDate);
+          let candidateLayover = nextDepTime - prevArrTime;
+          if (candidateLayover < 0) {
+            candidate.setUTCDate(candidate.getUTCDate() + 1);
+            candidateLayover += 24 * 60;
+          }
+          if (candidateLayover >= 0 && candidateLayover <= MAX_LAYOVER_MIN) {
+            const oldDepIso = next.departure_date;
+            const newDepIso = dateToISO(candidate);
+            console.log(
+              `[layover-fix] seg ${i} (${prevDest}): layover ${Math.round(layoverMin)}min implausible; snapping departure_date ${oldDepIso} -> ${newDepIso} (new layover ${Math.round(candidateLayover)}min)`,
+            );
+            next.departure_date = newDepIso;
+            // Shift arrival_date by the same delta to preserve flight duration
+            if (next.arrival_date) {
+              const oldDep = nextDepDate;
+              const arrShiftDays = Math.round((candidate.getTime() - oldDep.getTime()) / 86_400_000);
+              const arrIso = isoToDate(next.arrival_date);
+              if (arrIso) {
+                arrIso.setUTCDate(arrIso.getUTCDate() + arrShiftDays);
+                next.arrival_date = dateToISO(arrIso);
+              }
+            }
+          }
+        }
       }
     }
 
