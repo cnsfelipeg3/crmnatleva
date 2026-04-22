@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
+import PerfDebugOverlay from "@/components/PerfDebugOverlay";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -186,6 +187,7 @@ function AppRoutes() {
 
   return (
     <SmartSuspense>
+      <PerfDebugOverlay />
       <Routes>
         <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
         {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
