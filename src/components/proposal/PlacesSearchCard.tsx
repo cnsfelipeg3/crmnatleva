@@ -64,6 +64,7 @@ interface CuratedPhoto {
   source: "google" | "manual" | "official";
   description?: string;
   room_type?: string | null;
+  room_name?: string | null;
   category?: string;
 }
 
