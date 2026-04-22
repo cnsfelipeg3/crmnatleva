@@ -217,7 +217,6 @@ export function HotelPhotoGallery({
                     className="absolute inset-0 h-full w-full"
                     imgClassName="object-cover"
                     loading="lazy"
-                    forceProxy={photo.source === "official"}
                   />
 
                   {/* Cover badge */}
@@ -417,7 +416,8 @@ export function HotelPhotoGallery({
               alt={current.label || "Foto"}
               className="max-h-[82vh] max-w-[88vw] rounded-lg shadow-2xl"
               imgClassName="object-contain max-h-[82vh] max-w-[88vw]"
-              forceProxy={current.source === "official"}
+              eagerMount
+              loading="eager"
             />
           </div>
 
@@ -449,7 +449,6 @@ export function HotelPhotoGallery({
                         className="absolute inset-0 h-full w-full"
                         imgClassName="object-cover"
                         loading="lazy"
-                        forceProxy={p.source === "official"}
                       />
                       {isCover && (
                         <div className="absolute inset-0 flex items-start justify-start p-0.5">
