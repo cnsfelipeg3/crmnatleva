@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -11,16 +10,18 @@ const VISIBLE_KEY = "proposal-editor-preview-visible";
 interface SplitLayoutProps {
   left: ReactNode;
   preview: ReactNode;
-  /** Called with `false` when the user collapses the preview, so the parent can fall back to a tab UI on small screens. */
   forceSingleColumn?: boolean;
 }
 
 /**
- * Two-column editor layout: forms on the left, live preview on the right.
- * - On screens ≥1280px: resizable split with localStorage-persisted width and toggle.
- * - On screens <1280px: returns the `left` content only; the parent should provide a tabbed fallback.
+ * Two-column editor layout (forms left, live preview right).
+ * Uses a plain flex layout + manual drag handle to avoid the
+ * `react-resizable-panels` `useId` runtime issue.
  */
 export default function SplitLayout({ left, preview, forceSingleColumn }: SplitLayoutProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
   const [isWide, setIsWide] = useState<boolean>(() =>
     typeof window === "undefined" ? true : window.innerWidth >= SPLIT_BREAKPOINT,
   );
@@ -30,7 +31,7 @@ export default function SplitLayout({ left, preview, forceSingleColumn }: SplitL
     return v === null ? true : v === "1";
   });
   const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
-  const [defaultSize, setDefaultSize] = useState<number>(() => {
+  const [leftSize, setLeftSize] = useState<number>(() => {
     if (typeof window === "undefined") return 42;
     const v = Number(localStorage.getItem(SIZE_KEY));
     return Number.isFinite(v) && v >= 25 && v <= 75 ? v : 42;
@@ -45,6 +46,30 @@ export default function SplitLayout({ left, preview, forceSingleColumn }: SplitL
   useEffect(() => {
     localStorage.setItem(VISIBLE_KEY, previewVisible ? "1" : "0");
   }, [previewVisible]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.min(70, Math.max(28, pct));
+      setLeftSize(clamped);
+    };
+    const onUp = () => {
+      if (draggingRef.current) {
+        draggingRef.current = false;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        localStorage.setItem(SIZE_KEY, String(Math.round(leftSize)));
+      }
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [leftSize]);
 
   if (!isWide || forceSingleColumn || !previewVisible) {
     return (
@@ -62,22 +87,34 @@ export default function SplitLayout({ left, preview, forceSingleColumn }: SplitL
   }
 
   return (
-    <ResizablePanelGroup
-      direction="horizontal"
-      className="min-h-[calc(100vh-220px)] rounded-xl border border-border/40 bg-background"
-      onLayout={(sizes) => {
-        const [leftSize] = sizes;
-        if (Number.isFinite(leftSize)) {
-          setDefaultSize(leftSize);
-          localStorage.setItem(SIZE_KEY, String(Math.round(leftSize)));
-        }
-      }}
+    <div
+      ref={containerRef}
+      className="flex min-h-[calc(100vh-220px)] w-full rounded-xl border border-border/40 bg-background overflow-hidden"
     >
-      <ResizablePanel defaultSize={defaultSize} minSize={28} maxSize={70} className="overflow-y-auto">
+      <div
+        className="overflow-y-auto"
+        style={{ width: `${leftSize}%` }}
+      >
         <div className="p-4">{left}</div>
-      </ResizablePanel>
-      <ResizableHandle withHandle />
-      <ResizablePanel defaultSize={100 - defaultSize} minSize={30} className="overflow-y-auto bg-muted/30">
+      </div>
+
+      <div
+        role="separator"
+        aria-orientation="vertical"
+        onMouseDown={() => {
+          draggingRef.current = true;
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+        }}
+        className="group relative w-1.5 shrink-0 cursor-col-resize bg-border/40 hover:bg-primary/40 transition-colors"
+      >
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-10 w-1 rounded-full bg-border group-hover:bg-primary/60" />
+      </div>
+
+      <div
+        className="overflow-y-auto bg-muted/30"
+        style={{ width: `${100 - leftSize}%` }}
+      >
         <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/40 bg-background/95 backdrop-blur px-3 py-2">
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Eye className="w-3.5 h-3.5" />
@@ -129,13 +166,15 @@ export default function SplitLayout({ left, preview, forceSingleColumn }: SplitL
           <div
             className={cn(
               "mx-auto transition-all duration-300",
-              previewMode === "mobile" ? "max-w-[420px] rounded-2xl border border-border/40 bg-background shadow-md overflow-hidden" : "max-w-none",
+              previewMode === "mobile"
+                ? "max-w-[420px] rounded-2xl border border-border/40 bg-background shadow-md overflow-hidden"
+                : "max-w-none",
             )}
           >
             {preview}
           </div>
         </div>
-      </ResizablePanel>
-    </ResizablePanelGroup>
+      </div>
+    </div>
   );
 }
