@@ -105,7 +105,7 @@ export default function Proposals() {
   );
 
   const copyLink = (slug: string) => {
-    const url = `${window.location.origin}/proposta/${slug}`;
+    const url = getPublicProposalUrl(slug);
     navigator.clipboard.writeText(url);
     toast.success("Link copiado!");
   };

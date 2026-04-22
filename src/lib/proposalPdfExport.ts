@@ -120,8 +120,10 @@ export async function exportProposalPdf(slug: string, title: string) {
   }
 }
 
+import { getPublicProposalUrl } from "@/lib/publicUrl";
+
 export async function shareProposalLink(slug: string, title: string) {
-  const url = `${window.location.origin}/proposta/${slug}`;
+  const url = getPublicProposalUrl(slug);
   const shareData = {
     title: `Proposta — ${title}`,
     text: `Confira sua proposta exclusiva da NatLeva: ${title}`,

@@ -76,7 +76,7 @@ export default function PublishToPortalDialog({ open, onOpenChange, saleId, clie
     }
   };
 
-  const portalUrl = `${window.location.origin}/portal/login`;
+  const portalUrl = getPublicPortalLoginUrl();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

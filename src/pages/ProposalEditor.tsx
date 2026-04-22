@@ -707,7 +707,7 @@ export default function ProposalEditor() {
   const copyLink = () => {
     const slug = existing?.slug;
     if (slug) {
-      navigator.clipboard.writeText(`${window.location.origin}/proposta/${slug}`);
+      navigator.clipboard.writeText(getPublicProposalUrl(slug));
       toast.success("Link copiado!");
     }
   };
