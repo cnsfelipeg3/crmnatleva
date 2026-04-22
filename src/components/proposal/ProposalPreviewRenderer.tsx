@@ -190,13 +190,13 @@ function PhotoGallery({ photos, name, captions }: { photos: string[]; name: stri
         </div>
         {/* Thumbnails */}
         {photos.length > 1 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex gap-1.5 overflow-x-auto py-1.5 scrollbar-thin">
             {photos.map((url, i) => (
               <button
                 key={i}
                 onClick={(e) => { e.stopPropagation(); setActive(i); }}
                 className={`relative flex-shrink-0 w-20 h-14 sm:w-24 sm:h-16 rounded-md overflow-hidden transition-all ${
-                  i === active ? "ring-2 ring-accent ring-offset-1 ring-offset-background" : "opacity-60 hover:opacity-100"
+                  i === active ? "ring-1 ring-accent/70 ring-offset-1 ring-offset-background" : "opacity-60 hover:opacity-100"
                 }`}
                 aria-label={`Foto ${i + 1}`}
               >
