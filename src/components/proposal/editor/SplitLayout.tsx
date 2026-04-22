@@ -167,7 +167,7 @@ export default function SplitLayout({ left, preview, forceSingleColumn }: SplitL
             className={cn(
               "mx-auto transition-all duration-300",
               previewMode === "mobile"
-                ? "max-w-[420px] rounded-2xl border border-border/40 bg-background shadow-md overflow-hidden"
+                ? "proposal-mobile-frame max-w-[390px] rounded-2xl border border-border/40 bg-background shadow-md overflow-hidden"
                 : "max-w-none",
             )}
           >
