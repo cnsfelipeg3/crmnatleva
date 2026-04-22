@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,6 +89,21 @@ function generateSlug() {
   return result;
 }
 
+// Hook: retorna um valor "atrasado" para evitar re-renderizar componentes pesados
+// (como o ProposalPreviewRenderer) a cada keystroke. Mantém a digitação fluida.
+function useDebouncedValue<T>(value: T, delay = 250): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+// Memoiza o renderer do preview para que ele só re-renderize quando suas props
+// (referência de objeto) realmente mudarem. Combina-se com useMemo nas props.
+const MemoProposalPreviewRenderer = memo(ProposalPreviewRenderer);
+
 export default function ProposalEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -148,6 +163,22 @@ export default function ProposalEditor() {
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
+
+  // ── Debounce para o preview ─────────────────────────────────────────
+  // Form e items são atualizados em todo keystroke, mas o preview à direita
+  // (ProposalPreviewRenderer) é caro. Esperamos 250ms de inatividade antes
+  // de propagar. A digitação no formulário continua imediata.
+  const debouncedForm = useDebouncedValue(form, 250);
+  const debouncedItems = useDebouncedValue(items, 250);
+  const debouncedVisualOverrides = useDebouncedValue(visualOverrides, 250);
+
+  // Memoiza o objeto da proposta passado ao preview para que `React.memo`
+  // no renderer consiga pular re-renders quando nada relevante mudou.
+  const previewProposal = useMemo(() => ({
+    ...debouncedForm,
+    total_value: debouncedForm.total_value ? parseFloat(debouncedForm.total_value as any) : null,
+    value_per_person: debouncedForm.value_per_person ? parseFloat(debouncedForm.value_per_person as any) : null,
+  }), [debouncedForm]);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -1335,13 +1366,9 @@ export default function ProposalEditor() {
         </TabsContent>
 
         <TabsContent value="preview">
-          <ProposalPreviewRenderer
-            proposal={{
-              ...form,
-              total_value: form.total_value ? parseFloat(form.total_value) : null,
-              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-            }}
-            items={items}
+          <MemoProposalPreviewRenderer
+            proposal={previewProposal}
+            items={debouncedItems}
             template={selectedTemplate}
             embedded
           />
@@ -1377,15 +1404,11 @@ export default function ProposalEditor() {
                 try { localStorage.setItem(visualDraftKey, JSON.stringify(next)); } catch { /* ignore */ }
               }}
             >
-              <ProposalPreviewRenderer
-                proposal={{
-                  ...form,
-                  total_value: form.total_value ? parseFloat(form.total_value) : null,
-                  value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-                }}
-                items={items}
+              <MemoProposalPreviewRenderer
+                proposal={previewProposal}
+                items={debouncedItems}
                 template={selectedTemplate}
-                visualOverrides={visualOverrides}
+                visualOverrides={debouncedVisualOverrides}
                 embedded
               />
             </VisualCanvasOverlay>
