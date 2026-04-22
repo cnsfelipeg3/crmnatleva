@@ -786,24 +786,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                 </div>
               </div>
 
-              <div className="space-y-0">
-                {leg.segments.map((seg: any, i: number) => (
-                  <div key={i}>
-                    {i > 0 && (
-                      <ConnectionBadge
-                        fromIata={leg.segments[i - 1]?.destination_iata || ""}
-                        layoverMinutes={calcPreciseLayoverMinutes(leg.segments[i - 1], seg) ?? undefined}
-                      />
-                    )}
-                    <BoardingPassSegment
-                      seg={seg}
-                      showDate={true}
-                      flightTypeBadge={i === 0 ? (stops === 0 ? "direct" : `${stops}-stop`) : undefined}
-                      stopsCount={stops}
-                    />
-                  </div>
-                ))}
-            </div>
+              <UnifiedLegCard segments={leg.segments} />
 
             {/* Bagagem por leg (ida/volta separadamente) */}
             {(() => {
