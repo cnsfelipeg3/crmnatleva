@@ -1461,6 +1461,53 @@ export default function ProposalEditor() {
         initialDestination={form.title || ""}
         onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
       />
+      <AddFlightWizard
+        open={flightWizardOpen}
+        onOpenChange={setFlightWizardOpen}
+        onCreateManual={(itineraryType: WizardItineraryType) => {
+          setItems((prev) => [
+            ...prev,
+            {
+              item_type: "flight",
+              title: "",
+              description: "",
+              image_url: "",
+              data: {
+                itinerary_type: itineraryType,
+                flight_segments: [],
+              },
+            },
+          ]);
+          setActiveItemCategory("flight");
+        }}
+        onCreateFromExtraction={(itineraryType, extracted) => {
+          // Cria item vazio e aplica a extração reusando applyExtractedItem
+          setItems((prev) => {
+            const next = [
+              ...prev,
+              {
+                item_type: "flight",
+                title: "",
+                description: "",
+                image_url: "",
+                data: { itinerary_type: itineraryType, flight_segments: [] },
+              },
+            ];
+            return next;
+          });
+          // Aplica no próximo tick para garantir que o índice exista
+          setTimeout(() => {
+            setItems((curr) => {
+              const newIdx = curr.length - 1;
+              if (newIdx < 0) return curr;
+              // Reaproveita applyExtractedItem (que usa setItems internamente)
+              applyExtractedItem(newIdx, extracted);
+              return curr;
+            });
+          }, 0);
+          setActiveItemCategory("flight");
+        }}
+      />
     </div>
   );
 }
