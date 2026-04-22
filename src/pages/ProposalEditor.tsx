@@ -23,6 +23,7 @@ import VisualCanvasOverlay, { type VisualOverrides } from "@/components/proposal
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import SmartImage from "@/components/proposal/SmartImage";
+import HotelPhotoGallery from "@/components/proposal/HotelPhotoGallery";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
@@ -1219,112 +1220,12 @@ export default function ProposalEditor() {
                           {item.item_type === "hotel" && (
                             <>
                               {/* ── Photo Gallery Manager ── */}
-                              <div className="md:col-span-2 space-y-2 p-3 rounded-xl border border-border/60 bg-muted/20">
-                                <div className="flex items-center justify-between gap-2 flex-wrap">
-                                  <div className="flex items-center gap-2">
-                                    <ImageIcon className="w-4 h-4 text-primary" />
-                                    <span className="text-xs font-semibold">
-                                      Galeria de fotos
-                                      {(item.data?.official_photos?.length || 0) > 0 && (
-                                        <span className="ml-1.5 text-muted-foreground font-normal">
-                                          ({item.data.official_photos.length})
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Thumbnails */}
-                                {(item.data?.official_photos?.length || 0) > 0 ? (
-                                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-2">
-                                    {(item.data.official_photos as any[])
-                                      .filter((photo: any) => typeof photo?.url === "string" && photo.url.trim().length > 0)
-                                      .map((photo: any, pIdx: number) => {
-                                      const isCover = item.image_url === photo.url;
-                                       const badgeLabel = photo.source === "official" ? "Oficial" : photo.source === "manual" ? "Manual" : null;
-                                       const photoLabel = photo.label || photo.room_name || `Foto ${pIdx + 1}`;
-                                      return (
-                                        <div
-                                          key={`${photo.url}-${pIdx}`}
-                                           className={`group relative aspect-square min-w-0 overflow-hidden rounded-lg border transition-all ${isCover ? "border-primary ring-2 ring-primary/30 shadow-sm" : "border-border/40 hover:border-primary/40"} bg-muted/40`}
-                                        >
-                                           <SmartImage
-                                             src={photo.url}
-                                             alt={photoLabel}
-                                             className="absolute inset-0 h-full w-full"
-                                             imgClassName="object-cover"
-                                             loading="lazy"
-                                             forceProxy={photo.source === "official"}
-                                           />
-                                          {isCover && (
-                                             <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10">
-                                              CAPA
-                                            </div>
-                                          )}
-                                           {badgeLabel && (
-                                             <div className="absolute top-1 right-1 z-10 rounded-md bg-background/85 px-1.5 py-0.5 text-[8px] font-medium text-foreground shadow-sm backdrop-blur-sm">
-                                               {badgeLabel}
-                                             </div>
-                                           )}
-                                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 z-10">
-                                            {!isCover && (
-                                              <button
-                                                type="button"
-                                                title="Definir como capa"
-                                                onClick={() => updateItem(idx, "image_url", photo.url)}
-                                                className="p-1 rounded bg-white/20 hover:bg-white/40 text-white"
-                                              >
-                                                <Star className="w-3 h-3" />
-                                              </button>
-                                            )}
-                                            <button
-                                              type="button"
-                                              title="Remover foto"
-                                              onClick={() => {
-                                                const next = (item.data.official_photos as any[]).filter((_, i) => i !== pIdx);
-                                                updateItemData(idx, "official_photos", next);
-                                                if (isCover) updateItem(idx, "image_url", next[0]?.url || "");
-                                              }}
-                                              className="p-1 rounded bg-white/20 hover:bg-destructive/80 text-white"
-                                            >
-                                              <X className="w-3 h-3" />
-                                            </button>
-                                          </div>
-                                           <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-2 py-1.5">
-                                             <p className="truncate text-[10px] font-medium text-foreground">
-                                               {photoLabel}
-                                             </p>
-                                           </div>
-                                        </div>
-                                      );
-                                      })}
-                                  </div>
-                                ) : (
-                                  <p className="text-[11px] text-muted-foreground italic">
-                                    Nenhuma foto adicionada. Clique em <strong>Editar fotos</strong> para buscar do site oficial ou adicionar manualmente.
-                                  </p>
-                                )}
-
-                                {/* Manual photo URL input */}
-                                <div className="flex gap-1.5 items-center">
-                                  <Input
-                                    placeholder="Cole uma URL de imagem e pressione Enter..."
-                                    className="h-7 text-xs"
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        const url = (e.target as HTMLInputElement).value.trim();
-                                        if (!url) return;
-                                        const existing = item.data?.official_photos || [];
-                                         updateItemData(idx, "official_photos", [...existing, { url, label: "Manual", category: "outros", source: "manual" }]);
-                                        if (!item.image_url) updateItem(idx, "image_url", url);
-                                        (e.target as HTMLInputElement).value = "";
-                                        toast.success("Foto adicionada");
-                                      }
-                                    }}
-                                  />
-                                </div>
-                              </div>
+                              <HotelPhotoGallery
+                                photos={(item.data?.official_photos as any[]) || []}
+                                coverUrl={item.image_url || ""}
+                                onPhotosChange={(next) => updateItemData(idx, "official_photos", next)}
+                                onCoverChange={(url) => updateItem(idx, "image_url", url)}
+                              />
 
                               <div className="space-y-1">
                                 <Label className="text-xs">Categoria (estrelas)</Label>
