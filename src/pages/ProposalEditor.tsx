@@ -1104,7 +1104,7 @@ export default function ProposalEditor() {
                     {/* Collapsible content */}
                     {!isCollapsed && (
                       <div className="px-4 pb-4 pt-1 border-t border-border/50 space-y-3">
-                        {/* Google Places search button */}
+                        {/* Buscar Mídias (Google Places + Site Oficial unificado) */}
                         {supportsPlaces && !isSearchOpen && (
                           <Button
                             variant={hasPlaceData ? "outline" : "default"}
@@ -1112,8 +1112,8 @@ export default function ProposalEditor() {
                             onClick={() => setPlacesSearchIdx(idx)}
                             className="gap-1.5 text-xs w-full sm:w-auto"
                           >
-                            <Search className="w-3.5 h-3.5" />
-                            {hasPlaceData ? "Buscar outro no Google" : "Buscar no Google Places"}
+                            <Sparkles className="w-3.5 h-3.5" />
+                            {hasPlaceData ? "Buscar outras mídias" : "Buscar Mídias"}
                           </Button>
                         )}
 
