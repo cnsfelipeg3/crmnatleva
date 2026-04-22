@@ -16,6 +16,7 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { prefetchRoute } from "@/lib/routePrefetch";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -127,6 +128,9 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       to={item.to}
       end={item.to === "/financeiro"}
       onClick={onNavigate}
+      onMouseEnter={() => prefetchRoute(item.to)}
+      onFocus={() => prefetchRoute(item.to)}
+      onTouchStart={() => prefetchRoute(item.to)}
       className={({ isActive }) =>
         cn(
           "flex items-center gap-3 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-200 relative",
