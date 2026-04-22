@@ -881,6 +881,18 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       viewport={{ once: true }}
       transition={{ delay: idx * 0.1 }}
     >
+      {/* Cover image (aircraft / airline) */}
+      {flight.image_url && (
+        <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 aspect-[16/6] bg-muted">
+          <img
+            src={flight.image_url}
+            alt={flight.title || "Capa do aéreo"}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+
       {/* Legs (Ida / Volta / Trecho) */}
       <div className="space-y-8">
         {legs.map((leg, li) => {
