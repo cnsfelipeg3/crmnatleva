@@ -1110,9 +1110,15 @@ export default function PlacesSearchCard({
                       dragIdx === i && "scale-95 opacity-70"
                     )}
                   >
-                    <div className="aspect-[4/3] bg-muted/20 relative flex items-center justify-center">
-                      <img src={photo.url} alt={photo.label} className="max-w-full max-h-full object-contain" loading="lazy" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <div className="aspect-[4/3] bg-muted/20 relative">
+                      <SmartImage
+                        src={photo.url}
+                        alt={photo.label}
+                        className="absolute inset-0 w-full h-full"
+                        imgClassName="object-cover"
+                        forceProxy={photo.source === "official"}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                       <button onClick={() => toggleSelect(i)} className="absolute top-1.5 left-1.5 z-10">
                         {photo.selected ? <CheckSquare className="h-5 w-5 text-primary drop-shadow-md" /> : <Square className="h-5 w-5 text-white/80 drop-shadow-md" />}
                       </button>
