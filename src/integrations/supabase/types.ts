@@ -5374,6 +5374,7 @@ export type Database = {
       }
       proposals: {
         Row: {
+          children_ages: number[] | null
           client_id: string | null
           client_name: string | null
           consultant_name: string | null
@@ -5386,6 +5387,8 @@ export type Database = {
           last_viewed_at: string | null
           origin: string | null
           passenger_count: number | null
+          passengers_adults: number | null
+          passengers_children: number | null
           payment_conditions: Json | null
           proposal_outcome: string | null
           proposal_strategy: string | null
@@ -5408,6 +5411,7 @@ export type Database = {
           visual_overrides: Json
         }
         Insert: {
+          children_ages?: number[] | null
           client_id?: string | null
           client_name?: string | null
           consultant_name?: string | null
@@ -5420,6 +5424,8 @@ export type Database = {
           last_viewed_at?: string | null
           origin?: string | null
           passenger_count?: number | null
+          passengers_adults?: number | null
+          passengers_children?: number | null
           payment_conditions?: Json | null
           proposal_outcome?: string | null
           proposal_strategy?: string | null
@@ -5442,6 +5448,7 @@ export type Database = {
           visual_overrides?: Json
         }
         Update: {
+          children_ages?: number[] | null
           client_id?: string | null
           client_name?: string | null
           consultant_name?: string | null
@@ -5454,6 +5461,8 @@ export type Database = {
           last_viewed_at?: string | null
           origin?: string | null
           passenger_count?: number | null
+          passengers_adults?: number | null
+          passengers_children?: number | null
           payment_conditions?: Json | null
           proposal_outcome?: string | null
           proposal_strategy?: string | null
