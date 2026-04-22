@@ -996,6 +996,18 @@ export default function PlacesSearchCard({
                   <Info className="h-3 w-3" /> Ideal: 5–8 fotos
                 </span>
               )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fetchOfficialSitePhotos(false)}
+                disabled={loadingOfficial || !selectedPlace?.name}
+                className="h-7 px-2 text-[10px] gap-1"
+                title="Buscar fotos HD direto do site oficial do hotel"
+              >
+                {loadingOfficial ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+                {loadingOfficial ? "Buscando…" : "Site Oficial (HD)"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="h-7 px-2 text-[10px] gap-1">
                 <Upload className="h-3 w-3" /> Upload
               </Button>
@@ -1071,6 +1083,13 @@ export default function PlacesSearchCard({
                         <div className="absolute bottom-1.5 right-1.5 z-10">
                           <Badge variant="secondary" className="text-[8px] h-4 px-1.5 bg-background/80 backdrop-blur-sm">
                             Upload
+                          </Badge>
+                        </div>
+                      )}
+                      {photo.source === "official" && (
+                        <div className="absolute bottom-1.5 right-1.5 z-10">
+                          <Badge className="text-[8px] h-4 px-1.5 bg-primary/90 text-primary-foreground backdrop-blur-sm gap-0.5">
+                            <Globe className="h-2.5 w-2.5" /> Oficial
                           </Badge>
                         </div>
                       )}
