@@ -16,7 +16,7 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { prefetchRoute } from "@/lib/routePrefetch";
+import { prefetchRoute, prefetchAllRoutes } from "@/lib/routePrefetch";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -120,6 +120,13 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (p.startsWith("/implementacao") || p.startsWith("/import") || p.startsWith("/livechat/import")) setImplOpen(true);
     if (p.startsWith("/admin")) setAdminOpen(true);
     if (p.startsWith("/portal-admin")) setPortalAdminOpen(true);
+  }, []);
+
+  // Aggressively prefetch every sidebar route during browser idle time so
+  // the first click on any menu item is essentially instant.
+  useEffect(() => {
+    const t = setTimeout(() => prefetchAllRoutes(), 600);
+    return () => clearTimeout(t);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
