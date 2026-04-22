@@ -1027,9 +1027,9 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                   ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl"
                   : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 max-w-6xl";
             return (
-          <div className={`mx-auto grid ${gridCols} gap-6 justify-items-center`}>
+          <div className={`mx-auto grid ${gridCols} gap-6 ${count === 1 ? "" : "justify-items-center"}`}>
             {(destinations.length > 0 ? destinations : proposal.destinations.map((d: string, i: number) => ({ title: d, image_url: null, description: null, id: i }))).map((dest: any, idx: number) => (
-              <motion.div key={dest.id || idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} className="group rounded-2xl overflow-hidden relative h-72 cursor-pointer shadow-lg shadow-black/10">
+              <motion.div key={dest.id || idx} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.1 }} className="group rounded-2xl overflow-hidden relative h-72 cursor-pointer shadow-lg shadow-black/10 w-full">
                 <img src={dest.image_url || getDestImage(dest.title || "")} alt={dest.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[hsl(158,50%,4%,0.8)] via-transparent to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-6">
@@ -1039,6 +1039,8 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               </motion.div>
             ))}
           </div>
+            );
+          })()}
         </section>
       )}
 
