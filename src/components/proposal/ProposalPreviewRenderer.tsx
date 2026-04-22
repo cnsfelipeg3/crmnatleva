@@ -896,10 +896,21 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 /* ═══ Hotel Card ═══ */
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
-  const photos: string[] = d.photos || (d.selectedPhotos ? d.selectedPhotos : []);
+  const officialPhotos: any[] = Array.isArray(d.official_photos) ? d.official_photos : [];
+  const orderedPhotos = [
+    hotel.image_url,
+    ...officialPhotos.map((p) => p?.url),
+    ...(Array.isArray(d.photos) ? d.photos : []),
+    ...(Array.isArray(d.selectedPhotos) ? d.selectedPhotos : []),
+  ]
+    .filter((url): url is string => typeof url === "string" && url.trim().length > 0)
+    .reduce<string[]>((acc, url) => {
+      if (!acc.includes(url)) acc.push(url);
+      return acc;
+    }, []);
+  const photos: string[] = orderedPhotos;
   // Captions: only show meaningful labels for OFFICIAL site photos (skip generic
   // Google Places ones to avoid noise like "Foto 1"). Aligned by URL match.
-  const officialPhotos: any[] = Array.isArray(d.official_photos) ? d.official_photos : [];
   const captions: (string | null)[] = photos.map((url) => {
     const meta = officialPhotos.find((p) => p?.url === url);
     if (!meta || meta.source !== "official") return null;
