@@ -686,20 +686,22 @@ export default function ProposalEditor() {
         </div>
       </div>
 
-      <Tabs defaultValue="info" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="info">Informações</TabsTrigger>
-          <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
-          <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
-          <TabsTrigger value="preview" className="gap-1.5">
-            <Eye className="w-3.5 h-3.5" /> Preview
-          </TabsTrigger>
-          {!isNew && (
-            <TabsTrigger value="analytics" className="gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5" /> Analytics
-            </TabsTrigger>
-          )}
-        </TabsList>
+      <SplitLayout
+        left={
+          <Tabs defaultValue="info" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="info">Informações</TabsTrigger>
+              <TabsTrigger value="items">Itens da Viagem</TabsTrigger>
+              <TabsTrigger value="finance">Valores & Pagamento</TabsTrigger>
+              <TabsTrigger value="preview" className="gap-1.5 xl:hidden">
+                <Eye className="w-3.5 h-3.5" /> Preview
+              </TabsTrigger>
+              {!isNew && (
+                <TabsTrigger value="analytics" className="gap-1.5">
+                  <BarChart3 className="w-3.5 h-3.5" /> Analytics
+                </TabsTrigger>
+              )}
+            </TabsList>
 
         <TabsContent value="info" className="space-y-4">
           <Card>
