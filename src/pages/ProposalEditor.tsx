@@ -1142,8 +1142,8 @@ export default function ProposalEditor() {
                             </>
                           )}
 
-                          {/* Hotel Media Browser — opens only when "Editar fotos" is clicked */}
-                          {item.item_type === "hotel" && item.title && photoEditorIdx === idx && (
+                          {/* Hotel Media Browser — sempre visível para troca rápida de fotos */}
+                          {item.item_type === "hotel" && item.title && (
                             <div className="md:col-span-2 p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5">
                               <HotelMediaBrowser
                                 hotelName={item.title}
