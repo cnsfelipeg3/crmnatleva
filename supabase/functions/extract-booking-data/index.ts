@@ -262,18 +262,31 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json().catch(() => ({}));
-    const image_base64: string | undefined = body?.image_base64;
-    const file_type: string = (body?.file_type || "png").toLowerCase();
     const item_type: ItemType = (body?.item_type as ItemType) || "flight";
 
-    if (!image_base64 || typeof image_base64 !== "string") {
-      return json({ error: "image_base64 é obrigatório." }, 400);
+    // Backwards-compat: aceita { image_base64, file_type } OU { images: [{base64, file_type}] }
+    type ImgIn = { base64: string; file_type?: string };
+    let images: ImgIn[] = [];
+    if (Array.isArray(body?.images) && body.images.length > 0) {
+      images = body.images
+        .filter((it: any) => it && typeof it.base64 === "string" && it.base64.length > 0)
+        .map((it: any) => ({ base64: it.base64, file_type: String(it.file_type || "png").toLowerCase() }));
+    } else if (typeof body?.image_base64 === "string" && body.image_base64.length > 0) {
+      images = [{ base64: body.image_base64, file_type: String(body?.file_type || "png").toLowerCase() }];
+    }
+
+    if (images.length === 0) {
+      return json({ error: "Envie pelo menos uma imagem (image_base64 ou images[])." }, 400);
+    }
+    if (images.length > 6) {
+      return json({ error: "Máximo de 6 arquivos por extração." }, 400);
     }
     if (!SCHEMAS[item_type]) {
       return json({ error: `item_type inválido: ${item_type}` }, 400);
     }
-    if (image_base64.length > 15 * 1024 * 1024 * 1.4) {
-      return json({ error: "Arquivo muito grande (máx ~15MB)." }, 413);
+    const totalSize = images.reduce((acc, im) => acc + im.base64.length, 0);
+    if (totalSize > 25 * 1024 * 1024 * 1.4) {
+      return json({ error: "Arquivos muito grandes (máx ~25MB combinados)." }, 413);
     }
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -281,12 +294,19 @@ Deno.serve(async (req) => {
       return json({ error: "LOVABLE_API_KEY não configurada." }, 500);
     }
 
-    let mime = "image/png";
-    if (file_type === "jpeg" || file_type === "jpg") mime = "image/jpeg";
-    else if (file_type === "webp") mime = "image/webp";
-    else if (file_type === "pdf") mime = "application/pdf";
+    const mimeFor = (ft: string) => {
+      const f = (ft || "png").toLowerCase();
+      if (f === "jpeg" || f === "jpg") return "image/jpeg";
+      if (f === "webp") return "image/webp";
+      if (f === "pdf") return "application/pdf";
+      return "image/png";
+    };
 
-    const dataUrl = `data:${mime};base64,${image_base64}`;
+    const imageContents = images.map((im) => ({
+      type: "image_url" as const,
+      image_url: { url: `data:${mimeFor(im.file_type || "png")};base64,${im.base64}` },
+    }));
+
     const schema = SCHEMAS[item_type];
 
     const today = new Date();
@@ -294,10 +314,14 @@ Deno.serve(async (req) => {
     const todayISO = today.toISOString().slice(0, 10);
     const dateContext = `\n\nCONTEXTO TEMPORAL CRÍTICO: Hoje é ${todayISO}. O ano corrente é ${currentYear}. Quando a imagem mostrar apenas dia/mês sem ano explícito, ASSUMA SEMPRE o ano ${currentYear} (ou ${currentYear + 1} se a data já tiver passado neste ano). NUNCA use anos passados como ${currentYear - 1} ou anteriores — viagens são sempre futuras. Se enxergar um ano explícito na imagem (ex.: '2026', '/26'), use exatamente esse ano.`;
 
+    const multiImageNote = images.length > 1
+      ? `\n\nIMPORTANTE: Foram enviadas ${images.length} imagens/arquivos. CONSOLIDE TUDO em UMA única extração — use as imagens em conjunto para montar o itinerário completo (ex.: print da ida + print da volta = um único itinerário com todos os trechos em ordem cronológica). Não duplique trechos que aparecem em mais de uma imagem.`
+      : "";
+
     const userText =
       item_type === "flight"
-        ? `Extraia TODOS os trechos do voo desta imagem/PDF como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${dateContext}`
-        : `Extraia os dados desta reserva/cotação no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.${dateContext}`;
+        ? `Extraia TODOS os trechos do voo destas imagens/PDFs como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${multiImageNote}${dateContext}`
+        : `Extraia os dados desta(s) reserva(s)/cotação(ões) no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.${multiImageNote}${dateContext}`;
 
     const aiResp = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
@@ -315,7 +339,7 @@ Deno.serve(async (req) => {
               role: "user",
               content: [
                 { type: "text", text: userText },
-                { type: "image_url", image_url: { url: dataUrl } },
+                ...imageContents,
               ],
             },
           ],

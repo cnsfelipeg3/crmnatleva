@@ -27,6 +27,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
+import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 
@@ -143,6 +144,7 @@ export default function ProposalEditor() {
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
+  const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -1006,6 +1008,11 @@ export default function ProposalEditor() {
                           size="sm"
                           className="gap-1.5 h-8"
                           onClick={() => {
+                            // Aéreo abre wizard guiado; demais categorias criam item direto
+                            if (activeItemCategory === "flight") {
+                              setFlightWizardOpen(true);
+                              return;
+                            }
                             addItem(activeItemCategory);
                             // garante que o novo item fique aberto
                             setCollapsedItems((prev) => {
@@ -1453,6 +1460,53 @@ export default function ProposalEditor() {
         onOpenChange={setCoverDialogOpen}
         initialDestination={form.title || ""}
         onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+      />
+      <AddFlightWizard
+        open={flightWizardOpen}
+        onOpenChange={setFlightWizardOpen}
+        onCreateManual={(itineraryType: WizardItineraryType) => {
+          setItems((prev) => [
+            ...prev,
+            {
+              item_type: "flight",
+              title: "",
+              description: "",
+              image_url: "",
+              data: {
+                itinerary_type: itineraryType,
+                flight_segments: [],
+              },
+            },
+          ]);
+          setActiveItemCategory("flight");
+        }}
+        onCreateFromExtraction={(itineraryType, extracted) => {
+          // Cria item vazio e aplica a extração reusando applyExtractedItem
+          setItems((prev) => {
+            const next = [
+              ...prev,
+              {
+                item_type: "flight",
+                title: "",
+                description: "",
+                image_url: "",
+                data: { itinerary_type: itineraryType, flight_segments: [] },
+              },
+            ];
+            return next;
+          });
+          // Aplica no próximo tick para garantir que o índice exista
+          setTimeout(() => {
+            setItems((curr) => {
+              const newIdx = curr.length - 1;
+              if (newIdx < 0) return curr;
+              // Reaproveita applyExtractedItem (que usa setItems internamente)
+              applyExtractedItem(newIdx, extracted);
+              return curr;
+            });
+          }, 0);
+          setActiveItemCategory("flight");
+        }}
       />
     </div>
   );
