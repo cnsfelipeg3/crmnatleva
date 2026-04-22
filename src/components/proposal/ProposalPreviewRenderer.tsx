@@ -407,6 +407,7 @@ function ConnectionBadge({ fromIata, layoverMinutes }: { fromIata: string; layov
 
 /* ═══ Unified Leg Card (origin → destination with stops in timeline) ═══ */
 export function UnifiedLegCard({ segments }: { segments: any[] }) {
+  const [showDetails, setShowDetails] = useState(false);
   if (!segments?.length) return null;
   const firstSeg = segments[0];
   const lastSeg = segments[segments.length - 1];
@@ -425,6 +426,12 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
     if (!raw) return "";
     try {
       return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd 'de' MMM. 'de' yyyy", { locale: ptBR });
+    } catch { return String(raw); }
+  };
+  const fmtDateShort = (raw: any) => {
+    if (!raw) return "";
+    try {
+      return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM", { locale: ptBR });
     } catch { return String(raw); }
   };
 
