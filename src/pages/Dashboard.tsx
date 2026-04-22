@@ -54,6 +54,28 @@ interface LodgingTask {
   scheduled_at_utc: string | null; issue_type: string | null;
 }
 
+function SectionSkeleton({ tall = false }: { tall?: boolean }) {
+  return <Skeleton className={tall ? "h-80 rounded-xl" : "h-72 rounded-xl"} />;
+}
+
+function DeferredDashboardSection({
+  children,
+  delayMs = 0,
+  tall = false,
+}: {
+  children: React.ReactNode;
+  delayMs?: number;
+  tall?: boolean;
+}) {
+  return (
+    <DeferredRender delayMs={delayMs} fallback={<SectionSkeleton tall={tall} />}>
+      <Suspense fallback={<SectionSkeleton tall={tall} />}>
+        {children}
+      </Suspense>
+    </DeferredRender>
+  );
+}
+
 // Map UI period to RPC period param
 function toRpcPeriod(p: string): string {
   if (p === "yesterday") return "all"; // RPC doesn't support yesterday — fallback

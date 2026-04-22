@@ -26,9 +26,9 @@ export default function DeferredRender({
     setReady(false);
 
     let cancelled = false;
-    let delayTimer: number | undefined;
+    let delayTimer: ReturnType<typeof window.setTimeout> | undefined;
     let idleId: number | undefined;
-    let fallbackTimer: number | undefined;
+    let fallbackTimer: ReturnType<typeof globalThis.setTimeout> | undefined;
 
     const reveal = () => {
       if (!cancelled) setReady(true);
