@@ -19,6 +19,7 @@ import {
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
 import ProposalPreviewRenderer from "@/components/proposal/ProposalPreviewRenderer";
 import SplitLayout from "@/components/proposal/editor/SplitLayout";
+import InlineEditOverlay from "@/components/proposal/editor/InlineEditOverlay";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
@@ -103,6 +104,7 @@ export default function ProposalEditor() {
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
   const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
+  const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -1237,16 +1239,36 @@ export default function ProposalEditor() {
           </Tabs>
         }
         preview={
-          <ProposalPreviewRenderer
-            proposal={{
-              ...form,
-              total_value: form.total_value ? parseFloat(form.total_value) : null,
-              value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-            }}
-            items={items}
-            template={selectedTemplate}
-            embedded
-          />
+          <div className="space-y-2">
+            <div className="flex items-center justify-end">
+              <Button
+                type="button"
+                size="sm"
+                variant={inlineEditEnabled ? "default" : "outline"}
+                onClick={() => setInlineEditEnabled((v) => !v)}
+                className="gap-1.5 h-7 text-xs"
+                title="Editar visualmente clicando nos elementos"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                {inlineEditEnabled ? "Editando visual" : "Editar visual"}
+              </Button>
+            </div>
+            <InlineEditOverlay
+              storageKey={id || "novo"}
+              enabled={inlineEditEnabled}
+            >
+              <ProposalPreviewRenderer
+                proposal={{
+                  ...form,
+                  total_value: form.total_value ? parseFloat(form.total_value) : null,
+                  value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
+                }}
+                items={items}
+                template={selectedTemplate}
+                embedded
+              />
+            </InlineEditOverlay>
+          </div>
         }
       />
       <CoverImageSuggestDialog
