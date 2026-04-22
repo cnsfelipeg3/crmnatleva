@@ -23,6 +23,7 @@ import VisualCanvasOverlay, { type VisualOverrides } from "@/components/proposal
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import SmartImage from "@/components/proposal/SmartImage";
+import HotelPhotoGallery from "@/components/proposal/HotelPhotoGallery";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
