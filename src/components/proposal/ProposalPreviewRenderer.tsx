@@ -536,8 +536,8 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
           )}
         </div>
 
-        {/* Arrival (final destination) */}
-        <div className="text-right min-w-[56px] sm:min-w-[70px] shrink-0">
+        {/* Arrival (final destination) — empilhado: hora em cima, IATA embaixo */}
+        <div className="flex flex-col items-center text-center min-w-[56px] sm:min-w-[70px] shrink-0">
           <p className="text-base sm:text-xl font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {lastSeg.arrival_time || "—"}
             {(() => {
@@ -555,11 +555,11 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
               return null;
             })()}
           </p>
-          <p className="text-sm sm:text-base font-bold text-foreground mt-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p className="text-sm sm:text-base font-bold text-foreground mt-1" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {lastSeg.destination_iata || "—"}
           </p>
           {lastSeg.arrival_terminal && (
-            <p className="text-[11px] text-muted-foreground/60 flex items-center justify-end gap-0.5 mt-0.5">
+            <p className="text-[11px] text-muted-foreground/60 flex items-center justify-center gap-0.5 mt-0.5">
               <span className="font-mono">›_</span> T{lastSeg.arrival_terminal}
             </p>
           )}
