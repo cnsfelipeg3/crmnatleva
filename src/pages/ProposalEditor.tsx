@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2 } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload } from "lucide-react";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
@@ -101,6 +101,7 @@ export default function ProposalEditor() {
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
 
   const { data: templates } = useQuery({
     queryKey: ["proposal_templates_active"],
@@ -1005,6 +1006,105 @@ export default function ProposalEditor() {
 
                           {item.item_type === "hotel" && (
                             <>
+                              {/* ── Photo Gallery Manager ── */}
+                              <div className="md:col-span-2 space-y-2 p-3 rounded-xl border border-border/60 bg-muted/20">
+                                <div className="flex items-center justify-between gap-2 flex-wrap">
+                                  <div className="flex items-center gap-2">
+                                    <ImageIcon className="w-4 h-4 text-primary" />
+                                    <span className="text-xs font-semibold">
+                                      Galeria de fotos
+                                      {(item.data?.official_photos?.length || 0) > 0 && (
+                                        <span className="ml-1.5 text-muted-foreground font-normal">
+                                          ({item.data.official_photos.length})
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <Button
+                                      type="button"
+                                      variant={photoEditorIdx === idx ? "default" : "outline"}
+                                      size="sm"
+                                      className="gap-1.5 text-xs h-7"
+                                      onClick={() => setPhotoEditorIdx(photoEditorIdx === idx ? null : idx)}
+                                    >
+                                      <Pencil className="w-3 h-3" />
+                                      {photoEditorIdx === idx ? "Fechar editor" : "Editar fotos"}
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Thumbnails */}
+                                {(item.data?.official_photos?.length || 0) > 0 ? (
+                                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
+                                    {(item.data.official_photos as any[]).map((photo: any, pIdx: number) => {
+                                      const isCover = item.image_url === photo.url;
+                                      return (
+                                        <div
+                                          key={`${photo.url}-${pIdx}`}
+                                          className={`relative group aspect-square rounded-md overflow-hidden border ${isCover ? "border-primary ring-2 ring-primary/30" : "border-border/40"} bg-muted`}
+                                        >
+                                          <img src={photo.url} alt={photo.label || `Foto ${pIdx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                                          {isCover && (
+                                            <div className="absolute top-0.5 left-0.5 bg-primary text-primary-foreground text-[8px] font-bold px-1 rounded">
+                                              CAPA
+                                            </div>
+                                          )}
+                                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                            {!isCover && (
+                                              <button
+                                                type="button"
+                                                title="Definir como capa"
+                                                onClick={() => updateItem(idx, "image_url", photo.url)}
+                                                className="p-1 rounded bg-white/20 hover:bg-white/40 text-white"
+                                              >
+                                                <Star className="w-3 h-3" />
+                                              </button>
+                                            )}
+                                            <button
+                                              type="button"
+                                              title="Remover foto"
+                                              onClick={() => {
+                                                const next = (item.data.official_photos as any[]).filter((_, i) => i !== pIdx);
+                                                updateItemData(idx, "official_photos", next);
+                                                if (isCover) updateItem(idx, "image_url", next[0]?.url || "");
+                                              }}
+                                              className="p-1 rounded bg-white/20 hover:bg-destructive/80 text-white"
+                                            >
+                                              <X className="w-3 h-3" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <p className="text-[11px] text-muted-foreground italic">
+                                    Nenhuma foto adicionada. Clique em <strong>Editar fotos</strong> para buscar do site oficial ou adicionar manualmente.
+                                  </p>
+                                )}
+
+                                {/* Manual photo URL input */}
+                                <div className="flex gap-1.5 items-center">
+                                  <Input
+                                    placeholder="Cole uma URL de imagem e pressione Enter..."
+                                    className="h-7 text-xs"
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const url = (e.target as HTMLInputElement).value.trim();
+                                        if (!url) return;
+                                        const existing = item.data?.official_photos || [];
+                                        updateItemData(idx, "official_photos", [...existing, { url, label: "Manual", category: "outros" }]);
+                                        if (!item.image_url) updateItem(idx, "image_url", url);
+                                        (e.target as HTMLInputElement).value = "";
+                                        toast.success("Foto adicionada");
+                                      }
+                                    }}
+                                  />
+                                </div>
+                              </div>
+
                               <div className="space-y-1">
                                 <Label className="text-xs">Categoria (estrelas)</Label>
                                 <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
@@ -1054,9 +1154,9 @@ export default function ProposalEditor() {
                             </>
                           )}
 
-                          {/* Hotel Photos Scraper */}
-                          {item.item_type === "hotel" && item.title && (
-                            <div className="md:col-span-2">
+                          {/* Hotel Media Browser — opens only when "Editar fotos" is clicked */}
+                          {item.item_type === "hotel" && item.title && photoEditorIdx === idx && (
+                            <div className="md:col-span-2 p-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5">
                               <HotelMediaBrowser
                                 hotelName={item.title}
                                 hotelCity={item.data?.location || ""}
