@@ -25,6 +25,7 @@ interface ClientsGrowth {
   previousTotal: number;
   newCurrent: number;
   newPrevious: number;
+  comparisonLabel?: string;
 }
 
 interface Props {
