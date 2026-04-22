@@ -952,9 +952,12 @@ export default function PlacesSearchCard({
         {/* Place info bar */}
         <div className="px-5 py-3 bg-muted/20 border-b border-border/50 flex items-start gap-3">
           {coverPhoto && (
-            <div className="w-16 h-12 rounded-lg overflow-hidden shrink-0 shadow-sm">
-              <img src={coverPhoto.url} alt="" className="w-full h-full object-cover" />
-            </div>
+            <SmartImage
+              src={coverPhoto.url}
+              className="w-16 h-12 rounded-lg shrink-0 shadow-sm"
+              imgClassName="object-cover"
+              forceProxy={coverPhoto.source === "official"}
+            />
           )}
           <div className="min-w-0 flex-1">
             <h3 className="text-sm font-bold text-foreground truncate">{selectedPlace.name}</h3>
@@ -1225,9 +1228,12 @@ export default function PlacesSearchCard({
             </div>
             <div className="rounded-xl border border-border/50 overflow-hidden bg-card shadow-sm">
               {coverPhoto && (
-                <div className="w-full overflow-hidden bg-muted/10">
-                  <img src={coverPhoto.url} alt="" className="w-full h-auto max-h-64 object-contain" />
-                </div>
+                <SmartImage
+                  src={coverPhoto.url}
+                  className="w-full h-48"
+                  imgClassName="object-cover"
+                  forceProxy={coverPhoto.source === "official"}
+                />
               )}
               <div className="p-3">
                 <h4 className="text-sm font-bold text-foreground">{selectedPlace.name}</h4>
@@ -1240,9 +1246,13 @@ export default function PlacesSearchCard({
                 {selectedCount > 1 && (
                   <div className="flex gap-1 mt-2 overflow-x-auto">
                     {curatedPhotos.filter(p => p.selected && !p.isCover).slice(0, 4).map((p, i) => (
-                      <div key={i} className="w-14 h-10 rounded-md overflow-hidden shrink-0 bg-muted/10 flex items-center justify-center">
-                        <img src={p.url} alt="" className="max-w-full max-h-full object-contain" />
-                      </div>
+                      <SmartImage
+                        key={i}
+                        src={p.url}
+                        className="w-14 h-10 rounded-md shrink-0"
+                        imgClassName="object-cover"
+                        forceProxy={p.source === "official"}
+                      />
                     ))}
                     {selectedCount > 5 && (
                       <div className="w-12 h-9 rounded-md bg-muted/60 flex items-center justify-center shrink-0 text-[9px] font-semibold text-muted-foreground">
@@ -1272,10 +1282,13 @@ export default function PlacesSearchCard({
           <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/95 border-none">
             {lightboxIdx !== null && curatedPhotos[lightboxIdx] && (
               <div className="relative">
-                <img
+                <SmartImage
                   src={curatedPhotos[lightboxIdx].url}
                   alt={curatedPhotos[lightboxIdx].label}
-                  className="w-full max-h-[80vh] object-contain"
+                  className="w-full max-h-[80vh] min-h-[60vh] bg-black"
+                  imgClassName="object-contain"
+                  forceProxy={curatedPhotos[lightboxIdx].source === "official"}
+                  loading="eager"
                 />
                 <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
                   <p className="text-white text-sm font-semibold">{curatedPhotos[lightboxIdx].label}</p>
