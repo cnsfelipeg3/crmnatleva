@@ -994,7 +994,7 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
       {/* Galeria */}
       {photos.length > 0 && (
         <div className="px-6 pt-5">
-          <PhotoGallery photos={photos} name={hotel.title || "Hotel"} />
+          <PhotoGallery photos={photos} name={hotel.title || "Hotel"} captions={captions} />
         </div>
       )}
 
