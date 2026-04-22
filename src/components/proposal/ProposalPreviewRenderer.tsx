@@ -423,6 +423,41 @@ function buildPreviewFlightGrouping(displaySegments: any[]) {
     return { legs: fallbackLegs, itineraryType: "ONE_WAY", title: "" };
   }
 
+  const buildTitleFromLegs = (legs: { direction: string; segments: any[] }[], itineraryType: string) => {
+    const outboundLeg = legs.find((leg) => leg.direction === "ida") || legs[0];
+    return outboundLeg?.segments?.length
+      ? buildFlightTitle(
+          outboundLeg.segments[0].origin_iata,
+          outboundLeg.segments[outboundLeg.segments.length - 1].destination_iata,
+          itineraryType as any,
+        )
+      : "";
+  };
+
+  const explicitDirectionSegments = displaySegments.filter((seg) => {
+    const direction = String(seg.direction || "").toLowerCase();
+    return direction === "ida" || direction === "volta";
+  });
+
+  if (explicitDirectionSegments.length === displaySegments.length && explicitDirectionSegments.length > 0) {
+    const explicitLegs = displaySegments.reduce((acc: { label: string; direction: string; segments: any[] }[], seg) => {
+      const direction = String(seg.direction || "").toLowerCase();
+      const last = acc[acc.length - 1];
+      const label = direction === "volta" ? "Volta" : "Ida";
+
+      if (last && last.direction === direction) {
+        last.segments.push(seg);
+        return acc;
+      }
+
+      acc.push({ label, direction, segments: [seg] });
+      return acc;
+    }, []);
+
+    const itineraryType = explicitLegs.some((leg) => leg.direction === "volta") ? "ROUND_TRIP" : "ONE_WAY";
+    return { legs: explicitLegs, itineraryType, title: buildTitleFromLegs(explicitLegs, itineraryType) };
+  }
+
   const classification = classifyItinerary(
     displaySegments.map((seg, index) => ({
       ...seg,
@@ -457,9 +492,6 @@ function buildPreviewFlightGrouping(displaySegments: any[]) {
 
       if (segments.length === 0) return null;
 
-      // Priorize the classification result over any pre-existing `direction` on the segment.
-      // Individual flight items often come hardcoded as "ida" — trust the itinerary classifier
-      // for ROUND_TRIP / OPEN_JAW (leg 0 = ida, leg 1 = volta).
       const direction = String(
         (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
           ? (legIndex === 0 ? "ida" : "volta")
@@ -479,14 +511,7 @@ function buildPreviewFlightGrouping(displaySegments: any[]) {
     .filter(Boolean) as { label: string; direction: string; segments: any[] }[];
 
   const legs = resolvedLegs.length > 0 ? resolvedLegs : fallbackLegs;
-  const outboundLeg = legs.find((leg) => leg.direction === "ida") || legs[0];
-  const title = outboundLeg?.segments?.length
-    ? buildFlightTitle(
-        outboundLeg.segments[0].origin_iata,
-        outboundLeg.segments[outboundLeg.segments.length - 1].destination_iata,
-        classification.type,
-      )
-    : "";
+  const title = buildTitleFromLegs(legs, classification.type);
 
   return { legs, itineraryType: classification.type, title };
 }
