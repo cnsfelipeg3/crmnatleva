@@ -27,28 +27,66 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "esnext",
+    // Skip gzip-size reporting on each chunk — speeds up production builds
+    // significantly and has no runtime impact.
+    reportCompressedSize: false,
     rollupOptions: {
       output: {
-        manualChunks: {
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
-          "vendor-ui": [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-popover",
-            "@radix-ui/react-tooltip",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-select",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-accordion",
-          ],
-          "vendor-query": ["@tanstack/react-query"],
-          "vendor-supabase": ["@supabase/supabase-js"],
-          "vendor-charts": ["recharts"],
-          "vendor-3d": ["three", "@react-three/fiber", "@react-three/drei"],
-          "vendor-motion": ["framer-motion"],
+        // Granular vendor splitting — keeps initial route chunks small and
+        // lets the browser cache heavy/seldom-used libraries independently.
+        manualChunks: (id) => {
+          if (!id.includes("node_modules")) return undefined;
+
+          // React core — required on every page, keep tiny.
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
+            return "vendor-react";
+          }
+
+          // Radix UI — multiple separate packages, group together.
+          if (/[\\/]node_modules[\\/]@radix-ui[\\/]/.test(id)) return "vendor-radix";
+
+          // Data fetching.
+          if (/[\\/]node_modules[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) return "vendor-query";
+          if (/[\\/]node_modules[\\/]@tanstack[\\/]react-virtual[\\/]/.test(id)) return "vendor-virtual";
+
+          // Supabase SDK.
+          if (/[\\/]node_modules[\\/]@supabase[\\/]/.test(id)) return "vendor-supabase";
+
+          // Charts.
+          if (/[\\/]node_modules[\\/]recharts[\\/]/.test(id)) return "vendor-charts";
+          if (/[\\/]node_modules[\\/]d3-/.test(id)) return "vendor-charts";
+
+          // Animation.
+          if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return "vendor-motion";
+
+          // Heavy/lazy-only libs — isolate so they're never in the entry bundle.
+          if (/[\\/]node_modules[\\/]three[\\/]/.test(id)) return "vendor-3d";
+          if (/[\\/]node_modules[\\/]@react-three[\\/]/.test(id)) return "vendor-3d";
+          if (/[\\/]node_modules[\\/]cesium[\\/]/.test(id)) return "vendor-cesium";
+          if (/[\\/]node_modules[\\/]@xyflow[\\/]/.test(id)) return "vendor-flow";
+          if (/[\\/]node_modules[\\/]xlsx[\\/]/.test(id)) return "vendor-xlsx";
+          if (/[\\/]node_modules[\\/](html2pdf\.js|jspdf|html2canvas)[\\/]/.test(id)) return "vendor-pdf";
+          if (/[\\/]node_modules[\\/](emoji-mart|@emoji-mart)[\\/]/.test(id)) return "vendor-emoji";
+          if (/[\\/]node_modules[\\/]react-day-picker[\\/]/.test(id)) return "vendor-daypicker";
+          if (/[\\/]node_modules[\\/]embla-carousel/.test(id)) return "vendor-carousel";
+          if (/[\\/]node_modules[\\/]leaflet[\\/]/.test(id)) return "vendor-leaflet";
+          if (/[\\/]node_modules[\\/]react-markdown[\\/]/.test(id)) return "vendor-markdown";
+          if (/[\\/]node_modules[\\/](remark-|rehype-|micromark|mdast|hast)/.test(id)) return "vendor-markdown";
+
+          // Icons — lucide-react has 1000+ icons; isolate to avoid bloating route chunks.
+          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) return "vendor-icons";
+
+          // Date utils.
+          if (/[\\/]node_modules[\\/]date-fns[\\/]/.test(id)) return "vendor-date";
+
+          // Forms.
+          if (/[\\/]node_modules[\\/](react-hook-form|@hookform|zod)[\\/]/.test(id)) return "vendor-forms";
+
+          return "vendor-misc";
         },
         experimentalMinChunkSize: 10_000,
       },
     },
-    chunkSizeWarningLimit: 1200,
+    chunkSizeWarningLimit: 1500,
   },
 }));

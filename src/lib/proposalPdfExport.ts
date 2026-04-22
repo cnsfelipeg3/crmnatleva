@@ -1,4 +1,6 @@
-import html2pdf from "html2pdf.js";
+// `html2pdf.js` (~500KB with html2canvas + jsPDF) is loaded on-demand inside
+// `exportProposalPdf` to keep the initial bundle lean. The function is async
+// already, so the dynamic import is transparent to callers.
 
 /**
  * Exports the public proposal page as a single, continuous PDF
@@ -110,6 +112,8 @@ export async function exportProposalPdf(slug: string, title: string) {
   };
 
   try {
+    const html2pdfMod = await import("html2pdf.js");
+    const html2pdf = (html2pdfMod as any).default || html2pdfMod;
     await html2pdf().set(opt).from(clone).save();
   } finally {
     document.body.removeChild(iframe);
