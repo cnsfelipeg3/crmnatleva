@@ -1,26 +1,28 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardKpis } from "@/hooks/useDashboardKpis";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import KpiCards from "@/components/dashboard/KpiCards";
-import FinancialSection from "@/components/dashboard/FinancialSection";
-import CommercialSection from "@/components/dashboard/CommercialSection";
-import OperationalSection from "@/components/dashboard/OperationalSection";
-import ClientsSection from "@/components/dashboard/ClientsSection";
-import GeographicSection from "@/components/dashboard/GeographicSection";
-import MilesSection from "@/components/dashboard/MilesSection";
-import AlertsSection from "@/components/dashboard/AlertsSection";
-import ValueRangeSection from "@/components/dashboard/ValueRangeSection";
-import FunnelSection from "@/components/dashboard/FunnelSection";
-import SeasonalitySection from "@/components/dashboard/SeasonalitySection";
-import RegionSection from "@/components/dashboard/RegionSection";
-import MarginAnalysisSection from "@/components/dashboard/MarginAnalysisSection";
-import SellerRankingSection from "@/components/dashboard/SellerRankingSection";
-import GoalProjectionSection from "@/components/dashboard/GoalProjectionSection";
-import HeatmapSection from "@/components/dashboard/HeatmapSection";
-import OriginSection from "@/components/dashboard/OriginSection";
+import DeferredRender from "@/components/DeferredRender";
 import { Skeleton } from "@/components/ui/skeleton";
+
+const FinancialSection = lazy(() => import("@/components/dashboard/FinancialSection"));
+const CommercialSection = lazy(() => import("@/components/dashboard/CommercialSection"));
+const OperationalSection = lazy(() => import("@/components/dashboard/OperationalSection"));
+const ClientsSection = lazy(() => import("@/components/dashboard/ClientsSection"));
+const GeographicSection = lazy(() => import("@/components/dashboard/GeographicSection"));
+const MilesSection = lazy(() => import("@/components/dashboard/MilesSection"));
+const AlertsSection = lazy(() => import("@/components/dashboard/AlertsSection"));
+const ValueRangeSection = lazy(() => import("@/components/dashboard/ValueRangeSection"));
+const FunnelSection = lazy(() => import("@/components/dashboard/FunnelSection"));
+const SeasonalitySection = lazy(() => import("@/components/dashboard/SeasonalitySection"));
+const RegionSection = lazy(() => import("@/components/dashboard/RegionSection"));
+const MarginAnalysisSection = lazy(() => import("@/components/dashboard/MarginAnalysisSection"));
+const SellerRankingSection = lazy(() => import("@/components/dashboard/SellerRankingSection"));
+const GoalProjectionSection = lazy(() => import("@/components/dashboard/GoalProjectionSection"));
+const HeatmapSection = lazy(() => import("@/components/dashboard/HeatmapSection"));
+const OriginSection = lazy(() => import("@/components/dashboard/OriginSection"));
 
 interface Sale {
   id: string; name: string; display_id: string; status: string;
