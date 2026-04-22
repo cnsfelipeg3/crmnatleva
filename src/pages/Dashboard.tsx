@@ -372,43 +372,83 @@ export default function Dashboard() {
         <>
           {ceoMode ? (
             <>
-              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection>
+                <GoalProjectionSection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={120}>
+                <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={240}>
+                <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              <DeferredDashboardSection delayMs={360}>
+                <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              </DeferredDashboardSection>
             </>
           ) : (
             <>
               <div className="glow-line" />
-              <FinancialSection filtered={filtered} sellerNames={sellerNames} />
-              <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+              <DeferredDashboardSection>
+                <FinancialSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={100}>
+                <MarginAnalysisSection filtered={filtered} sellerNames={sellerNames} getRegion={getRegion} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                <FunnelSection filtered={filtered} />
-                <ValueRangeSection filtered={filtered} />
+                <DeferredDashboardSection delayMs={180}>
+                  <FunnelSection filtered={filtered} />
+                </DeferredDashboardSection>
+                <DeferredDashboardSection delayMs={220}>
+                  <ValueRangeSection filtered={filtered} />
+                </DeferredDashboardSection>
               </div>
-              <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
-              <RegionSection filtered={filtered} getRegion={getRegion} />
+              <DeferredDashboardSection delayMs={300}>
+                <CommercialSection filtered={filtered} segments={segments} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={380}>
+                <RegionSection filtered={filtered} getRegion={getRegion} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <OriginSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={460}>
+                <OriginSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              <DeferredDashboardSection delayMs={540}>
+                <SellerRankingSection filtered={filtered} sellerNames={sellerNames} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <SeasonalitySection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection delayMs={620}>
+                <SeasonalitySection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <GoalProjectionSection filtered={filtered} allSales={sales} />
+              <DeferredDashboardSection delayMs={700}>
+                <GoalProjectionSection filtered={filtered} allSales={sales} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <HeatmapSection filtered={filtered} />
+              <DeferredDashboardSection delayMs={780}>
+                <HeatmapSection filtered={filtered} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
-              <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
-              <GeographicSection filtered={filtered} />
-              <MilesSection filtered={filtered} costItems={costItems} />
+              <DeferredDashboardSection delayMs={860}>
+                <OperationalSection checkinTasks={checkinTasks} lodgingTasks={lodgingTasks} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={940}>
+                <ClientsSection clients={clients} filtered={filtered} periodStart={periodCutoff} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={1020}>
+                <GeographicSection filtered={filtered} />
+              </DeferredDashboardSection>
+              <DeferredDashboardSection delayMs={1100}>
+                <MilesSection filtered={filtered} costItems={costItems} />
+              </DeferredDashboardSection>
               <div className="glow-line" />
-              <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              <DeferredDashboardSection delayMs={1180}>
+                <AlertsSection filtered={filtered} sellerNames={sellerNames} clients={clients} />
+              </DeferredDashboardSection>
             </>
           )}
         </>

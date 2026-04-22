@@ -47,15 +47,17 @@ export default function DeferredRender({
       return;
     }
 
-    if (delayMs > 0) delayTimer = window.setTimeout(schedule, delayMs);
+    const win = window;
+
+    if (delayMs > 0) delayTimer = win.setTimeout(schedule, delayMs);
     else schedule();
 
     return () => {
       cancelled = true;
-      if (delayTimer) window.clearTimeout(delayTimer);
-      if (fallbackTimer) window.clearTimeout(fallbackTimer);
-      if (idleId && typeof window !== "undefined" && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(idleId);
+      if (delayTimer) win.clearTimeout(delayTimer);
+      if (fallbackTimer) win.clearTimeout(fallbackTimer);
+      if (idleId && "cancelIdleCallback" in win) {
+        win.cancelIdleCallback(idleId);
       }
     };
   }, [delayMs, enabled, timeoutMs]);
