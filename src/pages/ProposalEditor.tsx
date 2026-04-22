@@ -22,6 +22,7 @@ import SplitLayout from "@/components/proposal/editor/SplitLayout";
 import VisualCanvasOverlay, { type VisualOverrides } from "@/components/proposal/editor/VisualCanvasOverlay";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
+import SmartImage from "@/components/proposal/SmartImage";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
@@ -1231,21 +1232,37 @@ export default function ProposalEditor() {
 
                                 {/* Thumbnails */}
                                 {(item.data?.official_photos?.length || 0) > 0 ? (
-                                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-1.5">
-                                    {(item.data.official_photos as any[]).map((photo: any, pIdx: number) => {
+                                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8 gap-2">
+                                    {(item.data.official_photos as any[])
+                                      .filter((photo: any) => typeof photo?.url === "string" && photo.url.trim().length > 0)
+                                      .map((photo: any, pIdx: number) => {
                                       const isCover = item.image_url === photo.url;
+                                       const badgeLabel = photo.source === "official" ? "Oficial" : photo.source === "manual" ? "Manual" : null;
+                                       const photoLabel = photo.label || photo.room_name || `Foto ${pIdx + 1}`;
                                       return (
                                         <div
                                           key={`${photo.url}-${pIdx}`}
-                                          className={`relative group aspect-square rounded-md overflow-hidden border ${isCover ? "border-primary ring-2 ring-primary/30" : "border-border/40"} bg-muted`}
+                                           className={`group relative aspect-square min-w-0 overflow-hidden rounded-lg border transition-all ${isCover ? "border-primary ring-2 ring-primary/30 shadow-sm" : "border-border/40 hover:border-primary/40"} bg-muted/40`}
                                         >
-                                          <img src={photo.url} alt={photo.label || `Foto ${pIdx + 1}`} className="w-full h-full object-cover" loading="lazy" />
+                                           <SmartImage
+                                             src={photo.url}
+                                             alt={photoLabel}
+                                             className="absolute inset-0 h-full w-full"
+                                             imgClassName="object-cover"
+                                             loading="lazy"
+                                             forceProxy={photo.source === "official"}
+                                           />
                                           {isCover && (
-                                            <div className="absolute top-0.5 left-0.5 bg-primary text-primary-foreground text-[8px] font-bold px-1 rounded">
+                                             <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[8px] font-bold px-1.5 py-0.5 rounded-md shadow-sm z-10">
                                               CAPA
                                             </div>
                                           )}
-                                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                           {badgeLabel && (
+                                             <div className="absolute top-1 right-1 z-10 rounded-md bg-background/85 px-1.5 py-0.5 text-[8px] font-medium text-foreground shadow-sm backdrop-blur-sm">
+                                               {badgeLabel}
+                                             </div>
+                                           )}
+                                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 z-10">
                                             {!isCover && (
                                               <button
                                                 type="button"
@@ -1269,9 +1286,14 @@ export default function ProposalEditor() {
                                               <X className="w-3 h-3" />
                                             </button>
                                           </div>
+                                           <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-background/95 via-background/70 to-transparent px-2 py-1.5">
+                                             <p className="truncate text-[10px] font-medium text-foreground">
+                                               {photoLabel}
+                                             </p>
+                                           </div>
                                         </div>
                                       );
-                                    })}
+                                      })}
                                   </div>
                                 ) : (
                                   <p className="text-[11px] text-muted-foreground italic">
@@ -1290,7 +1312,7 @@ export default function ProposalEditor() {
                                         const url = (e.target as HTMLInputElement).value.trim();
                                         if (!url) return;
                                         const existing = item.data?.official_photos || [];
-                                        updateItemData(idx, "official_photos", [...existing, { url, label: "Manual", category: "outros" }]);
+                                         updateItemData(idx, "official_photos", [...existing, { url, label: "Manual", category: "outros", source: "manual" }]);
                                         if (!item.image_url) updateItem(idx, "image_url", url);
                                         (e.target as HTMLInputElement).value = "";
                                         toast.success("Foto adicionada");
