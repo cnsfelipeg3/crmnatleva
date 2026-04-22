@@ -444,10 +444,10 @@ function UnifiedLegCard({ segments }: { segments: any[] }) {
     <div className="rounded-2xl bg-card border border-border/40 p-5 sm:p-6 shadow-sm">
       {/* Header: dates + flight numbers */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <div className="text-sm text-secondary">
+        <div className="text-sm text-foreground">
           {fmtDateLabel(depDate)}
           {arrDate && arrDate !== depDate && (
-            <span className="text-secondary"> → {fmtDateLabel(arrDate)}</span>
+            <span className="text-foreground"> → {fmtDateLabel(arrDate)}</span>
           )}
         </div>
         {flightNumbers.length > 0 && (
@@ -499,7 +499,7 @@ function UnifiedLegCard({ segments }: { segments: any[] }) {
 
           {/* Timeline bar with stop dots */}
           <div className="w-full flex items-center">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 text-foreground" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M2 17h20M6 12l3-7 2 3h4l3 4H6z" />
             </svg>
             <div className="flex-1 relative mx-1">
@@ -517,15 +517,15 @@ function UnifiedLegCard({ segments }: { segments: any[] }) {
                 );
               })}
             </div>
-            <svg viewBox="0 0 24 24" className="w-4 h-4 text-muted-foreground/40 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0 text-foreground" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M2 17h20M18 12l-3-7-2 3H9L6 12h12z" />
             </svg>
           </div>
 
           {/* Total duration */}
           {totalMin > 0 && (
-            <span className="text-[11px] flex items-center gap-1 mt-1 text-secondary">
-              <Clock className="w-3 h-3" /> {fmtDuration(totalMin)} {stops > 0 && <span className="text-secondary">total</span>}
+            <span className="text-[11px] flex items-center gap-1 mt-1 text-foreground">
+              <Clock className="w-3 h-3" /> {fmtDuration(totalMin)} {stops > 0 && <span className="text-foreground">total</span>}
             </span>
           )}
 
@@ -778,7 +778,7 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
                 <div className="mt-3 space-y-1.5">
                   <p className="text-sm font-medium text-foreground/90">{routeLabel}</p>
                   {connectionSummaries.length > 0 && connectionSummaries.map((connection, connectionIndex) => (
-                    <p key={connectionIndex} className="text-xs text-secondary">
+                    <p key={connectionIndex} className="text-xs text-foreground">
                       {connectionSummaries.length === 1 ? "1 conexão" : `${connectionIndex + 1}ª conexão`} em {iataToCityName(connection.airport)}
                       {connection.layoverMinutes ? ` · ${fmtDuration(connection.layoverMinutes)}` : ""}
                     </p>
@@ -793,14 +793,14 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               const legBadges = getBaggageBadgesForLeg(leg.segments);
               if (!d.cabin && legBadges.length === 0) return null;
               return (
-                <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-foreground">
                   {d.cabin && (
-                    <span className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-secondary">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-foreground">
                       <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
                     </span>
                   )}
                   {legBadges.map((b, i) => (
-                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-secondary">
+                    <span key={i} className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-foreground">
                       <Luggage className="w-3 h-3 text-accent" /> {b}
                     </span>
                   ))}
@@ -1353,13 +1353,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               {proposal.value_per_person && (
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor por pessoa</p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
+                  <p className="text-2xl font-bold text-foreground sm:text-xl" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.value_per_person)}</p>
                 </div>
               )}
               {proposal.total_value && (
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-foreground/70 mb-2" style={{ fontFamily: headingFont }}>Valor total da viagem</p>
-                  <p className="text-3xl sm:text-4xl font-bold text-accent" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
+                  <p className="text-3xl font-bold text-accent sm:text-2xl" style={{ fontFamily: headingFont }}>{fmtCurrency(proposal.total_value)}</p>
                 </div>
               )}
               {proposal.includes_text && (
