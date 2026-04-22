@@ -887,8 +887,10 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
           const stops = leg.segments.length - 1;
           const firstSeg = leg.segments[0];
           const lastSeg = leg.segments[leg.segments.length - 1];
-          const originCity = iataToCityName(firstSeg?.origin_iata);
-          const destinationCity = iataToCityName(lastSeg?.destination_iata);
+          const originCityAuto = iataToCityName(firstSeg?.origin_iata);
+          const destinationCityAuto = iataToCityName(lastSeg?.destination_iata);
+          const originCity = (firstSeg?.leg_origin_label_override?.trim()) || originCityAuto;
+          const destinationCity = (firstSeg?.leg_destination_label_override?.trim()) || destinationCityAuto;
           const routeLabel = firstSeg && lastSeg ? `${originCity} → ${destinationCity}` : "";
           const connectionSummaries = leg.segments.slice(1).map((seg: any, segIndex: number) => {
             const previousSeg = leg.segments[segIndex];
@@ -903,13 +905,15 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
               return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM/yyyy", { locale: ptBR });
             } catch { return String(raw); }
           };
-          const headerDateLabel = fmtHeaderDate(firstSeg?.departure_date) || "—";
+          const headerDateRaw = (firstSeg?.leg_date_override?.trim()) || firstSeg?.departure_date;
+          const headerDateLabel = fmtHeaderDate(headerDateRaw) || "—";
+          const titleLabel = (firstSeg?.leg_title_override?.trim()) || `Passagem aérea - ${leg.label}`;
 
           return (
             <div key={li}>
               <div className="mb-4 rounded-2xl border border-border/30 bg-card/60 px-4 py-4 text-center sm:px-6">
                 <p className="text-sm uppercase tracking-[0.2em] text-foreground font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
-                  Passagem aérea - {leg.label}
+                  {titleLabel}
                 </p>
                 <div className="mt-3 grid gap-2 grid-cols-1 sm:grid-cols-3 sm:gap-4 text-sm">
                   <div className="rounded-xl border border-border/20 bg-background/70 px-3 py-2">
