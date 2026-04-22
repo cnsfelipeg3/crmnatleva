@@ -148,7 +148,11 @@ const HOTEL_SCHEMA = {
   parameters: {
     type: "object",
     properties: {
-      title: { type: "string", description: "Nome oficial do hotel (ex.: 'Belmond Hotel Splendido')." },
+      title: {
+        type: "string",
+        description:
+          "Nome LIMPO e CURTO do hotel para uso como título visual. REGRAS RÍGIDAS: (a) Use APENAS o nome principal da propriedade (ex.: 'Siyam World Maldives', 'Belmond Hotel Splendido', 'Fasano São Paulo'). (b) Pode acrescentar o regime no final SOMENTE se for icônico/all-inclusive (ex.: 'Siyam World Maldives - All Inclusive'). (c) NUNCA inclua: descrições promocionais ('24-Hour Premium', 'Free Transfer', 'with Breakfast'), durações ('5 nights'), tipos de quarto, categorias por estrelas, cidade/país, códigos de reserva, preços ou textos de marketing do Booking/Decolar/Expedia. (d) Máximo ~60 caracteres. (e) Capitalize corretamente (Title Case)."
+      },
       description: {
         type: "string",
         description:
