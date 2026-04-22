@@ -765,11 +765,11 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
     >
       {/* Cover image (aircraft / airline) — responsive aspect ratio */}
       {flight.image_url && (
-        <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 bg-muted aspect-[4/3] sm:aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6]">
+        <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 bg-muted aspect-[16/10] sm:aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6]">
           <img
             src={flight.image_url}
             alt={flight.title || "Capa do aéreo"}
-            className="w-full h-full object-cover object-center"
+            className="w-full h-full object-contain sm:object-cover object-center"
             loading="lazy"
           />
         </div>
@@ -1289,10 +1289,10 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
 
       {/* ──── INTRO ──── */}
       {proposal.intro_text && (
-        <section data-track-section="intro" className="max-w-3xl mx-auto py-10 sm:py-14 px-5 sm:px-6">
+        <section data-track-section="intro" className="w-full max-w-3xl mx-auto py-10 sm:py-14 px-5 sm:px-6 overflow-hidden">
           <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center">
             <div className="w-10 h-px bg-accent/40 mx-auto mb-5 sm:mb-6" />
-            <p className="text-base sm:text-lg leading-relaxed text-muted-foreground font-light italic">
+            <p className="text-base sm:text-lg leading-relaxed text-muted-foreground font-light italic break-words">
               "{proposal.intro_text}"
             </p>
             <div className="w-10 h-px bg-accent/40 mx-auto mt-5 sm:mt-6" />
