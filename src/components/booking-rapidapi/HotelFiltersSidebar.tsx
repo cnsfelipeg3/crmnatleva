@@ -148,6 +148,8 @@ export function HotelFiltersSidebar({
   onStateChange,
   filteredCount,
   className,
+  nameQuery,
+  onNameQueryChange,
 }: Props) {
   const priceFilter = useMemo(
     () => filters?.find((f) => f.field === "price" || f.filterStyle === "SLIDER"),
@@ -174,6 +176,7 @@ export function HotelFiltersSidebar({
       priceMax: undefined,
       sortBy: state.sortBy,
     });
+    onNameQueryChange?.("");
   };
 
   const setPrice = (v: [number, number]) => {
@@ -189,11 +192,41 @@ export function HotelFiltersSidebar({
   const hasActiveFilters =
     state.categoriesSelected.size > 0 ||
     state.priceMin !== undefined ||
-    state.priceMax !== undefined;
+    state.priceMax !== undefined ||
+    !!nameQuery;
+
+  // Name search box — always rendered, even when filters from API are loading/empty
+  const nameSearchBox = onNameQueryChange ? (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">
+        Buscar por nome
+      </label>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          value={nameQuery ?? ""}
+          onChange={(e) => onNameQueryChange(e.target.value)}
+          placeholder="Ex.: Copacabana Palace"
+          className="h-9 pl-8 pr-8 text-sm"
+        />
+        {nameQuery && (
+          <button
+            type="button"
+            onClick={() => onNameQueryChange("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Limpar busca"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   if (isLoading) {
     return (
       <div className={cn("space-y-4", className)}>
+        {nameSearchBox}
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -202,8 +235,17 @@ export function HotelFiltersSidebar({
     );
   }
 
+  // Even when API filters are empty, still render the name search box if available
   if (!filters?.length) {
-    return null;
+    return nameSearchBox ? (
+      <div className={cn("space-y-4", className)}>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          <h3 className="font-semibold text-sm">Filtros</h3>
+        </div>
+        {nameSearchBox}
+      </div>
+    ) : null;
   }
 
   const checkboxFilters = filters.filter((f) => f.filterStyle === "CHECKBOX");
@@ -227,6 +269,8 @@ export function HotelFiltersSidebar({
           </Button>
         )}
       </div>
+
+      {nameSearchBox}
 
       {typeof filteredCount === "number" && filteredCount > 0 && (
         <p className="text-xs text-muted-foreground">
