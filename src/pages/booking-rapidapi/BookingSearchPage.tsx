@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import { Search, Info, Cloud } from "lucide-react";
 import type { DateRange } from "react-day-picker";
@@ -12,6 +12,7 @@ import { DestinationAutocomplete } from "@/components/booking-rapidapi/Destinati
 import { SearchFilters, type GuestsConfig } from "@/components/booking-rapidapi/SearchFilters";
 import { HotelResultsGrid } from "@/components/booking-rapidapi/HotelResultsGrid";
 import { HotelDetailDrawer } from "@/components/booking-rapidapi/HotelDetailDrawer";
+import { HotelsPagination } from "@/components/booking-rapidapi/HotelsPagination";
 import { useSearchHotels } from "@/hooks/useBookingRapidApi";
 import type { BookingDestination, BookingHotel } from "@/components/booking-rapidapi/types";
 
@@ -37,9 +38,14 @@ export default function BookingSearchPage() {
   });
 
   const [searchParams, setSearchParams] = useState<SearchState | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [selectedHotel, setSelectedHotel] = useState<BookingHotel | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchParams]);
 
   const { data, isLoading, isError, error } = useSearchHotels(
     searchParams
@@ -51,6 +57,7 @@ export default function BookingSearchPage() {
           adults: searchParams.adults,
           children_age: searchParams.children.join(","),
           room_qty: searchParams.rooms,
+          page_number: currentPage,
         }
       : null,
   );
@@ -127,10 +134,19 @@ export default function BookingSearchPage() {
       </Card>
 
       <div>
-        {data?.hotels?.length !== undefined && searchParams && (
+        {data && searchParams && (
           <div className="text-sm text-muted-foreground mb-3">
-            <strong className="text-foreground">{data.hotels.length}</strong>{" "}
-            {data.hotels.length === 1 ? "hotel encontrado" : "hotéis encontrados"}
+            {data.totalHotels !== null ? (
+              <>
+                <strong className="text-foreground">{data.totalHotels.toLocaleString("pt-BR")}</strong>{" "}
+                {data.totalHotels === 1 ? "acomodação encontrada" : "acomodações encontradas"}
+              </>
+            ) : (
+              <>
+                <strong className="text-foreground">{data.hotels.length}</strong>{" "}
+                {data.hotels.length === 1 ? "hotel encontrado" : "hotéis encontrados"}
+              </>
+            )}
             {" em "}
             <strong className="text-foreground">{searchParams.destination.label || searchParams.destination.name}</strong>
           </div>
@@ -145,6 +161,15 @@ export default function BookingSearchPage() {
         onSelectHotel={handleSelectHotel}
         hasSearched={!!searchParams}
       />
+
+      {data && data.hotels.length > 0 && (
+        <HotelsPagination
+          currentPage={currentPage}
+          totalHotels={data.totalHotels}
+          pageSize={data.pageSize}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       <HotelDetailDrawer
         hotel={selectedHotel}
