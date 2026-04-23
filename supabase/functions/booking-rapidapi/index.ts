@@ -23,6 +23,7 @@ const CACHE_TTL: Record<string, number> = {
   hotelPhotos: 60 * 60 * 24 * 7,        // 7 dias
   hotelReviews: 60 * 60 * 24,           // 1 dia
   roomAvailability: 60 * 30,            // 30 min
+  getRoomList: 60 * 30,                 // 30 min — lista rica de ofertas
   getCurrency: 60 * 60 * 24 * 30,       // 30 dias
   getLanguages: 60 * 60 * 24 * 30,      // 30 dias
 };
