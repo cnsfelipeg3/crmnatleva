@@ -368,3 +368,142 @@ export function useRoomList(
     staleTime: 10 * 60 * 1000,
   });
 }
+
+// ============================================================
+// VOOS
+// ============================================================
+
+export function useFlightDestinations(
+  query: string,
+  enabled: boolean = true,
+) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ["booking-rapidapi", "flightDestinations", trimmed],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{ data: FlightLocation[] }>(
+        "searchFlightDestinations" as BookingAction,
+        { query: trimmed },
+      );
+      return (envelope.data || []) as FlightLocation[];
+    },
+    enabled: enabled && trimmed.length >= 2,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+export interface SearchFlightsInput {
+  fromId: string;
+  toId: string;
+  departDate: string;
+  returnDate?: string;
+  adults?: number;
+  children?: string;
+  cabinClass?: CabinClass;
+  sort?: FlightSort;
+  pageNo?: number;
+  currency_code?: string;
+}
+
+export function useSearchFlights(
+  params: SearchFlightsInput | null,
+  enabled: boolean = true,
+) {
+  const keyParams = params
+    ? {
+        fromId: params.fromId,
+        toId: params.toId,
+        departDate: params.departDate,
+        returnDate: params.returnDate ?? "",
+        adults: params.adults ?? 1,
+        children: params.children ?? "",
+        cabinClass: params.cabinClass ?? "ECONOMY",
+        sort: params.sort ?? "BEST",
+        pageNo: params.pageNo ?? 1,
+        currency_code: params.currency_code ?? "BRL",
+      }
+    : null;
+
+  return useQuery({
+    queryKey: ["booking-rapidapi", "searchFlights", keyParams],
+    queryFn: async (): Promise<SearchFlightsResult> => {
+      if (!keyParams) throw new Error("Params inválidos");
+      const envelope = await invokeBooking<{
+        data: {
+          flightOffers?: FlightOffer[];
+          flightDeals?: FlightDeal[];
+          aggregation?: Record<string, unknown>;
+          searchId?: string;
+        };
+        __cache?: boolean;
+      }>("searchFlights" as BookingAction, keyParams);
+      return {
+        offers: envelope?.data?.flightOffers ?? [],
+        deals: envelope?.data?.flightDeals ?? [],
+        aggregation: envelope?.data?.aggregation,
+        searchId: envelope?.data?.searchId,
+        cache_hit: !!envelope?.__cache,
+      };
+    },
+    enabled:
+      enabled &&
+      !!keyParams?.fromId &&
+      !!keyParams?.toId &&
+      !!keyParams?.departDate,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useFlightDetails(token: string | null, currencyCode = "BRL") {
+  return useQuery({
+    queryKey: ["booking-rapidapi", "flightDetails", token, currencyCode],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{ data: unknown }>(
+        "getFlightDetails" as BookingAction,
+        { token, currency_code: currencyCode },
+      );
+      return envelope?.data;
+    },
+    enabled: !!token,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useMinPrice(
+  fromId: string | null,
+  toId: string | null,
+  cabinClass: CabinClass = "ECONOMY",
+) {
+  return useQuery({
+    queryKey: ["booking-rapidapi", "minPrice", fromId, toId, cabinClass],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{ data: unknown }>(
+        "getMinPrice" as BookingAction,
+        {
+          fromId,
+          toId,
+          cabinClass,
+          currency_code: "BRL",
+        },
+      );
+      return envelope?.data;
+    },
+    enabled: !!fromId && !!toId,
+    staleTime: 6 * 60 * 60 * 1000,
+  });
+}
+
+export function useSeatMap(token: string | null) {
+  return useQuery({
+    queryKey: ["booking-rapidapi", "seatMap", token],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{ data: unknown }>(
+        "getSeatMap" as BookingAction,
+        { token },
+      );
+      return envelope?.data;
+    },
+    enabled: !!token,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
