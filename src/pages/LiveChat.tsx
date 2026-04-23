@@ -46,8 +46,7 @@ const FlowCanvas = lazy(() => import("@/components/flowbuilder/FlowCanvas").then
 const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIntegrations").then(m => ({ default: m.LiveChatIntegrations })));
 const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
 const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
+import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
@@ -2672,7 +2671,7 @@ export default function LiveChat() {
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-auto p-0" side="top" align="start">
-                              <Picker data={data} onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
+                              <LazyEmojiPicker onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
                             </PopoverContent>
                           </Popover>
                         )}
