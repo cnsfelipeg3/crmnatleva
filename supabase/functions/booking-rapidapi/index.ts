@@ -471,6 +471,104 @@ serve(async (req) => {
     }
 
     const endpoint = ACTION_ENDPOINTS[action];
+
+    // ============================================================
+    // Hotels.com: agrega múltiplas páginas em paralelo (~25/página)
+    // pra entregar um pool maior de resultados em uma única chamada.
+    // O cliente envia page_number=N como "página lógica"; convertemos
+    // em N páginas físicas (1..N*PAGES_PER_LOGICAL).
+    // ============================================================
+    if (action === "hotelscomSearch") {
+      const PAGES_PER_LOGICAL = 4; // 4 × 25 ≈ 100 hotéis por página lógica
+      const MAX_PAGES = 8;
+      const logicalPage = Math.max(1, parseInt(params.page_number ?? "1", 10) || 1);
+      const startPage = (logicalPage - 1) * PAGES_PER_LOGICAL + 1;
+      const endPage = Math.min(startPage + PAGES_PER_LOGICAL - 1, startPage + MAX_PAGES - 1);
+
+      const pagePromises: Promise<{ data: any; status: number; page: number }>[] = [];
+      for (let p = startPage; p <= endPage; p++) {
+        const pageParams = { ...params, page_number: String(p) };
+        pagePromises.push(
+          callRapidApi(endpoint, pageParams, action).then((r) => ({ ...r, page: p })),
+        );
+      }
+      const results = await Promise.all(pagePromises);
+
+      const firstError = results.find((r) => r.status >= 400);
+      if (firstError && results.every((r) => r.status >= 400)) {
+        await logCall({
+          action,
+          params,
+          cache_hit: false,
+          status_code: firstError.status,
+          latency_ms: Date.now() - startedAt,
+          error_message:
+            typeof firstError.data === "object"
+              ? JSON.stringify(firstError.data)
+              : String(firstError.data),
+        });
+        return new Response(
+          JSON.stringify({
+            error: "Erro na API do Hotels.com",
+            status: firstError.status,
+            details: firstError.data,
+          }),
+          { status: firstError.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      // Agrega listings de todas as páginas, dedup por id
+      const seenIds = new Set<string>();
+      const aggregated: any[] = [];
+      let totalCount: number | null = null;
+      let summary: any = undefined;
+
+      for (const r of results.sort((a, b) => a.page - b.page)) {
+        if (r.status >= 400) continue;
+        const d: any = r.data?.data ?? {};
+        const listings: any[] = Array.isArray(d.propertySearchListings)
+          ? d.propertySearchListings
+          : [];
+        for (const item of listings) {
+          const id = String(item?.id ?? item?.propertyId ?? Math.random());
+          if (seenIds.has(id)) continue;
+          seenIds.add(id);
+          aggregated.push(item);
+        }
+        if (totalCount == null && typeof d?.pagination?.totalCount === "number") {
+          totalCount = d.pagination.totalCount;
+        }
+        if (!summary && d?.summary) summary = d.summary;
+      }
+
+      const aggregatedEnvelope = {
+        status: true,
+        message: "Success",
+        timestamp: Date.now(),
+        data: {
+          propertySearchListings: aggregated,
+          pagination: { totalCount: totalCount ?? aggregated.length },
+          summary,
+          __pagesFetched: results.length,
+          __logicalPage: logicalPage,
+        },
+      };
+
+      await writeCache(action, params, aggregatedEnvelope);
+      await logCall({
+        action,
+        params,
+        cache_hit: false,
+        status_code: 200,
+        latency_ms: Date.now() - startedAt,
+      });
+
+      return new Response(
+        JSON.stringify({ ...aggregatedEnvelope, __cache: false }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     const { data, status } = await callRapidApi(endpoint, params, action);
 
     if (status >= 400) {
