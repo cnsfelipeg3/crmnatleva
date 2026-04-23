@@ -461,6 +461,7 @@ function OfferCard({
 
 export function RoomAvailability({
   hotelId,
+  hotelName,
   minDate,
   maxDate,
   adults,
@@ -515,6 +516,12 @@ export function RoomAvailability({
           offer={offer}
           roomDetail={data.rooms?.[String(offer.room_id)]}
           hotelId={hotelId}
+          hotelName={hotelName}
+          arrival={minDate}
+          departure={maxDate}
+          adults={adults}
+          childrenAges={childrenAges}
+          rooms={rooms}
         />
       ))}
     </div>
