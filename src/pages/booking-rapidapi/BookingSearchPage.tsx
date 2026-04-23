@@ -243,9 +243,17 @@ export default function BookingSearchPage() {
     return hotelscomUnified.filter((h) => h.name.toLowerCase().includes(q));
   }, [hotelscomUnified, nameQuery]);
 
-  const bookingCount = filteredBookingHotels.length;
-  const hotelscomCount = filteredHotelscom.length;
-  const totalCount = bookingCount + hotelscomCount;
+  // Contadores de página atual (após filtro local de nome)
+  const bookingPageCount = filteredBookingHotels.length;
+  const hotelscomPageCount = filteredHotelscom.length;
+  const pageCount = bookingPageCount + hotelscomPageCount;
+
+  // Totais reais retornados pelas APIs (todas as páginas)
+  const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
+  const hotelscomTotal = hotelscomData?.totalCount ?? hotelscomPageCount;
+  const grandTotal =
+    (sources.booking ? bookingTotal : 0) +
+    (sources.hotelscom ? hotelscomTotal : 0);
 
   const isAnyLoading =
     (sources.booking && bookingLoading) ||
