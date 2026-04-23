@@ -96,7 +96,9 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     fetchCount();
     const channel = supabase
       .channel("sidebar-briefings")
-      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quotation_briefings", filter: "status=eq.pendente" }, () => fetchCount())
+      .on("postgres_changes", { event: "DELETE", schema: "public", table: "quotation_briefings" }, () => fetchCount())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, []);
