@@ -83,9 +83,35 @@ export function useSearchHotels(
         __cache?: boolean;
       }>("searchHotels", keyParams);
 
-      const hotels = Array.isArray(envelope?.data?.hotels)
-        ? (envelope.data.hotels as BookingHotel[])
+      const rawHotels = Array.isArray(envelope?.data?.hotels)
+        ? (envelope.data.hotels as any[])
         : [];
+      // A API retorna os campos do hotel aninhados em `property`.
+      // Achatamos para que o HotelCard consuma direto.
+      const hotels: BookingHotel[] = rawHotels.map((h) => {
+        const p = (h?.property ?? {}) as Record<string, any>;
+        const photoUrls: string[] = Array.isArray(p.photoUrls) ? p.photoUrls : [];
+        return {
+          ...p,
+          ...h,
+          hotel_id: h?.hotel_id ?? p?.id,
+          name: p?.name ?? h?.name,
+          reviewScore: p?.reviewScore ?? h?.reviewScore,
+          reviewScoreWord: p?.reviewScoreWord ?? h?.reviewScoreWord,
+          reviewCount: p?.reviewCount ?? h?.reviewCount,
+          priceBreakdown: p?.priceBreakdown ?? h?.priceBreakdown,
+          photoUrls,
+          main_photo_url: photoUrls[0] ?? h?.main_photo_url,
+          wishlistName: p?.wishlistName ?? h?.wishlistName,
+          accuratePropertyClass:
+            p?.accuratePropertyClass ?? p?.qualityClass ?? p?.propertyClass ?? h?.accuratePropertyClass,
+          class: p?.qualityClass ?? p?.propertyClass ?? h?.class,
+          latitude: p?.latitude ?? h?.latitude,
+          longitude: p?.longitude ?? h?.longitude,
+          checkin: p?.checkin ?? h?.checkin,
+          checkout: p?.checkout ?? h?.checkout,
+        } as BookingHotel;
+      });
       const { hotels: _ignore, ...meta } = envelope?.data ?? {};
       return { hotels, meta, cache_hit: !!envelope?.__cache };
     },
