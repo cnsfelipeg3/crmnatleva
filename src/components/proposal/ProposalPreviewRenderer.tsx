@@ -1096,6 +1096,44 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
         </div>
       )}
 
+      {/* ── Sua Acomodação (galeria do quarto) ── */}
+      {(() => {
+        const roomPhotosRaw: any[] = (Array.isArray(d.room_photos) ? d.room_photos : [])
+          .filter((p: any) => p && p.excluded !== true);
+        const roomPhotos: string[] = roomPhotosRaw
+          .map((p: any) => p?.url)
+          .filter((u: any): u is string => typeof u === "string" && u.trim().length > 0)
+          .reduce<string[]>((acc, url) => { if (!acc.includes(url)) acc.push(url); return acc; }, []);
+        if (roomPhotos.length === 0) return null;
+        const roomCaptions: (string | null)[] = roomPhotos.map((url) => {
+          const meta = roomPhotosRaw.find((p: any) => p?.url === url);
+          if (!meta) return null;
+          const raw = (meta.label || meta.room_name || "").trim();
+          if (!raw) return null;
+          if (/^(foto|photo|imagem|image)\s*\d*$/i.test(raw)) return null;
+          return raw;
+        });
+        return (
+          <div className="px-6 pb-6 border-t border-border/20 pt-6">
+            <div className="text-center mb-4">
+              <h4 className="font-serif text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
+                Sua Acomodação
+              </h4>
+              {d.room_type && (
+                <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground/70 mt-1">
+                  {d.room_type}
+                </p>
+              )}
+            </div>
+            <PhotoGallery
+              photos={roomPhotos}
+              name={d.room_type ? `${hotel.title || "Hotel"} — ${d.room_type}` : `${hotel.title || "Hotel"} — Acomodação`}
+              captions={roomCaptions}
+            />
+          </div>
+        );
+      })()}
+
       {/* Avaliações */}
       {d.reviews && Array.isArray(d.reviews) && d.reviews.length > 0 && (
         <div className="px-6 pb-6 border-t border-border/20 pt-5">
