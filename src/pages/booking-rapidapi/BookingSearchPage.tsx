@@ -381,9 +381,6 @@ export default function BookingSearchPage() {
                     />
                   </SheetContent>
                 </Sheet>
-                    </SheetContent>
-                  </Sheet>
-                )}
 
                 <Select
                   value={filtersState.sortBy ?? ""}
