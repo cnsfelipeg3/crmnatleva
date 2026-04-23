@@ -457,6 +457,18 @@ export interface SearchFlightsInput {
   sort?: FlightSort;
   pageNo?: number;
   currency_code?: string;
+  // Filtros avançados (baseados na aggregation da API)
+  airlines?: string;
+  stops?: string;
+  departureTime?: string;
+  arrivalTime?: string;
+  maxDuration?: number;
+  maxLayoverDuration?: number;
+  maxBudget?: number;
+  baggage?: string;
+  flexibleTicket?: boolean;
+  departureAirports?: string;
+  arrivalAirports?: string;
 }
 
 export function useSearchFlights(
@@ -475,6 +487,17 @@ export function useSearchFlights(
         sort: params.sort ?? "BEST",
         pageNo: params.pageNo ?? 1,
         currency_code: params.currency_code ?? "BRL",
+        airlines: params.airlines || undefined,
+        stops: params.stops || undefined,
+        departureTime: params.departureTime || undefined,
+        arrivalTime: params.arrivalTime || undefined,
+        maxDuration: params.maxDuration ?? undefined,
+        maxLayoverDuration: params.maxLayoverDuration ?? undefined,
+        maxBudget: params.maxBudget ?? undefined,
+        baggage: params.baggage || undefined,
+        flexibleTicket: params.flexibleTicket ? true : undefined,
+        departureAirports: params.departureAirports || undefined,
+        arrivalAirports: params.arrivalAirports || undefined,
       }
     : null;
 
