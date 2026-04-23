@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
@@ -9,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Filter, X, ChevronDown } from "lucide-react";
+import { Filter, X, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HotelFilter, HotelFiltersState } from "./types";
 
@@ -20,9 +21,12 @@ interface Props {
   onStateChange: (next: HotelFiltersState) => void;
   filteredCount?: number | null;
   className?: string;
+  /** Optional: text value for "search by hotel name" — purely client-side */
+  nameQuery?: string;
+  onNameQueryChange?: (q: string) => void;
 }
 
-function CheckboxGroup({
+const CheckboxGroup = forwardRef<HTMLDivElement, {
   options,
   selected,
   onToggle,
