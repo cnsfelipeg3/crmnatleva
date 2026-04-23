@@ -5,6 +5,7 @@ import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Star, Camera, Check, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { SmartImg } from "@/components/ui/SmartImg";
 import MediaSwapPopover from "./MediaSwapPopover";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
 
@@ -164,11 +165,11 @@ export default function MediaExpressSelection({
             >
               <button className="group shrink-0 w-36 space-y-1">
                 <div className="relative aspect-[3/2] rounded-lg overflow-hidden border border-border/40 group-hover:border-accent/40 transition-all duration-200">
-                  <img
+                  <SmartImg
                     src={getDisplayUrl(slot.photo.url)}
                     alt={slot.label}
+                    displayWidth={160}
                     className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200"
-                    loading="lazy"
                     referrerPolicy="no-referrer"
                     onError={() => onImageError(slot.photo.url)}
                   />
