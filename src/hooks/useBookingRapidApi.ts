@@ -132,7 +132,8 @@ export function useSearchHotels(
         } as BookingHotel;
       });
       const { hotels: _ignore, ...meta } = envelope?.data ?? {};
-      return { hotels, meta, cache_hit: !!envelope?.__cache };
+      const totalHotels = extractTotalHotels((meta as any)?.meta);
+      return { hotels, meta, cache_hit: !!envelope?.__cache, totalHotels, pageSize: 20 };
     },
     enabled:
       enabled &&
