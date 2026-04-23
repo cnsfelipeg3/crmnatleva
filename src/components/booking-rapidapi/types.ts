@@ -53,6 +53,14 @@ export interface BookingHotel {
   priceBreakdown?: {
     grossPrice?: { value?: number; currency?: string };
     strikethroughPrice?: { value?: number; currency?: string };
+    /** Impostos e taxas NÃO incluídos no grossPrice (cobrados separadamente) */
+    excludedPrice?: { value?: number; currency?: string };
+    benefitBadges?: Array<{
+      text?: string;
+      variant?: string;
+      identifier?: string;
+      explanation?: string;
+    }>;
   };
   photoUrls?: string[];
   wishlistName?: string;
