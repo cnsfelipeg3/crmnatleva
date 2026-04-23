@@ -49,6 +49,24 @@ export function HotelDetailDrawer({
   const hotelId = hotel.hotel_id;
   const hotelName = hotel.name || "Hotel";
 
+  const stayPrice = hotel.priceBreakdown?.grossPrice?.value;
+  const stayCurrency = hotel.priceBreakdown?.grossPrice?.currency ?? "BRL";
+  const taxes = hotel.priceBreakdown?.excludedPrice?.value;
+  const taxesCurrency = hotel.priceBreakdown?.excludedPrice?.currency ?? stayCurrency;
+  const finalTotal =
+    typeof stayPrice === "number" && typeof taxes === "number"
+      ? stayPrice + taxes
+      : stayPrice;
+
+  const fmt = (v?: number, c?: string) =>
+    typeof v === "number"
+      ? new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: c || "BRL",
+          maximumFractionDigits: 2,
+        }).format(v)
+      : "—";
+
   const copyInfo = async () => {
     const lines = [
       `📍 ${hotelName}`,
@@ -58,9 +76,11 @@ export function HotelDetailDrawer({
         : null,
       arrival && departure ? `📅 ${arrival} → ${departure}` : null,
       `👥 ${adults} adulto(s)${childrenAges.length ? ` + ${childrenAges.length} criança(s)` : ""}, ${rooms} quarto(s)`,
-      hotel.priceBreakdown?.grossPrice?.value
-        ? `💰 Total: ${hotel.priceBreakdown.grossPrice.currency || ""} ${hotel.priceBreakdown.grossPrice.value.toLocaleString("pt-BR")}`
+      typeof stayPrice === "number" ? `💰 Estadia: ${fmt(stayPrice, stayCurrency)}` : null,
+      typeof taxes === "number" && taxes > 0
+        ? `🧾 Impostos e taxas: ${fmt(taxes, taxesCurrency)}`
         : null,
+      typeof finalTotal === "number" ? `✅ TOTAL FINAL: ${fmt(finalTotal, stayCurrency)}` : null,
       `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
     ].filter(Boolean);
     try {
@@ -113,7 +133,30 @@ export function HotelDetailDrawer({
                 </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            {typeof stayPrice === "number" && (
+              <div className="mt-3 rounded-md border bg-muted/40 p-3">
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Estadia</span>
+                    <span className="font-medium">{fmt(stayPrice, stayCurrency)}</span>
+                  </div>
+                  {typeof taxes === "number" && taxes > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Impostos e taxas</span>
+                      <span className="font-medium text-amber-700 dark:text-amber-500">
+                        + {fmt(taxes, taxesCurrency)}
+                      </span>
+                    </div>
+                  )}
+                  <div className="mt-1 flex items-center justify-between border-t pt-1">
+                    <span className="text-sm font-semibold">Total final</span>
+                    <span className="text-base font-bold">{fmt(finalTotal, stayCurrency)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-3">
               <Button variant="outline" size="sm" onClick={copyInfo}>
                 <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar info
               </Button>

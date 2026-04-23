@@ -28,6 +28,8 @@ export function HotelCard({ hotel, onClick }: Props) {
   const price = hotel.priceBreakdown?.grossPrice?.value;
   const currency = hotel.priceBreakdown?.grossPrice?.currency;
   const striked = hotel.priceBreakdown?.strikethroughPrice?.value;
+  const taxes = hotel.priceBreakdown?.excludedPrice?.value;
+  const taxesCurrency = hotel.priceBreakdown?.excludedPrice?.currency;
 
   const score = hotel.reviewScore;
   const scoreWord = hotel.reviewScoreWord;
@@ -101,6 +103,11 @@ export function HotelCard({ hotel, onClick }: Props) {
             )}
             <div className="text-base font-bold text-foreground">{formatPriceBRL(price, currency)}</div>
             <div className="text-[10px] text-muted-foreground">total da estadia</div>
+            {typeof taxes === "number" && taxes > 0 && (
+              <div className="mt-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-500">
+                + {formatPriceBRL(taxes, taxesCurrency)} em impostos e taxas
+              </div>
+            )}
           </div>
           <Badge variant="secondary" className="text-[10px]">Ver detalhes</Badge>
         </div>
