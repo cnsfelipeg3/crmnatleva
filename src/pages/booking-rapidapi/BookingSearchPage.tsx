@@ -390,16 +390,19 @@ export default function BookingSearchPage() {
           {searchParams && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{totalCount}</span>{" "}
-                {totalCount === 1 ? "hotel encontrado" : "hotéis encontrados"}
+                <span className="font-semibold text-foreground">{grandTotal.toLocaleString("pt-BR")}</span>{" "}
+                {grandTotal === 1 ? "hotel encontrado" : "hotéis encontrados"}
                 {" em "}
                 <span className="font-medium text-foreground">{searchParams.destination.label}</span>
                 {sources.booking && sources.hotelscom && (
                   <span className="ml-2 text-xs">
-                    (<span className="text-blue-600 dark:text-blue-400">Booking: {bookingCount}</span>
+                    (<span className="text-blue-600 dark:text-blue-400">Booking: {bookingTotal.toLocaleString("pt-BR")}</span>
                     {" · "}
-                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomCount}</span>)
+                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomTotal.toLocaleString("pt-BR")}</span>)
                   </span>
+                )}
+                {pageCount < grandTotal && (
+                  <span className="ml-2 text-xs">· exibindo {pageCount} nesta página</span>
                 )}
               </div>
 
