@@ -110,11 +110,31 @@ function OfferCard({
   offer,
   roomDetail,
   hotelId,
+  hotelName,
+  arrival,
+  departure,
+  adults,
+  childrenAges,
+  rooms,
 }: {
   offer: RoomOffer;
   roomDetail?: RoomDetail;
   hotelId: string | number | null;
+  hotelName?: string;
+  arrival?: string | null;
+  departure?: string | null;
+  adults?: number;
+  childrenAges?: number[];
+  rooms?: number;
 }) {
+  const bookingUrl = buildBookingSearchUrl({
+    hotelName,
+    arrival,
+    departure,
+    adults,
+    childrenAges,
+    rooms,
+  });
   const [expanded, setExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
