@@ -308,6 +308,16 @@ export default function FlightsSearchPage() {
         adults={passengers.adults}
       />
 
+      {/* Paginação — aparece quando tem resultados */}
+      {data && data.offers.length > 0 && (
+        <FlightsPagination
+          currentPage={currentPage}
+          totalCount={data.totalCount}
+          pageSize={data.pageSize}
+          onPageChange={setCurrentPage}
+        />
+      )}
+
       {/* Drawer */}
       <FlightDetailDrawer
         offer={selectedOffer}
