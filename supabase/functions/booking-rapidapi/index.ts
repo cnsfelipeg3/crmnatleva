@@ -291,7 +291,7 @@ function buildParams(
 
     case "searchFlights": {
       assertParams(input, ["fromId", "toId", "departDate"]);
-      return {
+      const p: Record<string, string> = {
         fromId: String(input.fromId),
         toId: String(input.toId),
         departDate: String(input.departDate),
@@ -303,6 +303,22 @@ function buildParams(
         pageNo: String(input.pageNo ?? 1),
         currency_code: String(input.currency_code ?? defaults.currency_code),
       };
+      if (input.airlines) p.airlines = String(input.airlines);
+      if (input.stops) p.stops = String(input.stops);
+      if (input.departureTime) p.departureTime = String(input.departureTime);
+      if (input.arrivalTime) p.arrivalTime = String(input.arrivalTime);
+      if (input.maxDuration !== undefined && input.maxDuration !== null && input.maxDuration !== "")
+        p.maxDuration = String(input.maxDuration);
+      if (input.maxLayoverDuration !== undefined && input.maxLayoverDuration !== null && input.maxLayoverDuration !== "")
+        p.maxLayoverDuration = String(input.maxLayoverDuration);
+      if (input.maxBudget !== undefined && input.maxBudget !== null && input.maxBudget !== "")
+        p.maxBudget = String(input.maxBudget);
+      if (input.baggage) p.baggage = String(input.baggage);
+      if (input.flexibleTicket !== undefined && input.flexibleTicket !== null && input.flexibleTicket !== "" && input.flexibleTicket !== false)
+        p.flexibleTicket = String(input.flexibleTicket);
+      if (input.departureAirports) p.departureAirports = String(input.departureAirports);
+      if (input.arrivalAirports) p.arrivalAirports = String(input.arrivalAirports);
+      return p;
     }
 
     case "getFlightDetails": {

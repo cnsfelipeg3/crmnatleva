@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import {
   Search,
@@ -6,6 +6,7 @@ import {
   Cloud,
   ArrowRightLeft,
   Plane,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -22,13 +23,18 @@ import {
 } from "@/components/booking-rapidapi/FlightSearchFilters";
 import { FlightResultsList } from "@/components/booking-rapidapi/FlightResultsList";
 import { FlightDetailDrawer } from "@/components/booking-rapidapi/FlightDetailDrawer";
+import { FlightsPagination } from "@/components/booking-rapidapi/FlightsPagination";
+import { FlightFiltersSidebar } from "@/components/booking-rapidapi/FlightFiltersSidebar";
 import { useSearchFlights } from "@/hooks/useBookingRapidApi";
 import type {
   CabinClass,
   FlightLocation,
   FlightOffer,
   FlightSort,
+  FlightFiltersState,
+  FlightsAggregation,
 } from "@/components/booking-rapidapi/flightTypes";
+import { emptyFlightFiltersState } from "@/components/booking-rapidapi/flightTypes";
 import {
   Select,
   SelectContent,
@@ -36,6 +42,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 const SORT_OPTIONS: { value: FlightSort; label: string }[] = [
   { value: "BEST", label: "Recomendados" },
@@ -54,6 +66,9 @@ interface SearchSnapshot {
   children: string;
   cabinClass: CabinClass;
 }
+
+const setToCsv = <T,>(s: Set<T>): string | undefined =>
+  s.size > 0 ? Array.from(s).join(",") : undefined;
 
 export default function FlightsSearchPage() {
   const [from, setFrom] = useState<FlightLocation | null>(null);
@@ -75,6 +90,24 @@ export default function FlightsSearchPage() {
 
   const [searchParams, setSearchParams] = useState<SearchSnapshot | null>(null);
 
+  // Paginação
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Filtros (sidebar)
+  const [filters, setFilters] = useState<FlightFiltersState>(() =>
+    emptyFlightFiltersState(),
+  );
+
+  // Reset pra página 1 quando busca/sort/filtros mudam
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchParams, sort, filters]);
+
+  // Reset filtros quando a busca muda (nova rota/datas)
+  useEffect(() => {
+    setFilters(emptyFlightFiltersState());
+  }, [searchParams?.from.id, searchParams?.to.id, searchParams?.departDate]);
+
   const [selectedOffer, setSelectedOffer] = useState<FlightOffer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -89,11 +122,24 @@ export default function FlightsSearchPage() {
           children: searchParams.children,
           cabinClass: searchParams.cabinClass,
           sort,
-          pageNo: 1,
+          pageNo: currentPage,
           currency_code: "BRL",
+          airlines: setToCsv(filters.airlines),
+          stops: setToCsv(filters.stops),
+          departureTime: setToCsv(filters.departureTimeSlots),
+          arrivalTime: setToCsv(filters.arrivalTimeSlots),
+          maxBudget: filters.maxBudget,
+          maxDuration: filters.maxDuration,
+          maxLayoverDuration: filters.maxLayoverDuration,
+          baggage: setToCsv(filters.baggage),
+          flexibleTicket: filters.flexibleTicketOnly,
+          departureAirports: setToCsv(filters.departureAirports),
+          arrivalAirports: setToCsv(filters.arrivalAirports),
         }
       : null,
   );
+
+  const aggregation = data?.aggregation as FlightsAggregation | undefined;
 
   const canSearch = useMemo(() => {
     if (!from || !to) return false;
@@ -131,7 +177,7 @@ export default function FlightsSearchPage() {
   };
 
   return (
-    <div className="container mx-auto max-w-6xl space-y-5 p-4 md:p-6">
+    <div className="container mx-auto max-w-7xl space-y-5 p-4 md:p-6">
       {/* Header */}
       <div className="space-y-1">
         <div className="flex items-center gap-2">
@@ -234,55 +280,123 @@ export default function FlightsSearchPage() {
         </div>
       </Card>
 
-      {/* Ordenação */}
-      {data && data.offers.length > 0 && (
-        <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
-          <div className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{data.offers.length}</strong>{" "}
-            {data.offers.length === 1 ? "voo encontrado" : "voos encontrados"}
-            {searchParams && (
-              <>
-                {" de "}
-                <span className="font-mono">{searchParams.from.code}</span>
-                {" para "}
-                <span className="font-mono">{searchParams.to.code}</span>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <Label className="shrink-0 text-xs text-muted-foreground">
-              Ordenar por:
-            </Label>
-            <Select
-              value={sort}
-              onValueChange={(v) => setSort(v as FlightSort)}
-            >
-              <SelectTrigger className="h-9 w-[200px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SORT_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      )}
+      {/* Layout com sidebar (desktop) + conteúdo */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[280px_1fr]">
+        {/* Sidebar desktop */}
+        {searchParams && aggregation && (
+          <aside className="hidden lg:block">
+            <div className="sticky top-4 max-h-[calc(100vh-2rem)] overflow-y-auto rounded-lg border border-border bg-card p-4">
+              <FlightFiltersSidebar
+                aggregation={aggregation}
+                isLoading={isLoading}
+                state={filters}
+                onStateChange={setFilters}
+                filteredCount={data?.filteredTotalCount ?? data?.totalCount}
+              />
+            </div>
+          </aside>
+        )}
 
-      {/* Resultados */}
-      <FlightResultsList
-        offers={data?.offers}
-        deals={data?.deals ?? []}
-        isLoading={isLoading}
-        isError={isError}
-        error={error as Error | null}
-        onSelectOffer={handleSelectOffer}
-        hasSearched={!!searchParams}
-        adults={passengers.adults}
-      />
+        <div className="min-w-0 space-y-4">
+          {/* Contador + ordenação */}
+          {data && data.offers.length > 0 && (
+            <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
+              <div className="text-sm text-muted-foreground">
+                {data.totalCount !== null ? (
+                  <>
+                    <strong className="text-foreground">
+                      {data.totalCount.toLocaleString("pt-BR")}
+                    </strong>{" "}
+                    {data.totalCount === 1 ? "voo encontrado" : "voos encontrados"}
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-foreground">{data.offers.length}</strong>{" "}
+                    {data.offers.length === 1 ? "voo encontrado" : "voos encontrados"}
+                  </>
+                )}
+                {searchParams && (
+                  <>
+                    {" de "}
+                    <span className="font-mono">{searchParams.from.code}</span>
+                    {" para "}
+                    <span className="font-mono">{searchParams.to.code}</span>
+                  </>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Botão de filtros (mobile) */}
+                {aggregation && (
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1 lg:hidden"
+                      >
+                        <SlidersHorizontal className="h-4 w-4" />
+                        Filtros
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="left" className="w-full overflow-y-auto sm:max-w-md">
+                      <SheetTitle className="mb-4">Filtros</SheetTitle>
+                      <FlightFiltersSidebar
+                        aggregation={aggregation}
+                        isLoading={isLoading}
+                        state={filters}
+                        onStateChange={setFilters}
+                        filteredCount={data?.filteredTotalCount ?? data?.totalCount}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                )}
+
+                <Label className="shrink-0 text-xs text-muted-foreground">
+                  Ordenar:
+                </Label>
+                <Select
+                  value={sort}
+                  onValueChange={(v) => setSort(v as FlightSort)}
+                >
+                  <SelectTrigger className="h-9 w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          {/* Resultados */}
+          <FlightResultsList
+            offers={data?.offers}
+            deals={data?.deals ?? []}
+            isLoading={isLoading}
+            isError={isError}
+            error={error as Error | null}
+            onSelectOffer={handleSelectOffer}
+            hasSearched={!!searchParams}
+            adults={passengers.adults}
+          />
+
+          {/* Paginação */}
+          {data && data.offers.length > 0 && (
+            <FlightsPagination
+              currentPage={currentPage}
+              totalCount={data.filteredTotalCount ?? data.totalCount}
+              pageSize={data.pageSize}
+              onPageChange={setCurrentPage}
+            />
+          )}
+        </div>
+      </div>
 
       {/* Drawer */}
       <FlightDetailDrawer
