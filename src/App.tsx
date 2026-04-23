@@ -55,6 +55,9 @@ const Itinerary = lazy(() => import("@/pages/Itinerary"));
 const SupplierRegistration = lazy(() => import("@/pages/SupplierRegistration"));
 const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 
+// Booking RapidAPI (BETA) — módulo experimental isolado
+const BookingSearchPage = lazy(() => import("@/pages/booking-rapidapi/BookingSearchPage"));
+
 // RH
 const RHIndex = lazy(() => import("@/pages/rh/RHIndex"));
 const Colaboradores = lazy(() => import("@/pages/rh/Colaboradores"));
@@ -309,6 +312,9 @@ function AppRoutes() {
 
           {/* Mídias */}
           <Route path="/midias" element={<MediaLibrary />} />
+
+          {/* Booking RapidAPI (BETA) — módulo experimental isolado */}
+          <Route path="/booking-search" element={<BookingSearchPage />} />
 
           {/* Apresentação */}
           <Route path="/apresentacao" element={<ApresentacaoGeral />} />
