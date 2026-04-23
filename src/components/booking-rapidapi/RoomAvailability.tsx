@@ -24,7 +24,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
@@ -461,22 +460,20 @@ export function RoomAvailability({
   }
 
   return (
-    <ScrollArea className="max-h-[65vh]">
-      <div className="space-y-3 pr-2">
-        <div className="text-xs text-muted-foreground">
-          {offers.length}{" "}
-          {offers.length === 1 ? "oferta disponível" : "ofertas disponíveis"}{" "}
-          para {minDate} → {maxDate}
-        </div>
-        {offers.map((offer) => (
-          <OfferCard
-            key={offer.block_id}
-            offer={offer}
-            roomDetail={data.rooms?.[String(offer.room_id)]}
-            hotelId={hotelId}
-          />
-        ))}
+    <div className="space-y-3">
+      <div className="text-xs text-muted-foreground">
+        {offers.length}{" "}
+        {offers.length === 1 ? "oferta disponível" : "ofertas disponíveis"}{" "}
+        para {minDate} → {maxDate}
       </div>
-    </ScrollArea>
+      {offers.map((offer) => (
+        <OfferCard
+          key={offer.block_id}
+          offer={offer}
+          roomDetail={data.rooms?.[String(offer.room_id)]}
+          hotelId={hotelId}
+        />
+      ))}
+    </div>
   );
 }
