@@ -24,8 +24,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 import {
   useRoomList,
   type RoomOffer,
@@ -410,51 +410,68 @@ function OfferCard({
         </div>
       </div>
 
-      <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
-        <DialogContent className="max-w-4xl bg-background p-2">
-          <DialogTitle className="sr-only">Fotos — {roomName}</DialogTitle>
-          {photos[galleryIdx] && (
-            <div className="relative">
-              <img
-                src={
-                  photos[galleryIdx].url_max1280 ||
-                  photos[galleryIdx].url_max750 ||
-                  photos[galleryIdx].url_original
-                }
-                alt={`${roomName} ${galleryIdx + 1}`}
-                className="max-h-[80vh] w-full rounded object-contain"
-              />
-              {photos.length > 1 && (
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setGalleryIdx(
-                        (galleryIdx - 1 + photos.length) % photos.length,
-                      )
-                    }
-                    className="rounded px-3 py-1 hover:bg-muted"
-                  >
-                    ‹ Anterior
-                  </button>
-                  <span className="text-muted-foreground">
-                    {galleryIdx + 1} / {photos.length}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setGalleryIdx((galleryIdx + 1) % photos.length)
-                    }
-                    className="rounded px-3 py-1 hover:bg-muted"
-                  >
-                    Próxima ›
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {galleryOpen && photos[galleryIdx] && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-4 backdrop-blur"
+          onClick={() => setGalleryOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Fotos — ${roomName}`}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setGalleryOpen(false);
+            }}
+            className="absolute right-4 top-4 rounded-full bg-background/80 p-2 hover:bg-background"
+            aria-label="Fechar"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <div
+            className="relative max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={
+                photos[galleryIdx].url_max1280 ||
+                photos[galleryIdx].url_max750 ||
+                photos[galleryIdx].url_original
+              }
+              alt={`${roomName} ${galleryIdx + 1}`}
+              className="max-h-[80vh] w-full rounded object-contain"
+            />
+            {photos.length > 1 && (
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGalleryIdx(
+                      (galleryIdx - 1 + photos.length) % photos.length,
+                    )
+                  }
+                  className="rounded px-3 py-1 hover:bg-muted"
+                >
+                  ‹ Anterior
+                </button>
+                <span className="text-muted-foreground">
+                  {galleryIdx + 1} / {photos.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setGalleryIdx((galleryIdx + 1) % photos.length)
+                  }
+                  className="rounded px-3 py-1 hover:bg-muted"
+                >
+                  Próxima ›
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </Card>
   );
 }
