@@ -1265,6 +1265,27 @@ export default function ProposalEditor() {
                                 onCoverChange={(url) => updateItem(idx, "image_url", url)}
                               />
 
+                              {/* ── Sua Acomodação · galeria do quarto ── */}
+                              <div className="md:col-span-2 mt-2 rounded-lg border border-border/40 bg-muted/20 p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Sua Acomodação · fotos do quarto
+                                  </Label>
+                                  {item.data?.room_type && (
+                                    <span className="text-[11px] text-muted-foreground/70">{item.data.room_type}</span>
+                                  )}
+                                </div>
+                                <p className="text-[11px] text-muted-foreground/80 mb-3">
+                                  Estas fotos aparecem em uma galeria separada na proposta, abaixo das comodidades, com o título "Sua Acomodação". Use a galeria de cima para fotos gerais do hotel.
+                                </p>
+                                <HotelPhotoGallery
+                                  photos={(item.data?.room_photos as any[]) || []}
+                                  coverUrl={item.image_url || ""}
+                                  onPhotosChange={(next) => updateItemData(idx, "room_photos", next)}
+                                  onCoverChange={() => { /* capa principal não muda pela galeria do quarto */ }}
+                                />
+                              </div>
+
                               <div className="space-y-1">
                                 <Label className="text-xs">Categoria (estrelas)</Label>
                                 <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
