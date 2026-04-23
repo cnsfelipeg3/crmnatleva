@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
-import { format, addDays } from "date-fns";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
+import { format, addDays, parseISO, isValid } from "date-fns";
 import {
   Search,
   Info,
@@ -46,6 +47,14 @@ const SORT_OPTIONS: { value: FlightSort; label: string }[] = [
   { value: "LATEST_DEPARTURE", label: "Saída mais tarde" },
 ];
 
+const VALID_SORTS: FlightSort[] = SORT_OPTIONS.map((o) => o.value);
+const VALID_CABINS: CabinClass[] = [
+  "ECONOMY",
+  "PREMIUM_ECONOMY",
+  "BUSINESS",
+  "FIRST",
+];
+
 interface SearchSnapshot {
   from: FlightLocation;
   to: FlightLocation;
@@ -56,37 +65,161 @@ interface SearchSnapshot {
   cabinClass: CabinClass;
 }
 
+/**
+ * URL params (compartilháveis):
+ *  fromId, fromCode, fromName, fromType  → origem
+ *  toId,   toCode,   toName,   toType    → destino
+ *  dep (YYYY-MM-DD), ret (YYYY-MM-DD opcional)
+ *  adults, children (CSV de idades), cabin (ECONOMY...)
+ *  sort (BEST...), page (1+)
+ *
+ * Faltando origem/destino/dep ⇒ não dispara busca (URL apenas pré-preenche).
+ */
+function buildLocationFromParams(
+  prefix: "from" | "to",
+  sp: URLSearchParams,
+): FlightLocation | null {
+  const id = sp.get(`${prefix}Id`);
+  const code = sp.get(`${prefix}Code`);
+  if (!id || !code) return null;
+  const type = (sp.get(`${prefix}Type`) || "AIRPORT") as "AIRPORT" | "CITY";
+  return {
+    id,
+    code,
+    type,
+    name: sp.get(`${prefix}Name`) || code,
+  };
+}
+
+function parseDateParam(value: string | null): Date | undefined {
+  if (!value) return undefined;
+  const d = parseISO(value);
+  return isValid(d) ? d : undefined;
+}
+
 export default function FlightsSearchPage() {
-  const [from, setFrom] = useState<FlightLocation | null>(null);
-  const [to, setTo] = useState<FlightLocation | null>(null);
-  const [tripType, setTripType] = useState<TripType>("roundtrip");
+  const [urlParams, setUrlParams] = useSearchParams();
+
+  // --- 1) Inicialização a partir da URL (uma vez) -----------------
+  const initial = useMemo(() => {
+    const fromLoc = buildLocationFromParams("from", urlParams);
+    const toLoc = buildLocationFromParams("to", urlParams);
+    const dep = parseDateParam(urlParams.get("dep"));
+    const ret = parseDateParam(urlParams.get("ret"));
+    const adultsRaw = parseInt(urlParams.get("adults") || "1", 10);
+    const adults = Number.isFinite(adultsRaw) && adultsRaw > 0 ? adultsRaw : 1;
+    const childrenCsv = urlParams.get("children") || "";
+    const children = childrenCsv
+      ? childrenCsv
+          .split(",")
+          .map((s) => parseInt(s, 10))
+          .filter((n) => Number.isFinite(n) && n >= 0 && n <= 17)
+      : [];
+    const cabinRaw = urlParams.get("cabin") as CabinClass | null;
+    const cabinClass: CabinClass = cabinRaw && VALID_CABINS.includes(cabinRaw)
+      ? cabinRaw
+      : "ECONOMY";
+    const sortRaw = urlParams.get("sort") as FlightSort | null;
+    const sort: FlightSort = sortRaw && VALID_SORTS.includes(sortRaw)
+      ? sortRaw
+      : "BEST";
+    const pageRaw = parseInt(urlParams.get("page") || "1", 10);
+    const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
+
+    const tripType: TripType = ret ? "roundtrip" : dep ? "oneway" : "roundtrip";
+    return {
+      fromLoc,
+      toLoc,
+      dep,
+      ret,
+      adults,
+      children,
+      cabinClass,
+      sort,
+      page,
+      tripType,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // só na montagem
+
+  // --- 2) Estado local ---------------------------------------------
+  const [from, setFrom] = useState<FlightLocation | null>(initial.fromLoc);
+  const [to, setTo] = useState<FlightLocation | null>(initial.toLoc);
+  const [tripType, setTripType] = useState<TripType>(initial.tripType);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initial.dep && initial.ret) return { from: initial.dep, to: initial.ret };
+    if (initial.dep) return { from: initial.dep, to: undefined };
     const today = new Date();
     return { from: addDays(today, 30), to: addDays(today, 37) };
   });
-  const [oneWayDate, setOneWayDate] = useState<Date | undefined>(() =>
-    addDays(new Date(), 30),
+  const [oneWayDate, setOneWayDate] = useState<Date | undefined>(
+    initial.dep ?? addDays(new Date(), 30),
   );
   const [passengers, setPassengers] = useState<FlightPassengers>({
-    adults: 1,
-    children: [],
+    adults: initial.adults,
+    children: initial.children,
   });
-  const [cabinClass, setCabinClass] = useState<CabinClass>("ECONOMY");
-  const [sort, setSort] = useState<FlightSort>("BEST");
+  const [cabinClass, setCabinClass] = useState<CabinClass>(initial.cabinClass);
+  const [sort, setSort] = useState<FlightSort>(initial.sort);
 
-  const [searchParams, setSearchParams] = useState<SearchSnapshot | null>(null);
+  const [searchParams, setSearchParams] = useState<SearchSnapshot | null>(() => {
+    if (!initial.fromLoc || !initial.toLoc || !initial.dep) return null;
+    return {
+      from: initial.fromLoc,
+      to: initial.toLoc,
+      departDate: format(initial.dep, "yyyy-MM-dd"),
+      returnDate: initial.ret ? format(initial.ret, "yyyy-MM-dd") : "",
+      adults: initial.adults,
+      children: initial.children.join(","),
+      cabinClass: initial.cabinClass,
+    };
+  });
 
-  // Paginação — cada troca de página dispara +1 request
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState(initial.page);
 
-  // Reset pra página 1 quando busca ou sort muda
+  // Reset pra página 1 só quando a busca em si muda (não no boot).
+  // Sort também volta pra página 1, conforme já era o comportamento.
+  const isFirstRun = useRef(true);
   useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      return;
+    }
     setCurrentPage(1);
   }, [searchParams, sort]);
 
   const [selectedOffer, setSelectedOffer] = useState<FlightOffer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // --- 3) Sincronização ESTADO → URL -------------------------------
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (searchParams) {
+      next.set("fromId", searchParams.from.id);
+      next.set("fromCode", searchParams.from.code);
+      if (searchParams.from.type) next.set("fromType", searchParams.from.type);
+      if (searchParams.from.name) next.set("fromName", searchParams.from.name);
+
+      next.set("toId", searchParams.to.id);
+      next.set("toCode", searchParams.to.code);
+      if (searchParams.to.type) next.set("toType", searchParams.to.type);
+      if (searchParams.to.name) next.set("toName", searchParams.to.name);
+
+      next.set("dep", searchParams.departDate);
+      if (searchParams.returnDate) next.set("ret", searchParams.returnDate);
+
+      next.set("adults", String(searchParams.adults));
+      if (searchParams.children) next.set("children", searchParams.children);
+      next.set("cabin", searchParams.cabinClass);
+
+      if (sort && sort !== "BEST") next.set("sort", sort);
+      if (currentPage > 1) next.set("page", String(currentPage));
+    }
+    // Evita histórico poluído: usa replace (botão "voltar" continua útil).
+    setUrlParams(next, { replace: true });
+  }, [searchParams, sort, currentPage, setUrlParams]);
+
+  // --- 4) Busca ----------------------------------------------------
   const { data, isLoading, isError, error } = useSearchFlights(
     searchParams
       ? {
