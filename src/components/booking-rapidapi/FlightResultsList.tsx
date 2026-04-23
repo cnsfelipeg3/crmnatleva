@@ -1,4 +1,4 @@
-import { AlertCircle, PlaneOff, Plane } from "lucide-react";
+import { AlertCircle, Plane } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { FlightCard } from "./FlightCard";
