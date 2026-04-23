@@ -53,6 +53,7 @@ import { emptyHotelFiltersState } from "@/components/booking-rapidapi/types";
 import {
   normalizeBookingHotel,
   normalizeHotelscomHotel,
+  groupHotelsByIdentity,
   type HotelSource,
   type UnifiedHotel,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
