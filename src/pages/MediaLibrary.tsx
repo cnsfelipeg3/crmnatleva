@@ -21,6 +21,7 @@ import {
   Camera, Sparkles, Building2, Ticket, Car, RotateCcw, Trash2,
   ChevronLeft, GripVertical, Tag, Clock, User, Info,
 } from "lucide-react";
+import { SmartImg } from "@/components/ui/SmartImg";
 
 /* ═══ Types ═══ */
 interface MediaPlace {
@@ -252,7 +253,7 @@ export default function MediaLibrary() {
         <div className="relative rounded-2xl overflow-hidden border border-border bg-card shadow-lg">
           {coverItem ? (
             <div className="h-48 sm:h-64 relative">
-              <img src={coverItem.image_url} alt="" className="w-full h-full object-cover" />
+              <SmartImg src={coverItem.image_url} alt="" displayWidth={1200} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
               <div className="absolute bottom-0 left-0 right-0 p-6">
                 <h1 className="text-2xl font-bold text-white">{selectedPlace.name}</h1>
@@ -377,7 +378,7 @@ export default function MediaLibrary() {
           <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
             {lightboxIdx !== null && items[lightboxIdx] && (
               <div className="relative">
-                <img src={items[lightboxIdx].image_url} alt={items[lightboxIdx].label || ""} className="w-full max-h-[80vh] object-contain" />
+                <SmartImg src={items[lightboxIdx].image_url} alt={items[lightboxIdx].label || ""} displayWidth={1600} loading="eager" className="w-full max-h-[80vh] object-contain" />
                 <div className="absolute bottom-0 left-0 right-0 p-5 bg-gradient-to-t from-black/80 to-transparent">
                   <p className="text-white text-sm font-semibold">{items[lightboxIdx].label || `Foto ${lightboxIdx + 1}`}</p>
                   <div className="flex items-center gap-2 mt-1">
@@ -516,7 +517,7 @@ export default function MediaLibrary() {
                         >
                           <div className="aspect-[16/10] bg-muted/30 relative overflow-hidden">
                             {place.cover_image_url ? (
-                              <img src={place.cover_image_url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                              <SmartImg src={place.cover_image_url} alt="" displayWidth={320} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
                                 <cfg.icon className={cn("h-10 w-10", cfg.color, "opacity-20")} />
@@ -585,7 +586,7 @@ function MediaCard({
         : "border-border/30 hover:border-border"
     )}>
       <div className="aspect-[4/3] bg-muted/20 relative">
-        <img src={item.image_url} alt={item.label || ""} className="w-full h-full object-cover" loading="lazy" />
+        <SmartImg src={item.image_url} alt={item.label || ""} displayWidth={320} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10 opacity-0 group-hover:opacity-100 transition-opacity" />
 
         {/* Cover badge */}
