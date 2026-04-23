@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { forwardRef, useMemo, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
@@ -9,7 +10,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Filter, X, ChevronDown } from "lucide-react";
+import { Filter, X, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { HotelFilter, HotelFiltersState } from "./types";
 
@@ -20,60 +21,63 @@ interface Props {
   onStateChange: (next: HotelFiltersState) => void;
   filteredCount?: number | null;
   className?: string;
+  /** Optional: text value for "search by hotel name" — purely client-side */
+  nameQuery?: string;
+  onNameQueryChange?: (q: string) => void;
 }
 
-function CheckboxGroup({
-  options,
-  selected,
-  onToggle,
-  maxVisible = 6,
-}: {
+interface CheckboxGroupProps {
   options: Array<{ title: string; genericId: string; countNotAutoextended?: number }>;
   selected: Set<string>;
   onToggle: (id: string) => void;
   maxVisible?: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? options : options.slice(0, maxVisible);
-
-  return (
-    <div className="space-y-2">
-      {visible.map((opt) => {
-        const isChecked = selected.has(opt.genericId);
-        return (
-          <label
-            key={opt.genericId}
-            className="flex items-start gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded px-1 py-0.5"
-          >
-            <Checkbox
-              checked={isChecked}
-              onCheckedChange={() => onToggle(opt.genericId)}
-              className="mt-0.5"
-            />
-            <span className="flex-1 leading-tight">{opt.title}</span>
-            {typeof opt.countNotAutoextended === "number" && (
-              <span className="text-xs text-muted-foreground">
-                ({opt.countNotAutoextended.toLocaleString("pt-BR")})
-              </span>
-            )}
-          </label>
-        );
-      })}
-      {options.length > maxVisible && (
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
-          {expanded ? "Mostrar menos" : `Mostrar mais ${options.length - maxVisible}`}
-          <ChevronDown
-            className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")}
-          />
-        </button>
-      )}
-    </div>
-  );
 }
+
+const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
+  ({ options, selected, onToggle, maxVisible = 6 }, ref) => {
+    const [expanded, setExpanded] = useState(false);
+    const visible = expanded ? options : options.slice(0, maxVisible);
+
+    return (
+      <div ref={ref} className="space-y-2">
+        {visible.map((opt) => {
+          const isChecked = selected.has(opt.genericId);
+          return (
+            <label
+              key={opt.genericId}
+              className="flex items-start gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded px-1 py-0.5"
+            >
+              <Checkbox
+                checked={isChecked}
+                onCheckedChange={() => onToggle(opt.genericId)}
+                className="mt-0.5"
+              />
+              <span className="flex-1 leading-tight">{opt.title}</span>
+              {typeof opt.countNotAutoextended === "number" && (
+                <span className="text-xs text-muted-foreground">
+                  ({opt.countNotAutoextended.toLocaleString("pt-BR")})
+                </span>
+              )}
+            </label>
+          );
+        })}
+        {options.length > maxVisible && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            {expanded ? "Mostrar menos" : `Mostrar mais ${options.length - maxVisible}`}
+            <ChevronDown
+              className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")}
+            />
+          </button>
+        )}
+      </div>
+    );
+  },
+);
+CheckboxGroup.displayName = "CheckboxGroup";
 
 function PriceSliderWithHistogram({
   filter,
@@ -144,6 +148,8 @@ export function HotelFiltersSidebar({
   onStateChange,
   filteredCount,
   className,
+  nameQuery,
+  onNameQueryChange,
 }: Props) {
   const priceFilter = useMemo(
     () => filters?.find((f) => f.field === "price" || f.filterStyle === "SLIDER"),
@@ -170,6 +176,7 @@ export function HotelFiltersSidebar({
       priceMax: undefined,
       sortBy: state.sortBy,
     });
+    onNameQueryChange?.("");
   };
 
   const setPrice = (v: [number, number]) => {
@@ -185,11 +192,41 @@ export function HotelFiltersSidebar({
   const hasActiveFilters =
     state.categoriesSelected.size > 0 ||
     state.priceMin !== undefined ||
-    state.priceMax !== undefined;
+    state.priceMax !== undefined ||
+    !!nameQuery;
+
+  // Name search box — always rendered, even when filters from API are loading/empty
+  const nameSearchBox = onNameQueryChange ? (
+    <div className="space-y-1.5">
+      <label className="text-xs font-medium text-muted-foreground">
+        Buscar por nome
+      </label>
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+        <Input
+          value={nameQuery ?? ""}
+          onChange={(e) => onNameQueryChange(e.target.value)}
+          placeholder="Ex.: Copacabana Palace"
+          className="h-9 pl-8 pr-8 text-sm"
+        />
+        {nameQuery && (
+          <button
+            type="button"
+            onClick={() => onNameQueryChange("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            aria-label="Limpar busca"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+    </div>
+  ) : null;
 
   if (isLoading) {
     return (
       <div className={cn("space-y-4", className)}>
+        {nameSearchBox}
         <Skeleton className="h-8 w-32" />
         <Skeleton className="h-24 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -198,8 +235,17 @@ export function HotelFiltersSidebar({
     );
   }
 
+  // Even when API filters are empty, still render the name search box if available
   if (!filters?.length) {
-    return null;
+    return nameSearchBox ? (
+      <div className={cn("space-y-4", className)}>
+        <div className="flex items-center gap-2">
+          <Filter className="h-4 w-4" />
+          <h3 className="font-semibold text-sm">Filtros</h3>
+        </div>
+        {nameSearchBox}
+      </div>
+    ) : null;
   }
 
   const checkboxFilters = filters.filter((f) => f.filterStyle === "CHECKBOX");
@@ -223,6 +269,8 @@ export function HotelFiltersSidebar({
           </Button>
         )}
       </div>
+
+      {nameSearchBox}
 
       {typeof filteredCount === "number" && filteredCount > 0 && (
         <p className="text-xs text-muted-foreground">
