@@ -1510,6 +1510,72 @@ export type Database = {
           },
         ]
       }
+      booking_rapidapi_cache: {
+        Row: {
+          action: string
+          cache_key: string
+          created_at: string
+          expires_at: string
+          id: string
+          params: Json
+          response: Json
+        }
+        Insert: {
+          action: string
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          params?: Json
+          response: Json
+        }
+        Update: {
+          action?: string
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          params?: Json
+          response?: Json
+        }
+        Relationships: []
+      }
+      booking_rapidapi_logs: {
+        Row: {
+          action: string
+          cache_hit: boolean
+          created_at: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          params: Json
+          status_code: number | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          cache_hit?: boolean
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          params?: Json
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          cache_hit?: boolean
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          params?: Json
+          status_code?: number | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       chameleon_sessions: {
         Row: {
           agents_tested: string[]
@@ -7521,6 +7587,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_booking_rapidapi_cache: { Args: never; Returns: number }
       cleanup_client_names: { Args: never; Returns: Json }
       dashboard_kpis: {
         Args: {
