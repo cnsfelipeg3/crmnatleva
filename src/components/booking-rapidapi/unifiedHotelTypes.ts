@@ -266,13 +266,236 @@ export function normalizeHotelscomHotel(
 // Helpers agregados
 // ============================================================
 
-/** Dedupa hotéis que aparecem em ambas fontes (match por nome + localização) */
+/**
+ * Converte um preço pra BRL usando a taxa de câmbio fornecida.
+ * Se já estiver em BRL ou rate indisponível, retorna o valor original.
+ *
+ * `rates` vem do useExchangeRates — formato { USD: X, EUR: Y, ... }
+ * onde X é quantos BRL valem 1 unidade daquela moeda.
+ */
+export function convertPriceToBRL(
+  value: number | undefined,
+  from: string | undefined,
+  rates: Record<string, number> | null | undefined,
+): { value: number | undefined; currency: string; converted: boolean } {
+  if (typeof value !== "number") {
+    return { value, currency: from ?? "BRL", converted: false };
+  }
+  const fromCurrency = (from || "USD").toUpperCase();
+  if (fromCurrency === "BRL") {
+    return { value, currency: "BRL", converted: false };
+  }
+  if (!rates || !rates[fromCurrency]) {
+    return { value, currency: fromCurrency, converted: false };
+  }
+  return {
+    value: value * rates[fromCurrency],
+    currency: "BRL",
+    converted: true,
+  };
+}
+
+/**
+ * Aplica conversão a um UnifiedHotelOffer — retorna nova offer em BRL.
+ */
+export function convertOfferToBRL(
+  offer: UnifiedHotelOffer,
+  rates: Record<string, number> | null | undefined,
+): UnifiedHotelOffer {
+  if (!offer.priceCurrency || offer.priceCurrency === "BRL") return offer;
+  const total = convertPriceToBRL(offer.priceTotal, offer.priceCurrency, rates);
+  const striked = convertPriceToBRL(
+    offer.priceStriked,
+    offer.priceCurrency,
+    rates,
+  );
+  const taxes = convertPriceToBRL(offer.priceTaxes, offer.priceCurrency, rates);
+  const perNight = convertPriceToBRL(
+    offer.pricePerNight,
+    offer.priceCurrency,
+    rates,
+  );
+  if (!total.converted) return offer;
+  return {
+    ...offer,
+    priceTotal: total.value,
+    priceCurrency: total.currency,
+    priceStriked: striked.value,
+    priceTaxes: taxes.value,
+    pricePerNight: perNight.value,
+    priceFormatted: undefined,
+  };
+}
+
+// ============================================================
+// AGRUPAMENTO TRIVAGO-STYLE
+// ============================================================
+
+/** Uma oferta de preço pra o hotel vindo de uma fonte específica */
+export interface UnifiedHotelOffer {
+  source: HotelSource;
+  id: string | number;
+  priceTotal?: number;
+  priceCurrency?: string;
+  priceStriked?: number;
+  priceTaxes?: number;
+  pricePerNight?: number;
+  priceFormatted?: string;
+  freeCancellation?: boolean;
+  breakfastIncluded?: boolean;
+  externalUrl?: string;
+  raw?: unknown;
+}
+
+/** Grupo Trivago: 1 hotel (mesclado), múltiplas ofertas */
+export interface UnifiedHotelGroup {
+  groupKey: string;
+  name: string;
+  location?: string;
+  photoUrl?: string;
+  photoUrls?: string[];
+  stars?: number;
+  reviewScore?: number;
+  reviewScoreWord?: string;
+  reviewCount?: number;
+  amenities?: string[];
+  latitude?: number;
+  longitude?: number;
+  offers: UnifiedHotelOffer[];
+  bestOffer?: UnifiedHotelOffer;
+  priceDeltaPercent: number;
+  savings?: number;
+  savingsCurrency?: string;
+}
+
+function normalizeForMatch(str?: string): string {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\b(hotel|hostel|resort|pousada|motel|apart|by|the|da|de|do|dos|das)\b/gi, "")
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
+  return {
+    source: h.source,
+    id: h.id,
+    priceTotal: h.priceTotal,
+    priceCurrency: h.priceCurrency,
+    priceStriked: h.priceStriked,
+    priceTaxes: h.priceTaxes,
+    pricePerNight: h.pricePerNight,
+    priceFormatted: h.priceFormatted,
+    freeCancellation: h.freeCancellation,
+    breakfastIncluded: h.breakfastIncluded,
+    externalUrl: h.externalUrl,
+    raw: h.raw,
+  };
+}
+
+export function groupHotelsByIdentity(
+  hotels: UnifiedHotel[],
+): UnifiedHotelGroup[] {
+  const groups = new Map<string, UnifiedHotel[]>();
+  for (const h of hotels) {
+    const nameKey = normalizeForMatch(h.name);
+    if (!nameKey) continue;
+    const existing = groups.get(nameKey);
+    if (existing) {
+      existing.push(h);
+    } else {
+      groups.set(nameKey, [h]);
+    }
+  }
+
+  const result: UnifiedHotelGroup[] = [];
+  for (const [key, members] of groups) {
+    const primary =
+      members.find((m) => m.source === "booking") ?? members[0];
+
+    const offers = members.map(toOffer);
+    offers.sort((a, b) => {
+      const pa = a.priceTotal;
+      const pb = b.priceTotal;
+      if (typeof pa !== "number" && typeof pb !== "number") return 0;
+      if (typeof pa !== "number") return 1;
+      if (typeof pb !== "number") return -1;
+      return pa - pb;
+    });
+
+    const bestOffer = offers.find((o) => typeof o.priceTotal === "number");
+    const worstOffer = [...offers]
+      .reverse()
+      .find((o) => typeof o.priceTotal === "number");
+
+    let priceDeltaPercent = 0;
+    let savings: number | undefined;
+    if (
+      bestOffer &&
+      worstOffer &&
+      bestOffer !== worstOffer &&
+      typeof bestOffer.priceTotal === "number" &&
+      typeof worstOffer.priceTotal === "number" &&
+      worstOffer.priceTotal > 0
+    ) {
+      savings = worstOffer.priceTotal - bestOffer.priceTotal;
+      priceDeltaPercent = Math.round(
+        (savings / worstOffer.priceTotal) * 100,
+      );
+    }
+
+    const allPhotos = new Set<string>();
+    for (const m of members) {
+      m.photoUrls?.forEach((p) => p && allPhotos.add(p));
+    }
+
+    const allAmenities = new Set<string>();
+    for (const m of members) {
+      m.amenities?.forEach((a) => a && allAmenities.add(a));
+    }
+
+    result.push({
+      groupKey: key,
+      name: primary.name,
+      location: primary.location,
+      photoUrl: primary.photoUrl ?? Array.from(allPhotos)[0],
+      photoUrls: Array.from(allPhotos),
+      stars: primary.stars,
+      reviewScore: primary.reviewScore,
+      reviewScoreWord: primary.reviewScoreWord,
+      reviewCount: primary.reviewCount,
+      amenities: Array.from(allAmenities),
+      latitude: primary.latitude,
+      longitude: primary.longitude,
+      offers,
+      bestOffer,
+      priceDeltaPercent,
+      savings,
+      savingsCurrency: bestOffer?.priceCurrency,
+    });
+  }
+
+  result.sort((a, b) => {
+    const pa = a.bestOffer?.priceTotal;
+    const pb = b.bestOffer?.priceTotal;
+    if (typeof pa !== "number" && typeof pb !== "number") return 0;
+    if (typeof pa !== "number") return 1;
+    if (typeof pb !== "number") return -1;
+    return pa - pb;
+  });
+
+  return result;
+}
+
+/** Mantém compatibilidade com código antigo que chamava dedupHotels */
 export function dedupHotels(hotels: UnifiedHotel[]): UnifiedHotel[] {
   const seen = new Map<string, UnifiedHotel>();
   for (const h of hotels) {
-    const key = `${h.name.toLowerCase().trim()}|${(h.location || "")
-      .toLowerCase()
-      .trim()}`;
+    const key = `${normalizeForMatch(h.name)}|${(h.location || "").toLowerCase().trim()}`;
     const existing = seen.get(key);
     if (!existing) {
       seen.set(key, h);
@@ -281,7 +504,7 @@ export function dedupHotels(hotels: UnifiedHotel[]): UnifiedHotel[] {
         typeof h.priceTotal === "number" &&
         (!existing.priceTotal || h.priceTotal < existing.priceTotal);
       if (newBetter) {
-        seen.set(key, { ...h, raw: { ...(h.raw as any), _duplicateOf: existing.uid } });
+        seen.set(key, h);
       }
     }
   }
