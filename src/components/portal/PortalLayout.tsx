@@ -49,18 +49,21 @@ export default function PortalLayout({ children }: { children: ReactNode }) {
     };
     fetchCount();
 
-    // Realtime subscription
+    // Realtime subscription — filtered by client_id to avoid receiving other clients' notifications
+    const clientFilter = `client_id=eq.${portalAccess.client_id}`;
     const channel = supabase
       .channel("portal-notifs")
       .on("postgres_changes", {
         event: "INSERT",
         schema: "public",
         table: "portal_notifications",
+        filter: clientFilter,
       }, () => fetchCount())
       .on("postgres_changes", {
         event: "UPDATE",
         schema: "public",
         table: "portal_notifications",
+        filter: clientFilter,
       }, () => fetchCount())
       .subscribe();
 
