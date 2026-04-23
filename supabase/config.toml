@@ -134,3 +134,6 @@ verify_jwt = false
 
 [functions.generate-hotel-description]
 verify_jwt = false
+
+[functions.extract-from-url]
+verify_jwt = false

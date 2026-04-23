@@ -25,6 +25,7 @@ import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/propos
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import SmartImage from "@/components/proposal/SmartImage";
 import HotelPhotoGallery from "@/components/proposal/HotelPhotoGallery";
+import UrlExtractButton, { type ExtractedAccommodation } from "@/components/proposal/UrlExtractButton";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
@@ -1257,7 +1258,29 @@ export default function ProposalEditor() {
 
                           {item.item_type === "hotel" && (
                             <>
-                              {/* ── Photo Gallery Manager ── */}
+                              {/* ── Photo Gallery Manager (Hotel) ── */}
+                              <div className="md:col-span-2 flex items-center justify-between gap-2 -mb-1">
+                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                  Galeria do Hotel
+                                </Label>
+                                <UrlExtractButton
+                                  mode="hotel"
+                                  onExtracted={(d: ExtractedAccommodation) => {
+                                    if (d.name && !item.title) updateItem(idx, "title", d.name);
+                                    if (d.description) updateItem(idx, "description", d.description);
+                                    if (d.stars) updateItemData(idx, "stars", d.stars);
+                                    if (d.location) updateItemData(idx, "location", d.location);
+                                    if (d.meal_plan) updateItemData(idx, "meal_plan", d.meal_plan);
+                                    if (d.amenities?.length) updateItemData(idx, "amenities", d.amenities);
+                                    if (d.photos?.length) {
+                                      const existing = (item.data?.official_photos as any[]) || [];
+                                      const merged = [...existing, ...d.photos.filter(p => !existing.some((e: any) => e.url === p.url))];
+                                      updateItemData(idx, "official_photos", merged);
+                                      if (!item.image_url && d.photos[0]?.url) updateItem(idx, "image_url", d.photos[0].url);
+                                    }
+                                  }}
+                                />
+                              </div>
                               <HotelPhotoGallery
                                 photos={(item.data?.official_photos as any[]) || []}
                                 coverUrl={item.image_url || ""}
@@ -1267,13 +1290,35 @@ export default function ProposalEditor() {
 
                               {/* ── Sua Acomodação · galeria do quarto ── */}
                               <div className="md:col-span-2 mt-2 rounded-lg border border-border/40 bg-muted/20 p-3">
-                                <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                                   <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                     Sua Acomodação · fotos do quarto
                                   </Label>
-                                  {item.data?.room_type && (
-                                    <span className="text-[11px] text-muted-foreground/70">{item.data.room_type}</span>
-                                  )}
+                                  <div className="flex items-center gap-2">
+                                    {item.data?.room_type && (
+                                      <span className="text-[11px] text-muted-foreground/70">{item.data.room_type}</span>
+                                    )}
+                                    <UrlExtractButton
+                                      mode="room"
+                                      onExtracted={(d: ExtractedAccommodation) => {
+                                        if (d.room_type) updateItemData(idx, "room_type", d.room_type);
+                                        if (d.bed_type) updateItemData(idx, "bed_type", d.bed_type);
+                                        if (d.size_sqm) updateItemData(idx, "size_sqm", d.size_sqm);
+                                        if (d.capacity) updateItemData(idx, "capacity", d.capacity);
+                                        if (d.description && !item.description) updateItem(idx, "description", d.description);
+                                        if (d.amenities?.length) {
+                                          const existing = (item.data?.amenities as string[]) || [];
+                                          const merged = Array.from(new Set([...existing, ...d.amenities]));
+                                          updateItemData(idx, "amenities", merged);
+                                        }
+                                        if (d.photos?.length) {
+                                          const existing = (item.data?.room_photos as any[]) || [];
+                                          const merged = [...existing, ...d.photos.filter(p => !existing.some((e: any) => e.url === p.url))];
+                                          updateItemData(idx, "room_photos", merged);
+                                        }
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                                 <p className="text-[11px] text-muted-foreground/80 mb-3">
                                   Estas fotos aparecem em uma galeria separada na proposta, abaixo das comodidades, com o título "Sua Acomodação". Use a galeria de cima para fotos gerais do hotel.
