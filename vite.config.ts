@@ -39,12 +39,14 @@ export default defineConfig(({ mode }) => ({
 
           // CRITICAL: React + every library that imports React MUST live in the
           // same chunk. Splitting React from libs that call React.useLayoutEffect
-          // at module-init time (three.js / @react-three / framer-motion /
-          // recharts / @xyflow / react-day-picker / embla-carousel etc.) causes
-          // a "Cannot read properties of undefined (reading 'useLayoutEffect')"
-          // crash in production because the consumer chunk loads before React
-          // is initialised. Keep them together — Rollup will still tree-shake.
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|three|@react-three|framer-motion|recharts|@xyflow|react-day-picker|embla-carousel|leaflet|react-leaflet|@radix-ui|@tanstack)[\\/]/.test(id)) {
+          // or React.createContext at module-init time (three.js / @react-three /
+          // framer-motion / recharts / @xyflow / react-day-picker / embla-carousel /
+          // cmdk / next-themes / vaul / react-resizable-panels / input-otp / sonner
+          // etc.) causes a "Cannot read properties of undefined (reading
+          // 'useLayoutEffect'/'createContext')" crash in production because the
+          // consumer chunk loads before React is initialised. Keep them together —
+          // Rollup will still tree-shake.
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|three|@react-three|framer-motion|recharts|@xyflow|react-day-picker|embla-carousel|leaflet|react-leaflet|@radix-ui|@tanstack|cmdk|next-themes|vaul|react-resizable-panels|input-otp|sonner)[\\/]/.test(id)) {
             return "vendor-react";
           }
 
