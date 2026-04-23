@@ -203,7 +203,7 @@ function OfferCard({
       typeof grossValue === "number" && typeof excludedValue === "number"
         ? `✅ TOTAL: ${fmt(grossValue + excludedValue, grossCurrency)}`
         : null,
-      `🔗 https://www.booking.com/hotel/rooms.html?hotel_id=${hotelId}`,
+      `🔗 ${bookingUrl}`,
     ].filter(Boolean);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
