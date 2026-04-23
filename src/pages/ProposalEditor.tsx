@@ -25,6 +25,7 @@ import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/propos
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
 import SmartImage from "@/components/proposal/SmartImage";
 import HotelPhotoGallery from "@/components/proposal/HotelPhotoGallery";
+import UrlExtractButton, { type ExtractedAccommodation } from "@/components/proposal/UrlExtractButton";
 import ProposalFlightSearch, { type FlightSegmentData } from "@/components/proposal/ProposalFlightSearch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
