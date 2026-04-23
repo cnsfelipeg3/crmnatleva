@@ -466,7 +466,7 @@ export default function BookingSearchPage() {
                 </Card>
               ))}
             </div>
-          ) : totalCount === 0 ? (
+          ) : pageCount === 0 ? (
             <Card className="p-12 text-center">
               <h3 className="text-lg font-semibold mb-2">Nenhum hotel encontrado</h3>
               <p className="text-sm text-muted-foreground">
