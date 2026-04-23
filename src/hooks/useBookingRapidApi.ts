@@ -432,17 +432,27 @@ export function useSearchFlights(
         data: {
           flightOffers?: FlightOffer[];
           flightDeals?: FlightDeal[];
-          aggregation?: Record<string, unknown>;
+          aggregation?: Record<string, unknown> & {
+            totalCount?: number;
+            filteredTotalCount?: number;
+          };
           searchId?: string;
         };
         __cache?: boolean;
       }>("searchFlights" as BookingAction, keyParams);
+      const agg = envelope?.data?.aggregation;
       return {
         offers: envelope?.data?.flightOffers ?? [],
         deals: envelope?.data?.flightDeals ?? [],
-        aggregation: envelope?.data?.aggregation,
+        aggregation: agg,
         searchId: envelope?.data?.searchId,
         cache_hit: !!envelope?.__cache,
+        totalCount: typeof agg?.totalCount === "number" ? agg.totalCount : null,
+        filteredTotalCount:
+          typeof agg?.filteredTotalCount === "number"
+            ? agg.filteredTotalCount
+            : null,
+        pageSize: 15,
       };
     },
     enabled:

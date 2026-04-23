@@ -21,6 +21,11 @@ import {
   DollarSign,
   Calendar,
   ArrowRight,
+  Receipt,
+  ShieldCheck,
+  RefreshCw,
+  Ban,
+  Info,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -115,6 +120,8 @@ function LegDetail({ leg }: { leg: FlightLeg }) {
               src={mainCarrier.logo}
               alt={mainCarrier.name}
               className="h-7 w-7 rounded object-contain"
+              loading="lazy"
+              decoding="async"
             />
           )}
           <div>
@@ -140,7 +147,9 @@ function LegDetail({ leg }: { leg: FlightLeg }) {
 
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div className="text-left">
-          <div className="text-xl font-semibold">{formatTime(leg.departureTime)}</div>
+          <div className="text-xl font-semibold">
+            {formatTime(leg.departureTime)}
+          </div>
           <div className="font-mono text-xs text-muted-foreground">
             {leg.departureAirport.code}
           </div>
@@ -218,11 +227,33 @@ function SegmentDetail({
           {idx < legs.length - 1 && (
             <div className="flex items-center gap-2 px-3 text-xs text-amber-700 dark:text-amber-400">
               <Clock className="h-3 w-3" />
-              Escala em {leg.arrivalAirport.cityName} ({leg.arrivalAirport.code})
+              Escala em {leg.arrivalAirport.cityName} (
+              {leg.arrivalAirport.code})
             </div>
           )}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** Renderiza um único feature da tarifa com ícone correspondente. */
+function FeatureLine({ f }: { f: BrandedFareFeature }) {
+  return (
+    <div className="flex items-start gap-2 text-sm">
+      {f.availability === "INCLUDED" ? (
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+      ) : f.availability === "PAID" ? (
+        <DollarSign className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+      ) : (
+        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      )}
+      <span className="text-foreground">
+        {f.label}
+        {f.availability === "PAID" && (
+          <span className="ml-1 text-xs text-amber-600">(pago)</span>
+        )}
+      </span>
     </div>
   );
 }
@@ -255,6 +286,7 @@ export function FlightDetailDrawer({
   const firstSeg = offer.segments[0];
   const lastSeg = offer.segments[offer.segments.length - 1];
 
+  // Agrupar features da tarifa por categoria
   const features = offer.brandedFareInfo?.features || [];
   const byCategory = features.reduce(
     (acc, f) => {
@@ -265,6 +297,22 @@ export function FlightDetailDrawer({
     },
     {} as Record<string, BrandedFareFeature[]>,
   );
+
+  const baggageFeatures = features.filter((f) =>
+    ["BAGGAGE", "CABIN"].includes(f.category || ""),
+  );
+  const cancellationFeatures = features.filter(
+    (f) => f.category === "CANCELLATION",
+  );
+  const changeFeatures = features.filter((f) => f.category === "CHANGE");
+  const refundFeatures = features.filter((f) => f.category === "REFUND");
+  const otherCategories = Object.entries(byCategory).filter(
+    ([cat]) =>
+      !["BAGGAGE", "CABIN", "CANCELLATION", "CHANGE", "REFUND"].includes(cat),
+  );
+  const hasAnyPolicy =
+    cancellationFeatures.length + changeFeatures.length + refundFeatures.length >
+    0;
 
   const copyInfo = async () => {
     const lines: (string | null)[] = [
@@ -314,9 +362,7 @@ export function FlightDetailDrawer({
     lines.push(`🔗 Reserve em booking.com/flights`);
 
     try {
-      await navigator.clipboard.writeText(
-        lines.filter(Boolean).join("\n"),
-      );
+      await navigator.clipboard.writeText(lines.filter(Boolean).join("\n"));
       toast.success("Informações copiadas!");
     } catch {
       toast.error("Erro ao copiar");
@@ -337,13 +383,19 @@ export function FlightDetailDrawer({
             <SheetHeader className="space-y-3 text-left">
               <SheetTitle className="flex items-center gap-2 text-xl">
                 <Plane className="h-5 w-5 text-primary" />
-                <span className="font-mono">{firstSeg.departureAirport.code}</span>
+                <span className="font-mono">
+                  {firstSeg.departureAirport.code}
+                </span>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono">{firstSeg.arrivalAirport.code}</span>
+                <span className="font-mono">
+                  {firstSeg.arrivalAirport.code}
+                </span>
                 {offer.segments.length > 1 && (
                   <>
                     <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-mono">{lastSeg.arrivalAirport.code}</span>
+                    <span className="font-mono">
+                      {lastSeg.arrivalAirport.code}
+                    </span>
                   </>
                 )}
               </SheetTitle>
@@ -369,13 +421,15 @@ export function FlightDetailDrawer({
                 )}
               </div>
 
-              {/* Breakdown */}
+              {/* Breakdown de preço (sumário) */}
               {total && (
                 <Card className="p-4">
                   <div className="space-y-1.5 text-sm">
                     {baseFare && (
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tarifa base</span>
+                        <span className="text-muted-foreground">
+                          Tarifa base
+                        </span>
                         <span>{formatMoney(baseFare)}</span>
                       </div>
                     )}
@@ -409,7 +463,7 @@ export function FlightDetailDrawer({
                         {formatMoney(total)}
                       </span>
                     </div>
-                    {perAdult && (
+                    {perAdult && adults > 1 && (
                       <div className="text-right text-[11px] text-muted-foreground">
                         ~ {formatMoney(perAdult)}/adulto
                       </div>
@@ -419,7 +473,12 @@ export function FlightDetailDrawer({
               )}
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={copyInfo} variant="outline" size="sm" className="gap-1.5">
+                <Button
+                  onClick={copyInfo}
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                >
                   <Copy className="h-3.5 w-3.5" /> Copiar info
                 </Button>
                 <Button onClick={openOnBooking} size="sm" className="gap-1.5">
@@ -428,14 +487,16 @@ export function FlightDetailDrawer({
               </div>
             </SheetHeader>
 
-            {/* Tabs */}
+            {/* Tabs: Voo · Bagagem · Políticas · Preços */}
             <Tabs defaultValue="flight" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="flight">Voo</TabsTrigger>
-                <TabsTrigger value="baggage">Bagagem e tarifa</TabsTrigger>
-                <TabsTrigger value="raw">Dados</TabsTrigger>
+                <TabsTrigger value="baggage">Bagagem</TabsTrigger>
+                <TabsTrigger value="policies">Políticas</TabsTrigger>
+                <TabsTrigger value="prices">Preços</TabsTrigger>
               </TabsList>
 
+              {/* Aba Voo */}
               <TabsContent value="flight" className="space-y-4 pt-4">
                 {offer.segments.map((seg, idx) => (
                   <SegmentDetail
@@ -452,6 +513,7 @@ export function FlightDetailDrawer({
                 ))}
               </TabsContent>
 
+              {/* Aba Bagagem */}
               <TabsContent value="baggage" className="space-y-5 pt-4">
                 <Card className="p-4">
                   <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
@@ -476,43 +538,81 @@ export function FlightDetailDrawer({
                   )}
                 </Card>
 
-                {features.length > 0 && (
+                {baggageFeatures.length > 0 && (
                   <Card className="p-4">
                     <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                      <DollarSign className="h-4 w-4 text-primary" />
-                      Tarifa {offer.brandedFareInfo?.fareName}
+                      <Info className="h-4 w-4 text-primary" />
+                      Detalhes da bagagem (tarifa{" "}
+                      {offer.brandedFareInfo?.fareName})
+                    </div>
+                    <div className="space-y-1.5">
+                      {baggageFeatures.map((f, i) => (
+                        <FeatureLine key={i} f={f} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Aba Políticas */}
+              <TabsContent value="policies" className="space-y-5 pt-4">
+                {cancellationFeatures.length > 0 && (
+                  <Card className="p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <Ban className="h-4 w-4 text-primary" />
+                      Política de cancelamento
+                    </div>
+                    <div className="space-y-1.5">
+                      {cancellationFeatures.map((f, i) => (
+                        <FeatureLine key={i} f={f} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {changeFeatures.length > 0 && (
+                  <Card className="p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <RefreshCw className="h-4 w-4 text-primary" />
+                      Política de alteração
+                    </div>
+                    <div className="space-y-1.5">
+                      {changeFeatures.map((f, i) => (
+                        <FeatureLine key={i} f={f} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {refundFeatures.length > 0 && (
+                  <Card className="p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <ShieldCheck className="h-4 w-4 text-primary" />
+                      Reembolso
+                    </div>
+                    <div className="space-y-1.5">
+                      {refundFeatures.map((f, i) => (
+                        <FeatureLine key={i} f={f} />
+                      ))}
+                    </div>
+                  </Card>
+                )}
+
+                {otherCategories.length > 0 && (
+                  <Card className="p-4">
+                    <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                      <Info className="h-4 w-4 text-primary" />
+                      Outras informações da tarifa
                     </div>
                     <div className="space-y-4">
-                      {Object.entries(byCategory).map(([cat, feats]) => (
+                      {otherCategories.map(([cat, feats]) => (
                         <div key={cat} className="space-y-1.5">
                           <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             {FEATURE_CATEGORY_LABELS[cat] || cat}
                           </div>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             {feats.map((f, i) => (
-                              <div key={i} className="flex items-start gap-2 text-sm">
-                                {f.availability === "INCLUDED" ? (
-                                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
-                                ) : f.availability === "PAID" ? (
-                                  <DollarSign className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                                ) : (
-                                  <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/60" />
-                                )}
-                                <span
-                                  className={
-                                    f.availability === "NOT_INCLUDED"
-                                      ? "text-muted-foreground"
-                                      : "text-foreground"
-                                  }
-                                >
-                                  {f.label}
-                                  {f.availability === "PAID" && (
-                                    <span className="ml-1 text-xs text-amber-600">
-                                      (pago)
-                                    </span>
-                                  )}
-                                </span>
-                              </div>
+                              <FeatureLine key={i} f={f} />
                             ))}
                           </div>
                         </div>
@@ -520,15 +620,151 @@ export function FlightDetailDrawer({
                     </div>
                   </Card>
                 )}
+
+                {!hasAnyPolicy && otherCategories.length === 0 && (
+                  <Card className="p-4 text-sm text-muted-foreground">
+                    Nenhuma política específica informada pela tarifa. Consulte
+                    as condições completas ao fechar a reserva no Booking.
+                  </Card>
+                )}
               </TabsContent>
 
-              <TabsContent value="raw" className="pt-4">
-                <Card className="p-3">
+              {/* Aba Preços */}
+              <TabsContent value="prices" className="space-y-5 pt-4">
+                <Card className="p-4">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                    <Receipt className="h-4 w-4 text-primary" />
+                    Composição do preço
+                  </div>
+                  <div className="space-y-1.5 text-sm">
+                    {baseFare && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Tarifa base
+                        </span>
+                        <span>{formatMoney(baseFare)}</span>
+                      </div>
+                    )}
+                    {tax && (moneyToNumber(tax) ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Impostos</span>
+                        <span className="text-muted-foreground">
+                          + {formatMoney(tax)}
+                        </span>
+                      </div>
+                    )}
+                    {fee && (moneyToNumber(fee) ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Taxas e serviços
+                        </span>
+                        <span className="text-muted-foreground">
+                          + {formatMoney(fee)}
+                        </span>
+                      </div>
+                    )}
+                    {discount && (moneyToNumber(discount) ?? 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Desconto aplicado
+                        </span>
+                        <span className="text-emerald-600">
+                          − {formatMoney(discount)}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between border-t border-border pt-2">
+                      <span className="font-medium">Total</span>
+                      <span className="text-lg font-bold text-primary">
+                        {formatMoney(total)}
+                      </span>
+                    </div>
+                    {perAdult && adults > 1 && (
+                      <div className="flex justify-between text-[11px] text-muted-foreground">
+                        <span>Por adulto (estimado)</span>
+                        <span>{formatMoney(perAdult)}</span>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+
+                {/* Taxas por companhia */}
+                {Array.isArray(offer.priceBreakdown?.carrierTaxBreakdown) &&
+                  offer.priceBreakdown!.carrierTaxBreakdown!.length > 0 && (
+                    <Card className="p-4">
+                      <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                        <Plane className="h-4 w-4 text-primary" />
+                        Taxas por companhia (média por adulto)
+                      </div>
+                      <div className="space-y-3">
+                        {offer.priceBreakdown!.carrierTaxBreakdown!.map(
+                          (ct, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-2.5"
+                            >
+                              <div className="flex items-center gap-2">
+                                {ct.carrier?.logo && (
+                                  <img
+                                    src={ct.carrier.logo}
+                                    alt={ct.carrier.name || ct.carrier.code}
+                                    className="h-6 w-6 rounded object-contain"
+                                    loading="lazy"
+                                    decoding="async"
+                                  />
+                                )}
+                                <span className="text-sm font-medium">
+                                  {ct.carrier?.name || ct.carrier?.code}
+                                </span>
+                              </div>
+                              <div className="flex flex-col items-end gap-0.5 text-xs">
+                                {ct.avgPerAdult?.base && (
+                                  <span className="text-muted-foreground">
+                                    Base: {formatMoney(ct.avgPerAdult.base)}
+                                  </span>
+                                )}
+                                {ct.avgPerAdult?.tax && (
+                                  <span className="text-muted-foreground">
+                                    Taxa: {formatMoney(ct.avgPerAdult.tax)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </Card>
+                  )}
+
+                {/* Taxas de plataforma (bcom) */}
+                {Array.isArray(offer.priceBreakdown?.bcomPricingItems) &&
+                  offer.priceBreakdown!.bcomPricingItems!.length > 0 && (
+                    <Card className="p-4">
+                      <div className="mb-3 text-sm font-semibold">
+                        Taxas de plataforma Booking
+                      </div>
+                      <div className="space-y-1.5 text-sm">
+                        {offer.priceBreakdown!.bcomPricingItems!.map(
+                          (p, i) => (
+                            <div key={i} className="flex justify-between">
+                              <span className="text-muted-foreground">
+                                {p.name}
+                              </span>
+                              <span>{formatMoney(p.amount)}</span>
+                            </div>
+                          ),
+                        )}
+                      </div>
+                    </Card>
+                  )}
+
+                {/* JSON bruto (debug) */}
+                <Card className="p-4">
                   <details>
                     <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
                       Ver JSON bruto da oferta (debug)
                     </summary>
-                    <pre className="mt-3 max-h-96 overflow-auto rounded bg-muted p-3 text-[10px]">
+                    <pre className="mt-3 max-h-80 overflow-auto rounded bg-muted/40 p-2 text-[10px] leading-tight">
                       {JSON.stringify(offer, null, 2)}
                     </pre>
                   </details>
