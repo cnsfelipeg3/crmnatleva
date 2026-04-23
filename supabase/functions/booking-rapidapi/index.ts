@@ -23,6 +23,7 @@ const CACHE_TTL: Record<string, number> = {
   hotelPhotos: 60 * 60 * 24 * 7,        // 7 dias
   hotelReviews: 60 * 60 * 24,           // 1 dia
   roomAvailability: 60 * 30,            // 30 min
+  getRoomList: 60 * 30,                 // 30 min — lista rica de ofertas
   getCurrency: 60 * 60 * 24 * 30,       // 30 dias
   getLanguages: 60 * 60 * 24 * 30,      // 30 dias
 };
@@ -34,6 +35,7 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   hotelPhotos: "/api/v1/hotels/getHotelPhotos",
   hotelReviews: "/api/v1/hotels/getHotelReviews",
   roomAvailability: "/api/v1/hotels/getAvailability",
+  getRoomList: "/api/v1/hotels/getRoomList",
   getCurrency: "/api/v1/meta/getCurrency",
   getLanguages: "/api/v1/meta/getLanguages",
 };
@@ -221,6 +223,20 @@ function buildParams(
         max_date: String(input.max_date),
         currency_code: String(input.currency_code ?? defaults.currency_code),
         location: String(input.location ?? "US"),
+      };
+    }
+    case "getRoomList": {
+      assertParams(input, ["hotel_id", "arrival_date", "departure_date"]);
+      return {
+        hotel_id: String(input.hotel_id),
+        arrival_date: String(input.arrival_date),
+        departure_date: String(input.departure_date),
+        adults: String(input.adults ?? 2),
+        children_age: String(input.children_age ?? ""),
+        room_qty: String(input.room_qty ?? 1),
+        units: String(input.units ?? "metric"),
+        currency_code: String(input.currency_code ?? defaults.currency_code),
+        languagecode: String(input.languagecode ?? defaults.locale),
       };
     }
     case "getCurrency":

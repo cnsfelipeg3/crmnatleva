@@ -228,7 +228,14 @@ export function HotelDetailDrawer({
             </TabsContent>
 
             <TabsContent value="rooms" className="mt-4">
-              <RoomAvailability hotelId={hotelId} minDate={arrival} maxDate={departure} />
+              <RoomAvailability
+                hotelId={hotelId}
+                minDate={arrival}
+                maxDate={departure}
+                adults={adults}
+                childrenAges={childrenAges}
+                rooms={rooms}
+              />
             </TabsContent>
 
             <TabsContent value="reviews" className="mt-4">

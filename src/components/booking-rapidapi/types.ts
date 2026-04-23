@@ -8,6 +8,7 @@ export type BookingAction =
   | "hotelPhotos"
   | "hotelReviews"
   | "roomAvailability"
+  | "getRoomList"
   | "getCurrency"
   | "getLanguages";
 
