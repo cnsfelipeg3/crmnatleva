@@ -26,58 +26,58 @@ interface Props {
   onNameQueryChange?: (q: string) => void;
 }
 
-const CheckboxGroup = forwardRef<HTMLDivElement, {
-  options,
-  selected,
-  onToggle,
-  maxVisible = 6,
-}: {
+interface CheckboxGroupProps {
   options: Array<{ title: string; genericId: string; countNotAutoextended?: number }>;
   selected: Set<string>;
   onToggle: (id: string) => void;
   maxVisible?: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? options : options.slice(0, maxVisible);
-
-  return (
-    <div className="space-y-2">
-      {visible.map((opt) => {
-        const isChecked = selected.has(opt.genericId);
-        return (
-          <label
-            key={opt.genericId}
-            className="flex items-start gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded px-1 py-0.5"
-          >
-            <Checkbox
-              checked={isChecked}
-              onCheckedChange={() => onToggle(opt.genericId)}
-              className="mt-0.5"
-            />
-            <span className="flex-1 leading-tight">{opt.title}</span>
-            {typeof opt.countNotAutoextended === "number" && (
-              <span className="text-xs text-muted-foreground">
-                ({opt.countNotAutoextended.toLocaleString("pt-BR")})
-              </span>
-            )}
-          </label>
-        );
-      })}
-      {options.length > maxVisible && (
-        <button
-          type="button"
-          onClick={() => setExpanded(!expanded)}
-          className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-        >
-          {expanded ? "Mostrar menos" : `Mostrar mais ${options.length - maxVisible}`}
-          <ChevronDown
-            className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")}
-          />
-        </button>
-      )}
-    </div>
-  );
 }
+
+const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
+  ({ options, selected, onToggle, maxVisible = 6 }, ref) => {
+    const [expanded, setExpanded] = useState(false);
+    const visible = expanded ? options : options.slice(0, maxVisible);
+
+    return (
+      <div ref={ref} className="space-y-2">
+        {visible.map((opt) => {
+          const isChecked = selected.has(opt.genericId);
+          return (
+            <label
+              key={opt.genericId}
+              className="flex items-start gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded px-1 py-0.5"
+            >
+              <Checkbox
+                checked={isChecked}
+                onCheckedChange={() => onToggle(opt.genericId)}
+                className="mt-0.5"
+              />
+              <span className="flex-1 leading-tight">{opt.title}</span>
+              {typeof opt.countNotAutoextended === "number" && (
+                <span className="text-xs text-muted-foreground">
+                  ({opt.countNotAutoextended.toLocaleString("pt-BR")})
+                </span>
+              )}
+            </label>
+          );
+        })}
+        {options.length > maxVisible && (
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            {expanded ? "Mostrar menos" : `Mostrar mais ${options.length - maxVisible}`}
+            <ChevronDown
+              className={cn("h-3 w-3 transition-transform", expanded && "rotate-180")}
+            />
+          </button>
+        )}
+      </div>
+    );
+  },
+);
+CheckboxGroup.displayName = "CheckboxGroup";
 
 function PriceSliderWithHistogram({
   filter,
