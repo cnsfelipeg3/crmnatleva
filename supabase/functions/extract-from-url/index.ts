@@ -207,66 +207,62 @@ Deno.serve(async (req) => {
     const html: string = doc.html ?? "";
     const links: string[] = Array.isArray(doc.links) ? doc.links : [];
 
-    // 2) Collect image URLs (HTML + links from any embedded JSON)
-    let allImages = extractImageUrls(html, url);
+    // 2) Collect image URLs WITH context (alt/title/surrounding HTML)
+    const imagesWithCtx: ImageWithContext[] = extractImageUrls(html, url);
 
-    // Also scan the markdown for image markdown syntax  ![](url)
-    const mdImgRe = /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;
+    const mdImgRe = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
     let mm: RegExpExecArray | null;
     while ((mm = mdImgRe.exec(markdown)) !== null) {
-      const u = mm[1];
+      const u = mm[2].replace(/&amp;/g, "&");
       if (/\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(u) && !isBlockedUrl(u)) {
-        allImages.push(u);
+        imagesWithCtx.push({ url: u, context: (mm[1] || "").toLowerCase() });
       }
     }
-    // From discovered links
     for (const l of links) {
       if (typeof l === "string" && /\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(l) && !isBlockedUrl(l)) {
-        allImages.push(l);
+        imagesWithCtx.push({ url: l, context: "" });
       }
     }
 
-    // 3) Upgrade resolution + dedupe by core key (keep first/longest URL per key)
-    const byKey = new Map<string, string>();
-    for (const raw of allImages) {
-      const upgraded = upgradeResolution(raw);
+    // 3) Upgrade resolution + dedup, MERGING contexts of duplicates
+    const byKey = new Map<string, { url: string; context: string }>();
+    for (const item of imagesWithCtx) {
+      const upgraded = upgradeResolution(item.url);
       const key = dedupKey(upgraded);
       const existing = byKey.get(key);
-      if (!existing || upgraded.length > existing.length) {
-        byKey.set(key, upgraded);
+      if (!existing) {
+        byKey.set(key, { url: upgraded, context: item.context });
+      } else {
+        existing.context = (existing.context + " " + item.context).slice(0, 800);
+        if (upgraded.length > existing.url.length) existing.url = upgraded;
       }
     }
-    const candidatePhotos = Array.from(byKey.values()).slice(0, 80);
+    const allCandidates = Array.from(byKey.values());
 
-    console.log("[extract-from-url] candidates:", candidatePhotos.length, "md:", markdown.length);
+    console.log("[extract-from-url] total candidates:", allCandidates.length, "md:", markdown.length);
 
-    // 4) Send to AI for structured extraction (only ask for URLs from the candidate list)
+    // 4) AI extracts metadata (especially room_type) using a sample of candidates
+    const sampleUrls = allCandidates.slice(0, 60).map(c => c.url);
     const truncatedMarkdown = markdown.slice(0, 22000);
 
     const aiRes = await fetch(LOVABLE_AI_URL, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
             content:
-              "Você é um especialista em extrair dados de páginas de hotéis/quartos (Booking, Decolar, Hoteis.com, Expedia, Azul Viagens, sites oficiais). Responda APENAS chamando a função extract_accommodation. " +
-              "Regras CRÍTICAS para fotos: " +
-              "1) Selecione APENAS URLs presentes na lista 'FOTOS CANDIDATAS'. NUNCA invente URLs. " +
-              "2) PROIBIDO incluir: logos (especialmente 'Genius' do Booking), badges, ícones, banners promocionais, fotos de avatar/usuários, fotos de comida genérica não relacionada ao hotel, mapas. " +
-              "3) Inclua TODAS as fotos reais do quarto/hotel/propriedade — geralmente entre 15 e 60 fotos. Quanto mais melhor, desde que sejam fotos legítimas. " +
-              "4) Priorize fotos da acomodação específica (quarto, banheiro, varanda, vista, piscina privativa, sala). " +
-              "5) Traduza descrição/comodidades para português brasileiro fluente. " +
-              "6) Extraia m², capacidade, tipo de cama e vista SEMPRE que estiverem na página.",
+              "Você extrai dados de páginas de hotéis/quartos (Booking, Decolar, Hoteis.com, Expedia, sites oficiais). Responda APENAS chamando a função extract_accommodation. " +
+              "REGRA CRÍTICA: a URL pode apontar para um QUARTO ESPECÍFICO. Identifique EXATAMENTE qual quarto está sendo cotado — observe parâmetros como 'highlighted_blocks', 'matching_block_id', '#room', âncoras, ou o quarto em destaque/selecionado na página. NÃO confunda com outros quartos da página. " +
+              "Para fotos: selecione APENAS URLs da lista candidata; PRIORIZE fotos do quarto específico identificado (não da galeria geral do hotel). Inclua 15–60 fotos legítimas. " +
+              "PROIBIDO: logos (Genius), badges, ícones, avatars, banners promocionais, mapas. " +
+              "Traduza descrição/comodidades para PT-BR. Extraia m², capacidade, cama e vista quando presentes.",
           },
           {
             role: "user",
-            content: `URL: ${url}\n\n=== CONTEÚDO DA PÁGINA (markdown) ===\n${truncatedMarkdown}\n\n=== FOTOS CANDIDATAS (${candidatePhotos.length} URLs absolutas em alta resolução) ===\n${candidatePhotos.join("\n")}`,
+            content: `URL: ${url}\n\n=== CONTEÚDO (markdown) ===\n${truncatedMarkdown}\n\n=== AMOSTRA DE FOTOS CANDIDATAS (${sampleUrls.length}) ===\n${sampleUrls.join("\n")}`,
           },
         ],
         tools: [{ type: "function", function: SCHEMA }],
@@ -286,33 +282,57 @@ Deno.serve(async (req) => {
     const toolCall = aiData?.choices?.[0]?.message?.tool_calls?.[0];
     const argsStr = toolCall?.function?.arguments;
     if (!argsStr) throw new Error("IA não retornou dados estruturados");
-
     const parsed = JSON.parse(argsStr);
 
-    // 5) Validate AI-selected URLs against candidate list (the AI sometimes hallucinates)
-    const candidateSet = new Set(candidatePhotos);
-    const aiUrls: string[] = Array.isArray(parsed.photo_urls) ? parsed.photo_urls : [];
-    const validAiUrls = aiUrls.filter((u) => typeof u === "string" && candidateSet.has(u) && !isBlockedUrl(u));
+    const roomType: string = parsed.room_type || "";
+    console.log("[extract-from-url] room_type:", roomType);
 
-    // 6) Fallback: if AI returned too few, supplement with top candidates
-    let finalUrls = validAiUrls;
-    if (finalUrls.length < 8) {
-      const supplement = candidatePhotos.filter((u) => !finalUrls.includes(u)).slice(0, 30 - finalUrls.length);
-      finalUrls = [...finalUrls, ...supplement];
+    // 5) Rank candidates by room-name token matches in their context
+    const roomTokens = normalize(roomType).split(" ").filter(t => t.length >= 3 && !["with","and","the","com","para","villa","room","quarto","suite","suíte"].includes(t));
+    const scored = allCandidates.map(c => ({
+      url: c.url,
+      score: scoreByRoomMatch(c.context, roomTokens),
+    }));
+
+    const matched = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
+    const unmatched = scored.filter(s => s.score === 0);
+    console.log("[extract-from-url] matched-to-room:", matched.length, "unmatched:", unmatched.length, "tokens:", roomTokens);
+
+    // 6) Final list: matched first, then AI-selected, then top unmatched as fallback
+    const finalUrls: string[] = [];
+    const candidateSet = new Set(allCandidates.map(c => c.url));
+
+    for (const s of matched) finalUrls.push(s.url);
+
+    const aiUrls: string[] = Array.isArray(parsed.photo_urls) ? parsed.photo_urls : [];
+    for (const u of aiUrls) {
+      if (typeof u === "string" && candidateSet.has(u) && !finalUrls.includes(u) && !isBlockedUrl(u)) {
+        finalUrls.push(u);
+      }
     }
+
+    // If we have very few matched-to-room photos, supplement with general hotel photos
+    if (finalUrls.length < 15) {
+      for (const s of unmatched) {
+        if (!finalUrls.includes(s.url)) finalUrls.push(s.url);
+        if (finalUrls.length >= 30) break;
+      }
+    }
+
+    const cappedUrls = finalUrls.slice(0, 60);
 
     // 7) Final dedup
     const seen = new Set<string>();
-    const photos = finalUrls
+    const photos = cappedUrls
       .filter((u) => { const k = dedupKey(u); if (seen.has(k)) return false; seen.add(k); return true; })
-      .map((u) => ({
+      .map((u, idx) => ({
         url: u,
         description: "",
-        category: "outro",
+        category: idx < matched.length ? "quarto" : "outro",
         source: "url_extract",
       }));
 
-    console.log("[extract-from-url] returning", photos.length, "photos");
+    console.log("[extract-from-url] returning", photos.length, "photos (", matched.length, "matched to room)");
 
     return new Response(
       JSON.stringify({
