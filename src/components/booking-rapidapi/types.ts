@@ -38,6 +38,11 @@ export interface BookingSearchParams {
   page_number?: number;
   currency_code?: string;
   languagecode?: string;
+  // Filtros
+  sort_by?: string;
+  categories_filter?: string;
+  price_min?: number;
+  price_max?: number;
 }
 
 export interface BookingHotel {
@@ -113,4 +118,62 @@ export type BookingPhotoSize =
 export function resizeBookingPhoto(url: string, size: BookingPhotoSize): string {
   if (!url) return url;
   return url.replace(/\/(square\d+|max\d+x?\d*)\//, `/${size}/`);
+}
+
+// ------------------------------------------------------------
+// Filtros da API (resposta de getHotelFilter)
+// ------------------------------------------------------------
+
+export type HotelFilterStyle = "SLIDER" | "CHECKBOX" | "RADIO" | string;
+
+export interface HotelFilterOption {
+  title: string;
+  genericId: string;
+  countNotAutoextended?: number;
+  selected?: boolean;
+}
+
+export interface HotelFilter {
+  title: string;
+  field?: string;
+  filterStyle: HotelFilterStyle;
+  options?: HotelFilterOption[];
+  min?: string;
+  max?: string;
+  minPriceStep?: string;
+  minSelected?: string;
+  maxSelected?: string;
+  histogram?: number[];
+  currency?: string;
+}
+
+export interface HotelFiltersResponse {
+  filters: HotelFilter[];
+  pagination?: { nbResultsTotal?: number };
+  availabilityInfo?: Record<string, unknown>;
+}
+
+export interface HotelFiltersState {
+  categoriesSelected: Set<string>;
+  priceMin?: number;
+  priceMax?: number;
+  sortBy?: string;
+}
+
+export function emptyHotelFiltersState(): HotelFiltersState {
+  return {
+    categoriesSelected: new Set(),
+    priceMin: undefined,
+    priceMax: undefined,
+    sortBy: undefined,
+  };
+}
+
+export function hotelFiltersStateIsEmpty(s: HotelFiltersState): boolean {
+  return (
+    s.categoriesSelected.size === 0 &&
+    s.priceMin === undefined &&
+    s.priceMax === undefined &&
+    !s.sortBy
+  );
 }

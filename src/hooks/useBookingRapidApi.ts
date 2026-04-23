@@ -10,6 +10,8 @@ import type {
   BookingHotelPhoto,
   BookingHotelReview,
   BookingSearchParams,
+  HotelFilter,
+  HotelFiltersResponse,
 } from "@/components/booking-rapidapi/types";
 import type {
   CabinClass,
@@ -98,6 +100,10 @@ export function useSearchHotels(
         page_number: params.page_number ?? 1,
         currency_code: params.currency_code ?? "BRL",
         languagecode: params.languagecode ?? "pt-br",
+        sort_by: params.sort_by ?? undefined,
+        categories_filter: params.categories_filter ?? undefined,
+        price_min: params.price_min ?? undefined,
+        price_max: params.price_max ?? undefined,
       }
     : null;
 
@@ -241,6 +247,54 @@ export function useRoomAvailability(
     },
     enabled: !!hotelId && !!minDate && !!maxDate,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+// ------------------------------------------------------------
+// 6.5) Filtros de hotéis (sidebar: price, stars, facilities, etc)
+// ------------------------------------------------------------
+
+export function useHotelFilters(
+  params: Partial<BookingSearchParams> | null,
+  enabled: boolean = true,
+) {
+  const keyParams = params
+    ? {
+        dest_id: params.dest_id,
+        search_type: params.search_type,
+        arrival_date: params.arrival_date,
+        departure_date: params.departure_date,
+        adults: params.adults ?? 2,
+        children_age: params.children_age ?? "",
+        room_qty: params.room_qty ?? 1,
+        currency_code: params.currency_code ?? "BRL",
+        languagecode: params.languagecode ?? "pt-br",
+      }
+    : null;
+
+  return useQuery({
+    queryKey: ["booking-rapidapi", "hotelFilters", keyParams],
+    queryFn: async (): Promise<HotelFiltersResponse> => {
+      if (!keyParams) throw new Error("Params inválidos");
+      const envelope = await invokeBooking<{
+        data: {
+          filters?: HotelFilter[];
+          pagination?: { nbResultsTotal?: number };
+          availabilityInfo?: Record<string, unknown>;
+        };
+      }>("getHotelFilter" as BookingAction, keyParams);
+      return {
+        filters: envelope?.data?.filters ?? [],
+        pagination: envelope?.data?.pagination,
+        availabilityInfo: envelope?.data?.availabilityInfo,
+      };
+    },
+    enabled:
+      enabled &&
+      !!keyParams?.dest_id &&
+      !!keyParams?.arrival_date &&
+      !!keyParams?.departure_date,
+    staleTime: 6 * 60 * 60 * 1000,
   });
 }
 
