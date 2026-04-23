@@ -80,50 +80,85 @@ function dedupKey(u: string): string {
   }
 }
 
-function extractImageUrls(html: string, baseUrl: string): string[] {
-  const urls = new Set<string>();
+interface ImageWithContext {
+  url: string;
+  context: string; // surrounding HTML/alt text (lowercase)
+}
+
+function extractImageUrls(html: string, baseUrl: string): ImageWithContext[] {
+  const found = new Map<string, string>(); // url → context
   let origin = "";
   try { origin = new URL(baseUrl).origin; } catch { /* ignore */ }
 
-  const push = (raw: string) => {
+  const push = (raw: string, context = "") => {
     if (!raw) return;
-    let abs = raw.trim();
+    let abs = raw.trim().replace(/&amp;/g, "&");
     if (abs.startsWith("//")) abs = `https:${abs}`;
     else if (abs.startsWith("/") && origin) abs = `${origin}${abs}`;
     if (!/^https?:\/\//i.test(abs)) return;
     if (!/\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(abs)) return;
     if (isBlockedUrl(abs)) return;
-    urls.add(abs);
+    const prev = found.get(abs) || "";
+    found.set(abs, (prev + " " + context).toLowerCase().slice(0, 500));
   };
 
-  // <img src/data-src/data-lazy>
-  const imgRe = /<img\b[^>]*?(?:src|data-src|data-lazy-src|data-original|data-hires|data-large|data-zoom)\s*=\s*["']([^"']+)["']/gi;
+  // <img ...> with surrounding context (alt, title, parent text)
+  const imgTagRe = /<img\b([^>]*)>/gi;
   let m: RegExpExecArray | null;
-  while ((m = imgRe.exec(html)) !== null) push(m[1]);
+  while ((m = imgTagRe.exec(html)) !== null) {
+    const tag = m[1];
+    const idx = m.index;
+    // Grab ~300 chars of surrounding HTML for room-name matching
+    const ctx = html.slice(Math.max(0, idx - 200), Math.min(html.length, idx + 300));
+    const altMatch = tag.match(/\balt\s*=\s*["']([^"']+)["']/i);
+    const titleMatch = tag.match(/\btitle\s*=\s*["']([^"']+)["']/i);
+    const ariaMatch = tag.match(/\baria-label\s*=\s*["']([^"']+)["']/i);
+    const fullCtx = [altMatch?.[1], titleMatch?.[1], ariaMatch?.[1], ctx].filter(Boolean).join(" ");
 
-  // srcset
-  const srcsetRe = /srcset\s*=\s*["']([^"']+)["']/gi;
-  while ((m = srcsetRe.exec(html)) !== null) {
-    const candidates = m[1].split(",").map((p) => {
-      const parts = p.trim().split(/\s+/);
-      const url = parts[0];
-      const widthPart = parts[1] || "";
-      const w = parseInt(widthPart.replace(/\D/g, ""), 10) || 0;
-      return { url, w };
-    });
-    candidates.sort((a, b) => b.w - a.w);
-    if (candidates[0]) push(candidates[0].url);
+    const srcAttrs = ["src", "data-src", "data-lazy-src", "data-original", "data-hires", "data-large", "data-zoom", "data-image-src"];
+    for (const attr of srcAttrs) {
+      const re = new RegExp(`\\b${attr}\\s*=\\s*["']([^"']+)["']`, "i");
+      const sm = tag.match(re);
+      if (sm) push(sm[1], fullCtx);
+    }
+    // srcset → pick largest
+    const ssMatch = tag.match(/\bsrcset\s*=\s*["']([^"']+)["']/i);
+    if (ssMatch) {
+      const candidates = ssMatch[1].split(",").map((p) => {
+        const parts = p.trim().split(/\s+/);
+        const w = parseInt((parts[1] || "").replace(/\D/g, ""), 10) || 0;
+        return { url: parts[0], w };
+      }).sort((a, b) => b.w - a.w);
+      if (candidates[0]) push(candidates[0].url, fullCtx);
+    }
   }
 
   // background-image
   const bgRe = /background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/gi;
-  while ((m = bgRe.exec(html)) !== null) push(m[1]);
+  while ((m = bgRe.exec(html)) !== null) push(m[1], "");
 
-  // JSON-LD / inline JSON: contentUrl, image, photo
-  const jsonImgRe = /["'](?:contentUrl|image|photo|url)["']\s*:\s*["'](https?:\/\/[^"']+\.(?:jpe?g|png|webp|avif)[^"']*)["']/gi;
-  while ((m = jsonImgRe.exec(html)) !== null) push(m[1]);
+  // JSON-LD / inline JSON
+  const jsonImgRe = /["'](?:contentUrl|image|photo|url|large_url|max_url|original_url)["']\s*:\s*["'](https?:\/\/[^"']+\.(?:jpe?g|png|webp|avif)[^"']*)["']/gi;
+  while ((m = jsonImgRe.exec(html)) !== null) {
+    // Try to capture surrounding JSON context for room-name hints
+    const idx = m.index;
+    const ctx = html.slice(Math.max(0, idx - 300), Math.min(html.length, idx + 100));
+    push(m[1], ctx);
+  }
 
-  return Array.from(urls);
+  return Array.from(found.entries()).map(([url, context]) => ({ url, context }));
+}
+
+function normalize(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function scoreByRoomMatch(ctx: string, roomTokens: string[]): number {
+  if (!roomTokens.length) return 0;
+  const nctx = normalize(ctx);
+  let hits = 0;
+  for (const t of roomTokens) if (t.length >= 3 && nctx.includes(t)) hits++;
+  return hits;
 }
 
 Deno.serve(async (req) => {
