@@ -102,12 +102,16 @@ export default function BookingSearchPage() {
   const [selectedHotel, setSelectedHotel] = useState<BookingHotel | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Client-side "search by hotel name" filter (applied to unifiedResults)
+  const [nameQuery, setNameQuery] = useState("");
+
   useEffect(() => {
     setCurrentPage(1);
   }, [searchParams, filtersState]);
 
   useEffect(() => {
     setFiltersState(emptyHotelFiltersState());
+    setNameQuery("");
   }, [searchParams?.destination.dest_id]);
 
   const { data: filtersData, isLoading: filtersLoading } = useHotelFilters(
