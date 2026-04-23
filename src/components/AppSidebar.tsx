@@ -40,6 +40,7 @@ const viagensItems = [
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
+  { to: "/booking-search", icon: Hotel, label: "Busca Booking", showBeta: true },
 ];
 
 const financeItems = [
@@ -155,6 +156,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           )}
           <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive ? "text-champagne" : "text-sidebar-foreground")} />
           {!isCollapsed && <span className={cn("tracking-tight", indent ? "text-xs" : "")}>{item.label}</span>}
+          {!isCollapsed && (item as any).showBeta && (
+            <span className="ml-auto shrink-0 rounded bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow-sm">
+              BETA
+            </span>
+          )}
           {item.to === "/cotacoes" && pendingBriefings > 0 && (
             <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[10px] font-bold px-1.5">
               {pendingBriefings}
