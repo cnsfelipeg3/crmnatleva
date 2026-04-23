@@ -1305,7 +1305,9 @@ export default function ProposalEditor() {
                                         if (d.bed_type) updateItemData(idx, "bed_type", d.bed_type);
                                         if (d.size_sqm) updateItemData(idx, "size_sqm", d.size_sqm);
                                         if (d.capacity) updateItemData(idx, "capacity", d.capacity);
-                                        if (d.description && !item.description) updateItem(idx, "description", d.description);
+                                        if (d.view) updateItemData(idx, "view", d.view);
+                                        // Sempre atualiza a descrição quando vier do extrator (o usuário pediu detalhes)
+                                        if (d.description) updateItem(idx, "description", d.description);
                                         if (d.amenities?.length) {
                                           const existing = (item.data?.amenities as string[]) || [];
                                           const merged = Array.from(new Set([...existing, ...d.amenities]));
