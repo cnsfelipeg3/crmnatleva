@@ -21,6 +21,9 @@ import type {
   FlightSort,
   SearchFlightsResult,
 } from "@/components/booking-rapidapi/flightTypes";
+import type {
+  HotelscomLodgingCard,
+} from "@/components/booking-rapidapi/unifiedHotelTypes";
 
 const FUNCTION_NAME = "booking-rapidapi";
 
@@ -591,6 +594,138 @@ export function useSeatMap(token: string | null) {
       return envelope?.data;
     },
     enabled: !!token,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+// ============================================================
+// HOTELS.COM (via ntd119)
+// ============================================================
+
+export interface HotelscomRegion {
+  gaiaId: string;
+  type: string;
+  regionNames?: {
+    fullName?: string;
+    shortName?: string;
+    displayName?: string;
+    primaryDisplayName?: string;
+    secondaryDisplayName?: string;
+    lastSearchName?: string;
+  };
+  coordinates?: { lat?: string; long?: string };
+  hierarchyInfo?: {
+    country?: { name?: string; isoCode2?: string };
+  };
+}
+
+export function useHotelscomAutocomplete(
+  query: string,
+  enabled: boolean = true,
+) {
+  const trimmed = query.trim();
+  return useQuery({
+    queryKey: ["booking-rapidapi", "hotelscomAutocomplete", trimmed],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{
+        data: { sr?: HotelscomRegion[]; q?: string };
+      }>("hotelscomAutocomplete" as BookingAction, { query: trimmed });
+      return (envelope?.data?.sr || []) as HotelscomRegion[];
+    },
+    enabled: enabled && trimmed.length >= 2,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+export interface HotelscomSearchInput {
+  locationId: string;
+  checkinDate: string;
+  checkoutDate: string;
+  adults?: number;
+  children_ages?: string;
+  currency?: string;
+  locale?: string;
+  sort_order?: string;
+  page_number?: number;
+  price_min?: number;
+  price_max?: number;
+  star_rating?: string;
+}
+
+export interface HotelscomSearchResult {
+  cards: HotelscomLodgingCard[];
+  totalCount: number | null;
+  cache_hit: boolean;
+  raw?: unknown;
+}
+
+export function useHotelscomSearch(
+  params: HotelscomSearchInput | null,
+  enabled: boolean = true,
+) {
+  const keyParams = params
+    ? {
+        locationId: params.locationId,
+        checkinDate: params.checkinDate,
+        checkoutDate: params.checkoutDate,
+        adults: params.adults ?? 2,
+        children_ages: params.children_ages ?? "",
+        currency: params.currency ?? "BRL",
+        locale: params.locale ?? "pt_BR",
+        sort_order: params.sort_order ?? "RECOMMENDED",
+        page_number: params.page_number ?? 1,
+        price_min: params.price_min,
+        price_max: params.price_max,
+        star_rating: params.star_rating,
+      }
+    : null;
+
+  return useQuery({
+    queryKey: ["booking-rapidapi", "hotelscomSearch", keyParams],
+    queryFn: async (): Promise<HotelscomSearchResult> => {
+      if (!keyParams) throw new Error("Params inválidos");
+      const envelope = await invokeBooking<{
+        data: {
+          propertySearchListings?: HotelscomLodgingCard[];
+          pagination?: { totalCount?: number };
+          summary?: Record<string, unknown>;
+        };
+        __cache?: boolean;
+      }>("hotelscomSearch" as BookingAction, keyParams);
+      const listings =
+        envelope?.data?.propertySearchListings?.filter(
+          (l: any) => l.__typename === "LodgingCard",
+        ) ?? [];
+      return {
+        cards: listings,
+        totalCount: envelope?.data?.pagination?.totalCount ?? null,
+        cache_hit: !!envelope?.__cache,
+        raw: envelope?.data,
+      };
+    },
+    enabled:
+      enabled &&
+      !!keyParams?.locationId &&
+      !!keyParams?.checkinDate &&
+      !!keyParams?.checkoutDate,
+    staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useHotelscomDetails(
+  hotelId: string | null,
+  enabled: boolean = true,
+) {
+  return useQuery({
+    queryKey: ["booking-rapidapi", "hotelscomDetails", hotelId],
+    queryFn: async () => {
+      const envelope = await invokeBooking<{ data: unknown }>(
+        "hotelscomDetails" as BookingAction,
+        { hotel_id: hotelId },
+      );
+      return envelope?.data;
+    },
+    enabled: enabled && !!hotelId,
     staleTime: 24 * 60 * 60 * 1000,
   });
 }
