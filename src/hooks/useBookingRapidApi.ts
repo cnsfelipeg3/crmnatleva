@@ -53,6 +53,25 @@ export interface SearchHotelsResult {
   hotels: BookingHotel[];
   meta: Record<string, unknown>;
   cache_hit: boolean;
+  totalHotels: number | null;
+  pageSize: number;
+}
+
+/**
+ * Extrai o total de hotéis do campo `meta` retornado pela API.
+ * Formato observado: meta: [{ "title": "5278 acomodações" }]
+ */
+function extractTotalHotels(meta: unknown): number | null {
+  try {
+    if (!Array.isArray(meta) || meta.length === 0) return null;
+    const title = (meta[0] as any)?.title;
+    if (typeof title !== "string") return null;
+    const match = title.match(/([\d.,]+)/);
+    if (!match) return null;
+    return parseInt(match[1].replace(/[^\d]/g, ""), 10);
+  } catch {
+    return null;
+  }
 }
 
 export function useSearchHotels(
