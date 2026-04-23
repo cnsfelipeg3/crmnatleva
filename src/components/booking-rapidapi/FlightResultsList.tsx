@@ -62,7 +62,7 @@ export function FlightResultsList({
   if (!offers?.length) {
     return (
       <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border py-16 text-center">
-        <PlaneOff className="h-12 w-12 text-muted-foreground/50" />
+        <Plane className="h-12 w-12 text-muted-foreground/50" />
         <p className="text-sm font-medium">Nenhum voo encontrado</p>
         <p className="max-w-sm text-xs text-muted-foreground">
           Ajuste datas, classe ou tente origem/destino alternativos.
