@@ -243,9 +243,17 @@ export default function BookingSearchPage() {
     return hotelscomUnified.filter((h) => h.name.toLowerCase().includes(q));
   }, [hotelscomUnified, nameQuery]);
 
-  const bookingCount = filteredBookingHotels.length;
-  const hotelscomCount = filteredHotelscom.length;
-  const totalCount = bookingCount + hotelscomCount;
+  // Contadores de página atual (após filtro local de nome)
+  const bookingPageCount = filteredBookingHotels.length;
+  const hotelscomPageCount = filteredHotelscom.length;
+  const pageCount = bookingPageCount + hotelscomPageCount;
+
+  // Totais reais retornados pelas APIs (todas as páginas)
+  const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
+  const hotelscomTotal = hotelscomData?.totalCount ?? hotelscomPageCount;
+  const grandTotal =
+    (sources.booking ? bookingTotal : 0) +
+    (sources.hotelscom ? hotelscomTotal : 0);
 
   const isAnyLoading =
     (sources.booking && bookingLoading) ||
@@ -382,16 +390,19 @@ export default function BookingSearchPage() {
           {searchParams && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{totalCount}</span>{" "}
-                {totalCount === 1 ? "hotel encontrado" : "hotéis encontrados"}
+                <span className="font-semibold text-foreground">{grandTotal.toLocaleString("pt-BR")}</span>{" "}
+                {grandTotal === 1 ? "hotel encontrado" : "hotéis encontrados"}
                 {" em "}
                 <span className="font-medium text-foreground">{searchParams.destination.label}</span>
                 {sources.booking && sources.hotelscom && (
                   <span className="ml-2 text-xs">
-                    (<span className="text-blue-600 dark:text-blue-400">Booking: {bookingCount}</span>
+                    (<span className="text-blue-600 dark:text-blue-400">Booking: {bookingTotal.toLocaleString("pt-BR")}</span>
                     {" · "}
-                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomCount}</span>)
+                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomTotal.toLocaleString("pt-BR")}</span>)
                   </span>
+                )}
+                {pageCount < grandTotal && (
+                  <span className="ml-2 text-xs">· exibindo {pageCount} nesta página</span>
                 )}
               </div>
 
@@ -442,7 +453,7 @@ export default function BookingSearchPage() {
                 Informe destino e datas acima para iniciar a busca.
               </p>
             </Card>
-          ) : isAnyLoading && totalCount === 0 ? (
+          ) : isAnyLoading && pageCount === 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {Array.from({ length: 8 }).map((_, i) => (
                 <Card key={i} className="overflow-hidden">
@@ -455,7 +466,7 @@ export default function BookingSearchPage() {
                 </Card>
               ))}
             </div>
-          ) : totalCount === 0 ? (
+          ) : pageCount === 0 ? (
             <Card className="p-12 text-center">
               <h3 className="text-lg font-semibold mb-2">Nenhum hotel encontrado</h3>
               <p className="text-sm text-muted-foreground">
