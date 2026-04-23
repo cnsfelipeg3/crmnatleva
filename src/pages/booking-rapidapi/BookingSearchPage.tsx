@@ -53,6 +53,7 @@ import { emptyHotelFiltersState } from "@/components/booking-rapidapi/types";
 import {
   normalizeBookingHotel,
   normalizeHotelscomHotel,
+  groupHotelsByIdentity,
   type HotelSource,
   type UnifiedHotel,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
@@ -420,11 +421,24 @@ export default function BookingSearchPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {unifiedResults.map((h) => (
+              {groupHotelsByIdentity(unifiedResults).map((group) => (
                 <UnifiedHotelCard
-                  key={h.uid}
-                  hotel={h}
-                  onClick={handleSelectHotel}
+                  key={group.groupKey}
+                  group={group}
+                  onCardClick={(g) => {
+                    const offer = g.bestOffer ?? g.offers[0];
+                    if (!offer) return;
+                    const hotel = unifiedResults.find(
+                      (h) => h.source === offer.source && h.id === offer.id,
+                    );
+                    if (hotel) handleSelectHotel(hotel);
+                  }}
+                  onOfferClick={(offer) => {
+                    const hotel = unifiedResults.find(
+                      (h) => h.source === offer.source && h.id === offer.id,
+                    );
+                    if (hotel) handleSelectHotel(hotel);
+                  }}
                 />
               ))}
             </div>
