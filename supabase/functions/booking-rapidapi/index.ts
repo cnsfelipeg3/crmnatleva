@@ -194,6 +194,21 @@ function assertParams(params: Record<string, any>, required: string[]) {
   }
 }
 
+function extractHotelscomTotalFromSummary(summary: any): number | null {
+  const messages = Array.isArray(summary?.resultMessages) ? summary.resultMessages : [];
+  for (const item of messages) {
+    const text = typeof item?.text === "string" ? item.text : "";
+    const match = text.match(/(\d[\d.,]*)\s*\+?\s*(properties|property|acomodações|hoteis|hotéis)/i);
+    if (!match) continue;
+    const numeric = match[1].replace(/[.,]/g, "");
+    const parsed = Number.parseInt(numeric, 10);
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return null;
+}
+
 function buildParams(
   action: string,
   input: Record<string, any>,
@@ -535,8 +550,12 @@ serve(async (req) => {
           seenIds.add(id);
           aggregated.push(item);
         }
-        if (totalCount == null && typeof d?.pagination?.totalCount === "number") {
-          totalCount = d.pagination.totalCount;
+        if (totalCount == null) {
+          if (typeof d?.pagination?.totalCount === "number") {
+            totalCount = d.pagination.totalCount;
+          } else {
+            totalCount = extractHotelscomTotalFromSummary(d?.summary);
+          }
         }
         if (!summary && d?.summary) summary = d.summary;
       }

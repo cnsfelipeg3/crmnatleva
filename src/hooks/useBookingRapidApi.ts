@@ -659,6 +659,22 @@ export interface HotelscomSearchResult {
   raw?: unknown;
 }
 
+function extractHotelscomTotal(raw: {
+  pagination?: { totalCount?: number };
+  summary?: { resultMessages?: Array<{ text?: string }> };
+} | undefined): number | null {
+  if (typeof raw?.pagination?.totalCount === "number") return raw.pagination.totalCount;
+  const messages = Array.isArray(raw?.summary?.resultMessages) ? raw.summary.resultMessages : [];
+  for (const item of messages) {
+    const text = typeof item?.text === "string" ? item.text : "";
+    const match = text.match(/(\d[\d.,]*)\s*\+?\s*(properties|property|acomodações|hoteis|hotéis)/i);
+    if (!match) continue;
+    const parsed = Number.parseInt(match[1].replace(/[.,]/g, ""), 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  return null;
+}
+
 export function useHotelscomSearch(
   params: HotelscomSearchInput | null,
   enabled: boolean = true,
@@ -698,7 +714,7 @@ export function useHotelscomSearch(
         ) ?? [];
       return {
         cards: listings,
-        totalCount: envelope?.data?.pagination?.totalCount ?? null,
+        totalCount: extractHotelscomTotal(envelope?.data),
         cache_hit: !!envelope?.__cache,
         raw: envelope?.data,
       };

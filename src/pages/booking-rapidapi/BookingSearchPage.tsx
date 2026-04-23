@@ -78,6 +78,20 @@ interface SearchParams {
   rooms: number;
 }
 
+function extractHotelscomTotalLabel(raw: unknown): string | null {
+  const messages = Array.isArray((raw as { summary?: { resultMessages?: Array<{ text?: string }> } } | undefined)?.summary?.resultMessages)
+    ? (raw as { summary?: { resultMessages?: Array<{ text?: string }> } }).summary?.resultMessages ?? []
+    : [];
+
+  for (const item of messages) {
+    const text = typeof item?.text === "string" ? item.text.trim() : "";
+    const match = text.match(/(\d[\d.,]*\+?)\s*(properties|property|acomodações|hoteis|hotéis)/i);
+    if (match) return match[1];
+  }
+
+  return null;
+}
+
 export default function BookingSearchPage() {
   const [destination, setDestination] = useState<BookingDestination | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
@@ -252,9 +266,14 @@ export default function BookingSearchPage() {
   // Totais reais retornados pelas APIs (todas as páginas)
   const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
   const hotelscomTotal = hotelscomData?.totalCount ?? hotelscomPageCount;
+  const hotelscomTotalLabel = extractHotelscomTotalLabel(hotelscomData?.raw) ?? hotelscomTotal.toLocaleString("pt-BR");
   const grandTotal =
     (sources.booking ? bookingTotal : 0) +
     (sources.hotelscom ? hotelscomTotal : 0);
+  const grandTotalLabel =
+    sources.hotelscom && hotelscomTotalLabel.includes("+")
+      ? `${grandTotal.toLocaleString("pt-BR")}+`
+      : grandTotal.toLocaleString("pt-BR");
 
   const isAnyLoading =
     (sources.booking && bookingLoading) ||
@@ -391,7 +410,7 @@ export default function BookingSearchPage() {
           {searchParams && (
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{grandTotal.toLocaleString("pt-BR")}</span>{" "}
+                <span className="font-semibold text-foreground">{grandTotalLabel}</span>{" "}
                 {grandTotal === 1 ? "hotel encontrado" : "hotéis encontrados"}
                 {" em "}
                 <span className="font-medium text-foreground">{searchParams.destination.label}</span>
@@ -399,7 +418,7 @@ export default function BookingSearchPage() {
                   <span className="ml-2 text-xs">
                     (<span className="text-blue-600 dark:text-blue-400">Booking: {bookingTotal.toLocaleString("pt-BR")}</span>
                     {" · "}
-                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomTotal.toLocaleString("pt-BR")}</span>)
+                    <span className="text-rose-600 dark:text-rose-400">Hotels.com: {hotelscomTotalLabel}</span>)
                   </span>
                 )}
                 {pageCount < grandTotal && (
