@@ -322,15 +322,17 @@ export default function BookingSearchPage() {
       </Card>
 
       <div className="flex gap-6">
-        {searchParams && sources.booking && (
+        {searchParams && (
           <aside className="hidden lg:block w-72 shrink-0">
             <div className="sticky top-4">
               <HotelFiltersSidebar
                 filters={filtersData?.filters}
-                isLoading={filtersLoading}
+                isLoading={filtersLoading && sources.booking}
                 state={filtersState}
                 onStateChange={setFiltersState}
                 filteredCount={bookingData?.totalHotels ?? null}
+                nameQuery={nameQuery}
+                onNameQueryChange={setNameQuery}
               />
             </div>
           </aside>
