@@ -21,6 +21,9 @@ import type {
   FlightSort,
   SearchFlightsResult,
 } from "@/components/booking-rapidapi/flightTypes";
+import type {
+  HotelscomLodgingCard,
+} from "@/components/booking-rapidapi/unifiedHotelTypes";
 
 const FUNCTION_NAME = "booking-rapidapi";
 

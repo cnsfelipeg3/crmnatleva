@@ -15,6 +15,10 @@ const corsHeaders = {
 const RAPIDAPI_HOST = "booking-com15.p.rapidapi.com";
 const RAPIDAPI_BASE = `https://${RAPIDAPI_HOST}`;
 
+// Host alternativo pra Hotels.com (via RapidAPI, provider ntd119)
+const HOTELSCOM_HOST = "hotels-com6.p.rapidapi.com";
+const HOTELSCOM_BASE = `https://${HOTELSCOM_HOST}`;
+
 // TTL (em segundos) por ação — balanceia frescor e consumo de requests
 const CACHE_TTL: Record<string, number> = {
   searchDestinations: 60 * 60 * 24 * 7, // 7 dias
@@ -25,6 +29,10 @@ const CACHE_TTL: Record<string, number> = {
   roomAvailability: 60 * 30,            // 30 min
   getRoomList: 60 * 30,                 // 30 min — lista rica de ofertas
   getHotelFilter: 60 * 60 * 6,          // 6h — filtros variam pouco
+  // ---- Hotels.com (provider ntd119) ----
+  hotelscomAutocomplete: 60 * 60 * 24 * 7, // 7 dias
+  hotelscomSearch: 60 * 60,                // 1h
+  hotelscomDetails: 60 * 60 * 24,          // 1 dia
   // ---- Voos ----
   searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
   searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
@@ -44,6 +52,10 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   roomAvailability: "/api/v1/hotels/getAvailability",
   getRoomList: "/api/v1/hotels/getRoomList",
   getHotelFilter: "/api/v1/hotels/getFilter",
+  // ---- Hotels.com (host diferente, roteado via HOTELSCOM_HOST) ----
+  hotelscomAutocomplete: "/hotels/auto-complete",
+  hotelscomSearch: "/hotels/search",
+  hotelscomDetails: "/hotels/details",
   // ---- Voos ----
   searchFlightDestinations: "/api/v1/flights/searchDestination",
   searchFlights: "/api/v1/flights/searchFlights",
@@ -136,22 +148,34 @@ async function logCall(payload: {
   }
 }
 
+/** Actions que devem ser roteadas pro host do Hotels.com (ntd119) */
+const HOTELSCOM_ACTIONS = new Set([
+  "hotelscomAutocomplete",
+  "hotelscomSearch",
+  "hotelscomDetails",
+]);
+
 async function callRapidApi(
   endpoint: string,
   params: Record<string, string>,
+  action?: string,
 ): Promise<{ data: unknown; status: number }> {
   const apiKey = Deno.env.get("RAPIDAPI_KEY");
   if (!apiKey) {
     throw new Error("RAPIDAPI_KEY não configurado.");
   }
 
+  const useHotelscom = action ? HOTELSCOM_ACTIONS.has(action) : false;
+  const host = useHotelscom ? HOTELSCOM_HOST : RAPIDAPI_HOST;
+  const base = useHotelscom ? HOTELSCOM_BASE : RAPIDAPI_BASE;
+
   const qs = new URLSearchParams(params).toString();
-  const url = `${RAPIDAPI_BASE}${endpoint}${qs ? `?${qs}` : ""}`;
+  const url = `${base}${endpoint}${qs ? `?${qs}` : ""}`;
 
   const res = await fetch(url, {
     method: "GET",
     headers: {
-      "x-rapidapi-host": RAPIDAPI_HOST,
+      "x-rapidapi-host": host,
       "x-rapidapi-key": apiKey,
       "Content-Type": "application/json",
     },
@@ -265,6 +289,46 @@ function buildParams(
         languagecode: String(input.languagecode ?? defaults.locale),
       };
     }
+    // ============================================================
+    // Hotels.com (provider ntd119 via RapidAPI)
+    // ============================================================
+
+    case "hotelscomAutocomplete": {
+      assertParams(input, ["query"]);
+      return {
+        query: String(input.query),
+        locale: String(input.locale ?? "pt_BR"),
+      };
+    }
+
+    case "hotelscomSearch": {
+      assertParams(input, ["locationId", "checkinDate", "checkoutDate"]);
+      const p: Record<string, string> = {
+        locationId: String(input.locationId),
+        checkinDate: String(input.checkinDate),
+        checkoutDate: String(input.checkoutDate),
+        adults: String(input.adults ?? 2),
+        currency: String(input.currency ?? "BRL"),
+        locale: String(input.locale ?? "pt_BR"),
+        sort_order: String(input.sort_order ?? "RECOMMENDED"),
+        page_number: String(input.page_number ?? 1),
+      };
+      if (input.children_ages) p.children_ages = String(input.children_ages);
+      if (input.price_min) p.price_min = String(input.price_min);
+      if (input.price_max) p.price_max = String(input.price_max);
+      if (input.star_rating) p.star_rating = String(input.star_rating);
+      return p;
+    }
+
+    case "hotelscomDetails": {
+      assertParams(input, ["hotel_id"]);
+      return {
+        hotel_id: String(input.hotel_id),
+        locale: String(input.locale ?? "pt_BR"),
+        currency: String(input.currency ?? "BRL"),
+      };
+    }
+
     case "getHotelFilter": {
       assertParams(input, ["dest_id", "search_type", "arrival_date", "departure_date"]);
       return {
@@ -407,7 +471,7 @@ serve(async (req) => {
     }
 
     const endpoint = ACTION_ENDPOINTS[action];
-    const { data, status } = await callRapidApi(endpoint, params);
+    const { data, status } = await callRapidApi(endpoint, params, action);
 
     if (status >= 400) {
       await logCall({
