@@ -17,7 +17,7 @@ import {
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 
 const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
-const TravelGlobe = lazy(() => import("@/components/globe/TravelGlobe"));
+import LazyViewportGlobe from "@/components/globe/LazyViewportGlobe";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
@@ -417,13 +417,7 @@ export default function PortalDashboard() {
               </div>
               <span className="text-[10px] text-accent bg-accent/10 px-2.5 py-1 rounded-full font-mono font-bold ml-auto">3D</span>
             </div>
-            <Suspense fallback={
-              <div className="h-[500px] rounded-2xl bg-card/40 border border-border/20 flex items-center justify-center">
-                <div className="w-10 h-10 border-2 border-accent/20 border-t-accent rounded-full animate-spin" />
-              </div>
-            }>
-              <TravelGlobe className="h-[500px] lg:h-[600px] w-full" />
-            </Suspense>
+            <LazyViewportGlobe className="h-[500px] lg:h-[600px] w-full" />
           </motion.section>
 
           {/* Recent trips preview — just top 3 upcoming */}
