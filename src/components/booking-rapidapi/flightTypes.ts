@@ -306,3 +306,121 @@ export const FEATURE_CATEGORY_LABELS: Record<string, string> = {
   MILES: "Milhas",
   REFUND: "Reembolso",
 };
+
+// ------------------------------------------------------------
+// Aggregation (filtros possíveis) que vem na resposta searchFlights
+// ------------------------------------------------------------
+
+export interface AirlineAggregation {
+  name: string;
+  iataCode: string;
+  logoUrl?: string;
+  count: number;
+  minPrice?: MoneyAmount;
+  minPricePerAdult?: MoneyAmount;
+}
+
+export interface StopsAggregation {
+  numberOfStops: number;
+  count: number;
+  minPrice?: MoneyAmount;
+  minPricePerAdult?: MoneyAmount;
+  cheapestAirline?: CarrierData;
+}
+
+export interface TimeSlotCount {
+  start: string;
+  end: string;
+  count: number;
+}
+
+export interface FlightTimesAggregation {
+  departure?: TimeSlotCount[];
+  arrival?: TimeSlotCount[];
+}
+
+export interface DurationAggregation {
+  min: number;
+  max: number;
+  durationType: "JOURNEY" | "LAYOVER" | string;
+  enabled: boolean;
+  paramName: string;
+}
+
+export interface BudgetAggregation {
+  paramName: string;
+  min: MoneyAmount;
+  max: MoneyAmount;
+}
+
+export interface BaggageAggregation {
+  name: string;
+  count: number;
+  paramValue?: string;
+}
+
+export interface AirportAggregation {
+  code: string;
+  name?: string;
+  count: number;
+  type?: "departure" | "arrival";
+}
+
+export interface FlightsAggregation {
+  totalCount?: number;
+  filteredTotalCount?: number;
+  airlines?: AirlineAggregation[];
+  stops?: StopsAggregation[];
+  flightTimes?: FlightTimesAggregation[];
+  duration?: DurationAggregation[];
+  budget?: BudgetAggregation;
+  baggage?: BaggageAggregation[];
+  airports?: AirportAggregation[];
+  flexibleTicket?: { count: number; label?: string };
+}
+
+export interface FlightFiltersState {
+  airlines: Set<string>;
+  stops: Set<number>;
+  maxBudget?: number;
+  maxDuration?: number;
+  maxLayoverDuration?: number;
+  departureTimeSlots: Set<string>;
+  arrivalTimeSlots: Set<string>;
+  baggage: Set<string>;
+  flexibleTicketOnly?: boolean;
+  departureAirports: Set<string>;
+  arrivalAirports: Set<string>;
+}
+
+export function emptyFlightFiltersState(): FlightFiltersState {
+  return {
+    airlines: new Set(),
+    stops: new Set(),
+    maxBudget: undefined,
+    maxDuration: undefined,
+    maxLayoverDuration: undefined,
+    departureTimeSlots: new Set(),
+    arrivalTimeSlots: new Set(),
+    baggage: new Set(),
+    flexibleTicketOnly: false,
+    departureAirports: new Set(),
+    arrivalAirports: new Set(),
+  };
+}
+
+export function flightFiltersIsEmpty(s: FlightFiltersState): boolean {
+  return (
+    s.airlines.size === 0 &&
+    s.stops.size === 0 &&
+    s.maxBudget === undefined &&
+    s.maxDuration === undefined &&
+    s.maxLayoverDuration === undefined &&
+    s.departureTimeSlots.size === 0 &&
+    s.arrivalTimeSlots.size === 0 &&
+    s.baggage.size === 0 &&
+    !s.flexibleTicketOnly &&
+    s.departureAirports.size === 0 &&
+    s.arrivalAirports.size === 0
+  );
+}
