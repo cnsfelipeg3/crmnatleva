@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format, addDays } from "date-fns";
 import {
   Search,
@@ -22,6 +22,7 @@ import {
 } from "@/components/booking-rapidapi/FlightSearchFilters";
 import { FlightResultsList } from "@/components/booking-rapidapi/FlightResultsList";
 import { FlightDetailDrawer } from "@/components/booking-rapidapi/FlightDetailDrawer";
+import { FlightsPagination } from "@/components/booking-rapidapi/FlightsPagination";
 import { useSearchFlights } from "@/hooks/useBookingRapidApi";
 import type {
   CabinClass,
@@ -75,6 +76,14 @@ export default function FlightsSearchPage() {
 
   const [searchParams, setSearchParams] = useState<SearchSnapshot | null>(null);
 
+  // Paginação — cada troca de página dispara +1 request
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Reset pra página 1 quando busca ou sort muda
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchParams, sort]);
+
   const [selectedOffer, setSelectedOffer] = useState<FlightOffer | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -89,7 +98,7 @@ export default function FlightsSearchPage() {
           children: searchParams.children,
           cabinClass: searchParams.cabinClass,
           sort,
-          pageNo: 1,
+          pageNo: currentPage,
           currency_code: "BRL",
         }
       : null,
@@ -238,8 +247,23 @@ export default function FlightsSearchPage() {
       {data && data.offers.length > 0 && (
         <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
           <div className="text-sm text-muted-foreground">
-            <strong className="text-foreground">{data.offers.length}</strong>{" "}
-            {data.offers.length === 1 ? "voo encontrado" : "voos encontrados"}
+            {data.totalCount !== null ? (
+              <>
+                <strong className="text-foreground">
+                  {data.totalCount.toLocaleString("pt-BR")}
+                </strong>{" "}
+                {data.totalCount === 1 ? "voo encontrado" : "voos encontrados"}
+              </>
+            ) : (
+              <>
+                <strong className="text-foreground">
+                  {data.offers.length}
+                </strong>{" "}
+                {data.offers.length === 1
+                  ? "voo encontrado"
+                  : "voos encontrados"}
+              </>
+            )}
             {searchParams && (
               <>
                 {" de "}
