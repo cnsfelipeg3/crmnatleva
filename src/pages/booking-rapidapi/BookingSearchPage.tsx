@@ -361,23 +361,26 @@ export default function BookingSearchPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                {sources.booking && (
-                  <Sheet>
-                    <SheetTrigger asChild>
-                      <Button variant="outline" size="sm" className="lg:hidden gap-2">
-                        <SlidersHorizontal className="h-4 w-4" />
-                        Filtros
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="left" className="w-80 overflow-y-auto">
-                      <SheetTitle className="mb-4">Filtros</SheetTitle>
-                      <HotelFiltersSidebar
-                        filters={filtersData?.filters}
-                        isLoading={filtersLoading}
-                        state={filtersState}
-                        onStateChange={setFiltersState}
-                        filteredCount={bookingData?.totalHotels ?? null}
-                      />
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button variant="outline" size="sm" className="lg:hidden gap-2">
+                      <SlidersHorizontal className="h-4 w-4" />
+                      Filtros
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-80 overflow-y-auto">
+                    <SheetTitle className="mb-4">Filtros</SheetTitle>
+                    <HotelFiltersSidebar
+                      filters={filtersData?.filters}
+                      isLoading={filtersLoading && sources.booking}
+                      state={filtersState}
+                      onStateChange={setFiltersState}
+                      filteredCount={bookingData?.totalHotels ?? null}
+                      nameQuery={nameQuery}
+                      onNameQueryChange={setNameQuery}
+                    />
+                  </SheetContent>
+                </Sheet>
                     </SheetContent>
                   </Sheet>
                 )}
