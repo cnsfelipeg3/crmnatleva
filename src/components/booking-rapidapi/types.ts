@@ -10,7 +10,10 @@ export type BookingAction =
   | "roomAvailability"
   | "getRoomList"
   | "getCurrency"
-  | "getLanguages";
+  | "getLanguages"
+  | "hotelscomAutocomplete"
+  | "hotelscomSearch"
+  | "hotelscomDetails";
 
 export interface BookingDestination {
   dest_id: string;
