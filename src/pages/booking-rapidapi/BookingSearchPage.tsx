@@ -199,8 +199,11 @@ export default function BookingSearchPage() {
     if (sources.hotelscom && hotelscomData?.cards) {
       out.push(...hotelscomData.cards.map(normalizeHotelscomHotel));
     }
-    return out;
-  }, [sources, bookingData?.hotels, hotelscomData?.cards]);
+    // Apply client-side name filter
+    const q = nameQuery.trim().toLowerCase();
+    if (!q) return out;
+    return out.filter((h) => h.name?.toLowerCase().includes(q));
+  }, [sources, bookingData?.hotels, hotelscomData?.cards, nameQuery]);
 
   const bookingCount = bookingData?.hotels?.length ?? 0;
   const hotelscomCount = hotelscomData?.cards?.length ?? 0;
