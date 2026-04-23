@@ -192,6 +192,9 @@ export interface SearchFlightsResult {
   aggregation?: Record<string, unknown>;
   searchId?: string;
   cache_hit: boolean;
+  totalCount: number | null;
+  filteredTotalCount: number | null;
+  pageSize: number;
 }
 
 // ------------------------------------------------------------
