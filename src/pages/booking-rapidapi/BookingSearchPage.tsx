@@ -380,10 +380,11 @@ export default function BookingSearchPage() {
         {searchParams && sources.booking && (
           <aside className="hidden lg:block w-72 shrink-0">
             <HotelFiltersSidebar
-              filtersData={filtersData}
+              filters={filtersData?.filters}
               isLoading={filtersLoading}
-              filtersState={filtersState}
-              onFiltersChange={setFiltersState}
+              state={filtersState}
+              onStateChange={setFiltersState}
+              filteredCount={filtersData?.pagination?.nbResultsTotal ?? null}
             />
           </aside>
         )}
@@ -418,10 +419,11 @@ export default function BookingSearchPage() {
                   <SheetContent side="left" className="w-80 p-4 overflow-y-auto">
                     <SheetTitle className="mb-3">Filtros</SheetTitle>
                     <HotelFiltersSidebar
-                      filtersData={filtersData}
+                      filters={filtersData?.filters}
                       isLoading={filtersLoading}
-                      filtersState={filtersState}
-                      onFiltersChange={setFiltersState}
+                      state={filtersState}
+                      onStateChange={setFiltersState}
+                      filteredCount={filtersData?.pagination?.nbResultsTotal ?? null}
                     />
                   </SheetContent>
                 </Sheet>
@@ -505,9 +507,9 @@ export default function BookingSearchPage() {
           {bookingData && bookingData.hotels.length > 0 && sources.booking && (
             <HotelsPagination
               currentPage={currentPage}
+              totalHotels={filtersData?.pagination?.nbResultsTotal ?? null}
+              pageSize={20}
               onPageChange={setCurrentPage}
-              hasMore={bookingData.hotels.length >= 20}
-              isLoading={bookingLoading}
             />
           )}
         </div>
