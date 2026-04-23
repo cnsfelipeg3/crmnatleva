@@ -1,28 +1,9 @@
 // Extract Hotel/Room data from any public URL using Firecrawl + Lovable AI
+// Aggressive quality filtering, hi-res upgrade, smart dedup.
 import { corsHeaders } from "@supabase/supabase-js/cors";
 
 const FIRECRAWL_V2 = "https://api.firecrawl.dev/v2";
 const LOVABLE_AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-
-interface ExtractResult {
-  success: boolean;
-  data?: {
-    name?: string;
-    room_type?: string;
-    description?: string;
-    amenities?: string[];
-    size_sqm?: string;
-    capacity?: string;
-    bed_type?: string;
-    location?: string;
-    stars?: string;
-    meal_plan?: string;
-    photos?: { url: string; description?: string; category?: string }[];
-    raw_extras?: Record<string, unknown>;
-  };
-  source_url?: string;
-  error?: string;
-}
 
 const SCHEMA = {
   name: "extract_accommodation",
@@ -31,31 +12,119 @@ const SCHEMA = {
     type: "object",
     properties: {
       name: { type: "string", description: "Nome do hotel ou propriedade" },
-      room_type: { type: "string", description: "Nome/tipo do quarto (ex: 'Deluxe King Suite com vista mar')" },
-      description: { type: "string", description: "Descrição completa em português (3-6 frases)" },
-      amenities: { type: "array", items: { type: "string" }, description: "Comodidades em português (Wi-Fi, varanda, banheira de hidromassagem...)" },
-      size_sqm: { type: "string", description: "Tamanho em m² (apenas número como string, ex: '45')" },
-      capacity: { type: "string", description: "Capacidade de hóspedes (ex: '2 adultos + 1 criança')" },
-      bed_type: { type: "string", description: "Tipo de cama (ex: 'King size', '2 camas de solteiro')" },
-      location: { type: "string", description: "Localização/endereço resumido" },
+      room_type: { type: "string", description: "Nome/tipo do quarto exato como aparece na página (ex: 'Lagoon Villa with Pool')" },
+      description: { type: "string", description: "Descrição completa do quarto em português brasileiro (4-8 frases ricas, mencionando vista, espaço, diferenciais, comodidades destaque)" },
+      amenities: { type: "array", items: { type: "string" }, description: "Lista de comodidades do quarto em português (Wi-Fi, varanda, banheira de hidromassagem, vista mar, piscina privativa, etc)" },
+      size_sqm: { type: "string", description: "Tamanho em m² (apenas o número como string, ex: '120'). Procure por 'm²', 'sqm', 'square meters', 'tamanho', 'size'." },
+      capacity: { type: "string", description: "Capacidade de hóspedes (ex: '2 adultos', '2 adultos + 1 criança', 'até 4 pessoas')" },
+      bed_type: { type: "string", description: "Tipo de cama (ex: 'King size', '2 camas de solteiro', 'Queen + sofá-cama')" },
+      view: { type: "string", description: "Vista/posição (ex: 'Vista para o mar', 'Frente para a lagoa', 'Sobre as águas')" },
+      location: { type: "string", description: "Localização/endereço resumido do hotel" },
       stars: { type: "string", description: "Categoria em estrelas (1-5)" },
-      meal_plan: { type: "string", description: "Regime alimentar (ex: 'Café da manhã incluso', 'All-inclusive')" },
-      photos: {
+      meal_plan: { type: "string", description: "Regime alimentar (ex: 'Café da manhã incluso', 'All-inclusive', 'Meia pensão')" },
+      photo_urls: {
         type: "array",
-        description: "URLs absolutas de fotos do quarto/hotel encontradas na página",
-        items: {
-          type: "object",
-          properties: {
-            url: { type: "string" },
-            description: { type: "string" },
-            category: { type: "string", description: "quarto, banheiro, vista, area_comum, restaurante, piscina, spa, fachada, outro" },
-          },
-          required: ["url"],
-        },
+        description: "URLs das melhores fotos do quarto/hotel (apenas fotos reais do quarto/propriedade — NUNCA logos, badges como 'Genius', ícones, avatars ou banners promocionais). Selecione apenas URLs da lista fornecida.",
+        items: { type: "string" },
       },
     },
+    required: ["photo_urls"],
   },
 };
+
+// ── URL filters: block logos, badges, icons, tracking pixels ──
+const BLOCK_PATTERNS = [
+  /genius/i, /loyalty/i, /badge/i, /logo/i, /favicon/i, /sprite/i,
+  /avatar/i, /flag[s]?\//i, /icon/i, /pixel/i, /tracking/i,
+  /\/static\//i, /\/assets\//i, /placeholder/i, /spinner/i, /loading/i,
+  /1x1\./i, /blank\./i, /transparent\./i,
+  /\/ui\//i, /\/svg\//i, /\.svg(\?|$)/i, /\.gif(\?|$)/i,
+  /tripadvisor.*\/img\//i, /trustyou/i, /booking_logos/i,
+  /reviewer/i, /profile_pictures/i, /user_photos/i,
+];
+
+function isBlockedUrl(u: string): boolean {
+  return BLOCK_PATTERNS.some((re) => re.test(u));
+}
+
+// ── Hi-res upgrades for known CDNs ──
+function upgradeResolution(u: string): string {
+  let out = u;
+  // Booking: cf.bstatic.com/xdata/images/hotel/square60/... → max1024x768
+  out = out.replace(/\/(square\d+|max\d+|thumb|small|sm|xs)\//gi, "/max1024x768/");
+  out = out.replace(/[?&]w=\d+/g, "");
+  out = out.replace(/[?&]h=\d+/g, "");
+  out = out.replace(/[?&]size=\w+/g, "");
+  // Hoteis.com / Expedia: _b.jpg, _t.jpg → _z.jpg (largest)
+  out = out.replace(/_(t|s|b|m|y)\.(jpe?g|png|webp)(\?|$)/i, "_z.$2$3");
+  // Decolar/Despegar: ?w=... or /resize/...
+  out = out.replace(/\/resize\/[^/]+\//gi, "/");
+  // Generic resize params
+  out = out.replace(/[?&](width|height|quality|q|wh|fit|crop)=[^&]+/gi, "");
+  // Cleanup leftover ? or &
+  out = out.replace(/\?&/, "?").replace(/[?&]$/, "");
+  return out;
+}
+
+// ── Dedup by "core" path (ignoring resolution segments) ──
+function dedupKey(u: string): string {
+  try {
+    const url = new URL(u);
+    let path = url.pathname.toLowerCase();
+    path = path.replace(/\/(square\d+|max\d+x?\d*|thumb|small|sm|xs|large|xl|original)\//g, "/");
+    path = path.replace(/_(t|s|b|m|y|z|l|xl|orig)\.(jpe?g|png|webp)$/i, ".$2");
+    path = path.replace(/-\d+x\d+\./g, ".");
+    return `${url.host}${path}`;
+  } catch {
+    return u;
+  }
+}
+
+function extractImageUrls(html: string, baseUrl: string): string[] {
+  const urls = new Set<string>();
+  let origin = "";
+  try { origin = new URL(baseUrl).origin; } catch { /* ignore */ }
+
+  const push = (raw: string) => {
+    if (!raw) return;
+    let abs = raw.trim();
+    if (abs.startsWith("//")) abs = `https:${abs}`;
+    else if (abs.startsWith("/") && origin) abs = `${origin}${abs}`;
+    if (!/^https?:\/\//i.test(abs)) return;
+    if (!/\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(abs)) return;
+    if (isBlockedUrl(abs)) return;
+    urls.add(abs);
+  };
+
+  // <img src/data-src/data-lazy>
+  const imgRe = /<img\b[^>]*?(?:src|data-src|data-lazy-src|data-original|data-hires|data-large|data-zoom)\s*=\s*["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = imgRe.exec(html)) !== null) push(m[1]);
+
+  // srcset
+  const srcsetRe = /srcset\s*=\s*["']([^"']+)["']/gi;
+  while ((m = srcsetRe.exec(html)) !== null) {
+    const candidates = m[1].split(",").map((p) => {
+      const parts = p.trim().split(/\s+/);
+      const url = parts[0];
+      const widthPart = parts[1] || "";
+      const w = parseInt(widthPart.replace(/\D/g, ""), 10) || 0;
+      return { url, w };
+    });
+    candidates.sort((a, b) => b.w - a.w);
+    if (candidates[0]) push(candidates[0].url);
+  }
+
+  // background-image
+  const bgRe = /background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/gi;
+  while ((m = bgRe.exec(html)) !== null) push(m[1]);
+
+  // JSON-LD / inline JSON: contentUrl, image, photo
+  const jsonImgRe = /["'](?:contentUrl|image|photo|url)["']\s*:\s*["'](https?:\/\/[^"']+\.(?:jpe?g|png|webp|avif)[^"']*)["']/gi;
+  while ((m = jsonImgRe.exec(html)) !== null) push(m[1]);
+
+  return Array.from(urls);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -74,8 +143,9 @@ Deno.serve(async (req) => {
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY não configurado");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado");
 
-    // 1) Scrape via Firecrawl (markdown + html + links)
     console.log("[extract-from-url] Scraping:", url);
+
+    // 1) Primary scrape
     const scrapeRes = await fetch(`${FIRECRAWL_V2}/scrape`, {
       method: "POST",
       headers: {
@@ -86,7 +156,7 @@ Deno.serve(async (req) => {
         url,
         formats: ["markdown", "html", "links"],
         onlyMainContent: false,
-        waitFor: 2500,
+        waitFor: 4000,
       }),
     });
 
@@ -102,31 +172,41 @@ Deno.serve(async (req) => {
     const html: string = doc.html ?? "";
     const links: string[] = Array.isArray(doc.links) ? doc.links : [];
 
-    // 2) Extract image URLs from HTML (img src + srcset + data-src + lazy)
-    const imgUrls = new Set<string>();
-    const origin = new URL(url).origin;
-    const imgRegex = /<img\b[^>]*?(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+)["'][^>]*>/gi;
-    const srcsetRegex = /srcset\s*=\s*["']([^"']+)["']/gi;
-    const styleBgRegex = /background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/gi;
-    let m: RegExpExecArray | null;
-    const pushUrl = (raw: string) => {
-      try {
-        const abs = raw.startsWith("//") ? `https:${raw}` : raw.startsWith("/") ? `${origin}${raw}` : raw;
-        if (/^https?:\/\//i.test(abs) && /\.(jpe?g|png|webp|avif)(\?|$)/i.test(abs)) imgUrls.add(abs);
-      } catch { /* ignore */ }
-    };
-    while ((m = imgRegex.exec(html)) !== null) pushUrl(m[1]);
-    while ((m = srcsetRegex.exec(html)) !== null) {
-      m[1].split(",").forEach(part => pushUrl(part.trim().split(/\s+/)[0]));
+    // 2) Collect image URLs (HTML + links from any embedded JSON)
+    let allImages = extractImageUrls(html, url);
+
+    // Also scan the markdown for image markdown syntax  ![](url)
+    const mdImgRe = /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g;
+    let mm: RegExpExecArray | null;
+    while ((mm = mdImgRe.exec(markdown)) !== null) {
+      const u = mm[1];
+      if (/\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(u) && !isBlockedUrl(u)) {
+        allImages.push(u);
+      }
     }
-    while ((m = styleBgRegex.exec(html)) !== null) pushUrl(m[1]);
-    links.forEach(l => { if (typeof l === "string") pushUrl(l); });
+    // From discovered links
+    for (const l of links) {
+      if (typeof l === "string" && /\.(jpe?g|png|webp|avif)(\?|$|#)/i.test(l) && !isBlockedUrl(l)) {
+        allImages.push(l);
+      }
+    }
 
-    const candidatePhotos = Array.from(imgUrls).slice(0, 60);
+    // 3) Upgrade resolution + dedupe by core key (keep first/longest URL per key)
+    const byKey = new Map<string, string>();
+    for (const raw of allImages) {
+      const upgraded = upgradeResolution(raw);
+      const key = dedupKey(upgraded);
+      const existing = byKey.get(key);
+      if (!existing || upgraded.length > existing.length) {
+        byKey.set(key, upgraded);
+      }
+    }
+    const candidatePhotos = Array.from(byKey.values()).slice(0, 80);
 
-    // 3) Send to Lovable AI for structured extraction
-    const truncatedMarkdown = markdown.slice(0, 18000);
-    console.log("[extract-from-url] Calling AI with", candidatePhotos.length, "candidate images,", truncatedMarkdown.length, "chars md");
+    console.log("[extract-from-url] candidates:", candidatePhotos.length, "md:", markdown.length);
+
+    // 4) Send to AI for structured extraction (only ask for URLs from the candidate list)
+    const truncatedMarkdown = markdown.slice(0, 22000);
 
     const aiRes = await fetch(LOVABLE_AI_URL, {
       method: "POST",
@@ -135,16 +215,23 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [
           {
             role: "system",
             content:
-              "Você é um especialista em extrair dados estruturados de páginas de hotéis/quartos (Booking, Decolar, Expedia, Hoteis.com, Azul Viagens, sites oficiais, etc.). Responda APENAS chamando a função extract_accommodation. Traduza descrição e comodidades para português brasileiro. Inclua TODAS as fotos relevantes do quarto/hotel a partir da lista fornecida. Não invente URLs.",
+              "Você é um especialista em extrair dados de páginas de hotéis/quartos (Booking, Decolar, Hoteis.com, Expedia, Azul Viagens, sites oficiais). Responda APENAS chamando a função extract_accommodation. " +
+              "Regras CRÍTICAS para fotos: " +
+              "1) Selecione APENAS URLs presentes na lista 'FOTOS CANDIDATAS'. NUNCA invente URLs. " +
+              "2) PROIBIDO incluir: logos (especialmente 'Genius' do Booking), badges, ícones, banners promocionais, fotos de avatar/usuários, fotos de comida genérica não relacionada ao hotel, mapas. " +
+              "3) Inclua TODAS as fotos reais do quarto/hotel/propriedade — geralmente entre 15 e 60 fotos. Quanto mais melhor, desde que sejam fotos legítimas. " +
+              "4) Priorize fotos da acomodação específica (quarto, banheiro, varanda, vista, piscina privativa, sala). " +
+              "5) Traduza descrição/comodidades para português brasileiro fluente. " +
+              "6) Extraia m², capacidade, tipo de cama e vista SEMPRE que estiverem na página.",
           },
           {
             role: "user",
-            content: `URL: ${url}\n\n=== CONTEÚDO DA PÁGINA (markdown) ===\n${truncatedMarkdown}\n\n=== FOTOS CANDIDATAS (URLs absolutas) ===\n${candidatePhotos.join("\n")}`,
+            content: `URL: ${url}\n\n=== CONTEÚDO DA PÁGINA (markdown) ===\n${truncatedMarkdown}\n\n=== FOTOS CANDIDATAS (${candidatePhotos.length} URLs absolutas em alta resolução) ===\n${candidatePhotos.join("\n")}`,
           },
         ],
         tools: [{ type: "function", function: SCHEMA }],
@@ -167,27 +254,52 @@ Deno.serve(async (req) => {
 
     const parsed = JSON.parse(argsStr);
 
-    // Sanitize photos: ensure unique + valid URLs
+    // 5) Validate AI-selected URLs against candidate list (the AI sometimes hallucinates)
+    const candidateSet = new Set(candidatePhotos);
+    const aiUrls: string[] = Array.isArray(parsed.photo_urls) ? parsed.photo_urls : [];
+    const validAiUrls = aiUrls.filter((u) => typeof u === "string" && candidateSet.has(u) && !isBlockedUrl(u));
+
+    // 6) Fallback: if AI returned too few, supplement with top candidates
+    let finalUrls = validAiUrls;
+    if (finalUrls.length < 8) {
+      const supplement = candidatePhotos.filter((u) => !finalUrls.includes(u)).slice(0, 30 - finalUrls.length);
+      finalUrls = [...finalUrls, ...supplement];
+    }
+
+    // 7) Final dedup
     const seen = new Set<string>();
-    const photos = (parsed.photos || [])
-      .filter((p: any) => p?.url && /^https?:\/\//i.test(p.url))
-      .filter((p: any) => { if (seen.has(p.url)) return false; seen.add(p.url); return true; })
-      .map((p: any) => ({
-        url: p.url,
-        description: p.description || "",
-        category: p.category || "outro",
+    const photos = finalUrls
+      .filter((u) => { const k = dedupKey(u); if (seen.has(k)) return false; seen.add(k); return true; })
+      .map((u) => ({
+        url: u,
+        description: "",
+        category: "outro",
         source: "url_extract",
       }));
 
-    const result: ExtractResult = {
-      success: true,
-      source_url: url,
-      data: { ...parsed, photos },
-    };
+    console.log("[extract-from-url] returning", photos.length, "photos");
 
-    return new Response(JSON.stringify(result), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        source_url: url,
+        data: {
+          name: parsed.name,
+          room_type: parsed.room_type,
+          description: parsed.description,
+          amenities: parsed.amenities || [],
+          size_sqm: parsed.size_sqm,
+          capacity: parsed.capacity,
+          bed_type: parsed.bed_type,
+          view: parsed.view,
+          location: parsed.location,
+          stars: parsed.stars,
+          meal_plan: parsed.meal_plan,
+          photos,
+        },
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err: any) {
     console.error("[extract-from-url] Fatal:", err);
     return new Response(JSON.stringify({ success: false, error: err.message || "Erro desconhecido" }), {

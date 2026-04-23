@@ -14,6 +14,7 @@ export interface ExtractedAccommodation {
   size_sqm?: string;
   capacity?: string;
   bed_type?: string;
+  view?: string;
   location?: string;
   stars?: string;
   meal_plan?: string;
