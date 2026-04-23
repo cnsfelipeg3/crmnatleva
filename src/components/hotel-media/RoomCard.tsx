@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Camera, Maximize2, Bed, Users, Eye, Sparkles, ExternalLink, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SmartImg } from "@/components/ui/SmartImg";
 import { buildCommercialSummary, getHighlightAmenity } from "./types";
 import { toast } from "sonner";
 import type { HotelPhoto, SectionDetail, RoomBlock } from "./types";
@@ -61,11 +62,11 @@ export default function RoomCard({ name, photos, detail, sourceUrl, getDisplayUr
       <div className="flex h-44 sm:h-48 relative">
         <div className="flex-[2] overflow-hidden bg-muted relative">
           {coverPhoto && (
-            <img
+            <SmartImg
               src={getDisplayUrl(coverPhoto.url)}
               alt={name}
+              displayWidth={320}
               className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-              loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => onImageError(coverPhoto.url)}
             />
@@ -73,11 +74,11 @@ export default function RoomCard({ name, photos, detail, sourceUrl, getDisplayUr
         </div>
         {secondPhoto && (
           <div className="flex-[1] overflow-hidden bg-muted border-l border-border/20">
-            <img
+            <SmartImg
               src={getDisplayUrl(secondPhoto.url)}
               alt={name}
+              displayWidth={160}
               className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300"
-              loading="lazy"
               referrerPolicy="no-referrer"
               onError={() => onImageError(secondPhoto.url)}
             />

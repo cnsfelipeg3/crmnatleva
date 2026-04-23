@@ -7,6 +7,7 @@ import {
   Wifi, Wind, Tv, LockKeyhole, Wine, Coffee, Droplets, Shirt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { SmartImg } from "@/components/ui/SmartImg";
 import { getPhotoTag, PHOTO_TAG_CONFIG } from "./types";
 import type { HotelPhoto, SectionDetail } from "./types";
 
@@ -182,11 +183,11 @@ export default function RoomGalleryDrawer({
                       )}
                       onClick={() => openLightbox(i)}
                     >
-                      <img
+                      <SmartImg
                         src={getDisplayUrl(photo.url)}
                         alt={photo.description || name}
+                        displayWidth={320}
                         className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-200"
-                        loading="lazy"
                         referrerPolicy="no-referrer"
                         onError={() => onImageError(photo.url)}
                       />
@@ -232,10 +233,12 @@ export default function RoomGalleryDrawer({
                 <ChevronLeft className="w-5 h-5" />
               </button>
 
-              <img
+              <SmartImg
                 key={currentPhoto.url}
                 src={getDisplayUrl(currentPhoto.url)}
                 alt={currentPhoto.description || name}
+                displayWidth={1600}
+                loading="eager"
                 className="max-w-full max-h-full object-contain rounded-lg select-none animate-in fade-in-50 duration-200"
                 draggable={false}
                 referrerPolicy="no-referrer"
@@ -292,11 +295,11 @@ export default function RoomGalleryDrawer({
                         : "border-transparent opacity-40 hover:opacity-70"
                     )}
                   >
-                    <img
+                    <SmartImg
                       src={getDisplayUrl(p.url)}
                       alt=""
+                      displayWidth={64}
                       className="w-full h-full object-cover"
-                      loading="lazy"
                       referrerPolicy="no-referrer"
                     />
                   </button>
