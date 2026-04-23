@@ -235,3 +235,128 @@ export function useRoomAvailability(
     staleTime: 10 * 60 * 1000,
   });
 }
+
+// ------------------------------------------------------------
+// Lista rica de quartos/ofertas (recomendado pra UI)
+// ------------------------------------------------------------
+
+export interface RoomPhoto {
+  photo_id: number;
+  url_original?: string;
+  url_max300?: string;
+  url_max500?: string;
+  url_max750?: string;
+  url_max1280?: string;
+  url_square60?: string;
+  url_square180?: string;
+  url_640x200?: string;
+}
+
+export interface RoomDetail {
+  highlights?: Array<{ translated_name?: string; icon?: string; id?: number }>;
+  photos?: RoomPhoto[];
+  description?: string;
+  name?: string;
+  private_bathroom_count?: number;
+  private_bathroom_highlight?: { has_highlight?: boolean };
+}
+
+export interface RoomOffer {
+  block_id: string;
+  room_id: number | string;
+  name?: string;
+  name_without_policy?: string;
+  room_name?: string;
+  nr_adults?: number;
+  nr_children?: number;
+  max_occupancy?: number | string;
+  number_of_bathrooms?: number;
+  room_surface_in_m2?: number;
+  refundable?: number;
+  refundable_until?: string;
+  breakfast_included?: number;
+  half_board?: number;
+  full_board?: number;
+  all_inclusive?: number;
+  is_last_minute_deal?: number;
+  is_flash_deal?: number;
+  is_smart_deal?: number;
+  genius_discount_percentage?: number;
+  can_reserve_free_parking?: number;
+  paymentterms?: {
+    prepayment?: {
+      type?: string;
+      simple_translation?: string;
+      description?: string;
+    };
+    cancellation?: {
+      description?: string;
+      non_refundable_anymore?: number;
+      info?: { date?: string; refundable?: number };
+    };
+  };
+  product_price_breakdown?: {
+    gross_amount?: { value?: number; currency?: string };
+    gross_amount_per_night?: { value?: number; currency?: string };
+    strikethrough_amount?: { value?: number; currency?: string };
+    excluded_amount?: { value?: number; currency?: string };
+    all_inclusive_amount?: { value?: number; currency?: string };
+  };
+  price_breakdown?: RoomOffer["product_price_breakdown"];
+  [key: string]: unknown;
+}
+
+export interface RoomListResult {
+  offers: RoomOffer[];
+  rooms: Record<string, RoomDetail>;
+  cancellation_policies: unknown[];
+  prepayment_policies: unknown[];
+  cache_hit: boolean;
+}
+
+export function useRoomList(
+  hotelId: string | number | null,
+  arrival: string | null,
+  departure: string | null,
+  extra?: { adults?: number; children_age?: string; room_qty?: number },
+) {
+  return useQuery({
+    queryKey: [
+      "booking-rapidapi",
+      "roomList",
+      hotelId,
+      arrival,
+      departure,
+      extra?.adults,
+      extra?.children_age,
+      extra?.room_qty,
+    ],
+    queryFn: async (): Promise<RoomListResult> => {
+      const envelope = await invokeBooking<{
+        data: {
+          rooms?: Record<string, RoomDetail>;
+          block?: RoomOffer[];
+          cancellation_policies?: unknown[];
+          prepayment_policies?: unknown[];
+        };
+        __cache?: boolean;
+      }>("getRoomList", {
+        hotel_id: hotelId,
+        arrival_date: arrival,
+        departure_date: departure,
+        adults: extra?.adults ?? 2,
+        children_age: extra?.children_age ?? "",
+        room_qty: extra?.room_qty ?? 1,
+      });
+      return {
+        offers: envelope?.data?.block ?? [],
+        rooms: envelope?.data?.rooms ?? {},
+        cancellation_policies: envelope?.data?.cancellation_policies ?? [],
+        prepayment_policies: envelope?.data?.prepayment_policies ?? [],
+        cache_hit: !!envelope?.__cache,
+      };
+    },
+    enabled: !!hotelId && !!arrival && !!departure,
+    staleTime: 10 * 60 * 1000,
+  });
+}
