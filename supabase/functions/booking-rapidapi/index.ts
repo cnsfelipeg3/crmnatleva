@@ -24,6 +24,7 @@ const CACHE_TTL: Record<string, number> = {
   hotelReviews: 60 * 60 * 24,           // 1 dia
   roomAvailability: 60 * 30,            // 30 min
   getRoomList: 60 * 30,                 // 30 min — lista rica de ofertas
+  getHotelFilter: 60 * 60 * 6,          // 6h — filtros variam pouco
   // ---- Voos ----
   searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
   searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
@@ -42,6 +43,7 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   hotelReviews: "/api/v1/hotels/getHotelReviews",
   roomAvailability: "/api/v1/hotels/getAvailability",
   getRoomList: "/api/v1/hotels/getRoomList",
+  getHotelFilter: "/api/v1/hotels/getFilter",
   // ---- Voos ----
   searchFlightDestinations: "/api/v1/flights/searchDestination",
   searchFlights: "/api/v1/flights/searchFlights",
@@ -180,8 +182,13 @@ function buildParams(
       return { query: String(input.query) };
     }
     case "searchHotels": {
-      assertParams(input, ["dest_id", "search_type", "arrival_date", "departure_date"]);
-      return {
+      assertParams(input, [
+        "dest_id",
+        "search_type",
+        "arrival_date",
+        "departure_date",
+      ]);
+      const params: Record<string, string> = {
         dest_id: String(input.dest_id),
         search_type: String(input.search_type),
         arrival_date: String(input.arrival_date),
@@ -195,6 +202,13 @@ function buildParams(
         languagecode: String(input.languagecode ?? defaults.locale),
         currency_code: String(input.currency_code ?? defaults.currency_code),
       };
+      if (input.sort_by) params.sort_by = String(input.sort_by);
+      if (input.categories_filter) {
+        params.categories_filter = String(input.categories_filter);
+      }
+      if (input.price_min) params.price_min = String(input.price_min);
+      if (input.price_max) params.price_max = String(input.price_max);
+      return params;
     }
     case "hotelDetails": {
       assertParams(input, ["hotel_id", "arrival_date", "departure_date"]);
@@ -241,6 +255,21 @@ function buildParams(
       assertParams(input, ["hotel_id", "arrival_date", "departure_date"]);
       return {
         hotel_id: String(input.hotel_id),
+        arrival_date: String(input.arrival_date),
+        departure_date: String(input.departure_date),
+        adults: String(input.adults ?? 2),
+        children_age: String(input.children_age ?? ""),
+        room_qty: String(input.room_qty ?? 1),
+        units: String(input.units ?? "metric"),
+        currency_code: String(input.currency_code ?? defaults.currency_code),
+        languagecode: String(input.languagecode ?? defaults.locale),
+      };
+    }
+    case "getHotelFilter": {
+      assertParams(input, ["dest_id", "search_type", "arrival_date", "departure_date"]);
+      return {
+        dest_id: String(input.dest_id),
+        search_type: String(input.search_type),
         arrival_date: String(input.arrival_date),
         departure_date: String(input.departure_date),
         adults: String(input.adults ?? 2),

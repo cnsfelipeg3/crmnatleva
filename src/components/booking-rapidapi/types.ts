@@ -38,6 +38,11 @@ export interface BookingSearchParams {
   page_number?: number;
   currency_code?: string;
   languagecode?: string;
+  // Filtros
+  sort_by?: string;
+  categories_filter?: string;
+  price_min?: number;
+  price_max?: number;
 }
 
 export interface BookingHotel {
