@@ -153,12 +153,53 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Common-area keywords that indicate a NON-room photo (restaurant, spa, lobby, etc.)
+const COMMON_AREA_TERMS = [
+  "restaurant", "restaurante", "dining", "jantar", "breakfast", "cafe da manha", "buffet",
+  "bar ", " bar", "lounge", "lobby", "reception", "recepcao",
+  "spa", "wellness", "massagem", "massage", "sauna", "hammam",
+  "gym", "academia", "fitness",
+  "kids", "infantil", "playground",
+  "meeting", "evento", "event", "conference", "conferencia", "ballroom",
+  "boutique", "shop", "loja",
+  "chef", "cozinha", "kitchen", "wine cellar", "adega",
+  "garden", "jardim de eventos",
+  "dive ", "diving", "mergulho center",
+  "watersport", "esporte aquatico",
+  "main pool", "piscina principal", "infinity pool deck",
+  "buggy", "transfer", "shuttle", "arrival",
+  "exterior view", "aerial view", "hotel exterior", "facade", "fachada",
+];
+
+function hasCommonAreaSignal(ctx: string): boolean {
+  const n = normalize(ctx);
+  return COMMON_AREA_TERMS.some((t) => n.includes(t));
+}
+
 function scoreByRoomMatch(ctx: string, roomTokens: string[]): number {
   if (!roomTokens.length) return 0;
   const nctx = normalize(ctx);
   let hits = 0;
   for (const t of roomTokens) if (t.length >= 3 && nctx.includes(t)) hits++;
+  // Penalize HEAVILY if context screams "common area"
+  if (hasCommonAreaSignal(nctx)) hits -= 5;
   return hits;
+}
+
+// Room-interior signals (positive boost)
+const ROOM_INTERIOR_TERMS = [
+  "bedroom", "quarto", "suite", "suíte", "villa interior", "room interior",
+  "king bed", "queen bed", "cama king", "cama queen", "bed ", " bed",
+  "bathroom", "banheiro", "bathtub", "banheira",
+  "private pool", "piscina privativa", "plunge pool",
+  "deck", "terrace", "terraco", "varanda", "balcony",
+  "living area", "sala de estar", "lounge area villa",
+  "outdoor shower", "ducha externa",
+];
+
+function hasRoomInteriorSignal(ctx: string): boolean {
+  const n = normalize(ctx);
+  return ROOM_INTERIOR_TERMS.some((t) => n.includes(t));
 }
 
 Deno.serve(async (req) => {
