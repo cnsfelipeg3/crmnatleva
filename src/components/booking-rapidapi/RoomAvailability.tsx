@@ -35,11 +35,38 @@ import {
 
 interface Props {
   hotelId: string | number | null;
+  hotelName?: string;
   minDate: string | null; // arrival_date
   maxDate: string | null; // departure_date
   adults?: number;
   childrenAges?: number[];
   rooms?: number;
+}
+
+/**
+ * Booking.com não aceita URLs no formato `/hotel.html?hotel_id=...`.
+ * A forma confiável de abrir a página correta é usar a busca por nome
+ * (+ datas e ocupação quando disponíveis) — sempre cai no hotel certo.
+ */
+function buildBookingSearchUrl(opts: {
+  hotelName?: string;
+  arrival?: string | null;
+  departure?: string | null;
+  adults?: number;
+  childrenAges?: number[];
+  rooms?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (opts.hotelName) params.set("ss", opts.hotelName);
+  if (opts.arrival) params.set("checkin", opts.arrival);
+  if (opts.departure) params.set("checkout", opts.departure);
+  if (opts.adults) params.set("group_adults", String(opts.adults));
+  if (opts.rooms) params.set("no_rooms", String(opts.rooms));
+  if (opts.childrenAges?.length) {
+    params.set("group_children", String(opts.childrenAges.length));
+    opts.childrenAges.forEach((age) => params.append("age", String(age)));
+  }
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
 
 function fmt(value?: number, currency?: string): string {
