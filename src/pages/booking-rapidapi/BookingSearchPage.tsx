@@ -447,6 +447,29 @@ export default function BookingSearchPage() {
             </div>
           )}
 
+          {/* Busca rápida por nome — só mobile (na sidebar desktop já existe) */}
+          {searchParams && (
+            <div className="relative lg:hidden">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Input
+                value={nameQuery}
+                onChange={(e) => setNameQuery(e.target.value)}
+                placeholder="Filtrar por nome do hotel…"
+                className="h-10 pl-9 pr-9"
+              />
+              {nameQuery && (
+                <button
+                  type="button"
+                  onClick={() => setNameQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
+
           {!searchParams ? (
             <Card className="p-12 text-center">
               <Search className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
