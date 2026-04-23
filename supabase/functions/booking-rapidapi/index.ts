@@ -24,6 +24,12 @@ const CACHE_TTL: Record<string, number> = {
   hotelReviews: 60 * 60 * 24,           // 1 dia
   roomAvailability: 60 * 30,            // 30 min
   getRoomList: 60 * 30,                 // 30 min — lista rica de ofertas
+  // ---- Voos ----
+  searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
+  searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
+  getFlightDetails: 60 * 30,                    // 30 min
+  getMinPrice: 60 * 60 * 6,                     // 6h — calendário de preços
+  getSeatMap: 60 * 60 * 24,                     // 1 dia
   getCurrency: 60 * 60 * 24 * 30,       // 30 dias
   getLanguages: 60 * 60 * 24 * 30,      // 30 dias
 };
@@ -36,6 +42,12 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   hotelReviews: "/api/v1/hotels/getHotelReviews",
   roomAvailability: "/api/v1/hotels/getAvailability",
   getRoomList: "/api/v1/hotels/getRoomList",
+  // ---- Voos ----
+  searchFlightDestinations: "/api/v1/flights/searchDestination",
+  searchFlights: "/api/v1/flights/searchFlights",
+  getFlightDetails: "/api/v1/flights/getFlightDetails",
+  getMinPrice: "/api/v1/flights/getMinPrice",
+  getSeatMap: "/api/v1/flights/getSeatMap",
   getCurrency: "/api/v1/meta/getCurrency",
   getLanguages: "/api/v1/meta/getLanguages",
 };
@@ -239,6 +251,56 @@ function buildParams(
         languagecode: String(input.languagecode ?? defaults.locale),
       };
     }
+    // ============================================================
+    // Voos
+    // ============================================================
+
+    case "searchFlightDestinations": {
+      assertParams(input, ["query"]);
+      return { query: String(input.query) };
+    }
+
+    case "searchFlights": {
+      assertParams(input, ["fromId", "toId", "departDate"]);
+      return {
+        fromId: String(input.fromId),
+        toId: String(input.toId),
+        departDate: String(input.departDate),
+        returnDate: String(input.returnDate ?? ""),
+        adults: String(input.adults ?? 1),
+        children: String(input.children ?? ""),
+        sort: String(input.sort ?? "BEST"),
+        cabinClass: String(input.cabinClass ?? "ECONOMY"),
+        pageNo: String(input.pageNo ?? 1),
+        currency_code: String(input.currency_code ?? defaults.currency_code),
+      };
+    }
+
+    case "getFlightDetails": {
+      assertParams(input, ["token"]);
+      return {
+        token: String(input.token),
+        currency_code: String(input.currency_code ?? defaults.currency_code),
+      };
+    }
+
+    case "getMinPrice": {
+      assertParams(input, ["fromId", "toId"]);
+      return {
+        fromId: String(input.fromId),
+        toId: String(input.toId),
+        cabinClass: String(input.cabinClass ?? "ECONOMY"),
+        currency_code: String(input.currency_code ?? defaults.currency_code),
+      };
+    }
+
+    case "getSeatMap": {
+      assertParams(input, ["token"]);
+      return {
+        token: String(input.token),
+      };
+    }
+
     case "getCurrency":
     case "getLanguages":
       return {};
