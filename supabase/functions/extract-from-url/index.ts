@@ -297,8 +297,11 @@ Deno.serve(async (req) => {
             content:
               "Você extrai dados de páginas de hotéis/quartos (Booking, Decolar, Hoteis.com, Expedia, sites oficiais). Responda APENAS chamando a função extract_accommodation. " +
               "REGRA CRÍTICA: a URL pode apontar para um QUARTO ESPECÍFICO. Identifique EXATAMENTE qual quarto está sendo cotado — observe parâmetros como 'highlighted_blocks', 'matching_block_id', '#room', âncoras, ou o quarto em destaque/selecionado na página. NÃO confunda com outros quartos da página. " +
-              "Para fotos: selecione APENAS URLs da lista candidata; PRIORIZE fotos do quarto específico identificado (não da galeria geral do hotel). Inclua 15–60 fotos legítimas. " +
-              "PROIBIDO: logos (Genius), badges, ícones, avatars, banners promocionais, mapas. " +
+              "Para fotos: selecione APENAS URLs da lista candidata que mostrem CLARAMENTE o INTERIOR/EXTERIOR do quarto específico (cama, banheiro, varanda privativa, piscina privativa da villa, vista do quarto, deck do quarto). " +
+              "PROIBIDO ABSOLUTO selecionar fotos de: restaurante, bar, lounge, lobby, recepção, spa, academia, piscina principal/comum do hotel, áreas de eventos, kids club, fachada/exterior do hotel inteiro, vistas aéreas do resort, buggy/transfer, chef cozinhando, refeições servidas. " +
+              "Se na dúvida, NÃO inclua a foto. Prefira retornar 10 fotos certeiras do quarto a 40 fotos misturadas. " +
+              "Inclua entre 10 e 40 fotos legítimas APENAS do quarto. " +
+              "PROIBIDO também: logos (Genius), badges, ícones, avatars, banners promocionais, mapas. " +
               "Traduza descrição/comodidades para PT-BR. Extraia m², capacidade, cama e vista quando presentes.",
           },
           {
