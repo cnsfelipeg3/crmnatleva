@@ -183,13 +183,14 @@ function AppRoutes() {
     location.pathname.startsWith("/portal/") ||
     location.pathname === "/cadastro-fornecedor";
 
-  if (isLoading && !isPublicRoute) return <ScreenLoader />;
-
   return (
     <SmartSuspense>
       <PerfDebugOverlay />
       <Routes>
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
+        <Route
+          path="/login"
+          element={isLoading && !isPublicRoute ? <ScreenLoader /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+        />
         {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
