@@ -37,13 +37,16 @@ export default defineConfig(({ mode }) => ({
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return undefined;
 
-          // React core — required on every page, keep tiny.
-          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) {
+          // CRITICAL: React + every library that imports React MUST live in the
+          // same chunk. Splitting React from libs that call React.useLayoutEffect
+          // at module-init time (three.js / @react-three / framer-motion /
+          // recharts / @xyflow / react-day-picker / embla-carousel etc.) causes
+          // a "Cannot read properties of undefined (reading 'useLayoutEffect')"
+          // crash in production because the consumer chunk loads before React
+          // is initialised. Keep them together — Rollup will still tree-shake.
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler|three|@react-three|framer-motion|recharts|@xyflow|react-day-picker|embla-carousel|leaflet|react-leaflet|@radix-ui|@tanstack)[\\/]/.test(id)) {
             return "vendor-react";
           }
-
-          // Radix UI — multiple separate packages, group together.
-          if (/[\\/]node_modules[\\/]@radix-ui[\\/]/.test(id)) return "vendor-radix";
 
           // Data fetching.
           if (/[\\/]node_modules[\\/]@tanstack[\\/]react-query[\\/]/.test(id)) return "vendor-query";
@@ -52,28 +55,11 @@ export default defineConfig(({ mode }) => ({
           // Supabase SDK.
           if (/[\\/]node_modules[\\/]@supabase[\\/]/.test(id)) return "vendor-supabase";
 
-          // Charts. Keep recharts isolated and let each d3-* stay in its own
-          // chunk to avoid top-level temporal-dead-zone errors caused by
-          // circular module init when all d3 sub-packages are merged.
-          if (/[\\/]node_modules[\\/]recharts[\\/]/.test(id)) return "vendor-charts";
-          // Do NOT group d3-* into a single chunk — return undefined so Rollup
-          // keeps Rollup's default per-package splitting, which preserves the
-          // correct module-init order between d3 packages.
-
-          // Animation.
-          if (/[\\/]node_modules[\\/]framer-motion[\\/]/.test(id)) return "vendor-motion";
-
-          // Heavy/lazy-only libs — isolate so they're never in the entry bundle.
-          if (/[\\/]node_modules[\\/]three[\\/]/.test(id)) return "vendor-3d";
-          if (/[\\/]node_modules[\\/]@react-three[\\/]/.test(id)) return "vendor-3d";
+          // Heavy/lazy-only libs that DON'T touch React at module init — safe to isolate.
           if (/[\\/]node_modules[\\/]cesium[\\/]/.test(id)) return "vendor-cesium";
-          if (/[\\/]node_modules[\\/]@xyflow[\\/]/.test(id)) return "vendor-flow";
           if (/[\\/]node_modules[\\/]xlsx[\\/]/.test(id)) return "vendor-xlsx";
           if (/[\\/]node_modules[\\/](html2pdf\.js|jspdf|html2canvas)[\\/]/.test(id)) return "vendor-pdf";
           if (/[\\/]node_modules[\\/](emoji-mart|@emoji-mart)[\\/]/.test(id)) return "vendor-emoji";
-          if (/[\\/]node_modules[\\/]react-day-picker[\\/]/.test(id)) return "vendor-daypicker";
-          if (/[\\/]node_modules[\\/]embla-carousel/.test(id)) return "vendor-carousel";
-          if (/[\\/]node_modules[\\/]leaflet[\\/]/.test(id)) return "vendor-leaflet";
           if (/[\\/]node_modules[\\/]react-markdown[\\/]/.test(id)) return "vendor-markdown";
           if (/[\\/]node_modules[\\/](remark-|rehype-|micromark|mdast|hast)/.test(id)) return "vendor-markdown";
 
