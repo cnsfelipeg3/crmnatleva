@@ -147,12 +147,53 @@ export interface HotelscomLodgingCard {
 // Normalizador HOTELS.COM → UnifiedHotel
 // ============================================================
 
-/** Extrai número de uma string tipo "$249 total" ou "R$ 1.200" */
+/**
+ * Extrai número de uma string de preço.
+ *
+ * A API do Hotels.com (ntd119) retorna em formato AMERICANO:
+ *   "$4,186"  → vírgula é separador de milhar, ponto é decimal
+ *   "$249"    → sem separadores
+ *   "$249.99" → ponto é decimal
+ *
+ * A API do Booking também retorna valores numéricos diretos, mas às vezes
+ * em formato BR "R$ 1.234,56". Por isso tentamos detectar o formato.
+ */
 function extractNumber(str?: string): number | undefined {
   if (!str) return undefined;
-  const m = str.replace(/\./g, "").match(/[\d,]+/);
-  if (!m) return undefined;
-  const n = parseFloat(m[0].replace(",", "."));
+  // Pega só dígitos, pontos e vírgulas
+  const match = str.match(/[\d.,]+/);
+  if (!match) return undefined;
+  let cleaned = match[0];
+
+  // Detecta formato: se tem TANTO vírgula quanto ponto, o que aparecer
+  // primeiro é separador de milhar e o último é decimal
+  const hasComma = cleaned.includes(",");
+  const hasDot = cleaned.includes(".");
+
+  if (hasComma && hasDot) {
+    // Formato misto: o ÚLTIMO símbolo antes do fim é o decimal
+    const lastComma = cleaned.lastIndexOf(",");
+    const lastDot = cleaned.lastIndexOf(".");
+    if (lastDot > lastComma) {
+      // Formato US: "1,234.56" → remove vírgulas
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      // Formato BR: "1.234,56" → remove pontos, troca vírgula por ponto
+      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+    }
+  } else if (hasComma) {
+    // Só vírgula — ambíguo. Heurística: se depois da vírgula tem 3+ dígitos,
+    // é separador de milhar (formato US "1,234"). Se tem 1-2, é decimal BR.
+    const afterComma = cleaned.split(",").pop() || "";
+    if (afterComma.length >= 3) {
+      cleaned = cleaned.replace(/,/g, ""); // milhar US
+    } else {
+      cleaned = cleaned.replace(",", "."); // decimal BR
+    }
+  }
+  // Só ponto ou sem separador: parse direto
+
+  const n = parseFloat(cleaned);
   return Number.isFinite(n) ? n : undefined;
 }
 
@@ -288,6 +329,7 @@ export function convertPriceToBRL(
   if (!rates || !rates[fromCurrency]) {
     return { value, currency: fromCurrency, converted: false };
   }
+  // rates[X] = quantos BRL valem 1 X, então valor_em_BRL = valor * rates[X]
   return {
     value: value * rates[fromCurrency],
     currency: "BRL",
@@ -323,17 +365,20 @@ export function convertOfferToBRL(
     priceStriked: striked.value,
     priceTaxes: taxes.value,
     pricePerNight: perNight.value,
+    // Limpa o priceFormatted porque ele era formatado em USD pela API
     priceFormatted: undefined,
   };
 }
 
 // ============================================================
 // AGRUPAMENTO TRIVAGO-STYLE
+// 1 card por hotel, com múltiplas ofertas de fontes diferentes
 // ============================================================
 
 /** Uma oferta de preço pra o hotel vindo de uma fonte específica */
 export interface UnifiedHotelOffer {
   source: HotelSource;
+  /** ID na fonte original — usado pra abrir drawer/link */
   id: string | number;
   priceTotal?: number;
   priceCurrency?: string;
@@ -344,12 +389,15 @@ export interface UnifiedHotelOffer {
   freeCancellation?: boolean;
   breakfastIncluded?: boolean;
   externalUrl?: string;
+  /** Dados brutos pra abrir drawer ou detalhes */
   raw?: unknown;
 }
 
 /** Grupo Trivago: 1 hotel (mesclado), múltiplas ofertas */
 export interface UnifiedHotelGroup {
+  /** Key única pra React (baseada em nome+local normalizado) */
   groupKey: string;
+  /** Dados comuns (primeira fonte que trouxe vence) */
   name: string;
   location?: string;
   photoUrl?: string;
@@ -361,25 +409,34 @@ export interface UnifiedHotelGroup {
   amenities?: string[];
   latitude?: number;
   longitude?: number;
+  /** Todas as ofertas disponíveis (ordenadas pelo menor preço) */
   offers: UnifiedHotelOffer[];
+  /** Melhor oferta (menor preço). Pode ser undefined se nenhuma tem priceTotal */
   bestOffer?: UnifiedHotelOffer;
+  /** Diferença em % entre menor e maior preço (0 se só 1 oferta) */
   priceDeltaPercent: number;
+  /** Economia absoluta vs maior preço (0 se só 1 oferta) */
   savings?: number;
   savingsCurrency?: string;
 }
 
+/**
+ * Normaliza string pra matching entre fontes.
+ * Remove acentos, lowercase, pontuação, stop-words comuns.
+ */
 function normalizeForMatch(str?: string): string {
   if (!str) return "";
   return str
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[\u0300-\u036f]/g, "") // remove acentos
     .toLowerCase()
     .replace(/\b(hotel|hostel|resort|pousada|motel|apart|by|the|da|de|do|dos|das)\b/gi, "")
-    .replace(/[^\w\s]/g, " ")
+    .replace(/[^\w\s]/g, " ") // remove pontuação
     .replace(/\s+/g, " ")
     .trim();
 }
 
+/** Converte UnifiedHotel em UnifiedHotelOffer */
 function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
   return {
     source: h.source,
@@ -397,9 +454,18 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
   };
 }
 
+/**
+ * Agrupa hotéis das múltiplas fontes em cards Trivago-style.
+ * Match por nome normalizado + proximidade de localização quando disponível.
+ *
+ * Trade-offs:
+ * - Match é fuzzy (remove acentos/pontuação/stop-words) — pega a maioria mas pode errar em hotéis com nomes parecidos
+ * - Hotéis que não fazem match aparecem como grupo com 1 oferta só (ainda renderiza bonito)
+ */
 export function groupHotelsByIdentity(
   hotels: UnifiedHotel[],
 ): UnifiedHotelGroup[] {
+  // Fase 1: agrupar por nome normalizado
   const groups = new Map<string, UnifiedHotel[]>();
   for (const h of hotels) {
     const nameKey = normalizeForMatch(h.name);
@@ -412,12 +478,16 @@ export function groupHotelsByIdentity(
     }
   }
 
+  // Fase 2: converter cada grupo em UnifiedHotelGroup
   const result: UnifiedHotelGroup[] = [];
   for (const [key, members] of groups) {
+    // Dados comuns: pegar da primeira fonte (ou preferir Booking que geralmente tem mais dados)
     const primary =
       members.find((m) => m.source === "booking") ?? members[0];
 
+    // Coletar todas as ofertas
     const offers = members.map(toOffer);
+    // Ordenar por menor preço (undefined vai pro fim)
     offers.sort((a, b) => {
       const pa = a.priceTotal;
       const pb = b.priceTotal;
@@ -448,11 +518,13 @@ export function groupHotelsByIdentity(
       );
     }
 
+    // Merge de fotos: todas as fotos de todas as fontes (dedupadas por URL)
     const allPhotos = new Set<string>();
     for (const m of members) {
       m.photoUrls?.forEach((p) => p && allPhotos.add(p));
     }
 
+    // Merge de amenidades
     const allAmenities = new Set<string>();
     for (const m of members) {
       m.amenities?.forEach((a) => a && allAmenities.add(a));
@@ -479,6 +551,7 @@ export function groupHotelsByIdentity(
     });
   }
 
+  // Ordenar grupos por menor preço disponível (grupos sem preço vão pro fim)
   result.sort((a, b) => {
     const pa = a.bestOffer?.priceTotal;
     const pb = b.bestOffer?.priceTotal;
