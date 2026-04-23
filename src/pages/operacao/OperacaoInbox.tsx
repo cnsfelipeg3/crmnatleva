@@ -36,8 +36,7 @@ import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
+import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
@@ -1897,7 +1896,7 @@ function OperacaoInboxInner() {
                             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0" side="top" align="start">
-                            <Picker data={data} onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
+                            <LazyEmojiPicker onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
                           </PopoverContent>
                         </Popover>
                       )}
