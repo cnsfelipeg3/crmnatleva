@@ -35,11 +35,38 @@ import {
 
 interface Props {
   hotelId: string | number | null;
+  hotelName?: string;
   minDate: string | null; // arrival_date
   maxDate: string | null; // departure_date
   adults?: number;
   childrenAges?: number[];
   rooms?: number;
+}
+
+/**
+ * Booking.com não aceita URLs no formato `/hotel.html?hotel_id=...`.
+ * A forma confiável de abrir a página correta é usar a busca por nome
+ * (+ datas e ocupação quando disponíveis) — sempre cai no hotel certo.
+ */
+function buildBookingSearchUrl(opts: {
+  hotelName?: string;
+  arrival?: string | null;
+  departure?: string | null;
+  adults?: number;
+  childrenAges?: number[];
+  rooms?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (opts.hotelName) params.set("ss", opts.hotelName);
+  if (opts.arrival) params.set("checkin", opts.arrival);
+  if (opts.departure) params.set("checkout", opts.departure);
+  if (opts.adults) params.set("group_adults", String(opts.adults));
+  if (opts.rooms) params.set("no_rooms", String(opts.rooms));
+  if (opts.childrenAges?.length) {
+    params.set("group_children", String(opts.childrenAges.length));
+    opts.childrenAges.forEach((age) => params.append("age", String(age)));
+  }
+  return `https://www.booking.com/searchresults.html?${params.toString()}`;
 }
 
 function fmt(value?: number, currency?: string): string {
@@ -83,11 +110,31 @@ function OfferCard({
   offer,
   roomDetail,
   hotelId,
+  hotelName,
+  arrival,
+  departure,
+  adults,
+  childrenAges,
+  rooms,
 }: {
   offer: RoomOffer;
   roomDetail?: RoomDetail;
   hotelId: string | number | null;
+  hotelName?: string;
+  arrival?: string | null;
+  departure?: string | null;
+  adults?: number;
+  childrenAges?: number[];
+  rooms?: number;
 }) {
+  const bookingUrl = buildBookingSearchUrl({
+    hotelName,
+    arrival,
+    departure,
+    adults,
+    childrenAges,
+    rooms,
+  });
   const [expanded, setExpanded] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
@@ -156,7 +203,7 @@ function OfferCard({
       typeof grossValue === "number" && typeof excludedValue === "number"
         ? `✅ TOTAL: ${fmt(grossValue + excludedValue, grossCurrency)}`
         : null,
-      `🔗 https://www.booking.com/hotel/rooms.html?hotel_id=${hotelId}`,
+      `🔗 ${bookingUrl}`,
     ].filter(Boolean);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -324,11 +371,7 @@ function OfferCard({
                 size="sm"
                 className="h-7 px-2 text-xs"
                 onClick={() =>
-                  window.open(
-                    `https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
+                  window.open(bookingUrl, "_blank", "noopener,noreferrer")
                 }
               >
                 <ExternalLink className="h-3 w-3 mr-1" /> Reservar
@@ -418,6 +461,7 @@ function OfferCard({
 
 export function RoomAvailability({
   hotelId,
+  hotelName,
   minDate,
   maxDate,
   adults,
@@ -472,6 +516,12 @@ export function RoomAvailability({
           offer={offer}
           roomDetail={data.rooms?.[String(offer.room_id)]}
           hotelId={hotelId}
+          hotelName={hotelName}
+          arrival={minDate}
+          departure={maxDate}
+          adults={adults}
+          childrenAges={childrenAges}
+          rooms={rooms}
         />
       ))}
     </div>
