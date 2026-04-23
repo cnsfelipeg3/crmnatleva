@@ -1,6 +1,7 @@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 import { cn } from "@/lib/utils";
+import { SmartImg } from "@/components/ui/SmartImg";
 import type { HotelPhoto } from "./types";
 
 interface Props {
@@ -33,11 +34,11 @@ export default function MediaSwapPopover({ alternatives, currentUrl, getDisplayU
                 "hover:border-primary hover:ring-1 hover:ring-primary/30 transition-all"
               )}
             >
-              <img
+              <SmartImg
                 src={getDisplayUrl(photo.url)}
                 alt=""
+                displayWidth={96}
                 className="w-full h-full object-cover"
-                loading="lazy"
                 referrerPolicy="no-referrer"
                 onError={() => onImageError(photo.url)}
               />
