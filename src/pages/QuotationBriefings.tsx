@@ -113,7 +113,10 @@ export default function QuotationBriefings() {
     // Realtime subscription
     const channel = supabase
       .channel("briefings-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_briefings" }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "quotation_briefings" }, () => {
+        fetchBriefings();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quotation_briefings" }, () => {
         fetchBriefings();
       })
       .subscribe();

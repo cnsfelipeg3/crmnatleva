@@ -33,6 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Cache auth data to avoid re-fetching on every navigation
   const cachedUserIdRef = useRef<string | null>(null);
+  // Cache user_roles per userId for 30 minutes — invalidated by AdminUsers / PermissoesAcessos
+  const rolesCacheRef = useRef<Map<string, { role: UserRole; fetchedAt: number }>>(new Map());
+  const ROLES_CACHE_MS = 30 * 60_000;
 
   const loadUserContext = useCallback(async (userId: string | null, forceRefresh = false) => {
     if (!userId) {
@@ -52,28 +55,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         admin: 0, gestor: 1, financeiro: 2, operacional: 3, vendedor: 4, leitura: 5,
       };
 
+      // Check roles cache first — only fetch roles if cache miss/stale
+      const cachedRoles = rolesCacheRef.current.get(userId);
+      const rolesCacheValid = !forceRefresh && cachedRoles
+        && Date.now() - cachedRoles.fetchedAt < ROLES_CACHE_MS;
+
       const [profileRes, rolesRes] = await Promise.all([
         supabase
           .from("profiles")
           .select("id, full_name, email, avatar_url")
           .eq("id", userId)
           .maybeSingle(),
-        supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", userId),
+        rolesCacheValid
+          ? Promise.resolve(null)
+          : supabase
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", userId),
       ]);
 
       if (profileRes.error) console.error("Profile fetch error:", profileRes.error);
-      if (rolesRes.error) console.error("Role fetch error:", rolesRes.error);
+      if (rolesRes && rolesRes.error) console.error("Role fetch error:", rolesRes.error);
 
       setProfile((profileRes.data as Profile | null) ?? null);
 
-      // Pick the highest-priority role when user has multiple
-      const roles = (rolesRes.data ?? []) as { role: string }[];
-      const bestRole = roles
-        .sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99))[0]?.role;
-      setRole((bestRole as UserRole) ?? DEFAULT_ROLE);
+      let bestRole: UserRole;
+      if (rolesCacheValid && cachedRoles) {
+        bestRole = cachedRoles.role;
+      } else {
+        const roles = (rolesRes?.data ?? []) as { role: string }[];
+        bestRole = (roles
+          .sort((a, b) => (ROLE_PRIORITY[a.role] ?? 99) - (ROLE_PRIORITY[b.role] ?? 99))[0]?.role as UserRole)
+          ?? DEFAULT_ROLE;
+        rolesCacheRef.current.set(userId, { role: bestRole, fetchedAt: Date.now() });
+      }
+      setRole(bestRole);
       cachedUserIdRef.current = userId;
     } catch (error) {
       console.error("Auth context load error:", error);

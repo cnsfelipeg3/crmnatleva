@@ -347,7 +347,10 @@ export default function CotacoesMonitorView() {
     fetchBriefings();
     const channel = supabase
       .channel("monitor-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "quotation_briefings" }, () => {
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "quotation_briefings" }, () => {
+        fetchBriefings();
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quotation_briefings" }, () => {
         fetchBriefings();
       })
       .subscribe();
