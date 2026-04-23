@@ -153,12 +153,53 @@ function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// Common-area keywords that indicate a NON-room photo (restaurant, spa, lobby, etc.)
+const COMMON_AREA_TERMS = [
+  "restaurant", "restaurante", "dining", "jantar", "breakfast", "cafe da manha", "buffet",
+  "bar ", " bar", "lounge", "lobby", "reception", "recepcao",
+  "spa", "wellness", "massagem", "massage", "sauna", "hammam",
+  "gym", "academia", "fitness",
+  "kids", "infantil", "playground",
+  "meeting", "evento", "event", "conference", "conferencia", "ballroom",
+  "boutique", "shop", "loja",
+  "chef", "cozinha", "kitchen", "wine cellar", "adega",
+  "garden", "jardim de eventos",
+  "dive ", "diving", "mergulho center",
+  "watersport", "esporte aquatico",
+  "main pool", "piscina principal", "infinity pool deck",
+  "buggy", "transfer", "shuttle", "arrival",
+  "exterior view", "aerial view", "hotel exterior", "facade", "fachada",
+];
+
+function hasCommonAreaSignal(ctx: string): boolean {
+  const n = normalize(ctx);
+  return COMMON_AREA_TERMS.some((t) => n.includes(t));
+}
+
 function scoreByRoomMatch(ctx: string, roomTokens: string[]): number {
   if (!roomTokens.length) return 0;
   const nctx = normalize(ctx);
   let hits = 0;
   for (const t of roomTokens) if (t.length >= 3 && nctx.includes(t)) hits++;
+  // Penalize HEAVILY if context screams "common area"
+  if (hasCommonAreaSignal(nctx)) hits -= 5;
   return hits;
+}
+
+// Room-interior signals (positive boost)
+const ROOM_INTERIOR_TERMS = [
+  "bedroom", "quarto", "suite", "suíte", "villa interior", "room interior",
+  "king bed", "queen bed", "cama king", "cama queen", "bed ", " bed",
+  "bathroom", "banheiro", "bathtub", "banheira",
+  "private pool", "piscina privativa", "plunge pool",
+  "deck", "terrace", "terraco", "varanda", "balcony",
+  "living area", "sala de estar", "lounge area villa",
+  "outdoor shower", "ducha externa",
+];
+
+function hasRoomInteriorSignal(ctx: string): boolean {
+  const n = normalize(ctx);
+  return ROOM_INTERIOR_TERMS.some((t) => n.includes(t));
 }
 
 Deno.serve(async (req) => {
@@ -256,8 +297,11 @@ Deno.serve(async (req) => {
             content:
               "Você extrai dados de páginas de hotéis/quartos (Booking, Decolar, Hoteis.com, Expedia, sites oficiais). Responda APENAS chamando a função extract_accommodation. " +
               "REGRA CRÍTICA: a URL pode apontar para um QUARTO ESPECÍFICO. Identifique EXATAMENTE qual quarto está sendo cotado — observe parâmetros como 'highlighted_blocks', 'matching_block_id', '#room', âncoras, ou o quarto em destaque/selecionado na página. NÃO confunda com outros quartos da página. " +
-              "Para fotos: selecione APENAS URLs da lista candidata; PRIORIZE fotos do quarto específico identificado (não da galeria geral do hotel). Inclua 15–60 fotos legítimas. " +
-              "PROIBIDO: logos (Genius), badges, ícones, avatars, banners promocionais, mapas. " +
+              "Para fotos: selecione APENAS URLs da lista candidata que mostrem CLARAMENTE o INTERIOR/EXTERIOR do quarto específico (cama, banheiro, varanda privativa, piscina privativa da villa, vista do quarto, deck do quarto). " +
+              "PROIBIDO ABSOLUTO selecionar fotos de: restaurante, bar, lounge, lobby, recepção, spa, academia, piscina principal/comum do hotel, áreas de eventos, kids club, fachada/exterior do hotel inteiro, vistas aéreas do resort, buggy/transfer, chef cozinhando, refeições servidas. " +
+              "Se na dúvida, NÃO inclua a foto. Prefira retornar 10 fotos certeiras do quarto a 40 fotos misturadas. " +
+              "Inclua entre 10 e 40 fotos legítimas APENAS do quarto. " +
+              "PROIBIDO também: logos (Genius), badges, ícones, avatars, banners promocionais, mapas. " +
               "Traduza descrição/comodidades para PT-BR. Extraia m², capacidade, cama e vista quando presentes.",
           },
           {
@@ -287,52 +331,69 @@ Deno.serve(async (req) => {
     const roomType: string = parsed.room_type || "";
     console.log("[extract-from-url] room_type:", roomType);
 
-    // 5) Rank candidates by room-name token matches in their context
+    // 5) Rank candidates by room-name token matches AND filter out common areas
     const roomTokens = normalize(roomType).split(" ").filter(t => t.length >= 3 && !["with","and","the","com","para","villa","room","quarto","suite","suíte"].includes(t));
-    const scored = allCandidates.map(c => ({
-      url: c.url,
-      score: scoreByRoomMatch(c.context, roomTokens),
-    }));
 
-    const matched = scored.filter(s => s.score > 0).sort((a, b) => b.score - a.score);
-    const unmatched = scored.filter(s => s.score === 0);
-    console.log("[extract-from-url] matched-to-room:", matched.length, "unmatched:", unmatched.length, "tokens:", roomTokens);
+    type Scored = { url: string; score: number; isCommonArea: boolean; isRoomInterior: boolean };
+    const scored: Scored[] = allCandidates.map(c => {
+      const isCommonArea = hasCommonAreaSignal(c.context);
+      const isRoomInterior = hasRoomInteriorSignal(c.context);
+      let score = scoreByRoomMatch(c.context, roomTokens);
+      if (isRoomInterior) score += 3;
+      return { url: c.url, score, isCommonArea, isRoomInterior };
+    });
 
-    // 6) Final list: matched first, then AI-selected, then top unmatched as fallback
+    // STRICT: matched-to-room AND not common-area
+    const matched = scored
+      .filter(s => s.score > 0 && !s.isCommonArea)
+      .sort((a, b) => b.score - a.score);
+
+    // Fallback pool: room-interior signals OR neutral context, NEVER common-area
+    const safeUnmatched = scored
+      .filter(s => s.score <= 0 && !s.isCommonArea && s.isRoomInterior)
+      .sort((a, b) => b.score - a.score);
+
+    const neutral = scored.filter(s => s.score <= 0 && !s.isCommonArea && !s.isRoomInterior);
+
+    console.log("[extract-from-url] matched:", matched.length, "room-interior:", safeUnmatched.length, "neutral:", neutral.length, "common-area-blocked:", scored.filter(s => s.isCommonArea).length, "tokens:", roomTokens);
+
+    // 6) Final list: STRICT room-matched first, then room-interior fallback
     const finalUrls: string[] = [];
     const candidateSet = new Set(allCandidates.map(c => c.url));
+    const blockedCommonAreaSet = new Set(scored.filter(s => s.isCommonArea).map(s => s.url));
 
     for (const s of matched) finalUrls.push(s.url);
 
+    // Only accept AI-selected URLs that are NOT common-area
     const aiUrls: string[] = Array.isArray(parsed.photo_urls) ? parsed.photo_urls : [];
     for (const u of aiUrls) {
-      if (typeof u === "string" && candidateSet.has(u) && !finalUrls.includes(u) && !isBlockedUrl(u)) {
+      if (typeof u === "string" && candidateSet.has(u) && !finalUrls.includes(u) && !isBlockedUrl(u) && !blockedCommonAreaSet.has(u)) {
         finalUrls.push(u);
       }
     }
 
-    // If we have very few matched-to-room photos, supplement with general hotel photos
-    if (finalUrls.length < 15) {
-      for (const s of unmatched) {
+    // Supplement with room-interior signals only (no common areas, no random shots)
+    if (finalUrls.length < 12) {
+      for (const s of safeUnmatched) {
         if (!finalUrls.includes(s.url)) finalUrls.push(s.url);
-        if (finalUrls.length >= 30) break;
+        if (finalUrls.length >= 20) break;
       }
     }
 
-    const cappedUrls = finalUrls.slice(0, 60);
+    const cappedUrls = finalUrls.slice(0, 50);
 
     // 7) Final dedup
     const seen = new Set<string>();
     const photos = cappedUrls
       .filter((u) => { const k = dedupKey(u); if (seen.has(k)) return false; seen.add(k); return true; })
-      .map((u, idx) => ({
+      .map((u) => ({
         url: u,
         description: "",
-        category: idx < matched.length ? "quarto" : "outro",
+        category: "quarto",
         source: "url_extract",
       }));
 
-    console.log("[extract-from-url] returning", photos.length, "photos (", matched.length, "matched to room)");
+    console.log("[extract-from-url] returning", photos.length, "photos (", matched.length, "strict-matched to room,", blockedCommonAreaSet.size, "common-area filtered out)");
 
     return new Response(
       JSON.stringify({
