@@ -1,26 +1,28 @@
-import { Star, MapPin, ImageOff, Check } from "lucide-react";
+import { Star, MapPin, ImageOff, Check, TrendingDown } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  SOURCE_BADGE_CLASSES,
   SOURCE_LABELS,
-  type UnifiedHotel,
+  type HotelSource,
+  type UnifiedHotelGroup,
+  type UnifiedHotelOffer,
 } from "./unifiedHotelTypes";
 
 interface Props {
-  hotel: UnifiedHotel;
-  onClick?: (hotel: UnifiedHotel) => void;
-  isBestPrice?: boolean;
-  comparisonPrice?: { value: number; currency: string; source: string } | null;
+  group: UnifiedHotelGroup;
+  /** Ao clicar numa oferta específica (abre drawer daquela fonte) */
+  onOfferClick?: (offer: UnifiedHotelOffer, group: UnifiedHotelGroup) => void;
+  /** Ao clicar na foto/header do card (abre drawer da melhor oferta) */
+  onCardClick?: (group: UnifiedHotelGroup) => void;
 }
 
-function formatPrice(value?: number, currency?: string): string {
+function formatPriceBRL(value?: number, currency?: string): string {
   if (value === undefined || value === null) return "—";
   try {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency: currency || "USD",
+      currency: currency || "BRL",
       maximumFractionDigits: 0,
     }).format(value);
   } catch {
@@ -28,25 +30,80 @@ function formatPrice(value?: number, currency?: string): string {
   }
 }
 
-export function UnifiedHotelCard({
-  hotel,
+/** Cores do dot por fonte (bolinha colorida antes do nome) */
+const SOURCE_DOT_CLASS: Record<HotelSource, string> = {
+  booking: "bg-blue-500",
+  hotelscom: "bg-rose-500",
+};
+
+/** Linha de oferta — versão compacta empilhada no card */
+function OfferRow({
+  offer,
+  isBest,
   onClick,
-  isBestPrice,
-  comparisonPrice,
-}: Props) {
-  const badgeClass = SOURCE_BADGE_CLASSES[hotel.source];
-  const sourceLabel = SOURCE_LABELS[hotel.source];
+}: {
+  offer: UnifiedHotelOffer;
+  isBest: boolean;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick?.();
+      }}
+      className={cn(
+        "w-full flex items-center justify-between gap-2 px-2 py-1.5 rounded-md text-left transition-colors",
+        "hover:bg-muted/60",
+        isBest && "bg-emerald-50 dark:bg-emerald-950/30",
+      )}
+    >
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={cn("h-2 w-2 rounded-full shrink-0", SOURCE_DOT_CLASS[offer.source])} />
+        <span className="text-xs font-medium text-foreground truncate">
+          {SOURCE_LABELS[offer.source]}
+        </span>
+        {isBest && (
+          <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 h-4 shrink-0">
+            MELHOR
+          </Badge>
+        )}
+      </div>
+      <div className="flex flex-col items-end shrink-0">
+        {offer.priceStriked &&
+          offer.priceStriked > (offer.priceTotal ?? 0) && (
+            <span className="text-[10px] text-muted-foreground line-through leading-none">
+              {formatPriceBRL(offer.priceStriked, offer.priceCurrency)}
+            </span>
+          )}
+        <span
+          className={cn(
+            "text-sm font-bold leading-tight",
+            isBest ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
+          )}
+        >
+          {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+export function UnifiedHotelCard({ group, onOfferClick, onCardClick }: Props) {
+  const { bestOffer, offers, priceDeltaPercent, savings } = group;
 
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow flex flex-col"
-      onClick={() => onClick?.(hotel)}
+      onClick={() => onCardClick?.(group)}
     >
+      {/* Foto principal */}
       <div className="relative aspect-[4/3] bg-muted">
-        {hotel.photoUrl ? (
+        {group.photoUrl ? (
           <img
-            src={hotel.photoUrl}
-            alt={hotel.name}
+            src={group.photoUrl}
+            alt={group.name}
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
@@ -59,41 +116,37 @@ export function UnifiedHotelCard({
           </div>
         )}
 
-        <Badge
-          variant="outline"
-          className={cn("absolute top-2 left-2 text-xs", badgeClass)}
-        >
-          {sourceLabel}
-        </Badge>
-
-        {typeof hotel.reviewScore === "number" && (
+        {/* Rating (top-right) */}
+        {typeof group.reviewScore === "number" && (
           <div className="absolute top-2 right-2 bg-background/90 backdrop-blur rounded-md px-2 py-1 text-xs flex items-center gap-1 shadow">
             <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-            <span className="font-semibold">{hotel.reviewScore.toFixed(1)}</span>
-            {hotel.reviewScoreWord && (
+            <span className="font-semibold">{group.reviewScore.toFixed(1)}</span>
+            {group.reviewScoreWord && (
               <span className="text-muted-foreground hidden sm:inline">
-                · {hotel.reviewScoreWord}
+                · {group.reviewScoreWord}
               </span>
             )}
           </div>
         )}
 
-        {isBestPrice && (
-          <Badge className="absolute bottom-2 left-2 bg-emerald-600 text-white gap-1">
-            <Check className="h-3 w-3" />
-            Melhor preço
+        {/* Badge "Economia X%" — só se múltiplas ofertas e delta ≥ 3% */}
+        {offers.length > 1 && priceDeltaPercent >= 3 && typeof savings === "number" && (
+          <Badge className="absolute top-2 left-2 bg-emerald-600 text-white gap-1 shadow">
+            <TrendingDown className="h-3 w-3" />
+            −{priceDeltaPercent}% comparando
           </Badge>
         )}
       </div>
 
+      {/* Conteúdo */}
       <div className="p-3 flex flex-col gap-2 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-semibold text-sm line-clamp-2 flex-1">
-            {hotel.name}
+            {group.name}
           </h3>
-          {typeof hotel.stars === "number" && hotel.stars > 0 && (
+          {typeof group.stars === "number" && group.stars > 0 && (
             <div className="flex shrink-0">
-              {Array.from({ length: Math.round(hotel.stars) }).map((_, i) => (
+              {Array.from({ length: Math.round(group.stars) }).map((_, i) => (
                 <Star
                   key={i}
                   className="h-3 w-3 fill-yellow-500 text-yellow-500"
@@ -103,22 +156,22 @@ export function UnifiedHotelCard({
           )}
         </div>
 
-        {hotel.location && (
+        {group.location && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <MapPin className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">{hotel.location}</span>
+            <span className="line-clamp-1">{group.location}</span>
           </div>
         )}
 
-        {typeof hotel.reviewCount === "number" && hotel.reviewCount > 0 && (
+        {typeof group.reviewCount === "number" && group.reviewCount > 0 && (
           <p className="text-xs text-muted-foreground">
-            {hotel.reviewCount.toLocaleString("pt-BR")} avaliações
+            {group.reviewCount.toLocaleString("pt-BR")} avaliações
           </p>
         )}
 
-        {hotel.amenities && hotel.amenities.length > 0 && (
+        {group.amenities && group.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1">
-            {hotel.amenities.slice(0, 3).map((a, i) => (
+            {group.amenities.slice(0, 3).map((a, i) => (
               <Badge key={i} variant="secondary" className="text-[10px] py-0">
                 {a}
               </Badge>
@@ -126,42 +179,27 @@ export function UnifiedHotelCard({
           </div>
         )}
 
-        <div className="mt-auto pt-2 border-t border-border flex items-end justify-between gap-2">
-          <div className="flex flex-col">
-            {hotel.priceStriked &&
-              hotel.priceStriked > (hotel.priceTotal ?? 0) && (
-                <span className="text-xs text-muted-foreground line-through">
-                  {formatPrice(hotel.priceStriked, hotel.priceCurrency)}
-                </span>
-              )}
-            <span className="text-base font-bold text-foreground">
-              {hotel.priceFormatted ||
-                formatPrice(hotel.priceTotal, hotel.priceCurrency)}
-            </span>
+        {/* Área de ofertas comparativas */}
+        <div className="mt-auto pt-2 border-t border-border flex flex-col gap-1">
+          {offers.map((offer, i) => (
+            <OfferRow
+              key={`${offer.source}:${offer.id}:${i}`}
+              offer={offer}
+              isBest={offer === bestOffer && offers.length > 1}
+              onClick={() => onOfferClick?.(offer, group)}
+            />
+          ))}
+
+          <div className="flex items-center justify-between mt-1 pt-1">
             <span className="text-[10px] text-muted-foreground">
-              total da estadia
+              {offers.length === 1
+                ? "total da estadia"
+                : `${offers.length} fontes · total da estadia`}
             </span>
-            {typeof hotel.priceTaxes === "number" && hotel.priceTaxes > 0 && (
-              <span className="text-[10px] text-muted-foreground">
-                + {formatPrice(hotel.priceTaxes, hotel.priceCurrency)} impostos
-              </span>
-            )}
-            {hotel.freeCancellation && (
-              <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-0.5">
-                <Check className="h-3 w-3" />
-                Cancelamento grátis
-              </span>
-            )}
-            {comparisonPrice && (
-              <span className="text-[10px] text-muted-foreground mt-0.5">
-                {comparisonPrice.source}:{" "}
-                {formatPrice(comparisonPrice.value, comparisonPrice.currency)}
-              </span>
-            )}
+            <span className="text-xs text-primary font-medium shrink-0">
+              Ver detalhes
+            </span>
           </div>
-          <span className="text-xs text-primary font-medium shrink-0">
-            Ver detalhes
-          </span>
         </div>
       </div>
     </Card>
