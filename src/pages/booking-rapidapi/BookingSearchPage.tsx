@@ -368,10 +368,10 @@ export default function BookingSearchPage() {
         {searchParams && (
           <div className="hidden lg:block w-72 shrink-0">
             <HotelFiltersSidebar
-              filters={filtersData ?? null}
+              filters={filtersData?.filters}
               isLoading={filtersLoading}
               state={filtersState}
-              onChange={setFiltersState}
+              onStateChange={setFiltersState}
               nameQuery={nameQuery}
               onNameQueryChange={setNameQuery}
             />
@@ -407,10 +407,10 @@ export default function BookingSearchPage() {
                     <SheetTitle>Filtros</SheetTitle>
                     <div className="mt-4">
                       <HotelFiltersSidebar
-                        filters={filtersData ?? null}
+                        filters={filtersData?.filters}
                         isLoading={filtersLoading}
                         state={filtersState}
-                        onChange={setFiltersState}
+                        onStateChange={setFiltersState}
                         nameQuery={nameQuery}
                         onNameQueryChange={setNameQuery}
                       />
@@ -503,8 +503,8 @@ export default function BookingSearchPage() {
           {bookingData && bookingData.hotels.length > 0 && sources.booking && (
             <HotelsPagination
               currentPage={currentPage}
-              totalResults={bookingData.totalCount ?? bookingData.hotels.length}
-              pageSize={bookingData.hotels.length}
+              totalHotels={bookingData.totalHotels ?? null}
+              pageSize={bookingData.pageSize ?? bookingData.hotels.length}
               onPageChange={setCurrentPage}
             />
           )}
@@ -519,7 +519,7 @@ export default function BookingSearchPage() {
         arrival={searchParams?.arrival ?? null}
         departure={searchParams?.departure ?? null}
         adults={searchParams?.adults ?? 1}
-        children={searchParams?.children ?? []}
+        childrenAges={searchParams?.children ?? []}
         rooms={searchParams?.rooms ?? 1}
       />
       <HotelscomDetailDrawer
