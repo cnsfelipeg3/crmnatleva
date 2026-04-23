@@ -33,7 +33,7 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   hotelDetails: "/api/v1/hotels/getHotelDetails",
   hotelPhotos: "/api/v1/hotels/getHotelPhotos",
   hotelReviews: "/api/v1/hotels/getHotelReviews",
-  roomAvailability: "/api/v1/hotels/getRoomAvailability",
+  roomAvailability: "/api/v1/hotels/getAvailability",
   getCurrency: "/api/v1/meta/getCurrency",
   getLanguages: "/api/v1/meta/getLanguages",
 };
