@@ -19,23 +19,24 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
-  X,
   Image as ImageIcon,
   Info,
   CheckCircle2,
   XCircle,
   Receipt,
   Sparkles,
-  Wifi,
-  Coffee,
-  Car,
-  Bath,
-  Snowflake,
-  Tv,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { HotelscomLodgingCard } from "./unifiedHotelTypes";
+
+interface Converted {
+  priceTotal?: number;
+  priceStriked?: number;
+  priceTaxes?: number;
+  pricePerNight?: number;
+  currency?: string;
+}
 
 interface Props {
   card: HotelscomLodgingCard | null;
@@ -44,39 +45,7 @@ interface Props {
   arrival: string | null;
   departure: string | null;
   adults: number;
-  /** Valores convertidos (em BRL) pra exibição */
-  converted?: {
-    priceTotal?: number;
-    priceStriked?: number;
-    priceTaxes?: number;
-    pricePerNight?: number;
-    currency?: string;
-  };
-}
-
-/**
- * Traduz mensagens da API (em inglês) para pt-BR.
- */
-function translateMessage(
-  raw: string | undefined,
-  converted?: Props["converted"],
-): string | undefined {
-  if (!raw) return raw;
-  let s = raw;
-  s = s.replace(/\bfor (\d+) nights?\b/i, (_, n) => `por ${n} noite${Number(n) > 1 ? "s" : ""}`);
-  s = s.replace(/\bWe have (\d+) left at this price\b/i, (_, n) => `Restam ${n} unidade${Number(n) > 1 ? "s" : ""} nesse preço`);
-  s = s.replace(/\bTotal with taxes and fees\b/i, "Total com impostos e taxas");
-  s = s.replace(/\bper night\b/i, "por noite");
-  if (/\bnightly\b/i.test(s) && converted?.pricePerNight) {
-    const fmt = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: converted.currency || "BRL",
-      maximumFractionDigits: 0,
-    }).format(converted.pricePerNight);
-    return `${fmt}/noite`;
-  }
-  s = s.replace(/\bnightly\b/i, "/noite");
-  return s;
+  converted?: Converted;
 }
 
 function fmtBRL(value?: number, currency?: string): string {
@@ -92,21 +61,18 @@ function fmtBRL(value?: number, currency?: string): string {
   }
 }
 
-function AmenityIcon({ icon }: { icon?: string }) {
-  const cls = "h-4 w-4 text-muted-foreground";
-  switch (icon) {
-    case "wifi": return <Wifi className={cls} />;
-    case "pool": return <span className="text-base">🏊</span>;
-    case "parking": return <Car className={cls} />;
-    case "breakfast":
-    case "coffee": return <Coffee className={cls} />;
-    case "bath": return <Bath className={cls} />;
-    case "snowflake":
-    case "air_conditioning": return <Snowflake className={cls} />;
-    case "tv":
-    case "screen": return <Tv className={cls} />;
-    default: return <Sparkles className={cls} />;
+function translateMessage(raw: string | undefined, converted?: Converted): string | undefined {
+  if (!raw) return raw;
+  let s = raw;
+  s = s.replace(/\bfor (\d+) nights?\b/i, (_, n) => `por ${n} noite${Number(n) > 1 ? "s" : ""}`);
+  s = s.replace(/\bWe have (\d+) left at this price\b/i, (_, n) => `Restam ${n} unidade${Number(n) > 1 ? "s" : ""} nesse preço`);
+  s = s.replace(/\bTotal with taxes and fees\b/i, "Total com impostos e taxas");
+  s = s.replace(/\bper night\b/i, "por noite");
+  if (/\bnightly\b/i.test(s) && converted?.pricePerNight) {
+    return `${fmtBRL(converted.pricePerNight, converted.currency || "BRL")}/noite`;
   }
+  s = s.replace(/\bnightly\b/i, "/noite");
+  return s;
 }
 
 function translateAmenity(text?: string): string {
@@ -163,17 +129,12 @@ export function HotelscomDetailDrawer({
   const ratingWord = rating?.phrases?.[0]?.phraseParts?.[0]?.text;
   const reviewCount = rating?.phrases?.[1]?.phraseParts?.[0]?.text;
 
-  const footerMessages =
-    card.summarySections?.[0]?.footerMessages?.listItems ?? [];
-
+  const footerMessages = card.summarySections?.[0]?.footerMessages?.listItems ?? [];
   const priceMessages = card.priceSection?.priceSummary?.priceMessagingV2 ?? [];
   const reassurance = (card.priceSection?.priceSummary as any)?.reassuranceMessage?.value;
-  const perNightMsg = card.priceSection?.priceSummary?.displayMessagesV2?.[0]
-    ?.lineItems?.[0];
+  const perNightMsg = card.priceSection?.priceSummary?.displayMessagesV2?.[0]?.lineItems?.[0];
   const perNightText =
-    perNightMsg?.state === "REASSURANCE_DISPLAY_QUALIFIER"
-      ? perNightMsg.value
-      : undefined;
+    perNightMsg?.state === "REASSURANCE_DISPLAY_QUALIFIER" ? perNightMsg.value : undefined;
 
   const copyInfo = async () => {
     const totalStr = converted?.priceTotal
@@ -183,15 +144,11 @@ export function HotelscomDetailDrawer({
     const lines = [
       `🏨 ${name}`,
       location ? `📍 ${location}` : null,
-      ratingScore
-        ? `⭐ Nota: ${ratingScore}${ratingWord ? ` ${ratingWord}` : ""}${reviewCount ? ` (${reviewCount})` : ""}`
-        : null,
+      ratingScore ? `⭐ Nota: ${ratingScore}${ratingWord ? ` ${ratingWord}` : ""}${reviewCount ? ` (${reviewCount})` : ""}` : null,
       arrival && departure ? `📅 ${arrival} → ${departure}` : null,
       `👥 ${adults} adulto(s)`,
       `💰 Total: ${totalStr}`,
-      converted?.priceTaxes
-        ? `🧾 Impostos: ${fmtBRL(converted.priceTaxes, "BRL")}`
-        : null,
+      converted?.priceTaxes ? `🧾 Impostos: ${fmtBRL(converted.priceTaxes, "BRL")}` : null,
       ...footerMessages
         .filter((l) => l.style === "POSITIVE" && l.text)
         .map((l) => `✅ ${l.text}`),
@@ -206,9 +163,7 @@ export function HotelscomDetailDrawer({
   };
 
   const openOnHotelscom = () => {
-    if (externalUrl) {
-      window.open(externalUrl, "_blank", "noopener,noreferrer");
-    }
+    if (externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
   };
 
   const openGallery = (idx: number) => setGalleryIdx(idx);
@@ -222,73 +177,60 @@ export function HotelscomDetailDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
         <ScrollArea className="flex-1">
-          <div className="p-6 space-y-5">
-            <SheetHeader className="space-y-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 space-y-1.5">
-                  <Badge
-                    className={cn(
-                      "text-[10px] font-semibold border w-fit",
-                      "bg-rose-100 text-rose-800 border-rose-200",
-                      "dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900",
-                    )}
-                  >
+          <SheetHeader className="p-5 border-b space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="flex-1 min-w-0 space-y-2">
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-rose-500 text-white hover:bg-rose-500">
                     Hotels.com
                   </Badge>
-                  <SheetTitle className="text-xl leading-tight">{name}</SheetTitle>
-                  {location && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      <span>{location}</span>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    {ratingScore && (
-                      <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {ratingScore} {ratingWord}
-                      </span>
-                    )}
-                    {reviewCount && <span>{reviewCount}</span>}
-                    {arrival && departure && (
-                      <span className="inline-flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {arrival} → {departure}
-                      </span>
-                    )}
+                </div>
+                <SheetTitle className="text-xl leading-tight">{name}</SheetTitle>
+                {location && (
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    <span>{location}</span>
                   </div>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  {ratingScore && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {ratingScore} {ratingWord}
+                    </Badge>
+                  )}
+                  {reviewCount && (
+                    <Badge variant="outline" className="text-xs">{reviewCount}</Badge>
+                  )}
+                  {arrival && departure && (
+                    <Badge variant="outline" className="gap-1 text-xs">
+                      <Calendar className="h-3 w-3" />
+                      {arrival} → {departure}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            </SheetHeader>
+            </div>
 
             {converted?.priceTotal && (
-              <Card className="p-4 bg-muted/30">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+              <Card className="p-3 bg-muted/30">
+                <div className="space-y-1.5 text-sm">
+                  <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Estadia</span>
-                    <span className="font-medium">
-                      {fmtBRL(converted.priceTotal, "BRL")}
-                    </span>
+                    <span className="font-medium">{fmtBRL(converted.priceTotal, "BRL")}</span>
                   </div>
-                  {typeof converted.priceTaxes === "number" &&
-                    converted.priceTaxes > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          Impostos e taxas
-                        </span>
-                        <span className="font-medium">
-                          + {fmtBRL(converted.priceTaxes, "BRL")}
-                        </span>
-                      </div>
-                    )}
-                  <div className="flex justify-between border-t border-border pt-2">
+                  {typeof converted.priceTaxes === "number" && converted.priceTaxes > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Impostos e taxas</span>
+                      <span className="text-amber-700 dark:text-amber-500">
+                        + {fmtBRL(converted.priceTaxes, "BRL")}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1 border-t">
                     <span className="font-semibold">Total final</span>
-                    <span className="text-lg font-bold text-foreground">
-                      {fmtBRL(
-                        (converted.priceTotal ?? 0) +
-                          (converted.priceTaxes ?? 0),
-                        "BRL",
-                      )}
+                    <span className="font-bold text-base">
+                      {fmtBRL((converted.priceTotal ?? 0) + (converted.priceTaxes ?? 0), "BRL")}
                     </span>
                   </div>
                   <p className="text-[10px] text-muted-foreground pt-1">
@@ -304,7 +246,7 @@ export function HotelscomDetailDrawer({
               </Card>
             )}
 
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 pt-1">
               <Button size="sm" variant="outline" onClick={copyInfo}>
                 <Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar info
               </Button>
@@ -314,203 +256,191 @@ export function HotelscomDetailDrawer({
                 </Button>
               )}
             </div>
+          </SheetHeader>
 
-            <Tabs defaultValue="photos">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="photos">Fotos ({photos.length})</TabsTrigger>
-                <TabsTrigger value="info">Informações</TabsTrigger>
-                <TabsTrigger value="raw">Dados</TabsTrigger>
-              </TabsList>
+          <Tabs defaultValue="photos" className="p-5">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="photos">Fotos ({photos.length})</TabsTrigger>
+              <TabsTrigger value="info">Informações</TabsTrigger>
+              <TabsTrigger value="raw">Dados</TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="photos" className="mt-4">
-                {photos.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    Nenhuma foto disponível
-                  </p>
-                ) : (
-                  <div className="grid grid-cols-3 gap-2">
-                    {photos.map((p, idx) => {
-                      const url =
-                        (p.media as any)?.url_max750 ??
-                        (p.media as any)?.url_max500 ??
-                        p.media?.url;
-                      if (!url) return null;
+            <TabsContent value="photos" className="mt-4">
+              {photos.length === 0 ? (
+                <div className="text-center py-8 text-sm text-muted-foreground">
+                  Nenhuma foto disponível
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {photos.map((p, idx) => {
+                    const url =
+                      (p.media as any)?.url_max750 ??
+                      (p.media as any)?.url_max500 ??
+                      p.media?.url;
+                    if (!url) return null;
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() => openGallery(idx)}
+                        className={cn(
+                          "group relative aspect-square overflow-hidden rounded-md bg-muted",
+                          "transition-transform duration-200 hover:scale-[1.02]",
+                        )}
+                      >
+                        <img
+                          src={url}
+                          alt={p.media?.description ?? `Foto ${idx + 1}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                        {idx === 0 && (
+                          <div className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-background/90 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium">
+                            <ImageIcon className="h-2.5 w-2.5" />
+                            {photos.length} fotos
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="info" className="mt-4 space-y-4">
+              {amenities.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Comodidades
+                  </h4>
+                  <div className="grid grid-cols-2 gap-2">
+                    {amenities.map((a, i) => (
+                      <div key={i} className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        <span className="text-foreground/80">
+                          {translateAmenity(a.text || a.icon?.description)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
+              {footerMessages.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                    <Info className="h-4 w-4 text-primary" />
+                    Informações importantes
+                  </h4>
+                  <div className="space-y-2">
+                    {footerMessages.map((m, i) => {
+                      const text = (m.text || "")
+                        .replace(/^Fully refundable$/i, "Totalmente reembolsável")
+                        .replace(/^Non refundable$/i, "Não reembolsável")
+                        .replace(/^Free cancellation$/i, "Cancelamento grátis")
+                        .replace(/^Breakfast included$/i, "Café da manhã incluso")
+                        .replace(/^Free Wi-?Fi$/i, "Wi-Fi grátis")
+                        .replace(/^Free parking$/i, "Estacionamento grátis")
+                        .replace(/\bfree cancellation\b/gi, "cancelamento grátis");
                       return (
-                        <button
-                          key={idx}
-                          onClick={() => openGallery(idx)}
-                          className={cn(
-                            "group relative aspect-square overflow-hidden rounded-md bg-muted",
-                            "transition-transform duration-200 hover:scale-[1.02]",
+                        <div key={i} className="flex items-start gap-2 text-sm">
+                          {m.style === "POSITIVE" ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
+                          ) : m.style === "NEGATIVE" ? (
+                            <XCircle className="h-3.5 w-3.5 text-destructive mt-0.5 shrink-0" />
+                          ) : (
+                            <Info className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                           )}
-                        >
-                          <img
-                            src={url}
-                            alt={p.media?.description ?? `Foto ${idx + 1}`}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                          {idx === 0 && (
-                            <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-background/80 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium">
-                              <ImageIcon className="h-2.5 w-2.5" />
-                              {photos.length} fotos
-                            </span>
-                          )}
-                        </button>
+                          <span className="text-foreground/80">{text}</span>
+                        </div>
                       );
                     })}
                   </div>
-                )}
-              </TabsContent>
+                </Card>
+              )}
 
-              <TabsContent value="info" className="mt-4 space-y-5">
-                {amenities.length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
-                      <Sparkles className="h-4 w-4" />
-                      Comodidades
-                    </h4>
-                    <div className="grid grid-cols-2 gap-2">
-                      {amenities.map((a, i) => (
-                        <div
-                          key={i}
-                          className="flex items-center gap-2 text-sm p-2 rounded-md bg-muted/40"
-                        >
-                          <AmenityIcon icon={a.icon?.id} />
-                          <span className="text-foreground">
-                            {translateAmenity(a.text || a.icon?.description)}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {footerMessages.length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
-                      <Info className="h-4 w-4" />
-                      Informações importantes
-                    </h4>
-                    <div className="space-y-2">
-                      {footerMessages.map((m, i) => {
-                        const text = (m.text || "")
-                          .replace(/^Fully refundable$/i, "Totalmente reembolsável")
-                          .replace(/^Non refundable$/i, "Não reembolsável")
-                          .replace(/^Free cancellation$/i, "Cancelamento grátis")
-                          .replace(/^Breakfast included$/i, "Café da manhã incluso")
-                          .replace(/^Free Wi-?Fi$/i, "Wi-Fi grátis")
-                          .replace(/^Free parking$/i, "Estacionamento grátis")
-                          .replace(/\bfree cancellation\b/gi, "cancelamento grátis");
-                        return (
-                          <div
-                            key={i}
-                            className="flex items-start gap-2 text-sm"
-                          >
-                            {m.style === "POSITIVE" ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-                            ) : m.style === "NEGATIVE" ? (
-                              <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                            ) : (
-                              <Info className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                            )}
-                            <span className="text-foreground">{text}</span>
+              {(perNightText || priceMessages.length > 0 || reassurance) && (
+                <Card className="p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                    <Receipt className="h-4 w-4 text-primary" />
+                    Detalhes do preço
+                  </h4>
+                  <div className="space-y-1.5 text-sm">
+                    {perNightText && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Por noite</span>
+                        <span className="font-medium">
+                          {translateMessage(perNightText, converted)}
+                        </span>
+                      </div>
+                    )}
+                    {priceMessages.map(
+                      (m, i) =>
+                        m.value && (
+                          <div key={i} className="text-xs text-muted-foreground">
+                            • {translateMessage(m.value, converted)}
                           </div>
-                        );
-                      })}
-                    </div>
+                        ),
+                    )}
+                    {reassurance && (
+                      <div className="text-xs text-amber-700 dark:text-amber-500 pt-1">
+                        ⚡ {translateMessage(reassurance, converted)}
+                      </div>
+                    )}
                   </div>
-                )}
+                </Card>
+              )}
+            </TabsContent>
 
-                {(perNightText || priceMessages.length > 0 || reassurance) && (
-                  <div>
-                    <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
-                      <Receipt className="h-4 w-4" />
-                      Detalhes do preço
-                    </h4>
-                    <div className="space-y-2 text-sm">
-                      {perNightText && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Por noite</span>
-                          <span className="font-medium">
-                            {translateMessage(perNightText, converted)}
-                          </span>
-                        </div>
-                      )}
-                      {priceMessages.map(
-                        (m, i) =>
-                          m.value && (
-                            <p key={i} className="text-xs text-muted-foreground">
-                              • {translateMessage(m.value, converted)}
-                            </p>
-                          ),
-                      )}
-                      {reassurance && (
-                        <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                          ⚡ {translateMessage(reassurance, converted)}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="raw" className="mt-4">
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-muted-foreground hover:text-foreground py-2">
+            <TabsContent value="raw" className="mt-4">
+              <Card className="p-3">
+                <details>
+                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground mb-2">
                     Ver JSON bruto (debug)
                   </summary>
-                  <pre className="mt-2 p-3 bg-muted rounded-md overflow-auto max-h-96 text-[10px]">
+                  <pre className="text-[10px] overflow-x-auto bg-muted p-2 rounded mt-2 max-h-96">
                     {JSON.stringify(card, null, 2)}
                   </pre>
                 </details>
-              </TabsContent>
-            </Tabs>
-          </div>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </ScrollArea>
       </SheetContent>
 
-      <Dialog
-        open={galleryIdx !== null}
-        onOpenChange={(o) => !o && closeGallery()}
-      >
-        <DialogContent className="max-w-5xl p-0 bg-background/95 backdrop-blur border-0">
+      {/* Lightbox */}
+      <Dialog open={galleryIdx !== null} onOpenChange={(o) => !o && closeGallery()}>
+        <DialogContent className="max-w-5xl p-0 bg-black/95 border-none">
           <DialogTitle className="sr-only">Galeria — {name}</DialogTitle>
           {galleryIdx !== null && photos[galleryIdx] && (
-            <div className="relative aspect-video bg-black flex items-center justify-center">
+            <div className="relative aspect-[16/10] flex items-center justify-center">
               <img
                 src={
-                  (photos[galleryIdx].media as any)?.url_max1280 ??
+                  (photos[galleryIdx].media as any)?.url_max750 ??
                   photos[galleryIdx].media?.url
                 }
-                alt={photos[galleryIdx].media?.description ?? `Foto ${galleryIdx + 1}`}
+                alt={photos[galleryIdx].media?.description ?? ""}
                 className="max-h-full max-w-full object-contain"
               />
               {photos.length > 1 && (
                 <>
                   <button
                     onClick={prevPhoto}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background"
+                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
                   >
-                    <ChevronLeft className="h-5 w-5" />
+                    <ChevronLeft className="h-5 w-5 text-white" />
                   </button>
                   <button
                     onClick={nextPhoto}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 hover:bg-background"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
                   >
-                    <ChevronRight className="h-5 w-5" />
+                    <ChevronRight className="h-5 w-5 text-white" />
                   </button>
-                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-background/80 text-xs">
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/50 backdrop-blur px-3 py-1 rounded-full text-xs text-white">
                     {galleryIdx + 1} / {photos.length}
-                  </span>
+                  </div>
                 </>
               )}
-              <button
-                onClick={closeGallery}
-                className="absolute top-2 right-2 p-2 rounded-full bg-background/80 hover:bg-background"
-              >
-                <X className="h-4 w-4" />
-              </button>
             </div>
           )}
         </DialogContent>
