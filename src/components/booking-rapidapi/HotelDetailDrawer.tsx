@@ -81,7 +81,7 @@ export function HotelDetailDrawer({
         ? `🧾 Impostos e taxas: ${fmt(taxes, taxesCurrency)}`
         : null,
       typeof finalTotal === "number" ? `✅ TOTAL FINAL: ${fmt(finalTotal, stayCurrency)}` : null,
-      `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
+      `🔗 ${buildBookingUrl()}`,
     ].filter(Boolean);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -91,12 +91,22 @@ export function HotelDetailDrawer({
     }
   };
 
+  const buildBookingUrl = () => {
+    const params = new URLSearchParams();
+    params.set("ss", hotelName);
+    if (arrival) params.set("checkin", arrival);
+    if (departure) params.set("checkout", departure);
+    if (adults) params.set("group_adults", String(adults));
+    if (rooms) params.set("no_rooms", String(rooms));
+    if (childrenAges?.length) {
+      params.set("group_children", String(childrenAges.length));
+      childrenAges.forEach((age) => params.append("age", String(age)));
+    }
+    return `https://www.booking.com/searchresults.html?${params.toString()}`;
+  };
+
   const openOnBooking = () => {
-    window.open(
-      `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(hotelName)}`,
-      "_blank",
-      "noopener,noreferrer",
-    );
+    window.open(buildBookingUrl(), "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -230,6 +240,7 @@ export function HotelDetailDrawer({
             <TabsContent value="rooms" className="mt-4">
               <RoomAvailability
                 hotelId={hotelId}
+                hotelName={hotelName}
                 minDate={arrival}
                 maxDate={departure}
                 adults={adults}
