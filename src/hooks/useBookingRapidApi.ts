@@ -11,6 +11,14 @@ import type {
   BookingHotelReview,
   BookingSearchParams,
 } from "@/components/booking-rapidapi/types";
+import type {
+  CabinClass,
+  FlightDeal,
+  FlightLocation,
+  FlightOffer,
+  FlightSort,
+  SearchFlightsResult,
+} from "@/components/booking-rapidapi/flightTypes";
 
 const FUNCTION_NAME = "booking-rapidapi";
 
