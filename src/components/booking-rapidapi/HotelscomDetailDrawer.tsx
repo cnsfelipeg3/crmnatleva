@@ -466,38 +466,72 @@ export function HotelscomDetailDrawer({
             </div>
           </div>
 
-          {converted?.priceTotal && (
-            <Card className="p-3 bg-muted/30">
-              <div className="space-y-1.5 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Estadia</span>
-                  <span className="font-medium">{fmtBRL(converted.priceTotal, "BRL")}</span>
-                </div>
-                {typeof converted.priceTaxes === "number" && converted.priceTaxes > 0 && (
+          {converted?.priceTotal && (() => {
+            // Calcula nights pra mostrar valor por noite — ajuda a sanity-check
+            // se a tarifa Member Price faz sentido vs. preço público no site.
+            let nights = 0;
+            if (arrival && departure) {
+              const a = new Date(arrival).getTime();
+              const d = new Date(departure).getTime();
+              if (Number.isFinite(a) && Number.isFinite(d) && d > a) {
+                nights = Math.round((d - a) / (1000 * 60 * 60 * 24));
+              }
+            }
+            const perNightCalc = nights > 0
+              ? (converted.priceTotal ?? 0) / nights
+              : converted.pricePerNight;
+            return (
+              <Card className="p-3 bg-muted/30">
+                <div className="space-y-1.5 text-sm">
+                  {nights > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">
+                        {nights} {nights === 1 ? "noite" : "noites"} · valor por noite
+                      </span>
+                      <span className="font-medium">{fmtBRL(perNightCalc, "BRL")}</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Impostos e taxas</span>
-                    <span className="text-amber-700 dark:text-amber-500">
-                      + {fmtBRL(converted.priceTaxes, "BRL")}
+                    <span className="text-muted-foreground">Estadia</span>
+                    <span className="font-medium">{fmtBRL(converted.priceTotal, "BRL")}</span>
+                  </div>
+                  {typeof converted.priceTaxes === "number" && converted.priceTaxes > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Impostos e taxas</span>
+                      <span className="text-amber-700 dark:text-amber-500">
+                        + {fmtBRL(converted.priceTaxes, "BRL")}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between pt-1 border-t">
+                    <span className="font-semibold">Total final</span>
+                    <span className="font-bold text-base">
+                      {fmtBRL((converted.priceTotal ?? 0) + (converted.priceTaxes ?? 0), "BRL")}
                     </span>
                   </div>
-                )}
-                <div className="flex items-center justify-between pt-1 border-t">
-                  <span className="font-semibold">Total final</span>
-                  <span className="font-bold text-base">
-                    {fmtBRL((converted.priceTotal ?? 0) + (converted.priceTaxes ?? 0), "BRL")}
-                  </span>
+                  {converted.isMemberPrice ? (
+                    <div className="mt-2 p-2 rounded-md bg-amber-500/10 border border-amber-500/30">
+                      <p className="text-[11px] font-medium text-amber-800 dark:text-amber-300">
+                        ⚠️ Tarifa "Member Price" da Hotels.com
+                      </p>
+                      <p className="text-[10px] text-amber-700/90 dark:text-amber-400/90 mt-0.5">
+                        Esse preço só aparece pra usuários logados. Quem abrir o link sem login pode ver um valor mais alto. Confira o preço real no site antes de fechar.
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground pt-1">
+                      Preço convertido do USD · taxa aproximada · pode variar no site
+                    </p>
+                  )}
+                  {typeof converted.priceStriked === "number" && converted.priceStriked > (converted.priceTotal ?? 0) && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Tarifa original: {fmtBRL(converted.priceStriked, "BRL")}
+                    </p>
+                  )}
                 </div>
-                <p className="text-[10px] text-muted-foreground pt-1">
-                  Preço convertido do USD · taxa aproximada
-                </p>
-                {typeof converted.priceStriked === "number" && converted.priceStriked > (converted.priceTotal ?? 0) && (
-                  <p className="text-[10px] text-muted-foreground">
-                    Tarifa original: {fmtBRL(converted.priceStriked, "BRL")}
-                  </p>
-                )}
-              </div>
-            </Card>
-          )}
+              </Card>
+            );
+          })()}
 
           <div className="flex flex-wrap gap-2 pt-1">
             <Button size="sm" variant="outline" onClick={copyInfo}>
