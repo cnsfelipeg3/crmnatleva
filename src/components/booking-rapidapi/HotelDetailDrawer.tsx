@@ -105,6 +105,7 @@ export function HotelDetailDrawer({
   adults,
   childrenAges,
   rooms,
+  embedded = false,
 }: Props) {
   const { data: details, isLoading } = useHotelDetails(
     hotel?.hotel_id ?? null,
