@@ -630,6 +630,7 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     promoBadges: h.promoBadges,
     accessibilityPriceLabel: h.accessibilityPriceLabel,
     propertyIdComposite: h.propertyIdComposite,
+    isMemberPrice: h.isMemberPrice,
     raw: h.raw,
   };
 }
