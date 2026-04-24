@@ -349,6 +349,7 @@ export function HotelscomDetailDrawer({
                       (p.media as any)?.url_max500 ??
                       p.media?.url;
                     if (!url) return null;
+                    const captionPt = translateCaption(p.media?.description);
                     return (
                       <button
                         key={idx}
@@ -364,6 +365,11 @@ export function HotelscomDetailDrawer({
                           loading="lazy"
                           className="h-full w-full object-cover"
                         />
+                        {captionPt && (
+                          <div className="absolute top-1 left-1 right-1 truncate inline-flex items-center rounded bg-background/85 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium text-foreground shadow-sm">
+                            {captionPt}
+                          </div>
+                        )}
                         {idx === 0 && (
                           <div className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-background/90 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium">
                             <ImageIcon className="h-2.5 w-2.5" />
