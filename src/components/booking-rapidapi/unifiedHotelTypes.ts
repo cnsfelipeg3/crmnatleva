@@ -820,16 +820,25 @@ export function groupHotelsByIdentity(
   }
 
   result.sort((a, b) => {
+    // 1) Grupos com 2 fontes (Booking + Hotels.com) primeiro — comparação ativa
     const aBucket = a.hasBooking && a.hasHotelscom ? 0 : a.hasBooking ? 1 : 2;
     const bBucket = b.hasBooking && b.hasHotelscom ? 0 : b.hasBooking ? 1 : 2;
     if (aBucket !== bBucket) return aBucket - bBucket;
 
+    // 2) Dentro do bucket de 2 fontes, prioriza maior economia (delta entre fontes)
+    if (aBucket === 0) {
+      const deltaDiff = b.priceDeltaPercent - a.priceDeltaPercent;
+      if (Math.abs(deltaDiff) >= 3) return deltaDiff;
+    }
+
+    // 3) Reputação: review count e score
     const reviewCountDiff = (b.reviewCount ?? -1) - (a.reviewCount ?? -1);
     if (reviewCountDiff !== 0) return reviewCountDiff;
 
     const reviewScoreDiff = (b.reviewScore ?? -1) - (a.reviewScore ?? -1);
     if (reviewScoreDiff !== 0) return reviewScoreDiff;
 
+    // 4) Preço como desempate final
     const pa = a.bestOffer?.priceTotal;
     const pb = b.bestOffer?.priceTotal;
     if (typeof pa !== "number" && typeof pb !== "number") return 0;
