@@ -64,6 +64,15 @@ function OfferRow({
         <span className="text-xs font-medium text-foreground truncate">
           {SOURCE_LABELS[offer.source]}
         </span>
+        {offer.isMemberPrice && (
+          <Badge
+            variant="outline"
+            className="text-[9px] px-1 py-0 h-4 shrink-0 border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+            title="Tarifa Member Price — só aparece para usuários logados na Hotels.com. O preço público pode ser mais alto."
+          >
+            membro
+          </Badge>
+        )}
         {isBest && (
           <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 h-4 shrink-0">
             MELHOR
@@ -85,6 +94,11 @@ function OfferRow({
         >
           {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
         </span>
+        {offer.isMemberPrice && (
+          <span className="text-[9px] text-amber-700/80 dark:text-amber-400/80 leading-none mt-0.5">
+            tarifa membro
+          </span>
+        )}
       </div>
     </button>
   );
