@@ -28,6 +28,7 @@ import AirlineLogo, { AirlineLogosStack } from "@/components/AirlineLogo";
 import ClientAutocomplete from "@/components/ClientAutocomplete";
 import SalePassengersManager from "@/components/SalePassengersManager";
 import SaleAttachmentsSection from "@/components/SaleAttachmentsSection";
+import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 
@@ -405,6 +406,14 @@ export default function SaleDetail() {
               <Button size="sm" onClick={handleGenerateSummary}>
                 <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
               </Button>
+              {sale && (
+                <DeleteSaleButton
+                  saleId={sale.id}
+                  saleLabel={`${sale.display_id} — ${sale.name}`}
+                  variant="full"
+                  onDeleted={() => navigate("/sales")}
+                />
+              )}
             </>
           )}
         </div>

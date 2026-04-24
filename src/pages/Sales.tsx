@@ -14,6 +14,7 @@ import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
+import DeleteSaleButton from "@/components/DeleteSaleButton";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -81,9 +82,10 @@ interface SaleRowProps {
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
+  onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
@@ -151,7 +153,10 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
         <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
       <td className="px-2 py-3">
-        <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" onClick={() => onNavigate(sale.id)}><Eye className="w-4 h-4" /></Button>
+          <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
+        </div>
       </td>
     </tr>
   );
@@ -229,6 +234,7 @@ export default function Sales() {
 
   const handleNavigateSale = useCallback((id: string) => navigate(`/sales/${id}`), [navigate]);
   const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
+  const handleDeleted = useCallback((id: string) => setSales((prev) => prev.filter((s) => s.id !== id)), []);
 
   const handleExport = () => {
     const headers = ["ID", "Nome", "Status", "Origem", "Destino", "PAX", "Receita", "Custo", "Lucro", "Margem%", "Lead", "Data Ida", "Data Volta"];
@@ -313,6 +319,7 @@ export default function Sales() {
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={cn("text-[10px] shrink-0", statusColor[sale.status] || "")}>{sale.status}</Badge>
                       {renderLeadBadge(sale.lead_type)}
+                      <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={handleDeleted} />
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
@@ -416,6 +423,7 @@ export default function Sales() {
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
+                        onDeleted={handleDeleted}
                       />
                     ))}
                   </tbody>
