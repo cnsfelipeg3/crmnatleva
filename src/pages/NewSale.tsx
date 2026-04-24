@@ -79,6 +79,7 @@ export default function NewSale() {
   const [activeTab, setActiveTab] = useState<string>("info");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = usePermissions();
   const { toast } = useToast();
   const location = useLocation();
   const { id: editId } = useParams<{ id: string }>();
