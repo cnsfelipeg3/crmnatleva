@@ -639,7 +639,41 @@ export function HotelscomDetailDrawer({
               </Card>
             )}
 
-            {amenitiesShort.length > 0 && (
+            {offerPerks.length > 0 && (
+              <Card className="p-4">
+                <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Todas as ofertas incluem
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {offerPerks.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                      <span className="text-foreground/80">
+                        {translateAmenity(p.text)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {headlineRich.supportingMessages.length > 0 && (
+              <Card className="p-4">
+                <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Destaques
+                </h4>
+                <ul className="space-y-1.5">
+                  {headlineRich.supportingMessages.map((m, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span className="text-foreground/80">{m}</span>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            )}
               <Card className="p-4">
                 <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
                   <Sparkles className="h-4 w-4 text-primary" />
