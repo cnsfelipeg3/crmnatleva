@@ -7,6 +7,8 @@ import {
   Cloud,
   SlidersHorizontal,
   Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
