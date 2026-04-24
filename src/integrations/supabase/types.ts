@@ -2800,6 +2800,7 @@ export type Database = {
           birth_date: string | null
           commission_enabled: boolean | null
           commission_percent: number | null
+          commission_rules: Json
           contract_type: string
           cpf: string | null
           created_at: string
@@ -2843,6 +2844,7 @@ export type Database = {
           birth_date?: string | null
           commission_enabled?: boolean | null
           commission_percent?: number | null
+          commission_rules?: Json
           contract_type?: string
           cpf?: string | null
           created_at?: string
@@ -2886,6 +2888,7 @@ export type Database = {
           birth_date?: string | null
           commission_enabled?: boolean | null
           commission_percent?: number | null
+          commission_rules?: Json
           contract_type?: string
           cpf?: string | null
           created_at?: string
