@@ -187,7 +187,8 @@ export default function Sales() {
 
   // Local table column sorting
   type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
-  const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>(null);
+  // Default: ordena por Data da Venda (close_date) decrescente — mais recentes primeiro
+  const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>({ key: "close_date", dir: "desc" });
 
   const toggleColSort = (key: ColSortKey) => {
     setColSort(prev => {
