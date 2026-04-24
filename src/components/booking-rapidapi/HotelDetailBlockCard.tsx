@@ -412,11 +412,7 @@ export function HotelDetailBlockCard({
                 size="sm"
                 className="h-7 px-2 text-xs"
                 onClick={() =>
-                  window.open(
-                    `https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
+                  window.open(bookingUrl, "_blank", "noopener,noreferrer")
                 }
               >
                 <ExternalLink className="mr-1 h-3 w-3" /> Reservar
