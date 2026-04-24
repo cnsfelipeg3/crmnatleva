@@ -45,12 +45,12 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">
+      <div className="hidden lg:flex lg:w-1/2 bg-sidebar relative overflow-hidden items-center justify-center">
         <div className="absolute inset-0 opacity-10">
           {[...Array(5)].map((_, i) => (
             <Plane
               key={i}
-              className="absolute text-primary-foreground"
+              className="absolute text-sidebar-accent-foreground"
               style={{
                 width: `${40 + i * 20}px`,
                 height: `${40 + i * 20}px`,
@@ -63,8 +63,8 @@ export default function Login() {
         </div>
         <div className="relative z-10 text-center px-12">
           <img src={logoNatleva} alt="NatLeva Viagens" className="h-16 mx-auto mb-8 brightness-0 invert" />
-          <h1 className="text-3xl font-serif text-primary-foreground mb-4">Sistema Interno</h1>
-          <p className="text-primary-foreground/70 text-lg">CRM de Vendas & Inteligência Operacional</p>
+          <h1 className="text-3xl font-serif text-sidebar-accent-foreground mb-4">Sistema Interno</h1>
+          <p className="text-sidebar-accent-foreground/70 text-lg">CRM de Vendas & Inteligência Operacional</p>
         </div>
       </div>
 
