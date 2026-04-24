@@ -36,6 +36,26 @@ import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/co
 import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryType } from "@/lib/itineraryClassifier";
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
+import { getProductLabel } from "@/lib/productTypes";
+
+// Mapeia chaves de item_type da proposta → slug canônico em @/lib/productTypes.
+// "destination" não é produto vendável (label local "Destino").
+const ITEM_TYPE_TO_SLUG: Record<string, string> = {
+  flight: "aereo",
+  hotel: "hospedagem",
+  train: "trem",
+  car: "aluguel-carro",
+  transfer: "transfer",
+  tour: "passeios",
+  ticket: "ingressos",
+  cruise: "cruzeiro",
+  experience: "passeios",
+  itinerary: "roteiro-personalizado",
+  insurance: "seguro-viagem",
+  other: "outros",
+};
+const labelFor = (itemType: string): string =>
+  itemType === "destination" ? "Destino" : getProductLabel(ITEM_TYPE_TO_SLUG[itemType] || "outros");
 
 const itemTypeIcons: Record<string, any> = {
   destination: MapPin,
@@ -54,35 +74,35 @@ const itemTypeIcons: Record<string, any> = {
 };
 
 const itemTypeLabels: Record<string, string> = {
-  destination: "Destino",
-  flight: "Aéreo",
-  hotel: "Hospedagem",
-  train: "Trem",
-  car: "Carro",
-  transfer: "Transfer",
-  tour: "Passeio",
-  ticket: "Ingresso",
-  cruise: "Cruzeiro",
-  experience: "Experiência",
-  itinerary: "Roteiro Personalizado",
-  insurance: "Seguro Viagem",
-  other: "Outros",
+  destination: labelFor("destination"),
+  flight:      labelFor("flight"),
+  hotel:       labelFor("hotel"),
+  train:       labelFor("train"),
+  car:         "Carro",
+  transfer:    labelFor("transfer"),
+  tour:        "Passeio",
+  ticket:      "Ingresso",
+  cruise:      labelFor("cruise"),
+  experience:  "Experiência",
+  itinerary:   labelFor("itinerary"),
+  insurance:   labelFor("insurance"),
+  other:       labelFor("other"),
 };
 
 // Categorias exibidas como abas verticais dentro de "Itens da Viagem"
 const ITEM_CATEGORIES: { value: string; label: string; icon: any }[] = [
-  { value: "flight", label: "Aéreo", icon: Plane },
-  { value: "hotel", label: "Hospedagens", icon: Hotel },
-  { value: "train", label: "Trens", icon: Train },
-  { value: "car", label: "Carro", icon: Car },
-  { value: "transfer", label: "Transfer", icon: Bus },
-  { value: "tour", label: "Passeios", icon: Sparkles },
-  { value: "ticket", label: "Ingressos", icon: Ticket },
-  { value: "cruise", label: "Cruzeiro", icon: Ship },
-  { value: "experience", label: "Experiências", icon: Sparkles },
-  { value: "itinerary", label: "Roteiro Personalizado", icon: MapIcon },
-  { value: "insurance", label: "Seguro Viagem", icon: ShieldCheck },
-  { value: "other", label: "Outros", icon: Package },
+  { value: "flight",      label: labelFor("flight"),     icon: Plane },
+  { value: "hotel",       label: "Hospedagens",          icon: Hotel },
+  { value: "train",       label: "Trens",                icon: Train },
+  { value: "car",         label: "Carro",                icon: Car },
+  { value: "transfer",    label: labelFor("transfer"),   icon: Bus },
+  { value: "tour",        label: "Passeios",             icon: Sparkles },
+  { value: "ticket",      label: "Ingressos",            icon: Ticket },
+  { value: "cruise",      label: labelFor("cruise"),     icon: Ship },
+  { value: "experience",  label: "Experiências",         icon: Sparkles },
+  { value: "itinerary",   label: labelFor("itinerary"),  icon: MapIcon },
+  { value: "insurance",   label: labelFor("insurance"),  icon: ShieldCheck },
+  { value: "other",       label: labelFor("other"),      icon: Package },
 ];
 
 function generateSlug() {
