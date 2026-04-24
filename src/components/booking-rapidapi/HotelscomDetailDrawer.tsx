@@ -228,7 +228,9 @@ export function HotelscomDetailDrawer({
 
   const rating = card.summarySections?.[0]?.guestRatingSectionV2;
   const ratingScore = rating?.badge?.text;
-  const ratingWord = rating?.phrases?.[0]?.phraseParts?.[0]?.text;
+  const ratingWord = translateHotelscomRatingWord(
+    rating?.phrases?.[0]?.phraseParts?.[0]?.text,
+  );
   const reviewCount = rating?.phrases?.[1]?.phraseParts?.[0]?.text;
 
   const footerMessages = card.summarySections?.[0]?.footerMessages?.listItems ?? [];
@@ -275,10 +277,11 @@ export function HotelscomDetailDrawer({
   })();
 
   // Highlights/Headline (textuais ricos)
-  const headlineText: string | undefined =
+  const headlineText: string | undefined = translateHotelscomText(
     details?.headline?.headline?.text ??
-    details?.headline?.text ??
-    details?.content?.tagline?.text;
+      details?.headline?.text ??
+      details?.content?.tagline?.text,
+  );
 
   const overviewSections: Array<{ title: string; body: string }> = (() => {
     const out: Array<{ title: string; body: string }> = [];
@@ -287,8 +290,8 @@ export function HotelscomDetailDrawer({
       high?.highlights ?? high?.items ?? high?.contentItems ?? [];
     if (Array.isArray(items)) {
       for (const it of items) {
-        const title = it?.heading ?? it?.title ?? it?.name;
-        const body = it?.body ?? it?.text ?? it?.description;
+        const title = translateHotelscomText(it?.heading ?? it?.title ?? it?.name);
+        const body = translateHotelscomText(it?.body ?? it?.text ?? it?.description);
         if (title && body) out.push({ title, body });
       }
     }
@@ -299,8 +302,8 @@ export function HotelscomDetailDrawer({
       [];
     if (out.length === 0 && Array.isArray(contentSections)) {
       for (const s of contentSections) {
-        const title = s?.heading ?? s?.title;
-        const body = s?.body?.text ?? s?.text ?? s?.description;
+        const title = translateHotelscomText(s?.heading ?? s?.title);
+        const body = translateHotelscomText(s?.body?.text ?? s?.text ?? s?.description);
         if (title && body) out.push({ title, body });
       }
     }
