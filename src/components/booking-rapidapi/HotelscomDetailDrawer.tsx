@@ -535,10 +535,10 @@ export function HotelscomDetailDrawer({
                   Destaques
                 </h4>
                 <ul className="space-y-1.5">
-                  {headlineRich.supportingMessages.map((m, i) => (
+                    {headlineRich.supportingMessages.map((m, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs">
                       <span className="text-primary mt-0.5">•</span>
-                      <span className="text-foreground/80">{m}</span>
+                        <span className="text-foreground/80">{translateHotelscomText(m)}</span>
                     </li>
                   ))}
                 </ul>
@@ -639,7 +639,7 @@ export function HotelscomDetailDrawer({
                                 f.positive && "border-emerald-300 text-emerald-700 dark:text-emerald-400",
                               )}
                             >
-                              {f.text}
+                               {translateHotelscomText(f.text)}
                             </Badge>
                           ))}
                         </div>
@@ -714,9 +714,9 @@ export function HotelscomDetailDrawer({
                                 : rate.cancellationLabel}
                             </Badge>
                           )}
-                          {rate.dealBadge && (
+                           {rate.dealBadge && (
                             <Badge className="text-[10px] bg-rose-500 hover:bg-rose-500 text-white">
-                              🔥 {rate.dealBadge}
+                               🔥 {translateHotelscomText(rate.dealBadge)}
                             </Badge>
                           )}
                         </div>
@@ -736,7 +736,7 @@ export function HotelscomDetailDrawer({
 
                   {room.amenities.length > 0 && (
                     <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                         Ver {room.amenities.length} comodidades do quarto
                       </summary>
                       <div className="mt-2 grid grid-cols-2 gap-1">
@@ -926,10 +926,10 @@ export function HotelscomDetailDrawer({
                       key={i}
                       className="flex items-center justify-between gap-3 text-xs"
                     >
-                      <span className="text-foreground/80 truncate">{n.name}</span>
+                       <span className="text-foreground/80 truncate">{translateHotelscomText(n.name)}</span>
                       {n.distance && (
                         <span className="text-muted-foreground shrink-0">
-                          {n.distance}
+                           {translateHotelscomDistance(n.distance)}
                         </span>
                       )}
                     </div>
@@ -949,14 +949,7 @@ export function HotelscomDetailDrawer({
                 </h4>
                 <div className="space-y-2">
                   {footerMessages.map((m, i) => {
-                    const text = (m.text || "")
-                      .replace(/^Fully refundable$/i, "Totalmente reembolsável")
-                      .replace(/^Non refundable$/i, "Não reembolsável")
-                      .replace(/^Free cancellation$/i, "Cancelamento grátis")
-                      .replace(/^Breakfast included$/i, "Café da manhã incluso")
-                      .replace(/^Free Wi-?Fi$/i, "Wi-Fi grátis")
-                      .replace(/^Free parking$/i, "Estacionamento grátis")
-                      .replace(/\bfree cancellation\b/gi, "cancelamento grátis");
+                      const text = translateHotelscomText(m.text || "");
                     return (
                       <div key={i} className="flex items-start gap-2 text-sm">
                         {m.style === "POSITIVE" ? (
