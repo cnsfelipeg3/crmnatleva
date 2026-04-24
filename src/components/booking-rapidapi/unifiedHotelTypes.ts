@@ -541,6 +541,56 @@ function normalizeForMatch(str?: string): string {
     .trim();
 }
 
+/** Tokens significativos do nome (>=3 chars, sem ruído) pra fuzzy match */
+function tokensFromName(str?: string): Set<string> {
+  const norm = normalizeForMatch(str);
+  if (!norm) return new Set();
+  return new Set(norm.split(" ").filter((t) => t.length >= 3));
+}
+
+/** Distância em km entre 2 coords (haversine simplificado) */
+function geoDistanceKm(
+  lat1?: number,
+  lon1?: number,
+  lat2?: number,
+  lon2?: number,
+): number | undefined {
+  if (
+    typeof lat1 !== "number" ||
+    typeof lon1 !== "number" ||
+    typeof lat2 !== "number" ||
+    typeof lon2 !== "number"
+  )
+    return undefined;
+  const R = 6371;
+  const toRad = (x: number) => (x * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/** Score 0–1 de similaridade entre 2 hotéis (nome + geo) */
+function similarityScore(a: UnifiedHotel, b: UnifiedHotel): number {
+  const ta = tokensFromName(a.name);
+  const tb = tokensFromName(b.name);
+  if (ta.size === 0 || tb.size === 0) return 0;
+  let inter = 0;
+  for (const t of ta) if (tb.has(t)) inter++;
+  const jaccard = inter / (ta.size + tb.size - inter);
+
+  const dist = geoDistanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
+  // Geo boost: se < 80m → mesma propriedade praticamente certa
+  if (typeof dist === "number") {
+    if (dist < 0.08 && jaccard >= 0.34) return 1; // praticamente colado + algum nome match
+    if (dist < 0.25 && jaccard >= 0.5) return 0.95;
+    if (dist > 1.5) return Math.min(jaccard, 0.4); // longe → não é o mesmo
+  }
+  return jaccard;
+}
+
 function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
   return {
     source: h.source,
