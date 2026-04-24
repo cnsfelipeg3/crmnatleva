@@ -6,6 +6,7 @@ import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import KpiCards from "@/components/dashboard/KpiCards";
 import DeferredRender from "@/components/DeferredRender";
 import { Skeleton } from "@/components/ui/skeleton";
+import { hasProduct } from "@/lib/productTypes";
 
 const FinancialSection = lazy(() => import("@/components/dashboard/FinancialSection"));
 const CommercialSection = lazy(() => import("@/components/dashboard/CommercialSection"));
@@ -262,7 +263,7 @@ export default function Dashboard() {
       if (sid) result = result.filter(s => s.seller_id === sid);
     }
     if (destination !== "all") result = result.filter(s => s.destination_iata === destination);
-    if (product !== "all") result = result.filter(s => (s.products || []).includes(product));
+    if (product !== "all") result = result.filter(s => hasProduct(s.products, product));
     if (status !== "all") result = result.filter(s => s.status === status);
     if (region !== "all") result = result.filter(s => getRegion(s.destination_iata) === region);
     if (valueRange !== "all") {
