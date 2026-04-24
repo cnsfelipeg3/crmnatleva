@@ -488,19 +488,6 @@ export function HotelscomDetailDrawer({
                 </Card>
               )}
             </TabsContent>
-
-            <TabsContent value="raw" className="mt-4">
-              <Card className="p-3">
-                <details>
-                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground mb-2">
-                    Ver JSON bruto (debug)
-                  </summary>
-                  <pre className="text-[10px] overflow-x-auto bg-muted p-2 rounded mt-2 max-h-96">
-                    {JSON.stringify(card, null, 2)}
-                  </pre>
-                </details>
-              </Card>
-            </TabsContent>
           </Tabs>
       </div>
     </ScrollArea>
