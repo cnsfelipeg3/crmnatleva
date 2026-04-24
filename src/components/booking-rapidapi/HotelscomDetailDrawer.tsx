@@ -91,6 +91,33 @@ function fmtBRL(value?: number, currency?: string): string {
   }
 }
 
+function parseCurrencySnippet(text?: string): { amount?: number; currency?: string } {
+  if (!text) return {};
+  const symbol = text.includes("R$") ? "BRL" : text.includes("€") ? "EUR" : text.includes("£") ? "GBP" : text.includes("$") ? "USD" : undefined;
+  const match = text.match(/[\d.,]+/);
+  if (!match) return { currency: symbol };
+  let raw = match[0];
+  if (symbol === "BRL") raw = raw.replace(/\./g, "").replace(",", ".");
+  else raw = raw.replace(/,/g, "");
+  const amount = parseFloat(raw);
+  return { amount: Number.isFinite(amount) ? amount : undefined, currency: symbol };
+}
+
+function formatDealBadgeBRL(
+  text: string | undefined,
+  rates: Record<string, number> | null | undefined,
+): string | undefined {
+  if (!text) return undefined;
+  const parsed = parseCurrencySnippet(text);
+  if (typeof parsed.amount === "number" && parsed.currency) {
+    const converted = convertPriceToBRL(parsed.amount, parsed.currency, rates);
+    if (typeof converted.value === "number") {
+      return `Desconto de ${fmtBRL(converted.value, "BRL")}`;
+    }
+  }
+  return translateHotelscomText(text.replace(/\boff\b/i, "de desconto"));
+}
+
 function translateMessage(raw: string | undefined, converted?: Converted): string | undefined {
   if (!raw) return raw;
   let s = raw;
@@ -225,6 +252,7 @@ export function HotelscomDetailDrawer({
     priceOpt?.formattedDisplayPrice ?? priceOpt?.displayPrice?.formatted;
   const originalStriked = priceOpt?.strikeOut?.formatted;
   const discountBadgeText = card.priceSection?.badge?.text;
+  const localizedDiscountBadge = formatDealBadgeBRL(discountBadgeText, rates);
 
   const rating = card.summarySections?.[0]?.guestRatingSectionV2;
   const ratingScore = rating?.badge?.text;
@@ -384,7 +412,7 @@ export function HotelscomDetailDrawer({
                 </Badge>
                 {discountBadgeText && (
                   <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive font-bold">
-                    🔥 {discountBadgeText}
+                    🔥 {localizedDiscountBadge}
                   </Badge>
                 )}
                 {detailsLoading && (
@@ -412,7 +440,7 @@ export function HotelscomDetailDrawer({
                   </Badge>
                 )}
                 {reviewCount && (
-                  <Badge variant="outline" className="text-xs">{reviewCount}</Badge>
+                  <Badge variant="outline" className="text-xs">{translateHotelscomText(reviewCount)}</Badge>
                 )}
                 {arrival && departure && (
                   <Badge variant="outline" className="gap-1 text-xs">
@@ -448,10 +476,9 @@ export function HotelscomDetailDrawer({
                 <p className="text-[10px] text-muted-foreground pt-1">
                   Preço convertido do USD · taxa aproximada
                 </p>
-                {originalPriceFormatted && (
+                {typeof converted.priceStriked === "number" && converted.priceStriked > (converted.priceTotal ?? 0) && (
                   <p className="text-[10px] text-muted-foreground">
-                    Original (Hotels.com): {originalPriceFormatted}
-                    {originalStriked && ` · riscado ${originalStriked}`}
+                    Tarifa original: {fmtBRL(converted.priceStriked, "BRL")}
                   </p>
                 )}
               </div>
@@ -626,7 +653,7 @@ export function HotelscomDetailDrawer({
                     <div className="flex-1 min-w-0">
                       <h5 className="font-semibold text-sm flex items-center gap-2">
                         <BedDouble className="h-4 w-4 text-primary" />
-                        {room.name}
+                        {translateHotelscomText(room.name)}
                       </h5>
                       {room.features.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -667,11 +694,13 @@ export function HotelscomDetailDrawer({
                               : "convertido do " + totalCurrency}
                           </p>
                         </>
-                      ) : cheapest?.totalFormatted ? (
+                       ) : cheapest?.totalFormatted && /R\$/i.test(cheapest.totalFormatted) ? (
                         <div className="font-bold text-base">
                           {cheapest.totalFormatted}
                         </div>
-                      ) : null}
+                       ) : (
+                         <div className="font-medium text-sm">Preço em BRL sob consulta</div>
+                       )}
                     </div>
                   </div>
 
@@ -709,14 +738,14 @@ export function HotelscomDetailDrawer({
                               className="text-[10px] border-emerald-300 text-emerald-700 dark:text-emerald-400 gap-1"
                             >
                               <CheckCircle2 className="h-2.5 w-2.5" />
-                              {/free cancellation/i.test(rate.cancellationLabel)
+                               {/free cancellation/i.test(rate.cancellationLabel)
                                 ? "Cancelamento grátis"
-                                : rate.cancellationLabel}
+                                 : translateHotelscomText(rate.cancellationLabel)}
                             </Badge>
                           )}
                            {rate.dealBadge && (
                             <Badge className="text-[10px] bg-rose-500 hover:bg-rose-500 text-white">
-                               🔥 {translateHotelscomText(rate.dealBadge)}
+                               🔥 {formatDealBadgeBRL(rate.dealBadge, rates)}
                             </Badge>
                           )}
                         </div>
@@ -809,7 +838,7 @@ export function HotelscomDetailDrawer({
             )}
             {amenitiesGroups.map((g, i) => (
               <Card key={i} className="p-4">
-                <h5 className="font-semibold text-sm mb-2">{g.title}</h5>
+                <h5 className="font-semibold text-sm mb-2">{translateHotelscomText(g.title)}</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {g.items.map((it, j) => (
                     <div key={j} className="flex items-center gap-2 text-xs">
@@ -832,7 +861,7 @@ export function HotelscomDetailDrawer({
                   </div>
                   <div>
                     {ratingSummary.label && (
-                      <div className="font-semibold text-sm">{ratingSummary.label}</div>
+                        <div className="font-semibold text-sm">{translateHotelscomText(ratingSummary.label)}</div>
                     )}
                     {ratingSummary.totalReviews && (
                       <div className="text-xs text-muted-foreground">
@@ -858,7 +887,7 @@ export function HotelscomDetailDrawer({
                   <div className="flex items-center gap-2 text-xs min-w-0">
                     <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="font-medium truncate">
-                      {r.authorContext ?? "Hóspede"}
+                      {translateHotelscomText(r.authorContext) || "Hóspede"}
                     </span>
                     {r.date && (
                       <span className="text-muted-foreground shrink-0">· {r.date}</span>
@@ -872,7 +901,7 @@ export function HotelscomDetailDrawer({
                   )}
                 </div>
                 {r.title && (
-                  <p className="text-xs font-semibold text-foreground/90">{r.title}</p>
+                  <p className="text-xs font-semibold text-foreground/90">{translateHotelscomText(r.title)}</p>
                 )}
                 {r.text && (
                   <p className="text-xs text-foreground/80 line-clamp-5">{r.text}</p>
@@ -912,7 +941,7 @@ export function HotelscomDetailDrawer({
               <Card className="p-4">
                 <h5 className="font-semibold text-sm mb-2">Sobre a localização</h5>
                 <p className="text-xs text-foreground/80 whitespace-pre-line">
-                  {editorialLocation}
+                  {translateHotelscomText(editorialLocation)}
                 </p>
               </Card>
             )}
