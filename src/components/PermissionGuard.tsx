@@ -19,6 +19,10 @@ export default function PermissionGuard({ children }: Props) {
   if (isAdmin) return <>{children}</>;
   if (loading) return null; // evita flash
 
+  // O /dashboard é sempre acessível para usuários autenticados.
+  // A escolha entre dashboard completo e dashboard simples já é feita no roteador.
+  if (location.pathname === "/dashboard") return <>{children}</>;
+
   // Tenta achar o menu pela rota exata; se não bater, libera (rota não governada)
   const menu = MENU_BY_PATH[location.pathname];
   if (!menu) return <>{children}</>;
