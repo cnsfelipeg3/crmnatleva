@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { getProductLabel } from "@/lib/productTypes";
 
 interface Props {
   item: NegotiationItem | null;
@@ -175,7 +176,7 @@ function CompleteProfile({ item }: { item: NegotiationItem }) {
 
       {/* Hotel */}
       {(b?.hotelPreference || b?.hotelStars || item.cabinClass) && (
-        <DetailSection title="Hospedagem" icon={Hotel} defaultOpen={false}>
+        <DetailSection title={getProductLabel("hospedagem")} icon={Hotel} defaultOpen={false}>
           <div className="grid grid-cols-2 gap-2">
             <InfoRow label="Preferência" value={b?.hotelPreference} />
             <InfoRow label="Estrelas" value={b?.hotelStars ? `${b.hotelStars}★` : null} />

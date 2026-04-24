@@ -9,6 +9,7 @@ import {
   MapPin, Calendar, Users, Wallet, Clock, Plane, Hotel, Sparkles,
   Globe, Heart, Shield, Tag, TrendingUp, AlertTriangle, Baby, Compass,
 } from "lucide-react";
+import { getProductLabel } from "@/lib/productTypes";
 
 interface Message {
   content: string;
@@ -522,7 +523,7 @@ export default function ConversationIntelligencePanel({ messages, className }: P
                     ? `${kidsCount}${childrenAges ? ` (${childrenAges})` : ""}`
                     : passengers.details || ""
                 } />
-                <FieldRow icon={Hotel} label="Hospedagem" value={needsHotel || ""} />
+                <FieldRow icon={Hotel} label={getProductLabel("hospedagem")} value={needsHotel || ""} />
                 <FieldRow icon={Plane} label="Classe" value={flightClass || ""} />
                 <FieldRow icon={Plane} label="Cia Aérea" value={airline || ""} />
                 <FieldRow icon={Plane} label="Aeroporto" value={airport || ""} />

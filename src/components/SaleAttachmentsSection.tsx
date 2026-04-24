@@ -5,6 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Paperclip, FileText, Image as ImageIcon, File, FileSpreadsheet, Download, ExternalLink, FolderOpen } from "lucide-react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { toast } from "sonner";
+import { getProductLabel } from "@/lib/productTypes";
 
 interface Attachment {
   id: string;
@@ -16,14 +17,14 @@ interface Attachment {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  voucher: "Vouchers",
+  voucher:        "Vouchers",
   prints_emissao: "Prints de Emissão",
-  comprovante: "Comprovantes",
-  nota_fiscal: "Notas Fiscais",
-  aereo: "Aéreo",
-  hotel: "Hotel",
-  seguro: "Seguro",
-  outros: "Outros",
+  comprovante:    "Comprovantes",
+  nota_fiscal:    "Notas Fiscais",
+  aereo:          getProductLabel("aereo"),
+  hotel:          getProductLabel("hospedagem"),
+  seguro:         getProductLabel("seguro-viagem"),
+  outros:         getProductLabel("outros"),
 };
 
 function getFileIcon(fileName: string) {

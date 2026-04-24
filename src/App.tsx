@@ -328,7 +328,7 @@ function AppRoutes() {
           <Route path="/settings/miles-programs" element={<GenericSettingsList title="Programas de Milhas" defaultItems={["Smiles", "LATAM Pass", "TudoAzul", "Livelo", "Esfera"]} />} />
           <Route path="/settings/payment-methods" element={<GenericSettingsList title="Meios de Pagamento" defaultItems={["PIX", "Cartão de crédito", "Transferência", "Boleto"]} />} />
           <Route path="/settings/tags" element={<GenericSettingsList title="Tags" defaultItems={["VIP", "Corporativo", "Lua de Mel", "Família", "Grupo"]} />} />
-          <Route path="/settings/products" element={<GenericSettingsList title="Produtos" defaultItems={["Aéreo", "Hotel", "Seguro Viagem", "Transfer", "Passeios"]} />} />
+          <Route path="/settings/products" element={<GenericSettingsList title="Produtos" defaultItems={[]} />} />
           <Route path="/settings/permissions" element={<GenericSettingsList title="Permissões" defaultItems={["admin", "gestor", "vendedor", "operacional", "financeiro", "leitura"]} />} />
           <Route path="/settings/calc-rules" element={<GenericSettingsList title="Regras de Cálculo" defaultItems={["Milheiro padrão: R$ 20,00", "Taxa fixa emissão: R$ 50,00", "Markup padrão: 15%"]} />} />
           <Route path="/settings/user-locations" element={<UserLocations />} />
