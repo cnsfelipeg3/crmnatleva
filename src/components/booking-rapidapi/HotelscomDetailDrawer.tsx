@@ -176,10 +176,9 @@ export function HotelscomDetailDrawer({
   const nextPhoto = () =>
     setGalleryIdx((i) => (i === null ? i : (i + 1) % photos.length));
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
-        <ScrollArea className="flex-1">
+  const innerContent = (
+    <ScrollArea className="flex-1 h-full">
+      <div className="flex flex-col">
           <SheetHeader className="p-5 border-b space-y-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 space-y-2">
