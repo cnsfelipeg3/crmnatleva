@@ -89,14 +89,36 @@ export default function Colaboradores() {
       termination_date,
     };
 
+    let employeeId = form.id;
     if (form.id) {
       await supabase.from("employees").update(payload).eq("id", form.id);
       toast.success("Colaborador atualizado");
     } else {
       const { data } = await supabase.from("employees").insert(payload).select().single();
-      if (data) setForm({ ...form, id: data.id });
+      if (data) { setForm({ ...form, id: data.id }); employeeId = data.id; }
       toast.success("Colaborador criado");
     }
+
+    // Sincroniza employee_permissions com o JSON granular
+    if (employeeId && form.permissions && typeof form.permissions === "object") {
+      const perms = form.permissions as Record<string, Partial<Record<"view"|"create"|"edit"|"delete", boolean>>>;
+      // Limpa todas as permissões antigas e regrava
+      await (supabase as any).from("employee_permissions").delete().eq("employee_id", employeeId);
+      const rows = Object.entries(perms)
+        .filter(([_, p]) => p && (p.view || p.create || p.edit || p.delete))
+        .map(([menu_key, p]) => ({
+          employee_id: employeeId,
+          menu_key,
+          can_view: !!p.view,
+          can_create: !!p.create,
+          can_edit: !!p.edit,
+          can_delete: !!p.delete,
+        }));
+      if (rows.length > 0) {
+        await (supabase as any).from("employee_permissions").insert(rows);
+      }
+    }
+
     setShowForm(false);
     setForm({});
     load();
