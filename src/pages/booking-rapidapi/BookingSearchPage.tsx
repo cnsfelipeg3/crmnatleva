@@ -36,10 +36,8 @@ import {
   SearchFilters,
   type GuestsConfig,
 } from "@/components/booking-rapidapi/SearchFilters";
-import { HotelCard } from "@/components/booking-rapidapi/HotelCard";
-import { HotelscomCard } from "@/components/booking-rapidapi/HotelscomCard";
-import { HotelDetailDrawer } from "@/components/booking-rapidapi/HotelDetailDrawer";
-import { HotelscomDetailDrawer } from "@/components/booking-rapidapi/HotelscomDetailDrawer";
+import { UnifiedHotelCard } from "@/components/booking-rapidapi/UnifiedHotelCard";
+import { UnifiedHotelDetailDrawer } from "@/components/booking-rapidapi/UnifiedHotelDetailDrawer";
 import { HotelsPagination } from "@/components/booking-rapidapi/HotelsPagination";
 import { HotelFiltersSidebar } from "@/components/booking-rapidapi/HotelFiltersSidebar";
 import {
@@ -56,9 +54,14 @@ import type {
 } from "@/components/booking-rapidapi/types";
 import { emptyHotelFiltersState } from "@/components/booking-rapidapi/types";
 import {
+  normalizeBookingHotel,
   normalizeHotelscomHotel,
   convertPriceToBRL,
+  groupHotelsByIdentity,
   type UnifiedHotel,
+  type UnifiedHotelGroup,
+  type UnifiedHotelOffer,
+  type HotelSource,
   type HotelscomLodgingCard,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
 
