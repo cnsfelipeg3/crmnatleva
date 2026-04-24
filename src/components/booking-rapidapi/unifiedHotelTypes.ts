@@ -63,6 +63,8 @@ export interface UnifiedHotel {
   propertyIdComposite?: string;
   /** True quando o preço é tarifa de membro/loyalty (pode diferir do preço público no site) */
   isMemberPrice?: boolean;
+  /** True quando o provider veio em outro mercado/moeda e o valor em BRL é apenas estimado */
+  isEstimatedPrice?: boolean;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
@@ -402,6 +404,10 @@ export function normalizeHotelscomHotel(
   const { lat, lng } = extractLatLongFromUrl(externalUrl);
   const neighborhood = extractNeighborhoodFromUrl(externalUrl);
   const promoBadges = extractPromoBadges(card);
+  const topCurMatch = externalUrl?.match(/[?&]top_cur=([^&]+)/i);
+  const topCur = topCurMatch?.[1]?.toUpperCase();
+  const isEstimatedPrice =
+    source === undefined ? false : !!topCur && topCur !== "BRL";
 
   return {
     source: "hotelscom",
@@ -433,6 +439,7 @@ export function normalizeHotelscomHotel(
     neighborhood,
     propertyIdComposite: card.propertyId,
     isMemberPrice,
+    isEstimatedPrice,
     raw: card,
   };
 }
@@ -526,6 +533,8 @@ export interface UnifiedHotelOffer {
   propertyIdComposite?: string;
   /** True quando o preço é tarifa de membro/loyalty (não bate com o preço público) */
   isMemberPrice?: boolean;
+  /** True quando o provider veio em outro mercado/moeda e o valor em BRL é apenas estimado */
+  isEstimatedPrice?: boolean;
   raw?: unknown;
 }
 
@@ -648,6 +657,7 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     accessibilityPriceLabel: h.accessibilityPriceLabel,
     propertyIdComposite: h.propertyIdComposite,
     isMemberPrice: h.isMemberPrice,
+    isEstimatedPrice: h.isEstimatedPrice,
     raw: h.raw,
   };
 }
@@ -699,6 +709,10 @@ export function groupHotelsByIdentity(
 
     const offers = members.map(toOffer);
     offers.sort((a, b) => {
+      const aTrusted = !a.isEstimatedPrice;
+      const bTrusted = !b.isEstimatedPrice;
+      if (aTrusted !== bTrusted) return aTrusted ? -1 : 1;
+
       const pa = a.priceTotal;
       const pb = b.priceTotal;
       if (typeof pa !== "number" && typeof pb !== "number") return 0;
@@ -707,8 +721,13 @@ export function groupHotelsByIdentity(
       return pa - pb;
     });
 
-    const bestOffer = offers.find((o) => typeof o.priceTotal === "number");
-    const worstOffer = [...offers]
+    const trustedOffers = offers.filter(
+      (o) => !o.isEstimatedPrice && typeof o.priceTotal === "number",
+    );
+    const comparableOffers = trustedOffers.length > 0 ? trustedOffers : offers;
+
+    const bestOffer = comparableOffers.find((o) => typeof o.priceTotal === "number");
+    const worstOffer = [...comparableOffers]
       .reverse()
       .find((o) => typeof o.priceTotal === "number");
 
