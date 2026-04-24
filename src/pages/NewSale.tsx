@@ -19,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { getProductLabel } from "@/lib/productTypes";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
@@ -78,10 +79,27 @@ export default function NewSale() {
   const [activeTab, setActiveTab] = useState<string>("info");
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { isAdmin } = usePermissions();
   const { toast } = useToast();
   const location = useLocation();
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = !!editId;
+
+  // Lista de colaboradores (apenas para admins selecionarem o vendedor da venda)
+  const { data: employeesList = [] } = useQuery({
+    queryKey: ["employees-for-seller-select"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, user_id, full_name, email, status")
+        .eq("status", "ativo")
+        .not("user_id", "is", null)
+        .order("full_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   // Upload & extraction
   const [dragOver, setDragOver] = useState(false);
@@ -97,6 +115,7 @@ export default function NewSale() {
     origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
     airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
     emission_source: "", lead_type: "agencia" as "agencia" | "organico",
+    seller_id: "" as string,
     // Payment
     received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
   });
@@ -160,6 +179,7 @@ export default function NewSale() {
           locator: (sale.locators as string[])?.join(", ") || "", connections: (sale.connections as string[])?.join(", ") || "",
           miles_program: sale.miles_program || "", emission_source: sale.emission_source || "",
           lead_type: (sale.lead_type as "agencia" | "organico") || "agencia",
+          seller_id: sale.seller_id || "",
           received_value: sale.received_value ? String(sale.received_value) : "",
           paid_value: "", payment_gateway: "", payment_installments: "1",
         });
@@ -535,7 +555,7 @@ export default function NewSale() {
 
       const salePayload = {
         name: smartCapitalizeName(form.name),
-        seller_id: user?.id,
+        seller_id: (isAdmin && form.seller_id) ? form.seller_id : user?.id,
         close_date: form.close_date || null,
         payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
@@ -795,7 +815,7 @@ export default function NewSale() {
               status: isPaid ? "recebido" : "pendente",
               received_date: isPaid ? (p.payment_date || todayStr) : null,
               due_date: p.due_date || p.payment_date || todayStr,
-              seller_id: user?.id || null,
+              seller_id: (isAdmin && form.seller_id) ? form.seller_id : (user?.id || null),
               created_by: user?.id || null,
               installment_number: 1,
               installment_total: p.installments,
@@ -874,8 +894,29 @@ export default function NewSale() {
                 <Input type="date" value={form.close_date} onChange={(e) => updateForm("close_date", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Vendedor Responsável</Label>
-                <Input value={user?.email || ""} disabled className="bg-muted/50" />
+                <Label>Vendedor Responsável {isAdmin && <span className="text-[10px] text-muted-foreground font-normal">(admin pode trocar)</span>}</Label>
+                {isAdmin ? (
+                  <Select
+                    value={form.seller_id || user?.id || ""}
+                    onValueChange={(v) => updateForm("seller_id", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {user?.id && !employeesList.some((e: any) => e.user_id === user.id) && (
+                        <SelectItem value={user.id}>{user.email} (você)</SelectItem>
+                      )}
+                      {employeesList.map((emp: any) => (
+                        <SelectItem key={emp.user_id} value={emp.user_id}>
+                          {emp.full_name}{emp.email ? ` — ${emp.email}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={user?.email || ""} disabled className="bg-muted/50" />
+                )}
               </div>
               <div className="sm:col-span-2 space-y-2">
                 <Label>Origem do Lead</Label>
@@ -895,7 +936,7 @@ export default function NewSale() {
                     </div>
                     <div>
                       <p className={cn("text-sm font-medium", form.lead_type === "agencia" ? "text-foreground" : "text-muted-foreground")}>Lead da Agência</p>
-                      <p className="text-[11px] text-muted-foreground">Comissão 15% sobre lucro</p>
+                      <p className="text-[11px] text-muted-foreground">Lead recebido pela agência</p>
                     </div>
                   </button>
                   <button
@@ -913,7 +954,7 @@ export default function NewSale() {
                     </div>
                     <div>
                       <p className={cn("text-sm font-medium", form.lead_type === "organico" ? "text-foreground" : "text-muted-foreground")}>Lead Orgânico</p>
-                      <p className="text-[11px] text-muted-foreground">Comissão 30% sobre lucro</p>
+                      <p className="text-[11px] text-muted-foreground">Captado pelo próprio vendedor</p>
                     </div>
                   </button>
                 </div>
