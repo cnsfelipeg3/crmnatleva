@@ -17,6 +17,7 @@ import {
   CheckCircle2, AlertTriangle, FileText, Paperclip, Copy,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getProductMeta } from "@/lib/productTypes";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -32,17 +33,13 @@ interface TimelineItem {
   icon: typeof Plane;
 }
 
-const TYPE_CONFIG: Record<string, { label: string; icon: typeof Plane; color: string }> = {
-  aereo: { label: "Aéreo", icon: Plane, color: "text-blue-400" },
-  hotel: { label: "Hospedagem", icon: Hotel, color: "text-amber-400" },
-  trem: { label: "Trem", icon: Train, color: "text-purple-400" },
-  transfer: { label: "Transfer", icon: Car, color: "text-green-400" },
-  passeio: { label: "Passeio", icon: Ticket, color: "text-pink-400" },
-  seguro: { label: "Seguro", icon: Shield, color: "text-cyan-400" },
-  ingresso: { label: "Ingresso", icon: Ticket, color: "text-orange-400" },
-  aluguel_carro: { label: "Aluguel de Carro", icon: Car, color: "text-teal-400" },
-  outros: { label: "Outros", icon: ShoppingBag, color: "text-muted-foreground" },
-};
+// Catálogo de tipos vem do helper canônico (@/lib/productTypes).
+// Mantemos só um wrapper que devolve { label, icon, color } usando getProductMeta —
+// que normaliza aliases legados como "hotel"→"hospedagem", "seguro"→"seguro-viagem", etc.
+function getTypeConfig(rawType: string | null | undefined) {
+  const meta = getProductMeta(rawType);
+  return { label: meta.label, icon: meta.icon, color: meta.className };
+}
 
 const STATUS_BADGE: Record<string, string> = {
   pendente: "bg-yellow-500/15 text-yellow-400 border-yellow-500/30",
@@ -223,7 +220,7 @@ export default function TripDetail() {
     // Other products from cost_items — include date/time info
     costItems.filter(ci => ci.category === "outros").forEach(ci => {
       const pType = ci.product_type || "outros";
-      const config = TYPE_CONFIG[pType] || TYPE_CONFIG.outros;
+      const config = getTypeConfig(pType);
       // Try to extract a meaningful time hint based on product type
       const timeHint = pType === "transfer" ? "Conforme reserva"
         : pType === "passeio" ? "Conforme reserva"
@@ -482,7 +479,7 @@ export default function TripDetail() {
 
                 <div className="space-y-4">
                   {timeline.map((item, i) => {
-                    const config = TYPE_CONFIG[item.type] || TYPE_CONFIG.outros;
+                    const config = getTypeConfig(item.type);
                     const Icon = config.icon;
                     const prevDate = i > 0 ? timeline[i - 1].date : null;
                     const showDateHeader = item.date && item.date !== prevDate;
