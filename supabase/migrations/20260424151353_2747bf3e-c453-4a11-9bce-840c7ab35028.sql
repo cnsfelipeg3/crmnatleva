@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS public.sales_backfill_backup_2026_04_24;
