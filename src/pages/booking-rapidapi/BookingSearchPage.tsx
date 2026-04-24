@@ -239,24 +239,38 @@ export default function BookingSearchPage() {
     });
   }, [hotelscomData?.cards, rates]);
 
-  // Filtro client-side por nome
-  const filteredBookingHotels = useMemo(() => {
-    const list = bookingData?.hotels ?? [];
-    if (!nameQuery.trim()) return list;
-    const q = nameQuery.toLowerCase();
-    return list.filter((h) => (h.name || "").toLowerCase().includes(q));
-  }, [bookingData?.hotels, nameQuery]);
+  // Normalizar Booking
+  const bookingUnified: UnifiedHotel[] = useMemo(() => {
+    if (!bookingData?.hotels) return [];
+    return bookingData.hotels.map(normalizeBookingHotel);
+  }, [bookingData?.hotels]);
 
-  const filteredHotelscom = useMemo(() => {
-    if (!nameQuery.trim()) return hotelscomUnified;
-    const q = nameQuery.toLowerCase();
-    return hotelscomUnified.filter((h) => h.name.toLowerCase().includes(q));
-  }, [hotelscomUnified, nameQuery]);
+  // Combinar fontes ativas
+  const combinedHotels: UnifiedHotel[] = useMemo(() => {
+    const list: UnifiedHotel[] = [];
+    if (sources.booking) list.push(...bookingUnified);
+    if (sources.hotelscom) list.push(...hotelscomUnified);
+    return list;
+  }, [bookingUnified, hotelscomUnified, sources.booking, sources.hotelscom]);
 
-  // Contadores de página atual (após filtro local de nome)
-  const bookingPageCount = filteredBookingHotels.length;
-  const hotelscomPageCount = filteredHotelscom.length;
-  const pageCount = bookingPageCount + hotelscomPageCount;
+  // Agrupar por identidade (Trivago-style)
+  const groupedHotels: UnifiedHotelGroup[] = useMemo(
+    () => groupHotelsByIdentity(combinedHotels),
+    [combinedHotels],
+  );
+
+  // Filtro client-side por nome (aplicado nos grupos)
+  const filteredGroups = useMemo(() => {
+    if (!nameQuery.trim()) return groupedHotels;
+    const q = nameQuery.toLowerCase();
+    return groupedHotels.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groupedHotels, nameQuery]);
+
+  // Contadores
+  const bookingPageCount = bookingUnified.length;
+  const hotelscomPageCount = hotelscomUnified.length;
+  const pageCount = filteredGroups.length;
+  const unifiedCount = groupedHotels.filter((g) => g.offers.length > 1).length;
 
   // Totais reais retornados pelas APIs (todas as páginas)
   const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
