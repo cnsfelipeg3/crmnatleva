@@ -506,9 +506,10 @@ serve(async (req) => {
     console.error("Amadeus search error:", err);
     const message = err instanceof Error ? err.message : "Unknown error";
     const statusCode = (err as any)?.statusCode || 0;
-    // If Amadeus itself returned a 5xx, return 200 with fallback so the client doesn't break
-    if (statusCode >= 500) {
-      return new Response(JSON.stringify({ error: "SERVICE_UNAVAILABLE", fallback: true, data: [] }), {
+    // If Amadeus returned 429 (rate limit) or 5xx, respond 200 with fallback so the client doesn't break (no blank screen)
+    if (statusCode === 429 || statusCode >= 500) {
+      const errorCode = statusCode === 429 ? "RATE_LIMITED" : "SERVICE_UNAVAILABLE";
+      return new Response(JSON.stringify({ error: errorCode, fallback: true, data: [] }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
