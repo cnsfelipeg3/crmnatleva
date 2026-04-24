@@ -258,6 +258,24 @@ export default function SaleDetail() {
     return [...set];
   }, [sale, segments]);
 
+  // Deriva origem/destino priorizando o que foi salvo em sale.origin_iata/destination_iata,
+  // mas caindo para o primeiro/último segmento quando esses campos estão vazios
+  // (acontece em vendas criadas antes da lógica de derivação em NewSale.tsx).
+  const routeEndpoints = useMemo(() => {
+    const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
+    const idaSegs = validSegs.filter(s => s.direction === "ida");
+    const originFromSeg = idaSegs.length > 0
+      ? idaSegs[0].origin_iata
+      : validSegs[0]?.origin_iata;
+    const destinationFromSeg = idaSegs.length > 0
+      ? idaSegs[idaSegs.length - 1].destination_iata
+      : validSegs[validSegs.length - 1]?.destination_iata;
+    return {
+      originIata: sale?.origin_iata || originFromSeg || null,
+      destinationIata: sale?.destination_iata || destinationFromSeg || null,
+    };
+  }, [sale, segments]);
+
   if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
@@ -292,9 +310,9 @@ export default function SaleDetail() {
             </div>
             {/* Quick trip badge row */}
             <div className="flex items-center gap-2 mt-2 flex-wrap">
-              {(sale.destination_city || sale.destination_iata) && (
+              {(sale.destination_city || routeEndpoints.destinationIata) && (
                 <Badge variant="outline" className="text-xs gap-1">
-                  <MapPin className="w-3 h-3" /> {routeLabel(sale.destination_city, sale.destination_iata)}
+                  <MapPin className="w-3 h-3" /> {routeLabel(sale.destination_city, routeEndpoints.destinationIata)}
                 </Badge>
               )}
               {sale.departure_date && (
@@ -562,16 +580,16 @@ export default function SaleDetail() {
               {/* Route visual */}
               <div className="flex items-center justify-center gap-6 py-4 mb-3">
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.origin_city, sale.origin_iata) || "?"}</p>
-                  {(sale.origin_city || sale.origin_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.origin_city, sale.origin_iata)}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.origin_city, routeEndpoints.originIata) || "?"}</p>
+                  {(sale.origin_city || routeEndpoints.originIata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.origin_city, routeEndpoints.originIata)}</p>}
                 </div>
                 <div className="flex-1 max-w-[200px] relative">
                   <div className="border-t-2 border-dashed border-border" />
                   <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary bg-card p-0.5" />
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.destination_city, sale.destination_iata) || "?"}</p>
-                  {(sale.destination_city || sale.destination_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.destination_city, sale.destination_iata)}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.destination_city, routeEndpoints.destinationIata) || "?"}</p>
+                  {(sale.destination_city || routeEndpoints.destinationIata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.destination_city, routeEndpoints.destinationIata)}</p>}
                 </div>
               </div>
 
