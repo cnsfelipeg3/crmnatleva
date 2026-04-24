@@ -30,10 +30,7 @@ export default function DeleteSaleButton({ saleId, saleLabel, variant = "icon", 
 
   const handleDelete = async () => {
     setLoading(true);
-    const { error } = await supabase
-      .from("sales")
-      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null } as any)
-      .eq("id", saleId);
+    const { error } = await (supabase as any).rpc("soft_delete_sale", { _sale_id: saleId });
     setLoading(false);
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
