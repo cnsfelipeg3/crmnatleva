@@ -331,10 +331,9 @@ export function HotelscomDetailDrawer({
           </SheetHeader>
 
           <Tabs defaultValue="photos" className="p-5">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="photos">Fotos ({photos.length})</TabsTrigger>
               <TabsTrigger value="info">Informações</TabsTrigger>
-              <TabsTrigger value="raw">Dados</TabsTrigger>
             </TabsList>
 
             <TabsContent value="photos" className="mt-4">
