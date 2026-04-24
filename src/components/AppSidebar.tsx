@@ -69,6 +69,14 @@ interface Props {
 
 export default function AppSidebar({ mobile, onNavigate }: Props) {
   const { profile, role, signOut } = useAuth();
+  const { can, isAdmin } = usePermissions();
+  const canSee = (path: string) => {
+    if (isAdmin) return true;
+    const menu = MENU_BY_PATH[path];
+    if (!menu) return true; // rota não governada = visível
+    return can(menu.key, "view");
+  };
+  const filterItems = <T extends { to: string }>(items: T[]) => items.filter((i) => canSee(i.to));
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
