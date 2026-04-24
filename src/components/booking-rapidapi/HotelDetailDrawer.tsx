@@ -621,6 +621,7 @@ export function HotelDetailDrawer({
                           roomDetails={roomsMap[String(block.room_id)]}
                           hotelId={hotelId}
                           currency={currency}
+                          bookingUrl={bookingExternalUrl}
                         />
                       ))}
                     </div>
