@@ -101,6 +101,27 @@ export default function Colaboradores() {
       toast.success("Colaborador criado");
     }
 
+    // Cria/atualiza usuário no Auth quando o toggle "Criar usuário" estiver ativo
+    if (employeeId && form._createUser && form._userEmail && form._userPassword) {
+      try {
+        const { data: authData, error: authErr } = await supabase.functions.invoke("bootstrap-employee-user", {
+          body: {
+            email: String(form._userEmail).trim().toLowerCase(),
+            password: String(form._userPassword),
+            full_name: form.full_name,
+            employee_id: employeeId,
+            role: form.system_role || "vendedor",
+          },
+        });
+        if (authErr) throw authErr;
+        if ((authData as any)?.error) throw new Error((authData as any).error);
+        toast.success("Acesso ao sistema criado para " + form._userEmail);
+      } catch (e: any) {
+        toast.error("Falha ao criar usuário: " + (e?.message || "erro desconhecido"));
+        console.error("[bootstrap-employee-user]", e);
+      }
+    }
+
     // Sincroniza employee_permissions com o JSON granular
     if (employeeId && form.permissions && typeof form.permissions === "object") {
       const perms = form.permissions as Record<string, Partial<Record<"view"|"create"|"edit"|"delete", boolean>>>;
