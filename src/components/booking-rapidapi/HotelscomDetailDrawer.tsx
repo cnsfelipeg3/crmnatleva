@@ -399,9 +399,7 @@ export function HotelscomDetailDrawer({
     }
   };
 
-  const openOnHotelscom = () => {
-    if (externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
-  };
+  const openOnHotelscom = () => openExternal(externalUrl);
 
   const openGallery = (idx: number) => setGalleryIdx(idx);
   const closeGallery = () => setGalleryIdx(null);
