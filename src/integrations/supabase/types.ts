@@ -6110,6 +6110,33 @@ export type Database = {
           },
         ]
       }
+      sales_backfill_backup_2026_04_24: {
+        Row: {
+          airline: string | null
+          departure_date: string | null
+          destination_iata: string | null
+          id: string | null
+          origin_iata: string | null
+          return_date: string | null
+        }
+        Insert: {
+          airline?: string | null
+          departure_date?: string | null
+          destination_iata?: string | null
+          id?: string | null
+          origin_iata?: string | null
+          return_date?: string | null
+        }
+        Update: {
+          airline?: string | null
+          departure_date?: string | null
+          destination_iata?: string | null
+          id?: string | null
+          origin_iata?: string | null
+          return_date?: string | null
+        }
+        Relationships: []
+      }
       simulated_leads: {
         Row: {
           context_summary: Json | null
