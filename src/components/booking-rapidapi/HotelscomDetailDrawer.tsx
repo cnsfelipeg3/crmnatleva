@@ -407,46 +407,64 @@ export function HotelscomDetailDrawer({
               </Card>
             </TabsContent>
           </Tabs>
-        </ScrollArea>
-      </SheetContent>
+      </div>
+    </ScrollArea>
+  );
 
-      {/* Lightbox */}
-      <Dialog open={galleryIdx !== null} onOpenChange={(o) => !o && closeGallery()}>
-        <DialogContent className="max-w-5xl p-0 bg-black/95 border-none">
-          <DialogTitle className="sr-only">Galeria — {name}</DialogTitle>
-          {galleryIdx !== null && photos[galleryIdx] && (
-            <div className="relative aspect-[16/10] flex items-center justify-center">
-              <img
-                src={
-                  (photos[galleryIdx].media as any)?.url_max750 ??
-                  photos[galleryIdx].media?.url
-                }
-                alt={photos[galleryIdx].media?.description ?? ""}
-                className="max-h-full max-w-full object-contain"
-              />
-              {photos.length > 1 && (
-                <>
-                  <button
-                    onClick={prevPhoto}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
-                  >
-                    <ChevronLeft className="h-5 w-5 text-white" />
-                  </button>
-                  <button
-                    onClick={nextPhoto}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
-                  >
-                    <ChevronRight className="h-5 w-5 text-white" />
-                  </button>
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/50 backdrop-blur px-3 py-1 rounded-full text-xs text-white">
-                    {galleryIdx + 1} / {photos.length}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+  const lightbox = (
+    <Dialog open={galleryIdx !== null} onOpenChange={(o) => !o && closeGallery()}>
+      <DialogContent className="max-w-5xl p-0 bg-black/95 border-none">
+        <DialogTitle className="sr-only">Galeria — {name}</DialogTitle>
+        {galleryIdx !== null && photos[galleryIdx] && (
+          <div className="relative aspect-[16/10] flex items-center justify-center">
+            <img
+              src={
+                (photos[galleryIdx].media as any)?.url_max750 ??
+                photos[galleryIdx].media?.url
+              }
+              alt={photos[galleryIdx].media?.description ?? ""}
+              className="max-h-full max-w-full object-contain"
+            />
+            {photos.length > 1 && (
+              <>
+                <button
+                  onClick={prevPhoto}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
+                >
+                  <ChevronLeft className="h-5 w-5 text-white" />
+                </button>
+                <button
+                  onClick={nextPhoto}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-background/30 hover:bg-background/60 backdrop-blur p-2 rounded-full"
+                >
+                  <ChevronRight className="h-5 w-5 text-white" />
+                </button>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/50 backdrop-blur px-3 py-1 rounded-full text-xs text-white">
+                  {galleryIdx + 1} / {photos.length}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+
+  if (embedded) {
+    return (
+      <>
+        {innerContent}
+        {lightbox}
+      </>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-2xl p-0 overflow-hidden flex flex-col">
+        {innerContent}
+      </SheetContent>
+      {lightbox}
     </Sheet>
   );
 }
