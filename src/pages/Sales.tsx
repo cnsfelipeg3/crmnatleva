@@ -82,9 +82,10 @@ interface SaleRowProps {
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
+  onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
@@ -152,7 +153,10 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
         <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
       <td className="px-2 py-3">
-        <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" onClick={() => onNavigate(sale.id)}><Eye className="w-4 h-4" /></Button>
+          <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
+        </div>
       </td>
     </tr>
   );
