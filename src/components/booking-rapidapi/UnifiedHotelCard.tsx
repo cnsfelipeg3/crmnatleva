@@ -8,6 +8,7 @@ import {
   type UnifiedHotelGroup,
   type UnifiedHotelOffer,
 } from "./unifiedHotelTypes";
+import { normalizeAmenities } from "./amenityLabels";
 
 interface Props {
   group: UnifiedHotelGroup;
