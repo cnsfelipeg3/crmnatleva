@@ -55,6 +55,11 @@ import {
   extractAllOfferPerks,
   type HotelscomRoom,
 } from "./hotelscomNormalizers";
+import {
+  normalizeHotelscomUrl,
+  buildHotelscomSearchUrl,
+  openExternal,
+} from "./externalUrls";
 
 interface Converted {
   priceTotal?: number;
@@ -245,7 +250,16 @@ export function HotelscomDetailDrawer({
   const name = card.headingSection?.heading ?? "Hotel";
   const location = card.headingSection?.messages?.[0]?.text;
   const amenitiesShort = card.headingSection?.amenities ?? [];
-  const externalUrl = card.cardLink?.resource?.value;
+  const rawCardLink = card.cardLink?.resource?.value;
+  const externalUrl =
+    normalizeHotelscomUrl(rawCardLink) ??
+    buildHotelscomSearchUrl({
+      hotelName: name,
+      arrival,
+      departure,
+      adults,
+      rooms: 1,
+    });
 
   const priceOpt = card.priceSection?.priceSummary?.optionsV2?.[0];
   const originalPriceFormatted =
@@ -385,9 +399,7 @@ export function HotelscomDetailDrawer({
     }
   };
 
-  const openOnHotelscom = () => {
-    if (externalUrl) window.open(externalUrl, "_blank", "noopener,noreferrer");
-  };
+  const openOnHotelscom = () => openExternal(externalUrl);
 
   const openGallery = (idx: number) => setGalleryIdx(idx);
   const closeGallery = () => setGalleryIdx(null);

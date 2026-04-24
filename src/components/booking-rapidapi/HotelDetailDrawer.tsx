@@ -52,6 +52,7 @@ import {
   type BookingRoomDetails,
   type BookingMoney,
 } from "./types";
+import { buildBookingSearchUrl, openExternal } from "./externalUrls";
 
 interface Props {
   hotel: BookingHotel | null;
@@ -203,7 +204,7 @@ export function HotelDetailDrawer({
         ? `✅ TOTAL FINAL: ${money(allInclusiveAmount).display}`
         : null,
       grossPerNight ? `   ~${money(grossPerNight).display}/noite` : null,
-      `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
+      `🔗 ${buildBookingSearchUrl({ hotelName, arrival, departure, adults, childrenAges, rooms })}`,
     ].filter(Boolean);
 
     try {
@@ -214,11 +215,16 @@ export function HotelDetailDrawer({
     }
   };
 
-  const openOnBooking = () => {
-    const url =
-      h.url || `https://www.booking.com/hotel.html?hotel_id=${hotelId}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+  const bookingExternalUrl = buildBookingSearchUrl({
+    hotelName,
+    arrival,
+    departure,
+    adults,
+    childrenAges,
+    rooms,
+  });
+
+  const openOnBooking = () => openExternal(bookingExternalUrl);
 
   // Hotel photos — combinando main + photoUrls + rooms[].photos
   const allPhotos: { url: string; id?: string | number }[] = [];
@@ -615,6 +621,7 @@ export function HotelDetailDrawer({
                           roomDetails={roomsMap[String(block.room_id)]}
                           hotelId={hotelId}
                           currency={currency}
+                          bookingUrl={bookingExternalUrl}
                         />
                       ))}
                     </div>

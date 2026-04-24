@@ -133,12 +133,15 @@ interface BlockCardProps {
   roomDetails?: BookingRoomDetails;
   hotelId: string | number;
   currency: string;
+  /** URL final (já construída) pra abrir esse hotel no Booking.com */
+  bookingUrl: string;
 }
 
 export function HotelDetailBlockCard({
   block,
   roomDetails,
   hotelId,
+  bookingUrl,
 }: BlockCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState<number | null>(null);
@@ -213,7 +216,7 @@ export function HotelDetailBlockCard({
             .filter(Boolean)
             .join(", ")}`
         : null,
-      `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
+      `🔗 ${bookingUrl}`,
     ].filter(Boolean);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
@@ -409,11 +412,7 @@ export function HotelDetailBlockCard({
                 size="sm"
                 className="h-7 px-2 text-xs"
                 onClick={() =>
-                  window.open(
-                    `https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
-                    "_blank",
-                    "noopener,noreferrer",
-                  )
+                  window.open(bookingUrl, "_blank", "noopener,noreferrer")
                 }
               >
                 <ExternalLink className="mr-1 h-3 w-3" /> Reservar
