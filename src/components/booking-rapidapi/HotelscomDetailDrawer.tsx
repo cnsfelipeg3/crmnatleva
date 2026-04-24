@@ -55,6 +55,11 @@ import {
   extractAllOfferPerks,
   type HotelscomRoom,
 } from "./hotelscomNormalizers";
+import {
+  normalizeHotelscomUrl,
+  buildHotelscomSearchUrl,
+  openExternal,
+} from "./externalUrls";
 
 interface Converted {
   priceTotal?: number;
