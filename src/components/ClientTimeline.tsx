@@ -381,7 +381,7 @@ export default function ClientTimeline({ clientId, clientPhone, sales }: ClientT
             <div className="flex justify-between"><span className="text-muted-foreground">Recebido</span><span className="font-bold text-emerald-500">{fmt(sale.received_value || 0)}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Status</span><Badge variant="outline" className="text-[10px]">{sale.status}</Badge></div>
             {sale.hotel_name && <div className="flex justify-between"><span className="text-muted-foreground">Hotel</span><span>{sale.hotel_name}</span></div>}
-            {sale.products?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Produtos</span><span>{normalizeProductsToSlugs(sale.products).map(getProductLabel).join(", ")}</span></div>}
+            {sale.products?.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Produtos</span><span>{normalizeProductsToSlugs(sale.products).map(s => getProductLabel(s)).join(", ")}</span></div>}
           </>
         ),
         linkTo: `/sales/${sale.id}`,
