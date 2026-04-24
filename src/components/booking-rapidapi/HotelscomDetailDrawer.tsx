@@ -1002,30 +1002,32 @@ export function HotelscomDetailDrawer({
               )}
             </Card>
 
+            {editorialLocation && (
+              <Card className="p-4">
+                <h5 className="font-semibold text-sm mb-2">Sobre a localização</h5>
+                <p className="text-xs text-foreground/80 whitespace-pre-line">
+                  {editorialLocation}
+                </p>
+              </Card>
+            )}
+
             {nearby.length > 0 && (
               <Card className="p-4">
                 <h5 className="font-semibold text-sm mb-2">Pontos próximos</h5>
                 <div className="space-y-1.5">
-                  {nearby.slice(0, 12).map((n: any, i: number) => {
-                    const label = n?.name ?? n?.label ?? n?.text;
-                    const distance = n?.distance ?? n?.distanceText;
-                    if (!label) return null;
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <span className="text-foreground/80">{label}</span>
-                        {distance && (
-                          <span className="text-muted-foreground shrink-0">
-                            {typeof distance === "string"
-                              ? distance
-                              : `${distance.value} ${distance.unit ?? ""}`}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {nearby.slice(0, 15).map((n, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="text-foreground/80 truncate">{n.name}</span>
+                      {n.distance && (
+                        <span className="text-muted-foreground shrink-0">
+                          {n.distance}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}
