@@ -30,6 +30,7 @@ import PassengerSelector, { type SelectedPassenger } from "@/components/Passenge
 import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsEditor";
 import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
+import { getProductSlug } from "@/lib/productTypes";
 
 /* ─── Types ────────────────────────────────────────────── */
 
@@ -504,13 +505,18 @@ export default function NewSale() {
     }
     setSaving(true);
     try {
-      const products: string[] = [];
-      if (airCost > 0 || form.airline) products.push("Aéreo");
-      if (hotelCost > 0 || hotelEntries.some(h => h.hotel_name)) products.push("Hotel");
+      // Monta array de products como SLUGS canônicos (catálogo unificado)
+      const productSlugs = new Set<string>();
+      if (airCost > 0 || form.airline) productSlugs.add("aereo");
+      if (hotelCost > 0 || hotelEntries.some(h => h.hotel_name)) productSlugs.add("hospedagem");
       otherProducts.forEach(p => {
-        const label = PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type;
-        if (!products.includes(label)) products.push(label);
+        // p.type usa values UI internos ("transfer", "seguro", "trem", etc) — helper traduz pro slug canônico
+        productSlugs.add(getProductSlug(p.type));
       });
+      // Se TEM aéreo + hospedagem juntos, marca também como pacote (preserva semântica de combo)
+      if (productSlugs.has("aereo") && productSlugs.has("hospedagem")) productSlugs.add("pacote");
+      const products: string[] = Array.from(productSlugs);
+
 
       // Use first hotel for legacy fields
       const firstHotel = hotelEntries[0];
