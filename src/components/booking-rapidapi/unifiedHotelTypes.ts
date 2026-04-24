@@ -306,12 +306,15 @@ export function normalizeHotelscomHotel(
     pricePerNight = extractNumber(firstMsg.value);
   }
 
-  // Fotos
+  // Fotos + legendas
   const mediaItems = card.mediaSection?.gallery?.media ?? [];
   const photoUrls = mediaItems
     .map((m) => m.media?.url)
     .filter((u): u is string => !!u);
   const photoUrl = photoUrls[0];
+  const photoCaptions = mediaItems
+    .map((m) => translatePhotoCaption(m.media?.description))
+    .filter((c): c is string => !!c);
 
   // Rating
   const ratingBadge = card.summarySections?.[0]?.guestRatingSectionV2?.badge;
@@ -319,6 +322,7 @@ export function normalizeHotelscomHotel(
   const reviewScore = reviewScoreStr
     ? parseFloat(reviewScoreStr.replace(",", "."))
     : undefined;
+  const ratingTheme = ratingBadge?.theme;
 
   const phrases = card.summarySections?.[0]?.guestRatingSectionV2?.phrases;
   const reviewScoreWord = phrases?.[0]?.phraseParts?.[0]?.text;
@@ -354,18 +358,29 @@ export function normalizeHotelscomHotel(
   // URL externa
   const externalUrl = card.cardLink?.resource?.value;
 
+  // Selo de desconto, frase de preço, lat/long, bairro, badges promo
+  const discountBadge = card.priceSection?.badge?.text;
+  const accessibilityPriceLabel = priceOptV2?.accessibilityLabel;
+  const { lat, lng } = extractLatLongFromUrl(externalUrl);
+  const neighborhood = extractNeighborhoodFromUrl(externalUrl);
+  const promoBadges = extractPromoBadges(card);
+
   return {
     source: "hotelscom",
     id: card.id,
     uid: `hotelscom:${card.id}`,
     name: heading,
     location,
+    latitude: lat,
+    longitude: lng,
     photoUrl,
     photoUrls,
+    photoCaptions,
     stars: Number.isFinite(stars as number) ? (stars as number) : undefined,
     reviewScore,
     reviewScoreWord,
     reviewCount,
+    ratingTheme,
     priceTotal,
     priceCurrency,
     priceStriked,
@@ -374,6 +389,10 @@ export function normalizeHotelscomHotel(
     freeCancellation,
     amenities,
     externalUrl,
+    discountBadge,
+    accessibilityPriceLabel,
+    promoBadges: promoBadges.length > 0 ? promoBadges : undefined,
+    neighborhood,
     raw: card,
   };
 }
