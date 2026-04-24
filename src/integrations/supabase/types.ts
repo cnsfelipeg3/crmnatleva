@@ -5230,6 +5230,36 @@ export type Database = {
         }
         Relationships: []
       }
+      products_migration_log: {
+        Row: {
+          created_at: string
+          id: string
+          new_products: string[] | null
+          old_products: string[] | null
+          reason: string | null
+          sale_id: string
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          new_products?: string[] | null
+          old_products?: string[] | null
+          reason?: string | null
+          sale_id: string
+          source: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          new_products?: string[] | null
+          old_products?: string[] | null
+          reason?: string | null
+          sale_id?: string
+          source?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -6201,19 +6231,25 @@ export type Database = {
       }
       sales_products_backup_2026_04_24: {
         Row: {
-          backed_up_at: string | null
-          products_original: string[] | null
-          sale_id: string | null
+          display_id: string | null
+          id: string | null
+          name: string | null
+          products: string[] | null
+          updated_at: string | null
         }
         Insert: {
-          backed_up_at?: string | null
-          products_original?: string[] | null
-          sale_id?: string | null
+          display_id?: string | null
+          id?: string | null
+          name?: string | null
+          products?: string[] | null
+          updated_at?: string | null
         }
         Update: {
-          backed_up_at?: string | null
-          products_original?: string[] | null
-          sale_id?: string | null
+          display_id?: string | null
+          id?: string | null
+          name?: string | null
+          products?: string[] | null
+          updated_at?: string | null
         }
         Relationships: []
       }
