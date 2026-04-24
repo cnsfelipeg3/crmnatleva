@@ -576,7 +576,7 @@ Deno.serve(async (req) => {
         .in("status", ["running", "completed"])
         .order("started_at", { ascending: false })
         .limit(1);
-      if (activeSession?.length > 0) {
+      if (activeSession && activeSession.length > 0) {
         flowToExecute = activeSession[0].flow_id;
       }
     }

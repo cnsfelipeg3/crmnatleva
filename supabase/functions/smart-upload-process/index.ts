@@ -69,7 +69,7 @@ serve(async (req) => {
         if (sizeMB > 20) {
           throw new Error(`PDF muito grande para OCR (${sizeMB.toFixed(0)}MB). Máximo: 20MB.`);
         }
-        const base64 = base64Encode(bytes);
+        const base64 = base64Encode(bytes as unknown as ArrayBuffer);
         const dataUrl = `data:application/pdf;base64,${base64}`;
         const prompt = `Título: "${title}"\n\nExtraia TODO o texto deste PDF (incluindo tabelas, legendas e cabeçalhos), do início ao fim. Retorne apenas o conteúdo textual em português, sem markdown.`;
         content = await callAI(prompt, dataUrl, "application/pdf");
@@ -94,7 +94,7 @@ serve(async (req) => {
         throw new Error(`Arquivo muito grande (${sizeMB.toFixed(0)}MB). Máximo suportado: 20MB.`);
       }
 
-      const base64 = base64Encode(bytes);
+      const base64 = base64Encode(bytes as unknown as ArrayBuffer);
       const dataUrl = `data:${mimeType};base64,${base64}`;
       content = await callAI(prompt, dataUrl, mimeType);
       extractionMethod = "gemini";

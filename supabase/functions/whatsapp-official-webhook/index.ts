@@ -85,14 +85,16 @@ serve(async (req) => {
             await supabase.from("conversations").update({
               last_message_at: new Date().toISOString(),
               last_message_preview: content.body || `[${msg.type}]`,
-              unread_count: supabase.rpc ? 1 : 1, // increment handled below
+              unread_count: 1, // increment handled below
               updated_at: new Date().toISOString(),
             }).eq("id", existingConv.id);
 
             // Increment unread
-            await supabase.rpc("increment_unread" as any, { conv_id: existingConv.id }).catch(() => {
+            try {
+              await supabase.rpc("increment_unread" as any, { conv_id: existingConv.id });
+            } catch {
               // If RPC doesn't exist, the update above set it to 1
-            });
+            }
 
             // Insert into messages table for Inbox
             await supabase.from("messages").insert({

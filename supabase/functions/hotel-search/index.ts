@@ -80,7 +80,7 @@ async function searchPhoton(query: string): Promise<HotelResult[]> {
         place_id: `photon:${String(props.osm_type || "")}:${String(props.osm_id || "")}`,
       };
     })
-    .filter((item) => item.name.length > 0);
+    .filter((item: any) => item.name.length > 0);
 
   return dedupeResults(results).slice(0, 15);
 }
