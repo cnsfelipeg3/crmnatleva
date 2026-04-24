@@ -440,16 +440,12 @@ export function HotelscomDetailDrawer({
     return out;
   })();
 
-  // Localização (lat/lng do details-location)
-  const loc = details?.location;
-  const latitude: number | undefined =
-    loc?.coordinates?.latitude ?? loc?.latitude ?? loc?.location?.latitude;
-  const longitude: number | undefined =
-    loc?.coordinates?.longitude ?? loc?.longitude ?? loc?.location?.longitude;
-  const fullAddress: string | undefined =
-    loc?.address?.fullAddress ?? loc?.address?.text ?? loc?.fullAddress;
-  const nearby: any[] =
-    loc?.nearbyLocations ?? loc?.pointsOfInterest ?? loc?.attractions ?? [];
+  // Localização (preferimos o normalizer rico)
+  const latitude: number | undefined = locationRich.latitude;
+  const longitude: number | undefined = locationRich.longitude;
+  const fullAddress: string | undefined = locationRich.address;
+  const editorialLocation: string | undefined = locationRich.editorial;
+  const nearby = locationRich.nearby;
 
   // Políticas (do content)
   const policies: Array<{ title: string; body: string }> = (() => {
