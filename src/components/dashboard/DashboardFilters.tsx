@@ -5,6 +5,7 @@ import { Plus, Activity, X, Filter, SlidersHorizontal, Crown } from "lucide-reac
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useProductTypes } from "@/lib/productTypes";
 
 interface Props {
   period: string; setPeriod: (v: string) => void;
@@ -42,6 +43,7 @@ export default function DashboardFilters({
 }: Props) {
   const navigate = useNavigate();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const { catalog: productCatalog } = useProductTypes();
 
   const applyPreset = (preset: typeof STRATEGIC_PRESETS[0]) => {
     onClearAll();
