@@ -922,66 +922,61 @@ export function HotelscomDetailDrawer({
 
           {/* AVALIAÇÕES */}
           <TabsContent value="reviews" className="mt-4 space-y-3">
-            {categoryScores.length > 0 && (
+            {(ratingSummary.score || ratingSummary.totalReviews) && (
               <Card className="p-4">
-                <h5 className="font-semibold text-sm mb-3">Notas por categoria</h5>
-                <div className="space-y-2">
-                  {categoryScores.map((c, i) => (
-                    <div key={i} className="flex items-center gap-3 text-xs">
-                      <span className="w-32 shrink-0 text-muted-foreground">
-                        {c.label}
-                      </span>
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500"
-                          style={{ width: `${(c.score / 10) * 100}%` }}
-                        />
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-bold text-primary">
+                    {ratingSummary.score ?? "—"}
+                  </div>
+                  <div>
+                    {ratingSummary.label && (
+                      <div className="font-semibold text-sm">{ratingSummary.label}</div>
+                    )}
+                    {ratingSummary.totalReviews && (
+                      <div className="text-xs text-muted-foreground">
+                        {ratingSummary.totalReviews.toLocaleString("pt-BR")} avaliações
                       </div>
-                      <span className="w-8 text-right font-semibold">
-                        {c.score.toFixed(1)}
-                      </span>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               </Card>
             )}
 
-            {detailsLoading && reviews.length === 0 && (
+            {detailsLoading && reviewsRich.length === 0 && (
               <Skeleton className="h-32 w-full" />
             )}
-            {reviews.length === 0 && !detailsLoading && categoryScores.length === 0 && (
+            {reviewsRich.length === 0 && !detailsLoading && !ratingSummary.score && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 Nenhuma avaliação detalhada disponível
               </div>
             )}
-            {reviews.slice(0, 10).map((r: any, i: number) => {
-              const author = r?.reviewAuthorAttribution?.text ?? r?.author ?? "Hóspede";
-              const score = r?.ratingOverall ?? r?.rating?.overall ?? r?.score;
-              const text = r?.text ?? r?.reviewText ?? r?.title;
-              const date = r?.submissionTime?.longDateFormat ?? r?.date;
-              return (
-                <Card key={i} className="p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="font-medium">{author}</span>
-                      {date && (
-                        <span className="text-muted-foreground">· {date}</span>
-                      )}
-                    </div>
-                    {score && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {typeof score === "number" ? score.toFixed(1) : score}
-                      </Badge>
+            {reviewsRich.slice(0, 12).map((r, i) => (
+              <Card key={r.id || i} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs min-w-0">
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate">
+                      {r.authorContext ?? "Hóspede"}
+                    </span>
+                    {r.date && (
+                      <span className="text-muted-foreground shrink-0">· {r.date}</span>
                     )}
                   </div>
-                  {text && (
-                    <p className="text-xs text-foreground/80 line-clamp-4">{text}</p>
+                  {r.score && (
+                    <Badge variant="secondary" className="gap-1 shrink-0">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {r.score}
+                    </Badge>
                   )}
-                </Card>
-              );
-            })}
+                </div>
+                {r.title && (
+                  <p className="text-xs font-semibold text-foreground/90">{r.title}</p>
+                )}
+                {r.text && (
+                  <p className="text-xs text-foreground/80 line-clamp-5">{r.text}</p>
+                )}
+              </Card>
+            ))}
           </TabsContent>
 
           {/* LOCALIZAÇÃO */}
