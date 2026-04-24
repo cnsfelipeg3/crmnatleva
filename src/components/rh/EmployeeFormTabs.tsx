@@ -12,7 +12,36 @@ import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquar
 import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTemplate } from "@/lib/systemMenus";
 import CommissionRulesEditor from "@/components/rh/CommissionRulesEditor";
 
-const POSITIONS = ["SDR", "Vendas", "Consultor", "Operação", "Financeiro", "Admin", "Marketing", "Atendimento"];
+const POSITIONS = [
+  "SDR",
+  "Vendas",
+  "Consultor",
+  "Operação",
+  "Financeiro",
+  "Admin",
+  "Marketing",
+  "Atendimento",
+  "Analista de Turismo Júnior",
+  "Analista de Turismo Pleno",
+  "Analista de Turismo Senior",
+  "Coordenador de Turismo",
+  "Gerente de Turismo",
+  "Diretor de Turismo",
+  "Vendedor Júnior",
+  "Vendedor Pleno",
+  "Vendedor Senior",
+  "Coordenador Comercial",
+  "Gerente Comercial",
+  "Diretor Comercial",
+  "Assistente - Jovem Aprendiz",
+  "Estagiário",
+  "CEO",
+  "Presidente",
+  "Vice-Presidente",
+  "Auxiliar de Limpeza",
+  "Assistente Financeiro",
+  "Gerente Operacional",
+];
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
 const CONTRACT_TYPES = ["CLT", "PJ", "Freelancer", "Estágio"];
 const STATUSES = ["ativo", "inativo", "afastado"];
