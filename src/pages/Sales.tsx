@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import AirlineLogo from "@/components/AirlineLogo";
 import { routeCode } from "@/lib/cityExtract";
 import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
@@ -17,10 +16,6 @@ import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/comp
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-// Slugs cujo ícone NÃO deve aparecer quando há cia aérea (logo da cia já cobre o aéreo)
-const AERO_SLUGS = new Set(["aereo", "pacote", "remarcacao-aereo"]);
-
 
 const statusColor: Record<string, string> = {
   Fechado: "bg-success/15 text-success border-success/20",
@@ -122,9 +117,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
       <td className="px-1 py-3 text-center">{pax}</td>
       <td className="px-1 py-3">
         <div className="flex gap-1 items-center flex-wrap">
-          {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
           {slugs.map((slug) => {
-            if (AERO_SLUGS.has(slug) && sale.airline) return null;
             const meta = getProductMeta(slug, productCatalog);
             const Icon = meta.icon;
             const tooltipLabel = slug === "hospedagem" && sale.hotel_name ? sale.hotel_name : meta.label;
@@ -331,9 +324,7 @@ export default function Sales() {
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-muted-foreground">{(sale.adults || 0) + (sale.children || 0)} pax</span>
                       <div className="flex gap-1 items-center flex-wrap">
-                        {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
                         {normalizeProductsToSlugs(sale.products).map((slug) => {
-                          if (AERO_SLUGS.has(slug) && sale.airline) return null;
                           const meta = getProductMeta(slug, productCatalog);
                           const Icon = meta.icon;
                           const tooltipLabel = slug === "hospedagem" && sale.hotel_name ? sale.hotel_name : meta.label;
