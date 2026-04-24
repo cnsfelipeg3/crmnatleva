@@ -472,7 +472,7 @@ export function HotelDetailDrawer({
                   )}
 
                   {(typeof wifiScore === "number" ||
-                    (breakfastScore?.review_score ?? 0) > 0) && (
+                    (Number(breakfastScore?.review_score) || 0) > 0) && (
                     <Card className="p-4">
                       <h4 className="mb-2 text-sm font-semibold">Notas por categoria</h4>
                       <div className="space-y-2 text-xs">
