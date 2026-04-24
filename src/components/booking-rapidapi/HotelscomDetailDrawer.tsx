@@ -39,6 +39,12 @@ import { useExchangeRates } from "@/hooks/useExchangeRates";
 import { convertPriceToBRL } from "./unifiedHotelTypes";
 import type { HotelscomLodgingCard } from "./unifiedHotelTypes";
 import {
+  translateHotelscomCaption,
+  translateHotelscomRatingWord,
+  translateHotelscomText,
+  translateHotelscomDistance,
+} from "./hotelscomLocalization";
+import {
   extractGallery,
   extractRooms as extractRoomsRich,
   extractAmenityGroups,
@@ -85,6 +91,33 @@ function fmtBRL(value?: number, currency?: string): string {
   }
 }
 
+function parseCurrencySnippet(text?: string): { amount?: number; currency?: string } {
+  if (!text) return {};
+  const symbol = text.includes("R$") ? "BRL" : text.includes("€") ? "EUR" : text.includes("£") ? "GBP" : text.includes("$") ? "USD" : undefined;
+  const match = text.match(/[\d.,]+/);
+  if (!match) return { currency: symbol };
+  let raw = match[0];
+  if (symbol === "BRL") raw = raw.replace(/\./g, "").replace(",", ".");
+  else raw = raw.replace(/,/g, "");
+  const amount = parseFloat(raw);
+  return { amount: Number.isFinite(amount) ? amount : undefined, currency: symbol };
+}
+
+function formatDealBadgeBRL(
+  text: string | undefined,
+  rates: Record<string, number> | null | undefined,
+): string | undefined {
+  if (!text) return undefined;
+  const parsed = parseCurrencySnippet(text);
+  if (typeof parsed.amount === "number" && parsed.currency) {
+    const converted = convertPriceToBRL(parsed.amount, parsed.currency, rates);
+    if (typeof converted.value === "number") {
+      return `Desconto de ${fmtBRL(converted.value, "BRL")}`;
+    }
+  }
+  return translateHotelscomText(text.replace(/\boff\b/i, "de desconto"));
+}
+
 function translateMessage(raw: string | undefined, converted?: Converted): string | undefined {
   if (!raw) return raw;
   let s = raw;
@@ -96,7 +129,7 @@ function translateMessage(raw: string | undefined, converted?: Converted): strin
     return `${fmtBRL(converted.pricePerNight, converted.currency || "BRL")}/noite`;
   }
   s = s.replace(/\bnightly\b/i, "/noite");
-  return s;
+  return translateHotelscomText(s);
 }
 
 function translateAmenity(text?: string): string {
@@ -121,33 +154,11 @@ function translateAmenity(text?: string): string {
     Restaurant: "Restaurante",
     Bar: "Bar",
   };
-  return map[text] ?? text;
+  return map[text] ?? translateHotelscomText(text);
 }
 
 function translateCaption(en?: string): string | undefined {
-  if (!en) return undefined;
-  const first = en.split(".")[0].trim();
-  const map: Array<[RegExp, string]> = [
-    [/\breception\b/i, "Recepção"],
-    [/\blobby\b/i, "Lobby"],
-    [/\bexterior\b/i, "Exterior"],
-    [/\bfacade\b/i, "Fachada"],
-    [/\bpool\b/i, "Piscina"],
-    [/\bgym\b|\bfitness\b/i, "Academia"],
-    [/\bbar\b/i, "Bar"],
-    [/\brestaurant\b/i, "Restaurante"],
-    [/\bsuite\b/i, "Suíte"],
-    [/\bbedroom\b/i, "Quarto"],
-    [/\bbathroom\b/i, "Banheiro"],
-    [/\bbeach\b/i, "Praia"],
-    [/\bview\b/i, "Vista"],
-    [/\bspa\b/i, "Spa"],
-    [/\bbreakfast\b/i, "Café da manhã"],
-    [/\bterrace\b|\bbalcony\b/i, "Terraço"],
-    [/\blounge\b/i, "Lounge"],
-  ];
-  for (const [re, pt] of map) if (re.test(first)) return pt;
-  return first;
+  return translateHotelscomCaption(en);
 }
 
 // Extratores ricos vivem em ./hotelscomNormalizers
@@ -241,10 +252,13 @@ export function HotelscomDetailDrawer({
     priceOpt?.formattedDisplayPrice ?? priceOpt?.displayPrice?.formatted;
   const originalStriked = priceOpt?.strikeOut?.formatted;
   const discountBadgeText = card.priceSection?.badge?.text;
+  const localizedDiscountBadge = formatDealBadgeBRL(discountBadgeText, rates);
 
   const rating = card.summarySections?.[0]?.guestRatingSectionV2;
   const ratingScore = rating?.badge?.text;
-  const ratingWord = rating?.phrases?.[0]?.phraseParts?.[0]?.text;
+  const ratingWord = translateHotelscomRatingWord(
+    rating?.phrases?.[0]?.phraseParts?.[0]?.text,
+  );
   const reviewCount = rating?.phrases?.[1]?.phraseParts?.[0]?.text;
 
   const footerMessages = card.summarySections?.[0]?.footerMessages?.listItems ?? [];
@@ -291,10 +305,11 @@ export function HotelscomDetailDrawer({
   })();
 
   // Highlights/Headline (textuais ricos)
-  const headlineText: string | undefined =
+  const headlineText: string | undefined = translateHotelscomText(
     details?.headline?.headline?.text ??
-    details?.headline?.text ??
-    details?.content?.tagline?.text;
+      details?.headline?.text ??
+      details?.content?.tagline?.text,
+  );
 
   const overviewSections: Array<{ title: string; body: string }> = (() => {
     const out: Array<{ title: string; body: string }> = [];
@@ -303,8 +318,8 @@ export function HotelscomDetailDrawer({
       high?.highlights ?? high?.items ?? high?.contentItems ?? [];
     if (Array.isArray(items)) {
       for (const it of items) {
-        const title = it?.heading ?? it?.title ?? it?.name;
-        const body = it?.body ?? it?.text ?? it?.description;
+        const title = translateHotelscomText(it?.heading ?? it?.title ?? it?.name);
+        const body = translateHotelscomText(it?.body ?? it?.text ?? it?.description);
         if (title && body) out.push({ title, body });
       }
     }
@@ -315,8 +330,8 @@ export function HotelscomDetailDrawer({
       [];
     if (out.length === 0 && Array.isArray(contentSections)) {
       for (const s of contentSections) {
-        const title = s?.heading ?? s?.title;
-        const body = s?.body?.text ?? s?.text ?? s?.description;
+        const title = translateHotelscomText(s?.heading ?? s?.title);
+        const body = translateHotelscomText(s?.body?.text ?? s?.text ?? s?.description);
         if (title && body) out.push({ title, body });
       }
     }
@@ -397,7 +412,7 @@ export function HotelscomDetailDrawer({
                 </Badge>
                 {discountBadgeText && (
                   <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive font-bold">
-                    🔥 {discountBadgeText}
+                    🔥 {localizedDiscountBadge}
                   </Badge>
                 )}
                 {detailsLoading && (
@@ -425,7 +440,7 @@ export function HotelscomDetailDrawer({
                   </Badge>
                 )}
                 {reviewCount && (
-                  <Badge variant="outline" className="text-xs">{reviewCount}</Badge>
+                  <Badge variant="outline" className="text-xs">{translateHotelscomText(reviewCount)}</Badge>
                 )}
                 {arrival && departure && (
                   <Badge variant="outline" className="gap-1 text-xs">
@@ -461,10 +476,9 @@ export function HotelscomDetailDrawer({
                 <p className="text-[10px] text-muted-foreground pt-1">
                   Preço convertido do USD · taxa aproximada
                 </p>
-                {originalPriceFormatted && (
+                {typeof converted.priceStriked === "number" && converted.priceStriked > (converted.priceTotal ?? 0) && (
                   <p className="text-[10px] text-muted-foreground">
-                    Original (Hotels.com): {originalPriceFormatted}
-                    {originalStriked && ` · riscado ${originalStriked}`}
+                    Tarifa original: {fmtBRL(converted.priceStriked, "BRL")}
                   </p>
                 )}
               </div>
@@ -548,10 +562,10 @@ export function HotelscomDetailDrawer({
                   Destaques
                 </h4>
                 <ul className="space-y-1.5">
-                  {headlineRich.supportingMessages.map((m, i) => (
+                    {headlineRich.supportingMessages.map((m, i) => (
                     <li key={i} className="flex items-start gap-2 text-xs">
                       <span className="text-primary mt-0.5">•</span>
-                      <span className="text-foreground/80">{m}</span>
+                        <span className="text-foreground/80">{translateHotelscomText(m)}</span>
                     </li>
                   ))}
                 </ul>
@@ -639,7 +653,7 @@ export function HotelscomDetailDrawer({
                     <div className="flex-1 min-w-0">
                       <h5 className="font-semibold text-sm flex items-center gap-2">
                         <BedDouble className="h-4 w-4 text-primary" />
-                        {room.name}
+                        {translateHotelscomText(room.name)}
                       </h5>
                       {room.features.length > 0 && (
                         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -652,7 +666,7 @@ export function HotelscomDetailDrawer({
                                 f.positive && "border-emerald-300 text-emerald-700 dark:text-emerald-400",
                               )}
                             >
-                              {f.text}
+                               {translateHotelscomText(f.text)}
                             </Badge>
                           ))}
                         </div>
@@ -680,11 +694,13 @@ export function HotelscomDetailDrawer({
                               : "convertido do " + totalCurrency}
                           </p>
                         </>
-                      ) : cheapest?.totalFormatted ? (
+                       ) : cheapest?.totalFormatted && /R\$/i.test(cheapest.totalFormatted) ? (
                         <div className="font-bold text-base">
                           {cheapest.totalFormatted}
                         </div>
-                      ) : null}
+                       ) : (
+                         <div className="font-medium text-sm">Preço em BRL sob consulta</div>
+                       )}
                     </div>
                   </div>
 
@@ -722,14 +738,14 @@ export function HotelscomDetailDrawer({
                               className="text-[10px] border-emerald-300 text-emerald-700 dark:text-emerald-400 gap-1"
                             >
                               <CheckCircle2 className="h-2.5 w-2.5" />
-                              {/free cancellation/i.test(rate.cancellationLabel)
+                               {/free cancellation/i.test(rate.cancellationLabel)
                                 ? "Cancelamento grátis"
-                                : rate.cancellationLabel}
+                                 : translateHotelscomText(rate.cancellationLabel)}
                             </Badge>
                           )}
-                          {rate.dealBadge && (
+                           {rate.dealBadge && (
                             <Badge className="text-[10px] bg-rose-500 hover:bg-rose-500 text-white">
-                              🔥 {rate.dealBadge}
+                               🔥 {formatDealBadgeBRL(rate.dealBadge, rates)}
                             </Badge>
                           )}
                         </div>
@@ -749,7 +765,7 @@ export function HotelscomDetailDrawer({
 
                   {room.amenities.length > 0 && (
                     <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                       <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
                         Ver {room.amenities.length} comodidades do quarto
                       </summary>
                       <div className="mt-2 grid grid-cols-2 gap-1">
@@ -822,7 +838,7 @@ export function HotelscomDetailDrawer({
             )}
             {amenitiesGroups.map((g, i) => (
               <Card key={i} className="p-4">
-                <h5 className="font-semibold text-sm mb-2">{g.title}</h5>
+                <h5 className="font-semibold text-sm mb-2">{translateHotelscomText(g.title)}</h5>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                   {g.items.map((it, j) => (
                     <div key={j} className="flex items-center gap-2 text-xs">
@@ -845,7 +861,7 @@ export function HotelscomDetailDrawer({
                   </div>
                   <div>
                     {ratingSummary.label && (
-                      <div className="font-semibold text-sm">{ratingSummary.label}</div>
+                        <div className="font-semibold text-sm">{translateHotelscomText(ratingSummary.label)}</div>
                     )}
                     {ratingSummary.totalReviews && (
                       <div className="text-xs text-muted-foreground">
@@ -871,7 +887,7 @@ export function HotelscomDetailDrawer({
                   <div className="flex items-center gap-2 text-xs min-w-0">
                     <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     <span className="font-medium truncate">
-                      {r.authorContext ?? "Hóspede"}
+                      {translateHotelscomText(r.authorContext) || "Hóspede"}
                     </span>
                     {r.date && (
                       <span className="text-muted-foreground shrink-0">· {r.date}</span>
@@ -885,7 +901,7 @@ export function HotelscomDetailDrawer({
                   )}
                 </div>
                 {r.title && (
-                  <p className="text-xs font-semibold text-foreground/90">{r.title}</p>
+                  <p className="text-xs font-semibold text-foreground/90">{translateHotelscomText(r.title)}</p>
                 )}
                 {r.text && (
                   <p className="text-xs text-foreground/80 line-clamp-5">{r.text}</p>
@@ -925,7 +941,7 @@ export function HotelscomDetailDrawer({
               <Card className="p-4">
                 <h5 className="font-semibold text-sm mb-2">Sobre a localização</h5>
                 <p className="text-xs text-foreground/80 whitespace-pre-line">
-                  {editorialLocation}
+                  {translateHotelscomText(editorialLocation)}
                 </p>
               </Card>
             )}
@@ -939,10 +955,10 @@ export function HotelscomDetailDrawer({
                       key={i}
                       className="flex items-center justify-between gap-3 text-xs"
                     >
-                      <span className="text-foreground/80 truncate">{n.name}</span>
+                       <span className="text-foreground/80 truncate">{translateHotelscomText(n.name)}</span>
                       {n.distance && (
                         <span className="text-muted-foreground shrink-0">
-                          {n.distance}
+                           {translateHotelscomDistance(n.distance)}
                         </span>
                       )}
                     </div>
@@ -962,14 +978,7 @@ export function HotelscomDetailDrawer({
                 </h4>
                 <div className="space-y-2">
                   {footerMessages.map((m, i) => {
-                    const text = (m.text || "")
-                      .replace(/^Fully refundable$/i, "Totalmente reembolsável")
-                      .replace(/^Non refundable$/i, "Não reembolsável")
-                      .replace(/^Free cancellation$/i, "Cancelamento grátis")
-                      .replace(/^Breakfast included$/i, "Café da manhã incluso")
-                      .replace(/^Free Wi-?Fi$/i, "Wi-Fi grátis")
-                      .replace(/^Free parking$/i, "Estacionamento grátis")
-                      .replace(/\bfree cancellation\b/gi, "cancelamento grátis");
+                      const text = translateHotelscomText(m.text || "");
                     return (
                       <div key={i} className="flex items-start gap-2 text-sm">
                         {m.style === "POSITIVE" ? (

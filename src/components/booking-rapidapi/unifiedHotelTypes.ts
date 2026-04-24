@@ -504,11 +504,25 @@ export interface UnifiedHotelGroup {
   amenities?: string[];
   latitude?: number;
   longitude?: number;
+  hasBooking: boolean;
+  hasHotelscom: boolean;
   offers: UnifiedHotelOffer[];
   bestOffer?: UnifiedHotelOffer;
   priceDeltaPercent: number;
   savings?: number;
   savingsCurrency?: string;
+}
+
+function compareReviewStrength(a?: UnifiedHotel, b?: UnifiedHotel): number {
+  const aCount = a?.reviewCount ?? -1;
+  const bCount = b?.reviewCount ?? -1;
+  if (aCount !== bCount) return bCount - aCount;
+
+  const aScore = a?.reviewScore ?? -1;
+  const bScore = b?.reviewScore ?? -1;
+  if (aScore !== bScore) return bScore - aScore;
+
+  return 0;
 }
 
 function normalizeForMatch(str?: string): string {
@@ -567,6 +581,9 @@ export function groupHotelsByIdentity(
   for (const [key, members] of groups) {
     const primary =
       members.find((m) => m.source === "booking") ?? members[0];
+    const reviewRepresentative = [...members].sort(compareReviewStrength)[0] ?? primary;
+    const hasBooking = members.some((m) => m.source === "booking");
+    const hasHotelscom = members.some((m) => m.source === "hotelscom");
 
     const offers = members.map(toOffer);
     offers.sort((a, b) => {
@@ -612,16 +629,18 @@ export function groupHotelsByIdentity(
     result.push({
       groupKey: key,
       name: primary.name,
-      location: primary.location,
-      photoUrl: primary.photoUrl ?? Array.from(allPhotos)[0],
+      location: primary.location ?? reviewRepresentative.location,
+      photoUrl: primary.photoUrl ?? reviewRepresentative.photoUrl ?? Array.from(allPhotos)[0],
       photoUrls: Array.from(allPhotos),
       stars: primary.stars,
-      reviewScore: primary.reviewScore,
-      reviewScoreWord: primary.reviewScoreWord,
-      reviewCount: primary.reviewCount,
+      reviewScore: reviewRepresentative.reviewScore,
+      reviewScoreWord: reviewRepresentative.reviewScoreWord,
+      reviewCount: reviewRepresentative.reviewCount,
       amenities: Array.from(allAmenities),
-      latitude: primary.latitude,
-      longitude: primary.longitude,
+      latitude: primary.latitude ?? reviewRepresentative.latitude,
+      longitude: primary.longitude ?? reviewRepresentative.longitude,
+      hasBooking,
+      hasHotelscom,
       offers,
       bestOffer,
       priceDeltaPercent,
@@ -631,6 +650,16 @@ export function groupHotelsByIdentity(
   }
 
   result.sort((a, b) => {
+    const aBucket = a.hasBooking && a.hasHotelscom ? 0 : a.hasBooking ? 1 : 2;
+    const bBucket = b.hasBooking && b.hasHotelscom ? 0 : b.hasBooking ? 1 : 2;
+    if (aBucket !== bBucket) return aBucket - bBucket;
+
+    const reviewCountDiff = (b.reviewCount ?? -1) - (a.reviewCount ?? -1);
+    if (reviewCountDiff !== 0) return reviewCountDiff;
+
+    const reviewScoreDiff = (b.reviewScore ?? -1) - (a.reviewScore ?? -1);
+    if (reviewScoreDiff !== 0) return reviewScoreDiff;
+
     const pa = a.bestOffer?.priceTotal;
     const pb = b.bestOffer?.priceTotal;
     if (typeof pa !== "number" && typeof pb !== "number") return 0;
