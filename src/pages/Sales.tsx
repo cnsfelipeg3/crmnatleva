@@ -80,6 +80,90 @@ const SALES_FILTER_CONFIG: SmartFilterConfig = {
   pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "last_30_days", "all"],
 };
 
+// Memoized row — re-renders only when sale data actually changes (not on sort/filter reorder)
+interface SaleRowProps {
+  sale: SaleRow;
+  productCatalog: ReturnType<typeof useProductTypes>["catalog"];
+  onNavigate: (id: string) => void;
+  onNavigateClient: (clientId: string) => void;
+}
+
+const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient }: SaleRowProps) {
+  const o = routeCode(sale.origin_city, sale.origin_iata);
+  const d = routeCode(sale.destination_city, sale.destination_iata);
+  const routeEmpty = !o && !d;
+  const pax = (sale.adults || 0) + (sale.children || 0);
+  const slugs = normalizeProductsToSlugs(sale.products);
+
+  return (
+    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onNavigate(sale.id)}>
+      <td className="px-3 py-3">
+        <p className="font-medium text-foreground truncate">{sale.name}</p>
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
+          <span className="truncate">{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+          {sale.client_id && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onNavigateClient(sale.client_id!); }}
+              className="text-primary hover:underline font-medium flex-shrink-0"
+            >
+              👤
+            </button>
+          )}
+        </div>
+      </td>
+      <td className="px-2 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
+      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
+      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
+      <td className="px-2 py-3">
+        <span className={cn("font-mono text-xs", routeEmpty && "text-muted-foreground/40 italic")}>
+          {o && d ? `${o} → ${d}` : o ? `${o} → N/D` : d ? `N/D → ${d}` : "—"}
+        </span>
+      </td>
+      <td className="px-1 py-3 text-center">{pax}</td>
+      <td className="px-1 py-3">
+        <div className="flex gap-1 items-center flex-wrap">
+          {sale.airline && <AirlineLogo iata={sale.airline} size={18} />}
+          {slugs.map((slug) => {
+            if (AERO_SLUGS.has(slug) && sale.airline) return null;
+            const meta = getProductMeta(slug, productCatalog);
+            const Icon = meta.icon;
+            const tooltipLabel = slug === "hospedagem" && sale.hotel_name ? sale.hotel_name : meta.label;
+            return (
+              <Tooltip key={slug}>
+                <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", meta.className)} /></span></TooltipTrigger>
+                <TooltipContent>{tooltipLabel}</TooltipContent>
+              </Tooltip>
+            );
+          })}
+        </div>
+      </td>
+      <td className="px-2 py-3 text-right font-medium whitespace-nowrap">{fmt(sale.received_value || 0)}</td>
+      <td className="px-2 py-3 text-right text-muted-foreground whitespace-nowrap">{fmt(sale.total_cost || 0)}</td>
+      <td className="px-2 py-3 text-right">
+        <span className={cn("font-medium whitespace-nowrap", (sale.profit || 0) > 0 ? "text-success" : (sale.profit || 0) < 0 ? "text-destructive" : "text-foreground")}>
+          {fmt(sale.profit || 0)}
+        </span>
+      </td>
+      <td className="px-1 py-3 text-right">
+        <span className={cn("whitespace-nowrap", (sale.margin || 0) > 25 ? "text-success font-semibold" : "text-foreground")}>
+          {(sale.margin || 0).toFixed(1)}%
+        </span>
+      </td>
+      <td className="px-1 py-3 text-center">
+        {sale.lead_type === "organico"
+          ? <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>
+          : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
+      </td>
+      <td className="px-1 py-3">
+        <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
+      </td>
+      <td className="px-2 py-3">
+        <Button variant="ghost" size="sm"><Eye className="w-4 h-4" /></Button>
+      </td>
+    </tr>
+  );
+});
+
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
