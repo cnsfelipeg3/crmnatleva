@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizeProductsToSlugs, inferProductSlugsFromSale } from "../_shared/productTypes.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,8 +190,18 @@ serve(async (req) => {
       const destMatch = destText.match(/\(([A-Z]{3})\)/);
       if (destMatch) destIata = destMatch[1];
 
-      // Parse products
-      const products = sale.products ? sale.products.split(",").map((p: string) => p.trim()).filter(Boolean) : [];
+      // Parse products → normalize legacy labels to canonical slugs
+      const rawProducts = sale.products ? sale.products.split(",").map((p: string) => p.trim()).filter(Boolean) : [];
+      let products = normalizeProductsToSlugs(rawProducts);
+      // Fallback: infer from structural data if no explicit products
+      if (products.length === 0) {
+        products = inferProductSlugsFromSale({
+          origin_iata: originIata,
+          destination_iata: destIata,
+          airline: sale.airline,
+          hotel_name: sale.hotel_name,
+        });
+      }
 
       // Parse connections
       const connectionsRaw = sale.connections || "";
