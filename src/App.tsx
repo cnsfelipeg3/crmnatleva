@@ -169,12 +169,11 @@ function ScreenLoader() {
    return <SessionAwareLoader />;
 }
 
-// TODO: TEMPORÁRIO - Reativar proteção de login depois dos testes
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  // const { isAuthenticated, isLoading } = useAuth();
-  // const location = useLocation();
-  // if (isLoading) return <ScreenLoader />;
-  // if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+  if (isLoading) return <ScreenLoader />;
+  if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
 
@@ -195,8 +194,8 @@ function AppRoutes() {
           path="/login"
           element={isLoading && !isPublicRoute ? <ScreenLoader /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
         />
-        {/* TODO: TEMPORÁRIO - Redireciona direto pro dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
+        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/sales" element={<Sales />} />
