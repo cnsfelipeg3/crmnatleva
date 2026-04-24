@@ -104,7 +104,7 @@ export function UnifiedHotelDetailDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="w-full overflow-hidden p-0 sm:max-w-3xl flex flex-col"
+        className="w-full overflow-hidden p-0 sm:max-w-3xl lg:max-w-4xl xl:max-w-5xl flex flex-col"
       >
         {/* HEADER UNIFICADO */}
         <SheetHeader className="shrink-0 border-b bg-background p-4 space-y-2">
