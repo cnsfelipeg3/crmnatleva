@@ -737,7 +737,7 @@ export function useHotelscomDetails(
     queryFn: async () => {
       const envelope = await invokeBooking<{ data: unknown }>(
         "hotelscomDetails" as BookingAction,
-        { hotel_id: hotelId },
+        { propertyId: hotelId },
       );
       return envelope?.data;
     },
@@ -745,3 +745,118 @@ export function useHotelscomDetails(
     staleTime: 24 * 60 * 60 * 1000,
   });
 }
+
+// ============================================================
+// HOTELS.COM — DETALHES COMPLETOS (11 endpoints em paralelo)
+// ============================================================
+
+export interface HotelscomFullDetails {
+  content?: any;
+  gallery?: any;
+  amenities?: any;
+  offers?: any;
+  summary?: any;
+  location?: any;
+  ratingSummary?: any;
+  highlights?: any;
+  reviewsList?: any;
+  reviewsSummary?: any;
+  headline?: any;
+}
+
+/**
+ * Busca em paralelo os 11 endpoints de detalhe do Hotels.com.
+ * `propertyId` deve ser o ID composto "regionId_propertyId".
+ * Tolerante a falhas: se um endpoint falhar, retorna undefined naquele campo.
+ */
+export function useHotelscomFullDetails(
+  propertyId: string | null,
+  checkinDate: string | null,
+  checkoutDate: string | null,
+  adults: number = 2,
+  enabled: boolean = true,
+) {
+  return useQuery({
+    queryKey: [
+      "booking-rapidapi",
+      "hotelscomFullDetails",
+      propertyId,
+      checkinDate,
+      checkoutDate,
+      adults,
+    ],
+    queryFn: async (): Promise<HotelscomFullDetails> => {
+      if (!propertyId) throw new Error("propertyId obrigatório");
+
+      const baseParams = {
+        propertyId,
+        domain: "US",
+        locale: "en_US",
+      };
+
+      const safe = async <T = any>(
+        action: string,
+        params: Record<string, unknown>,
+      ): Promise<T | undefined> => {
+        try {
+          const env = await invokeBooking<{ data: T }>(
+            action as BookingAction,
+            params,
+          );
+          return (env as any)?.data;
+        } catch (err) {
+          console.warn(`[hotelscomFullDetails] ${action} falhou:`, err);
+          return undefined;
+        }
+      };
+
+      const offersParams =
+        checkinDate && checkoutDate
+          ? { ...baseParams, checkinDate, checkoutDate, adults }
+          : null;
+
+      const [
+        content,
+        gallery,
+        amenities,
+        offers,
+        summary,
+        location,
+        ratingSummary,
+        highlights,
+        reviewsList,
+        reviewsSummary,
+        headline,
+      ] = await Promise.all([
+        safe("hotelscomContent", baseParams),
+        safe("hotelscomGallery", baseParams),
+        safe("hotelscomAmenities", baseParams),
+        offersParams ? safe("hotelscomOffers", offersParams) : Promise.resolve(undefined),
+        safe("hotelscomSummary", baseParams),
+        safe("hotelscomLocation", baseParams),
+        safe("hotelscomRatingSummary", baseParams),
+        safe("hotelscomHighlights", baseParams),
+        safe("hotelscomReviewsList", baseParams),
+        safe("hotelscomReviewsSummary", baseParams),
+        safe("hotelscomHeadline", baseParams),
+      ]);
+
+      return {
+        content,
+        gallery,
+        amenities,
+        offers,
+        summary,
+        location,
+        ratingSummary,
+        highlights,
+        reviewsList,
+        reviewsSummary,
+        headline,
+      };
+    },
+    enabled: enabled && !!propertyId,
+    staleTime: 30 * 60 * 1000, // 30min — preços/disponibilidade não envelhecem demais
+  });
+}
+

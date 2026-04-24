@@ -59,6 +59,8 @@ export interface UnifiedHotel {
   neighborhood?: string;
   /** Tema do badge de nota (positive/neutral/negative) — pra cor */
   ratingTheme?: string;
+  /** ID composto do Hotels.com ("regionId_propertyId") usado nos endpoints de detalhe */
+  propertyIdComposite?: string;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
@@ -393,6 +395,7 @@ export function normalizeHotelscomHotel(
     accessibilityPriceLabel,
     promoBadges: promoBadges.length > 0 ? promoBadges : undefined,
     neighborhood,
+    propertyIdComposite: card.propertyId,
     raw: card,
   };
 }
@@ -482,6 +485,8 @@ export interface UnifiedHotelOffer {
   discountBadge?: string;
   promoBadges?: string[];
   accessibilityPriceLabel?: string;
+  /** ID composto do Hotels.com ("regionId_propertyId") — usado pra buscar detalhes ricos */
+  propertyIdComposite?: string;
   raw?: unknown;
 }
 
@@ -538,6 +543,7 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     discountBadge: h.discountBadge,
     promoBadges: h.promoBadges,
     accessibilityPriceLabel: h.accessibilityPriceLabel,
+    propertyIdComposite: h.propertyIdComposite,
     raw: h.raw,
   };
 }
