@@ -292,35 +292,52 @@ export function normalizeHotelscomHotel(
   const heading = card.headingSection?.heading || "Hotel sem nome";
   const location = card.headingSection?.messages?.[0]?.text;
 
-  // Preço principal — formattedDisplayPrice é geralmente o TOTAL da estadia
-  // (confirmado pelo accessibilityLabel "for N nights"). A API ntd119 retorna
-  // valores em USD por padrão e os preços costumam ser tarifas promocionais
-  // ("Member Price") que diferem do site público. Por isso exibimos per-night
-  // calculado também, pra o vendedor sanity-check.
-  const priceOptV2 = card.priceSection?.priceSummary?.optionsV2?.[0];
-  const priceFormatted =
-    priceOptV2?.formattedDisplayPrice ?? priceOptV2?.displayPrice?.formatted;
-  const priceTotal = extractNumber(priceFormatted);
-  const priceCurrency = detectCurrency(priceFormatted);
-  const strikedFormatted = priceOptV2?.strikeOut?.formatted;
-  const priceStriked =
-    priceOptV2?.strikeOut?.amount ?? extractNumber(strikedFormatted);
-
-  // Preço por noite (procura em todos os displayMessagesV2)
-  let pricePerNight: number | undefined;
+  // Preço principal — A API ntd119 do Hotels.com expõe preços em DOIS lugares:
+  // 1) `optionsV2[0].formattedDisplayPrice` (formato antigo, nem sempre presente)
+  // 2) `displayMessagesV2[].lineItems[]` com role "LEAD" (total) e "STRIKEOUT" (preço cheio)
+  // O #2 é o que é REALMENTE renderizado no site público do Hotels.com.
+  // Priorizamos #2 para garantir paridade com o que o cliente vê ao clicar em "Reservar".
   const dmList = card.priceSection?.priceSummary?.displayMessagesV2 ?? [];
+
+  // Acha price com role LEAD (total exibido) e STRIKEOUT (riscado)
+  let leadPriceFormatted: string | undefined;
+  let strikeoutPriceFormatted: string | undefined;
+  let pricePerNight: number | undefined;
   for (const dm of dmList) {
     for (const li of dm?.lineItems ?? []) {
+      // Preços (DisplayPrice tem .role e .price.formatted)
+      const role = (li as any)?.role as string | undefined;
+      const formatted = (li as any)?.price?.formatted as string | undefined;
+      if (role === "LEAD" && formatted) leadPriceFormatted = formatted;
+      else if (role === "STRIKEOUT" && formatted)
+        strikeoutPriceFormatted = formatted;
+
+      // Per-night (LodgingEnrichedMessage com state REASSURANCE_DISPLAY_QUALIFIER)
       if (
-        li?.state === "REASSURANCE_DISPLAY_QUALIFIER" &&
-        typeof li.value === "string" &&
-        /night/i.test(li.value)
+        (li as any)?.state === "REASSURANCE_DISPLAY_QUALIFIER" &&
+        typeof (li as any)?.value === "string" &&
+        /night/i.test((li as any).value)
       ) {
-        pricePerNight = extractNumber(li.value);
-        break;
+        pricePerNight = extractNumber((li as any).value);
       }
     }
-    if (pricePerNight) break;
+  }
+
+  // Fallback pro formato optionsV2 (resposta antiga)
+  const priceOptV2 = card.priceSection?.priceSummary?.optionsV2?.[0];
+  const priceFormatted =
+    leadPriceFormatted ??
+    priceOptV2?.formattedDisplayPrice ??
+    priceOptV2?.displayPrice?.formatted;
+  const priceTotal = extractNumber(priceFormatted);
+  const priceCurrency = detectCurrency(priceFormatted);
+
+  const strikedFormatted = strikeoutPriceFormatted ?? priceOptV2?.strikeOut?.formatted;
+  let priceStriked =
+    extractNumber(strikedFormatted) ?? priceOptV2?.strikeOut?.amount;
+  // Só mantém riscado se for maior que o total (segurança)
+  if (priceStriked && priceTotal && priceStriked <= priceTotal) {
+    priceStriked = undefined;
   }
 
   // Detecta se é tarifa de membro/promocional (badge "Member Price")
