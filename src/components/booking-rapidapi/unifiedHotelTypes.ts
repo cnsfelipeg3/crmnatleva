@@ -422,11 +422,10 @@ export function normalizeHotelscomHotel(
   const { lat, lng } = extractLatLongFromUrl(externalUrl);
   const neighborhood = extractNeighborhoodFromUrl(externalUrl);
   const promoBadges = extractPromoBadges(card);
-  // Confia na moeda detectada no preço formatado: se vier "R$ ..." é BRL real.
-  // Só marca como estimado se houver preço E a moeda do preço NÃO for BRL.
-  // (A URL pode ter top_cur=USD por padrão da API mesmo retornando preço em BRL.)
-  const isEstimatedPrice =
-    typeof priceTotal === "number" && priceCurrency !== "BRL";
+  // Marca como estimado quando o valor foi convertido de outra moeda pra BRL.
+  // O valor aparece no card normalmente, mas com badge "estimado" pra deixar
+  // claro que o preço final exato é o do site do parceiro.
+  const isEstimatedPrice = needsConversion && typeof priceTotal === "number";
 
   return {
     source: "hotelscom",
