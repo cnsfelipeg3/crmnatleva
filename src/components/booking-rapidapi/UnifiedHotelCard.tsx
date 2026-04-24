@@ -8,6 +8,7 @@ import {
   type UnifiedHotelGroup,
   type UnifiedHotelOffer,
 } from "./unifiedHotelTypes";
+import { normalizeAmenities } from "./amenityLabels";
 
 interface Props {
   group: UnifiedHotelGroup;
@@ -178,15 +179,19 @@ export function UnifiedHotelCard({ group, onOfferClick, onCardClick }: Props) {
           </p>
         )}
 
-        {group.amenities && group.amenities.length > 0 && (
-          <div className="flex flex-wrap gap-1">
-            {group.amenities.slice(0, 3).map((a, i) => (
-              <Badge key={i} variant="secondary" className="text-[10px] py-0">
-                {a}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const niceAmenities = normalizeAmenities(group.amenities);
+          if (niceAmenities.length === 0) return null;
+          return (
+            <div className="flex flex-wrap gap-1">
+              {niceAmenities.slice(0, 3).map((a, i) => (
+                <Badge key={i} variant="secondary" className="text-[10px] py-0 font-normal">
+                  {a}
+                </Badge>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Área de ofertas comparativas */}
         <div className="mt-auto pt-2 border-t border-border flex flex-col gap-1">
