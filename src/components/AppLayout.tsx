@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import PanelHelpButton from "./PanelHelpButton";
+import PermissionGuard from "./PermissionGuard";
 import { MinimalLoader } from "./AppLoaders";
 import DeferredRender from "./DeferredRender";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -92,7 +93,9 @@ export default function AppLayout() {
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
           <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
-              <Outlet />
+              <PermissionGuard>
+                <Outlet />
+              </PermissionGuard>
             </div>
           </Suspense>
         </main>
@@ -143,7 +146,9 @@ export default function AppLayout() {
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
-              <Outlet />
+              <PermissionGuard>
+                <Outlet />
+              </PermissionGuard>
             </div>
           </Suspense>
         </main>

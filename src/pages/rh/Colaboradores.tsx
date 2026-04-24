@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Search, Download } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import EmployeeFormTabs from "@/components/rh/EmployeeFormTabs";
 
@@ -22,6 +26,7 @@ export default function Colaboradores() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -97,6 +102,18 @@ export default function Colaboradores() {
     load();
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+    } else {
+      toast.success(`${deleteTarget.full_name} foi excluído`);
+      setDeleteTarget(null);
+      load();
+    }
+  };
+
   const exportCSV = () => {
     const headers = "Nome,Cargo,Área,Contrato,Status,Salário,Admissão\n";
     const rows = filtered.map(e => `"${e.full_name}","${e.position}","${e.department}","${e.contract_type}","${e.status}",${e.base_salary},"${e.hire_date}"`).join("\n");
@@ -152,21 +169,41 @@ export default function Colaboradores() {
                 <TableHead>Admissão</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Salário</TableHead>
+                <TableHead className="text-right w-[100px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.map(e => (
-                <TableRow key={e.id} className="cursor-pointer hover:bg-muted/30" onClick={() => { setForm(e); setShowForm(true); }}>
-                  <TableCell className="font-medium">{e.full_name}</TableCell>
-                  <TableCell>{e.position}</TableCell>
-                  <TableCell>{e.department}</TableCell>
-                  <TableCell><Badge variant="outline">{e.contract_type}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs">{e.hire_date}</TableCell>
-                  <TableCell><Badge className={statusColor(e.status)}>{e.status}</Badge></TableCell>
-                  <TableCell className="text-right font-mono">R$ {Number(e.base_salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                <TableRow key={e.id} className="hover:bg-muted/30">
+                  <TableCell className="font-medium cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.full_name}</TableCell>
+                  <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.position}</TableCell>
+                  <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.department}</TableCell>
+                  <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge variant="outline">{e.contract_type}</Badge></TableCell>
+                  <TableCell className="font-mono text-xs cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.hire_date}</TableCell>
+                  <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge className={statusColor(e.status)}>{e.status}</Badge></TableCell>
+                  <TableCell className="text-right font-mono cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>R$ {Number(e.base_salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={(ev) => { ev.stopPropagation(); setForm(e); setShowForm(true); }}
+                        title="Editar"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost" size="icon"
+                        className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={(ev) => { ev.stopPropagation(); setDeleteTarget(e); }}
+                        title="Excluir"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-8">Nenhum colaborador encontrado</TableCell></TableRow>}
+              {filtered.length === 0 && <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-8">Nenhum colaborador encontrado</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
@@ -178,6 +215,27 @@ export default function Colaboradores() {
           <EmployeeFormTabs form={form} setForm={setForm} onSave={handleSave} employees={employees} />
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir colaborador?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação é permanente e vai remover <strong>{deleteTarget?.full_name}</strong> do sistema,
+              junto com vínculos de permissões. Registros históricos (vendas, ponto, folha) ficam preservados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
