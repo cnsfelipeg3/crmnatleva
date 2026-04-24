@@ -404,6 +404,12 @@ function buildParams(
         checkoutDate: String(input.checkoutDate),
         adults: String(input.adults ?? 2),
         currency: String(input.currency ?? "BRL"),
+        // Tenta forçar mercado/moeda BR no provider (alguns aliases que diferentes
+        // wrappers da Hotels.com aceitam — mandamos todos pra maximizar a chance).
+        top_cur: String(input.currency ?? "BRL"),
+        siteid: "300000035", // Hotels.com BR
+        eapid: "35",         // Expedia Affiliate Partner ID Brasil
+        langid: "1046",      // pt_BR
         locale: String(input.locale ?? "pt_BR"),
         sort_order: String(input.sort_order ?? "RECOMMENDED"),
         page_number: String(input.page_number ?? 1),
