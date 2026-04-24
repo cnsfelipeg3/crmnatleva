@@ -68,8 +68,18 @@ interface Props {
 }
 
 export default function AppSidebar({ mobile, onNavigate }: Props) {
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, user, signOut } = useAuth();
   const { can, isAdmin } = usePermissions();
+  const [employeePosition, setEmployeePosition] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setEmployeePosition(null); return; }
+    supabase
+      .from("employees")
+      .select("position")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setEmployeePosition(data?.position ?? null));
+  }, [user?.id]);
   const canSee = (path: string) => {
     if (isAdmin) return true;
     const menu = MENU_BY_PATH[path];
@@ -423,7 +433,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {!isCollapsed && profile && (
           <div className="px-2 mb-2">
             <p className="text-xs font-semibold truncate text-foreground">{profile.full_name || profile.email}</p>
-            <p className="text-[10px] text-muted-foreground capitalize font-mono tracking-wider">{role}</p>
+            <p className="text-[10px] text-muted-foreground capitalize font-mono tracking-wider">{employeePosition || role}</p>
           </div>
         )}
         <button onClick={signOut} className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] text-sidebar-foreground hover:bg-primary/5 hover:text-foreground w-full transition-all duration-200">
