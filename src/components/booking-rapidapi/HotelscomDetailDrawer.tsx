@@ -46,6 +46,8 @@ interface Props {
   departure: string | null;
   adults: number;
   converted?: Converted;
+  /** Quando true, renderiza só o conteúdo interno (sem wrapper Sheet) — usado pelo UnifiedHotelDetailDrawer */
+  embedded?: boolean;
 }
 
 function fmtBRL(value?: number, currency?: string): string {
