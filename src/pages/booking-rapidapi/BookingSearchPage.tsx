@@ -36,10 +36,8 @@ import {
   SearchFilters,
   type GuestsConfig,
 } from "@/components/booking-rapidapi/SearchFilters";
-import { HotelCard } from "@/components/booking-rapidapi/HotelCard";
-import { HotelscomCard } from "@/components/booking-rapidapi/HotelscomCard";
-import { HotelDetailDrawer } from "@/components/booking-rapidapi/HotelDetailDrawer";
-import { HotelscomDetailDrawer } from "@/components/booking-rapidapi/HotelscomDetailDrawer";
+import { UnifiedHotelCard } from "@/components/booking-rapidapi/UnifiedHotelCard";
+import { UnifiedHotelDetailDrawer } from "@/components/booking-rapidapi/UnifiedHotelDetailDrawer";
 import { HotelsPagination } from "@/components/booking-rapidapi/HotelsPagination";
 import { HotelFiltersSidebar } from "@/components/booking-rapidapi/HotelFiltersSidebar";
 import {
@@ -56,9 +54,14 @@ import type {
 } from "@/components/booking-rapidapi/types";
 import { emptyHotelFiltersState } from "@/components/booking-rapidapi/types";
 import {
+  normalizeBookingHotel,
   normalizeHotelscomHotel,
   convertPriceToBRL,
+  groupHotelsByIdentity,
   type UnifiedHotel,
+  type UnifiedHotelGroup,
+  type UnifiedHotelOffer,
+  type HotelSource,
   type HotelscomLodgingCard,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
 
@@ -118,18 +121,10 @@ export default function BookingSearchPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Drawers (um por fonte)
-  const [selectedBookingHotel, setSelectedBookingHotel] = useState<BookingHotel | null>(null);
-  const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
-  const [selectedHotelscomCard, setSelectedHotelscomCard] = useState<HotelscomLodgingCard | null>(null);
-  const [hotelscomDrawerOpen, setHotelscomDrawerOpen] = useState(false);
-  const [selectedHotelscomConverted, setSelectedHotelscomConverted] = useState<{
-    priceTotal?: number;
-    priceStriked?: number;
-    priceTaxes?: number;
-    pricePerNight?: number;
-    currency?: string;
-  } | null>(null);
+  // Drawer unificado (1 hotel = vários providers em tabs)
+  const [selectedGroup, setSelectedGroup] = useState<UnifiedHotelGroup | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [initialTab, setInitialTab] = useState<HotelSource | undefined>(undefined);
 
   // Taxas de câmbio (pra converter USD do Hotels.com → BRL)
   const { data: exchangeData } = useExchangeRates();

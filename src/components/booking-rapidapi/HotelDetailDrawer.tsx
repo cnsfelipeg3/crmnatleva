@@ -62,6 +62,8 @@ interface Props {
   adults: number;
   childrenAges: number[];
   rooms: number;
+  /** Quando true, renderiza só o conteúdo interno (sem wrapper Sheet) — usado pelo UnifiedHotelDetailDrawer */
+  embedded?: boolean;
 }
 
 // ============================================================
@@ -103,6 +105,7 @@ export function HotelDetailDrawer({
   adults,
   childrenAges,
   rooms,
+  embedded = false,
 }: Props) {
   const { data: details, isLoading } = useHotelDetails(
     hotel?.hotel_id ?? null,
@@ -245,13 +248,8 @@ export function HotelDetailDrawer({
     return true;
   });
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-hidden p-0 sm:max-w-3xl"
-      >
-        <div className="flex h-full flex-col">
+  const inner = (
+    <div className="flex h-full flex-col">
           {/* HEADER */}
           <SheetHeader className="shrink-0 border-b bg-background p-4">
             <div className="flex items-start justify-between gap-3">
@@ -807,6 +805,17 @@ export function HotelDetailDrawer({
             </ScrollArea>
           </Tabs>
         </div>
+  );
+
+  if (embedded) return inner;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-hidden p-0 sm:max-w-3xl"
+      >
+        {inner}
       </SheetContent>
     </Sheet>
   );

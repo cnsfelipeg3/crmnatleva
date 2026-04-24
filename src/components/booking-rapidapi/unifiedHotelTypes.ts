@@ -374,7 +374,11 @@ function normalizeForMatch(str?: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/\b(hotel|hostel|resort|pousada|motel|apart|by|the|da|de|do|dos|das)\b/gi, "")
+    // remove ruído comum de nomes de hotéis pra aumentar match cross-OTA
+    .replace(
+      /\b(hotel|hostel|resort|pousada|motel|apart|aparthotel|inn|suites?|suite|residence|residences|spa|boutique|by|the|and|y|e|of|le|la|el|al|de|da|do|des|das|dos|du)\b/gi,
+      "",
+    )
     .replace(/[^\w\s]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
