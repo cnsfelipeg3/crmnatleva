@@ -99,6 +99,7 @@ export default function NewSale() {
     origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
     airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
     emission_source: "", lead_type: "agencia" as "agencia" | "organico",
+    seller_id: "" as string,
     // Payment
     received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
   });
