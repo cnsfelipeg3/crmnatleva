@@ -224,6 +224,7 @@ export function UnifiedHotelDetailDrawer({
                   arrival={arrival}
                   departure={departure}
                   adults={adults}
+                  propertyIdComposite={hotelscomOffer?.propertyIdComposite}
                   converted={{
                     priceTotal: hotelscomOffer?.priceTotal,
                     priceStriked: hotelscomOffer?.priceStriked,
