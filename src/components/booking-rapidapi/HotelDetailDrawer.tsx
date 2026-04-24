@@ -52,6 +52,7 @@ import {
   type BookingRoomDetails,
   type BookingMoney,
 } from "./types";
+import { buildBookingSearchUrl, openExternal } from "./externalUrls";
 
 interface Props {
   hotel: BookingHotel | null;
