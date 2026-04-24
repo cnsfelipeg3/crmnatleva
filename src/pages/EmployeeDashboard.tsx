@@ -18,7 +18,11 @@ import {
   Wallet,
   CalendarHeart,
   Image as ImageIcon,
+  MessagesSquare,
 } from "lucide-react";
+
+// Emails que enxergam ações exclusivas de gestor (Feedback 1:1 etc.)
+const MANAGER_EMAILS = ["arthurlessa713@gmail.com"];
 
 interface QuickAction {
   menuKey: string;
