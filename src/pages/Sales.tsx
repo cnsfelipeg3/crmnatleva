@@ -244,15 +244,14 @@ export default function Sales() {
                       <span className="text-xs text-muted-foreground">{(sale.adults || 0) + (sale.children || 0)} pax</span>
                       <div className="flex gap-1 items-center flex-wrap">
                         {sale.airline && <AirlineLogo iata={sale.airline} size={16} />}
-                        {(sale.products || []).map((p) => {
-                          const cfg = PRODUCT_ICON_MAP[p];
-                          if (!cfg) return null;
-                          if ((p === "Passagem Aérea" || p === "Passagem Aérea e Hospedagem" || p === "Remarcação Passagem Aérea") && sale.airline) return null;
-                          const Icon = cfg.icon;
-                          const tooltipLabel = p === "Hospedagem" && sale.hotel_name ? sale.hotel_name : cfg.label;
+                        {normalizeProductsToSlugs(sale.products).map((slug) => {
+                          if (AERO_SLUGS.has(slug) && sale.airline) return null;
+                          const meta = getProductMeta(slug, productCatalog);
+                          const Icon = meta.icon;
+                          const tooltipLabel = slug === "hospedagem" && sale.hotel_name ? sale.hotel_name : meta.label;
                           return (
-                            <Tooltip key={p}>
-                              <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", cfg.className)} /></span></TooltipTrigger>
+                            <Tooltip key={slug}>
+                              <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", meta.className)} /></span></TooltipTrigger>
                               <TooltipContent>{tooltipLabel}</TooltipContent>
                             </Tooltip>
                           );
