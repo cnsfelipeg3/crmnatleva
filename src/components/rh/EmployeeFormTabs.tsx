@@ -502,7 +502,7 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <Label className="text-[10px] text-muted-foreground">Intervalo (min)</Label>
-                                  <Input type="number" min={0} className="h-8 w-16 text-xs" value={s.lunch_minutes} onChange={e => updateDay(d.value, { lunch_minutes: Number(e.target.value) })} />
+                                  <Input type="number" min={0} className="h-8 w-20 text-xs" value={s.lunch_minutes} onChange={e => updateDay(d.value, { lunch_minutes: Number(e.target.value) })} />
                                 </div>
                               </div>
                             </>
