@@ -894,8 +894,29 @@ export default function NewSale() {
                 <Input type="date" value={form.close_date} onChange={(e) => updateForm("close_date", e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Vendedor Responsável</Label>
-                <Input value={user?.email || ""} disabled className="bg-muted/50" />
+                <Label>Vendedor Responsável {isAdmin && <span className="text-[10px] text-muted-foreground font-normal">(admin pode trocar)</span>}</Label>
+                {isAdmin ? (
+                  <Select
+                    value={form.seller_id || user?.id || ""}
+                    onValueChange={(v) => updateForm("seller_id", v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o vendedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {user?.id && !employeesList.some((e: any) => e.user_id === user.id) && (
+                        <SelectItem value={user.id}>{user.email} (você)</SelectItem>
+                      )}
+                      {employeesList.map((emp: any) => (
+                        <SelectItem key={emp.user_id} value={emp.user_id}>
+                          {emp.full_name}{emp.email ? ` — ${emp.email}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input value={user?.email || ""} disabled className="bg-muted/50" />
+                )}
               </div>
               <div className="sm:col-span-2 space-y-2">
                 <Label>Origem do Lead</Label>
