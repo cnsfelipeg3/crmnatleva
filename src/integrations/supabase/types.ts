@@ -6057,6 +6057,8 @@ export type Database = {
           connections: string[] | null
           created_at: string
           created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           departure_date: string | null
           destination_city: string | null
           destination_iata: string | null
@@ -6112,6 +6114,8 @@ export type Database = {
           connections?: string[] | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           departure_date?: string | null
           destination_city?: string | null
           destination_iata?: string | null
@@ -6167,6 +6171,8 @@ export type Database = {
           connections?: string[] | null
           created_at?: string
           created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           departure_date?: string | null
           destination_city?: string | null
           destination_iata?: string | null
