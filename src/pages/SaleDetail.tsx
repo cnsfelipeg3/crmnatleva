@@ -258,6 +258,24 @@ export default function SaleDetail() {
     return [...set];
   }, [sale, segments]);
 
+  // Deriva origem/destino priorizando o que foi salvo em sale.origin_iata/destination_iata,
+  // mas caindo para o primeiro/último segmento quando esses campos estão vazios
+  // (acontece em vendas criadas antes da lógica de derivação em NewSale.tsx).
+  const routeEndpoints = useMemo(() => {
+    const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
+    const idaSegs = validSegs.filter(s => s.direction === "ida");
+    const originFromSeg = idaSegs.length > 0
+      ? idaSegs[0].origin_iata
+      : validSegs[0]?.origin_iata;
+    const destinationFromSeg = idaSegs.length > 0
+      ? idaSegs[idaSegs.length - 1].destination_iata
+      : validSegs[validSegs.length - 1]?.destination_iata;
+    return {
+      originIata: sale?.origin_iata || originFromSeg || null,
+      destinationIata: sale?.destination_iata || destinationFromSeg || null,
+    };
+  }, [sale, segments]);
+
   if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
