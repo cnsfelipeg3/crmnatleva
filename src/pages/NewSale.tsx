@@ -555,7 +555,7 @@ export default function NewSale() {
 
       const salePayload = {
         name: smartCapitalizeName(form.name),
-        seller_id: user?.id,
+        seller_id: (isAdmin && form.seller_id) ? form.seller_id : user?.id,
         close_date: form.close_date || null,
         payment_method: salePayments.length > 0 ? salePayments.map(p => p.payment_method).join(", ") : form.payment_method || null,
         products, observations: form.observations || null,
