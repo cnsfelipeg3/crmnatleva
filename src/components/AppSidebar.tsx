@@ -68,8 +68,18 @@ interface Props {
 }
 
 export default function AppSidebar({ mobile, onNavigate }: Props) {
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, user, signOut } = useAuth();
   const { can, isAdmin } = usePermissions();
+  const [employeePosition, setEmployeePosition] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user?.id) { setEmployeePosition(null); return; }
+    supabase
+      .from("employees")
+      .select("position")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => setEmployeePosition(data?.position ?? null));
+  }, [user?.id]);
   const canSee = (path: string) => {
     if (isAdmin) return true;
     const menu = MENU_BY_PATH[path];
