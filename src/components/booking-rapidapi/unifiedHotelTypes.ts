@@ -47,6 +47,18 @@ export interface UnifiedHotel {
   amenities?: string[];
   /** Link pra página do hotel no site original */
   externalUrl?: string;
+  /** Selo de desconto formatado (ex: "$67 off") */
+  discountBadge?: string;
+  /** Legendas das fotos (mesma ordem de photoUrls) */
+  photoCaptions?: string[];
+  /** Selos de promoção (ex: "Promoção pública", "Cancelamento grátis") */
+  promoBadges?: string[];
+  /** Frase pronta de preço (ex: "Price was $252, price is now $185 for 3 nights") */
+  accessibilityPriceLabel?: string;
+  /** Bairro / região extraída da URL */
+  neighborhood?: string;
+  /** Tema do badge de nota (positive/neutral/negative) — pra cor */
+  ratingTheme?: string;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
