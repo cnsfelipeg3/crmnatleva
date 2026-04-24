@@ -122,6 +122,7 @@ export default function BookingSearchPage() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   // Drawer unificado (1 hotel = vários providers em tabs)
   const [selectedGroup, setSelectedGroup] = useState<UnifiedHotelGroup | null>(null);
