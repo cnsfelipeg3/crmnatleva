@@ -535,6 +535,9 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     freeCancellation: h.freeCancellation,
     breakfastIncluded: h.breakfastIncluded,
     externalUrl: h.externalUrl,
+    discountBadge: h.discountBadge,
+    promoBadges: h.promoBadges,
+    accessibilityPriceLabel: h.accessibilityPriceLabel,
     raw: h.raw,
   };
 }
