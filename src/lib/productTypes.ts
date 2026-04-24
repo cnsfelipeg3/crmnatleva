@@ -217,3 +217,60 @@ export function normalizeProductsToSlugs(arr: (string | null | undefined)[] | nu
 export function hasProduct(arr: (string | null | undefined)[] | null | undefined, slug: string): boolean {
   return normalizeProductsToSlugs(arr).includes(slug);
 }
+
+// ─── Inferência de produtos a partir de sinais de venda ────────────────────
+
+export interface SaleInferenceInput {
+  airline?: string | null;
+  origin_iata?: string | null;
+  destination_iata?: string | null;
+  departure_date?: string | null;
+  hotel_name?: string | null;
+  hotel_city?: string | null;
+  hotel_checkin_date?: string | null;
+  hotel_reservation_code?: string | null;
+  hotel_address?: string | null;
+  airCost?: number;
+  hotelCost?: number;
+  flightSegmentsCount?: number;
+  hotelEntriesCount?: number;
+  /** slugs vindos do formulário "Outros Produtos" (ou explícitos preservados) */
+  explicitOtherSlugs?: string[];
+}
+
+/**
+ * Infere os slugs de produtos de uma venda a partir de sinais estruturados.
+ * Fonte única da regra — usada tanto no formulário (NewSale) quanto no
+ * botão "Recalcular produtos" (SaleDetail).
+ */
+export function inferProductSlugsFromSale(input: SaleInferenceInput): string[] {
+  const slugs = new Set<string>();
+
+  const hasAereo =
+    (input.airCost ?? 0) > 0 ||
+    !!input.airline ||
+    !!input.origin_iata ||
+    !!input.destination_iata ||
+    !!input.departure_date ||
+    (input.flightSegmentsCount ?? 0) > 0;
+  if (hasAereo) slugs.add("aereo");
+
+  const hasHospedagem =
+    (input.hotelCost ?? 0) > 0 ||
+    !!input.hotel_name ||
+    !!input.hotel_city ||
+    !!input.hotel_checkin_date ||
+    !!input.hotel_reservation_code ||
+    !!input.hotel_address ||
+    (input.hotelEntriesCount ?? 0) > 0;
+  if (hasHospedagem) slugs.add("hospedagem");
+
+  for (const s of input.explicitOtherSlugs ?? []) {
+    if (s) slugs.add(getProductSlug(s));
+  }
+
+  // Combo: aéreo + hospedagem ⇒ pacote
+  if (slugs.has("aereo") && slugs.has("hospedagem")) slugs.add("pacote");
+
+  return Array.from(slugs);
+}

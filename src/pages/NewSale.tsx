@@ -505,21 +505,26 @@ export default function NewSale() {
     }
     setSaving(true);
     try {
-      // Monta array de products como SLUGS canônicos (catálogo unificado)
-      const productSlugs = new Set<string>();
-      if (airCost > 0 || form.airline) productSlugs.add("aereo");
-      if (hotelCost > 0 || hotelEntries.some(h => h.hotel_name)) productSlugs.add("hospedagem");
-      otherProducts.forEach(p => {
-        // p.type usa values UI internos ("transfer", "seguro", "trem", etc) — helper traduz pro slug canônico
-        productSlugs.add(getProductSlug(p.type));
-      });
-      // Se TEM aéreo + hospedagem juntos, marca também como pacote (preserva semântica de combo)
-      if (productSlugs.has("aereo") && productSlugs.has("hospedagem")) productSlugs.add("pacote");
-      const products: string[] = Array.from(productSlugs);
-
-
-      // Use first hotel for legacy fields
+      // Use first hotel for legacy fields (declarado antes para alimentar a inferência)
       const firstHotel = hotelEntries[0];
+
+      // Monta array de products como SLUGS canônicos via fonte única (productTypes.inferProductSlugsFromSale)
+      const products = inferProductSlugsFromSale({
+        airline: form.airline,
+        origin_iata: form.origin_iata,
+        destination_iata: form.destination_iata,
+        departure_date: form.departure_date,
+        hotel_name: firstHotel?.hotel_name,
+        hotel_city: firstHotel?.hotel_city,
+        hotel_checkin_date: firstHotel?.hotel_checkin_date,
+        hotel_reservation_code: firstHotel?.hotel_reservation_code,
+        hotel_address: firstHotel?.hotel_address,
+        airCost,
+        hotelCost,
+        flightSegmentsCount: segments.length,
+        hotelEntriesCount: hotelEntries.length,
+        explicitOtherSlugs: otherProducts.map(p => p.type),
+      });
 
       // Auto-derive origin/destination from segments if not set manually
       const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
