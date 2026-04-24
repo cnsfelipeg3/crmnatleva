@@ -178,6 +178,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Admin (e gestor) veem o dashboard BI completo. Demais colaboradores veem
+// um dashboard simples com atalhos relevantes — evita a tela "Acesso restrito".
+function DashboardSwitch() {
+  const { role } = useAuth();
+  const isFullDashboard = role === "admin" || role === "gestor";
+  return isFullDashboard ? <Dashboard /> : <EmployeeDashboard />;
+}
+
 function AppRoutes() {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
