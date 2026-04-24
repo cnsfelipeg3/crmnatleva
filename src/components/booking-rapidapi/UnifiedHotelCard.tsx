@@ -74,6 +74,15 @@ function OfferRow({
             membro
           </Badge>
         )}
+        {offer.isEstimatedPrice && (
+          <Badge
+            variant="outline"
+            className="text-[9px] px-1 py-0 h-4 shrink-0 border-orange-500/40 text-orange-700 dark:text-orange-400 bg-orange-500/10"
+            title="O provedor retornou esta tarifa em outra moeda/mercado. O valor em BRL é apenas estimado — confira o preço final no site."
+          >
+            estimado
+          </Badge>
+        )}
         {isBest && (
           <Badge className="bg-emerald-600 text-white text-[9px] px-1 py-0 h-4 shrink-0">
             MELHOR
@@ -82,20 +91,27 @@ function OfferRow({
       </div>
       <div className="flex flex-col items-end shrink-0">
         {offer.priceStriked &&
-          offer.priceStriked > (offer.priceTotal ?? 0) && (
+          offer.priceStriked > (offer.priceTotal ?? 0) &&
+          !offer.isEstimatedPrice && (
             <span className="text-[10px] text-muted-foreground line-through leading-none">
               {formatPriceBRL(offer.priceStriked, offer.priceCurrency)}
             </span>
           )}
-        <span
-          className={cn(
-            "text-sm font-bold leading-tight",
-            isBest ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
-          )}
-        >
-          {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
-        </span>
-        {offer.isMemberPrice && (
+        {offer.isEstimatedPrice ? (
+          <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400 leading-tight">
+            ver no site
+          </span>
+        ) : (
+          <span
+            className={cn(
+              "text-sm font-bold leading-tight",
+              isBest ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
+            )}
+          >
+            {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
+          </span>
+        )}
+        {offer.isMemberPrice && !offer.isEstimatedPrice && (
           <span className="text-[9px] text-amber-700/80 dark:text-amber-400/80 leading-none mt-0.5">
             tarifa membro
           </span>
