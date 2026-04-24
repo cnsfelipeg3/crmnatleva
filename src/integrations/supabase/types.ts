@@ -2803,6 +2803,7 @@ export type Database = {
           contract_type: string
           cpf: string | null
           created_at: string
+          daily_schedule: Json | null
           department: string
           email: string | null
           emergency_contact_name: string | null
@@ -2845,6 +2846,7 @@ export type Database = {
           contract_type?: string
           cpf?: string | null
           created_at?: string
+          daily_schedule?: Json | null
           department?: string
           email?: string | null
           emergency_contact_name?: string | null
@@ -2887,6 +2889,7 @@ export type Database = {
           contract_type?: string
           cpf?: string | null
           created_at?: string
+          daily_schedule?: Json | null
           department?: string
           email?: string | null
           emergency_contact_name?: string | null
