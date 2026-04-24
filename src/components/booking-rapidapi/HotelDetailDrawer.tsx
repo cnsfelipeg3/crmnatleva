@@ -204,7 +204,7 @@ export function HotelDetailDrawer({
         ? `✅ TOTAL FINAL: ${money(allInclusiveAmount).display}`
         : null,
       grossPerNight ? `   ~${money(grossPerNight).display}/noite` : null,
-      `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
+      `🔗 ${buildBookingSearchUrl({ hotelName, arrival, departure, adults, childrenAges, rooms })}`,
     ].filter(Boolean);
 
     try {
