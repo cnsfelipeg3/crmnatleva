@@ -404,9 +404,11 @@ export function normalizeHotelscomHotel(
   const { lat, lng } = extractLatLongFromUrl(externalUrl);
   const neighborhood = extractNeighborhoodFromUrl(externalUrl);
   const promoBadges = extractPromoBadges(card);
-  const topCurMatch = externalUrl?.match(/[?&]top_cur=([^&]+)/i);
-  const topCur = topCurMatch?.[1]?.toUpperCase();
-  const isEstimatedPrice = !!topCur && topCur !== "BRL";
+  // Confia na moeda detectada no preço formatado: se vier "R$ ..." é BRL real.
+  // Só marca como estimado se houver preço E a moeda do preço NÃO for BRL.
+  // (A URL pode ter top_cur=USD por padrão da API mesmo retornando preço em BRL.)
+  const isEstimatedPrice =
+    typeof priceTotal === "number" && priceCurrency !== "BRL";
 
   return {
     source: "hotelscom",
@@ -706,7 +708,29 @@ export function groupHotelsByIdentity(
     const hasBooking = members.some((m) => m.source === "booking");
     const hasHotelscom = members.some((m) => m.source === "hotelscom");
 
-    const offers = members.map(toOffer);
+    // Coleta ofertas e deduplica por fonte: mantém apenas a melhor oferta de cada
+    // provider (preço confiável tem prioridade; entre confiáveis, o menor preço vence).
+    const rawOffers = members.map(toOffer);
+    const bestPerSource = new Map<HotelSource, UnifiedHotelOffer>();
+    for (const o of rawOffers) {
+      const current = bestPerSource.get(o.source);
+      if (!current) {
+        bestPerSource.set(o.source, o);
+        continue;
+      }
+      const currentTrusted = !current.isEstimatedPrice && typeof current.priceTotal === "number";
+      const candidateTrusted = !o.isEstimatedPrice && typeof o.priceTotal === "number";
+      if (candidateTrusted && !currentTrusted) {
+        bestPerSource.set(o.source, o);
+        continue;
+      }
+      if (!candidateTrusted && currentTrusted) continue;
+      // Ambos no mesmo nível de confiança → menor preço vence
+      const cp = current.priceTotal ?? Infinity;
+      const op = o.priceTotal ?? Infinity;
+      if (op < cp) bestPerSource.set(o.source, o);
+    }
+    const offers = Array.from(bestPerSource.values());
     offers.sort((a, b) => {
       const aTrusted = !a.isEstimatedPrice;
       const bTrusted = !b.isEstimatedPrice;
