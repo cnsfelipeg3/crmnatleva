@@ -11,7 +11,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon, Lightbulb,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { MENU_BY_PATH } from "@/lib/systemMenus";
 
 const navItems = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/dashboard", icon: Home, label: "Home", alwaysVisible: true },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
@@ -86,7 +86,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (!menu) return true; // rota não governada = visível
     return can(menu.key, "view");
   };
-  const filterItems = <T extends { to: string }>(items: T[]) => items.filter((i) => canSee(i.to));
+  const filterItems = <T extends { to: string; alwaysVisible?: boolean }>(items: T[]) => items.filter((i) => i.alwaysVisible || canSee(i.to));
   const [collapsed, setCollapsed] = useState(false);
   const [dark, setDark] = useState(() => document.documentElement.classList.contains("dark"));
   const [financeOpen, setFinanceOpen] = useState(false);
