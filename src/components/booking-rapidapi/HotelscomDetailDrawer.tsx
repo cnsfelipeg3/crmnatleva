@@ -608,14 +608,14 @@ export function HotelscomDetailDrawer({
           <TabsList className="w-full grid grid-cols-4 lg:grid-cols-7 h-auto gap-1">
             <TabsTrigger value="overview" className="text-xs">Visão</TabsTrigger>
             <TabsTrigger value="rooms" className="text-xs">
-              Quartos {rooms.length > 0 && `(${rooms.length})`}
+              Quartos {richRooms.length > 0 && `(${richRooms.length})`}
             </TabsTrigger>
             <TabsTrigger value="photos" className="text-xs">
               Fotos ({fullGalleryPhotos.length})
             </TabsTrigger>
             <TabsTrigger value="amenities" className="text-xs">Comodidades</TabsTrigger>
             <TabsTrigger value="reviews" className="text-xs">
-              Avaliações {reviews.length > 0 && `(${reviews.length})`}
+              Avaliações {reviewsRich.length > 0 && `(${reviewsRich.length})`}
             </TabsTrigger>
             <TabsTrigger value="location" className="text-xs">Local</TabsTrigger>
             <TabsTrigger value="policies" className="text-xs">Políticas</TabsTrigger>
