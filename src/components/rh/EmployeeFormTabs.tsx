@@ -8,7 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquare, Upload, Trash2, ChevronDown, ChevronRight, Check, X, Eye, Plus, Pencil, Download, CheckCircle2 } from "lucide-react";
+import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquare, Upload, Trash2, ChevronDown, ChevronRight, Check, X, Eye, Plus, Pencil, Download, CheckCircle2, Search } from "lucide-react";
+import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTemplate } from "@/lib/systemMenus";
 
 const POSITIONS = ["SDR", "Vendas", "Consultor", "Operação", "Financeiro", "Admin", "Marketing", "Atendimento"];
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
@@ -25,150 +26,44 @@ const WORK_DAYS_OPTIONS = [
   { value: "dom", label: "Dom" },
 ];
 
-// === PERMISSÕES GRANULARES ===
-type PermAction = "view" | "create" | "edit" | "delete" | "export" | "approve";
-const ACTION_META: Record<PermAction, { label: string; icon: any; desc: string }> = {
-  view:    { label: "Visualizar", icon: Eye,          desc: "Pode ver os dados do módulo" },
-  create:  { label: "Criar",      icon: Plus,         desc: "Pode adicionar novos registros" },
-  edit:    { label: "Editar",     icon: Pencil,       desc: "Pode alterar registros existentes" },
-  delete:  { label: "Excluir",    icon: Trash2,       desc: "Pode remover registros" },
-  export:  { label: "Exportar",   icon: Download,     desc: "Pode baixar dados (CSV/PDF)" },
-  approve: { label: "Aprovar",    icon: CheckCircle2, desc: "Pode aprovar/validar fluxos" },
+// === PERMISSÕES GRANULARES — BASEADO EM SYSTEM_MENUS REAIS ===
+const ACTION_META: Record<MenuAction, { label: string; icon: any; desc: string }> = {
+  view:   { label: "Visualizar", icon: Eye,    desc: "Pode ver o menu e seus dados" },
+  create: { label: "Criar",      icon: Plus,   desc: "Pode adicionar novos registros" },
+  edit:   { label: "Editar",     icon: Pencil, desc: "Pode alterar registros existentes" },
+  delete: { label: "Excluir",    icon: Trash2, desc: "Pode remover registros" },
 };
 
-interface ModuleDef {
-  key: string;
-  label: string;
-  description: string;
-  actions: PermAction[];
-  features: { key: string; label: string; description?: string }[];
-}
+// Mapa de permissões por menu_key → ações habilitadas
+type MenuPerm = Partial<Record<MenuAction, boolean>>;
+type PermissionsMap = Record<string, MenuPerm>; // menu_key → ações
 
-const MODULE_CATALOG: ModuleDef[] = [
-  { key: "vendas", label: "Vendas", description: "CRM, pipeline e gestão comercial",
-    actions: ["view", "create", "edit", "delete", "export", "approve"],
-    features: [
-      { key: "ver_todas",       label: "Ver vendas de todos", description: "Caso desmarcado, vê apenas as próprias" },
-      { key: "alterar_status",  label: "Alterar status da venda" },
-      { key: "ver_lucro",       label: "Visualizar margem e lucro" },
-      { key: "editar_comissao", label: "Editar valor de comissão" },
-      { key: "cancelar",        label: "Cancelar venda" },
-    ] },
-  { key: "viagens", label: "Viagens", description: "Torre de controle e operações de viagem",
-    actions: ["view", "create", "edit", "delete", "export"],
-    features: [
-      { key: "checkin",              label: "Realizar check-in" },
-      { key: "emissao",              label: "Confirmar emissão" },
-      { key: "alterar_voos",         label: "Alterar segmentos de voo" },
-      { key: "gerenciar_hospedagem", label: "Gerenciar hospedagem" },
-    ] },
-  { key: "clientes", label: "Clientes", description: "Cadastro, perfil 360 e passageiros",
-    actions: ["view", "create", "edit", "delete", "export"],
-    features: [
-      { key: "ver_todos",            label: "Ver clientes de outros vendedores" },
-      { key: "ver_dados_sensiveis",  label: "Ver CPF/Passaporte completos" },
-      { key: "mesclar",              label: "Mesclar duplicados" },
-      { key: "transferir",           label: "Transferir cliente entre vendedores" },
-    ] },
-  { key: "financeiro", label: "Financeiro", description: "Contas a pagar/receber, comissões e DRE",
-    actions: ["view", "create", "edit", "delete", "export", "approve"],
-    features: [
-      { key: "contas_pagar",     label: "Contas a pagar" },
-      { key: "contas_receber",   label: "Contas a receber" },
-      { key: "conciliacao",      label: "Conciliação bancária" },
-      { key: "fechar_comissao",  label: "Fechar/aprovar comissões" },
-      { key: "dre",              label: "DRE e relatórios fiscais" },
-      { key: "plano_contas",     label: "Editar plano de contas" },
-    ] },
-  { key: "operacoes", label: "Operações", description: "Inbox, atendimento e automações",
-    actions: ["view", "create", "edit", "delete"],
-    features: [
-      { key: "inbox",            label: "Atender Inbox WhatsApp" },
-      { key: "responder_lead",   label: "Responder leads de outros" },
-      { key: "fluxos",           label: "Editar fluxos de automação" },
-      { key: "transferir_atend", label: "Transferir atendimento" },
-    ] },
-  { key: "relatorios", label: "Relatórios & BI", description: "Dashboards, métricas e exportações",
-    actions: ["view", "export"],
-    features: [
-      { key: "dashboard_geral",       label: "Dashboard geral" },
-      { key: "dashboard_financeiro",  label: "Dashboard financeiro" },
-      { key: "dashboard_comercial",   label: "Dashboard comercial" },
-      { key: "ranking_vendedores",    label: "Ranking de vendedores" },
-      { key: "ver_metas_outros",      label: "Ver metas de outros vendedores" },
-    ] },
-  { key: "ai_team", label: "Inteligência IA", description: "Agentes, conhecimento e estratégia",
-    actions: ["view", "create", "edit", "delete"],
-    features: [
-      { key: "editar_agentes",     label: "Editar prompts dos agentes" },
-      { key: "base_conhecimento",  label: "Gerenciar base de conhecimento" },
-      { key: "regras_globais",     label: "Editar regras globais da agência" },
-      { key: "simulador",          label: "Acessar simuladores" },
-    ] },
-  { key: "administracao", label: "Administração", description: "Configurações gerais do sistema",
-    actions: ["view", "edit"],
-    features: [
-      { key: "integracoes",     label: "Integrações (Z-API, Amadeus, etc.)" },
-      { key: "config_agencia",  label: "Configurações da agência" },
-      { key: "logs_sistema",    label: "Ver logs do sistema" },
-      { key: "backup",          label: "Backup e restauração" },
-    ] },
-  { key: "rh", label: "Recursos Humanos", description: "Colaboradores, ponto e folha",
-    actions: ["view", "create", "edit", "delete", "export"],
-    features: [
-      { key: "ver_salarios",     label: "Ver salários e remuneração" },
-      { key: "gerenciar_perms",  label: "Gerenciar permissões de outros" },
-      { key: "ponto",            label: "Controle de ponto" },
-      { key: "documentos",       label: "Gerenciar documentos pessoais" },
-    ] },
-];
+const emptyPerm = (): MenuPerm => ({});
 
-type ModulePerm = { actions: PermAction[]; features: Record<string, boolean> };
-type PermissionsMap = Record<string, ModulePerm>;
-const emptyModulePerm = (): ModulePerm => ({ actions: [], features: {} });
-const buildPreset = (template: (mod: ModuleDef) => ModulePerm): PermissionsMap =>
-  Object.fromEntries(MODULE_CATALOG.map(m => [m.key, template(m)]));
-
-const PERMISSION_PRESETS: Record<string, { label: string; description: string; build: () => PermissionsMap }> = {
-  administrador: { label: "Administrador", description: "Acesso total a tudo, incluindo configurações sensíveis",
-    build: () => buildPreset(m => ({ actions: [...m.actions], features: Object.fromEntries(m.features.map(f => [f.key, true])) })) },
-  gestor: { label: "Gestor / Gerente", description: "Vê e edita tudo, sem mexer em integrações nem RH sensível",
-    build: () => buildPreset(m => {
-      if (m.key === "administracao") return { actions: ["view"], features: { logs_sistema: true } };
-      if (m.key === "rh") return { actions: ["view", "edit"], features: { ver_salarios: true, ponto: true, documentos: true } };
-      return { actions: m.actions.filter(a => a !== "delete"), features: Object.fromEntries(m.features.map(f => [f.key, true])) };
-    }) },
-  vendedor: { label: "Vendedor", description: "Vê apenas as próprias vendas/clientes; sem financeiro nem admin",
-    build: () => buildPreset(m => {
-      if (m.key === "vendas") return { actions: ["view", "create", "edit", "export"], features: { alterar_status: true, ver_lucro: false, ver_todas: false, editar_comissao: false, cancelar: false } };
-      if (m.key === "clientes") return { actions: ["view", "create", "edit"], features: { ver_todos: false, ver_dados_sensiveis: true, mesclar: false, transferir: false } };
-      if (m.key === "viagens") return { actions: ["view"], features: {} };
-      if (m.key === "relatorios") return { actions: ["view"], features: { dashboard_comercial: true, ranking_vendedores: true } };
-      if (m.key === "operacoes") return { actions: ["view", "create"], features: { inbox: true, responder_lead: false } };
-      return emptyModulePerm();
-    }) },
-  operacional: { label: "Operacional", description: "Foca em viagens, check-in e atendimento",
-    build: () => buildPreset(m => {
-      if (m.key === "viagens") return { actions: ["view", "create", "edit", "export"], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
-      if (m.key === "operacoes") return { actions: ["view", "create", "edit"], features: { inbox: true, responder_lead: true, transferir_atend: true } };
-      if (m.key === "clientes") return { actions: ["view", "edit"], features: { ver_todos: true, ver_dados_sensiveis: true } };
-      if (m.key === "vendas") return { actions: ["view"], features: { ver_todas: true } };
-      if (m.key === "relatorios") return { actions: ["view"], features: { dashboard_geral: true } };
-      return emptyModulePerm();
-    }) },
-  financeiro: { label: "Financeiro", description: "Acesso completo ao financeiro, leitura nas demais áreas",
-    build: () => buildPreset(m => {
-      if (m.key === "financeiro") return { actions: [...m.actions], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
-      if (m.key === "vendas") return { actions: ["view", "export"], features: { ver_todas: true, ver_lucro: true } };
-      if (m.key === "clientes") return { actions: ["view"], features: { ver_todos: true, ver_dados_sensiveis: true } };
-      if (m.key === "relatorios") return { actions: ["view", "export"], features: Object.fromEntries(m.features.map(f => [f.key, true])) };
-      return emptyModulePerm();
-    }) },
-  leitura: { label: "Somente Leitura", description: "Pode ver tudo, não pode alterar nada",
-    build: () => buildPreset(_m => ({ actions: ["view"], features: {} })) },
+// Aplica um ROLE_TEMPLATE a todos os SYSTEM_MENUS
+const buildFromTemplate = (template: RoleTemplate): PermissionsMap => {
+  const result: PermissionsMap = {};
+  const fn = ROLE_TEMPLATES[template];
+  for (const menu of SYSTEM_MENUS) {
+    const perms = fn(menu.key);
+    const filtered: MenuPerm = {};
+    for (const action of menu.actions) {
+      if (perms[action]) filtered[action] = true;
+    }
+    result[menu.key] = filtered;
+  }
+  return result;
 };
 
-const MODULES = MODULE_CATALOG.map(m => m.key);
+const PERMISSION_PRESETS: Record<RoleTemplate, { label: string; description: string }> = {
+  admin:       { label: "Administrador",   description: "Acesso total a tudo do sistema" },
+  gestor:      { label: "Gestor / Gerente", description: "Vê e edita tudo, sem excluir financeiro/RH crítico" },
+  vendedor:    { label: "Vendedor",         description: "CRM, vendas, cotações, propostas e clientes" },
+  operacional: { label: "Operacional",      description: "Foca em viagens, check-in e atendimento" },
+  financeiro:  { label: "Financeiro",       description: "Acesso completo ao financeiro" },
+  leitura:     { label: "Somente Leitura",  description: "Pode ver tudo, não altera nada" },
+};
+
 
 interface EmployeeFormTabsProps {
   form: any;
@@ -183,35 +78,53 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
   const [createUser, setCreateUser] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
+  const [permSearch, setPermSearch] = useState("");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("Principal");
+  const [activePreset, setActivePreset] = useState<RoleTemplate | null>(null);
+  const [permsLoaded, setPermsLoaded] = useState(false);
 
-  // Migra permissões antigas (string por módulo) para o novo formato granular
-  const rawPermissions = form.permissions || {};
-  const permissions: PermissionsMap = MODULE_CATALOG.reduce((acc, mod) => {
-    const existing = rawPermissions[mod.key];
-    if (existing && typeof existing === "object" && "actions" in existing) {
-      acc[mod.key] = existing as ModulePerm;
-    } else if (typeof existing === "string") {
-      // legacy: "total" | "parcial" | "sem_acesso"
-      if (existing === "total") acc[mod.key] = { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) };
-      else if (existing === "parcial") acc[mod.key] = { actions: ["view"], features: {} };
-      else acc[mod.key] = emptyModulePerm();
-    } else {
-      acc[mod.key] = emptyModulePerm();
-    }
-    return acc;
-  }, {} as PermissionsMap);
-
-  const [expandedModule, setExpandedModule] = useState<string | null>(null);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
+  // Permissões em formato { menu_key: { view, create, edit, delete } } — armazenadas em form.permissions
+  const permissions: PermissionsMap = (form.permissions && typeof form.permissions === "object" && !Array.isArray(form.permissions))
+    ? (form.permissions as PermissionsMap)
+    : {};
 
   useEffect(() => {
-    if (form.id) loadDocuments();
+    if (form.id) {
+      loadDocuments();
+      loadPermissionsFromDb();
+    } else {
+      setPermsLoaded(true);
+    }
   }, [form.id]);
 
   const loadDocuments = async () => {
     if (!form.id) return;
     const { data } = await supabase.from("employee_documents").select("*").eq("employee_id", form.id).order("created_at", { ascending: false });
     setDocuments(data || []);
+  };
+
+  const loadPermissionsFromDb = async () => {
+    if (!form.id) return;
+    const { data } = await (supabase as any)
+      .from("employee_permissions")
+      .select("menu_key, can_view, can_create, can_edit, can_delete")
+      .eq("employee_id", form.id);
+    if (data && data.length > 0) {
+      const map: PermissionsMap = {};
+      for (const row of data as any[]) {
+        const p: MenuPerm = {};
+        if (row.can_view) p.view = true;
+        if (row.can_create) p.create = true;
+        if (row.can_edit) p.edit = true;
+        if (row.can_delete) p.delete = true;
+        map[row.menu_key] = p;
+      }
+      // Só sobrescreve form.permissions se o form ainda não tem nada gravado
+      if (!form.permissions || Object.keys(form.permissions).length === 0) {
+        setForm({ ...form, permissions: map });
+      }
+    }
+    setPermsLoaded(true);
   };
 
   const f = (key: string) => form[key] || "";
@@ -222,50 +135,79 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
     set("work_days", days.includes(day) ? days.filter(d => d !== day) : [...days, day]);
   };
 
-  const setModulePerm = (modKey: string, next: ModulePerm) => {
-    set("permissions", { ...permissions, [modKey]: next });
+  const setMenuPerm = (menuKey: string, next: MenuPerm) => {
+    const cleaned = { ...next };
+    // limpa chaves false pra manter o objeto enxuto
+    (Object.keys(cleaned) as MenuAction[]).forEach(k => { if (!cleaned[k]) delete cleaned[k]; });
+    const nextAll = { ...permissions, [menuKey]: cleaned };
+    if (Object.keys(cleaned).length === 0) delete nextAll[menuKey];
+    set("permissions", nextAll);
     setActivePreset(null);
   };
 
-  const toggleAction = (modKey: string, action: PermAction) => {
-    const current = permissions[modKey] || emptyModulePerm();
-    const has = current.actions.includes(action);
-    let nextActions = has ? current.actions.filter(a => a !== action) : [...current.actions, action];
+  const toggleAction = (menuKey: string, action: MenuAction) => {
+    const current = permissions[menuKey] || emptyPerm();
+    const has = !!current[action];
+    const next: MenuPerm = { ...current, [action]: !has };
     // Regra: se ativar qualquer ação, garante "view" também
-    if (!has && action !== "view" && !nextActions.includes("view")) nextActions = ["view", ...nextActions];
+    if (!has && action !== "view") next.view = true;
     // Regra: se remover "view", remove tudo
-    if (has && action === "view") nextActions = [];
-    setModulePerm(modKey, { ...current, actions: nextActions });
+    if (has && action === "view") {
+      next.create = false; next.edit = false; next.delete = false;
+    }
+    setMenuPerm(menuKey, next);
   };
 
-  const toggleFeature = (modKey: string, featKey: string) => {
-    const current = permissions[modKey] || emptyModulePerm();
-    setModulePerm(modKey, { ...current, features: { ...current.features, [featKey]: !current.features[featKey] } });
+  const setGroupActions = (group: string, mode: "all" | "view" | "none") => {
+    const next = { ...permissions };
+    for (const menu of SYSTEM_MENUS.filter(m => m.group === group)) {
+      if (mode === "none") { delete next[menu.key]; continue; }
+      const p: MenuPerm = {};
+      if (mode === "all") {
+        for (const a of menu.actions) p[a] = true;
+      } else if (mode === "view") {
+        if (menu.actions.includes("view")) p.view = true;
+      }
+      if (Object.keys(p).length > 0) next[menu.key] = p; else delete next[menu.key];
+    }
+    set("permissions", next);
+    setActivePreset(null);
   };
 
-  const setAllActions = (modKey: string, mode: "all" | "none" | "readonly") => {
-    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
-    if (mode === "all") setModulePerm(modKey, { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) });
-    else if (mode === "readonly") setModulePerm(modKey, { actions: ["view"], features: {} });
-    else setModulePerm(modKey, emptyModulePerm());
-  };
-
-  const applyPreset = (presetKey: string) => {
-    const preset = PERMISSION_PRESETS[presetKey];
-    if (!preset) return;
-    set("permissions", preset.build());
+  const applyPreset = (presetKey: RoleTemplate) => {
+    const built = buildFromTemplate(presetKey);
+    set("permissions", built);
     setActivePreset(presetKey);
-    toast.success(`Perfil "${preset.label}" aplicado`);
+    toast.success(`Perfil "${PERMISSION_PRESETS[presetKey].label}" aplicado`);
   };
 
-  const moduleStatus = (modKey: string): "total" | "custom" | "readonly" | "none" => {
-    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
-    const p = permissions[modKey] || emptyModulePerm();
-    if (p.actions.length === 0) return "none";
-    if (p.actions.length === 1 && p.actions[0] === "view" && Object.values(p.features).every(v => !v)) return "readonly";
-    if (p.actions.length === mod.actions.length && mod.features.every(f => p.features[f.key])) return "total";
+  const groupStatus = (group: string): "total" | "custom" | "readonly" | "none" => {
+    const menus = SYSTEM_MENUS.filter(m => m.group === group);
+    let totalCount = 0, viewOnlyCount = 0, anyCount = 0;
+    for (const menu of menus) {
+      const p = permissions[menu.key];
+      if (!p || Object.keys(p).length === 0) continue;
+      anyCount++;
+      const hasAll = menu.actions.every(a => p[a]);
+      if (hasAll) totalCount++;
+      else if (p.view && !p.create && !p.edit && !p.delete) viewOnlyCount++;
+    }
+    if (anyCount === 0) return "none";
+    if (totalCount === menus.length) return "total";
+    if (viewOnlyCount === menus.length) return "readonly";
     return "custom";
   };
+
+  // Filtra menus pela busca
+  const filteredMenusByGroup = MENU_GROUPS.reduce((acc, group) => {
+    const menus = SYSTEM_MENUS.filter(m => m.group === group);
+    const filtered = permSearch
+      ? menus.filter(m => m.label.toLowerCase().includes(permSearch.toLowerCase()) || m.path.toLowerCase().includes(permSearch.toLowerCase()))
+      : menus;
+    if (filtered.length > 0) acc[group] = filtered;
+    return acc;
+  }, {} as Record<string, typeof SYSTEM_MENUS>);
+
 
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
     if (!form.id || !e.target.files?.length) return;
@@ -478,8 +420,9 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
           )}
         </TabsContent>
 
-        {/* TAB 6: PERMISSÕES GRANULARES */}
+        {/* TAB 6: PERMISSÕES GRANULARES — BASEADO EM MENUS REAIS DO SISTEMA */}
         <TabsContent value="permissoes" className="space-y-4 mt-4">
+          {/* Perfis pré-configurados */}
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
@@ -493,7 +436,7 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {Object.entries(PERMISSION_PRESETS).map(([key, preset]) => (
+              {(Object.entries(PERMISSION_PRESETS) as [RoleTemplate, typeof PERMISSION_PRESETS[RoleTemplate]][]).map(([key, preset]) => (
                 <button
                   key={key}
                   type="button"
@@ -507,12 +450,31 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
             </div>
           </div>
 
+          {/* Busca de menus */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar menu por nome ou rota (ex: vendas, /financeiro)..."
+              value={permSearch}
+              onChange={e => setPermSearch(e.target.value)}
+              className="pl-9 h-9 text-xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Menus do sistema ({SYSTEM_MENUS.length} totais)
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {Object.values(permissions).filter(p => Object.keys(p).length > 0).length} com acesso liberado
+            </p>
+          </div>
+
+          {/* Lista por GRUPO -> MENUS */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissões por módulo</p>
-            {MODULE_CATALOG.map(mod => {
-              const perm = permissions[mod.key] || emptyModulePerm();
-              const status = moduleStatus(mod.key);
-              const isOpen = expandedModule === mod.key;
+            {Object.entries(filteredMenusByGroup).map(([group, menus]) => {
+              const status = groupStatus(group);
+              const isOpen = expandedGroup === group || !!permSearch;
               const statusBadge = {
                 total:    { label: "Acesso total",   className: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
                 custom:   { label: "Personalizado",  className: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
@@ -520,96 +482,89 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                 none:     { label: "Sem acesso",     className: "bg-muted text-muted-foreground border-border" },
               }[status];
               return (
-                <div key={mod.key} className="rounded-lg border border-border/60 overflow-hidden">
+                <div key={group} className="rounded-lg border border-border/60 overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setExpandedModule(isOpen ? null : mod.key)}
+                    onClick={() => setExpandedGroup(isOpen && !permSearch ? null : group)}
                     className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold">{mod.label}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{mod.description}</p>
+                        <p className="text-sm font-semibold">{group}</p>
+                        <p className="text-[11px] text-muted-foreground">{menus.length} menus</p>
                       </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] shrink-0 ${statusBadge.className}`}>{statusBadge.label}</Badge>
                   </button>
 
                   {isOpen && (
-                    <div className="border-t border-border/60 bg-muted/10 px-4 py-3 space-y-4">
-                      {/* Atalhos */}
+                    <div className="border-t border-border/60 bg-muted/10 px-3 py-3 space-y-3">
+                      {/* Atalhos de grupo */}
                       <div className="flex flex-wrap gap-1.5">
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "all")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "all")}>
                           <Check className="w-3 h-3 mr-1" /> Liberar tudo
                         </Button>
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "readonly")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "view")}>
                           <Eye className="w-3 h-3 mr-1" /> Somente leitura
                         </Button>
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "none")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "none")}>
                           <X className="w-3 h-3 mr-1" /> Bloquear tudo
                         </Button>
                       </div>
 
-                      {/* Ações (verbos) */}
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Ações permitidas</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {mod.actions.map(action => {
-                            const meta = ACTION_META[action];
-                            const Icon = meta.icon;
-                            const enabled = perm.actions.includes(action);
-                            return (
-                              <button
-                                key={action}
-                                type="button"
-                                onClick={() => toggleAction(mod.key, action)}
-                                title={meta.desc}
-                                className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${enabled ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 bg-background text-muted-foreground hover:border-primary/40"}`}
-                              >
-                                <Icon className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">{meta.label}</span>
-                                {enabled && <Check className="w-3 h-3 ml-auto shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      {/* Lista de menus do grupo */}
+                      <div className="space-y-1.5">
+                        {menus.map(menu => {
+                          const perm = permissions[menu.key] || emptyPerm();
+                          const hasAny = Object.keys(perm).length > 0;
+                          return (
+                            <div key={menu.key} className={`rounded-md border px-3 py-2 ${hasAny ? "border-primary/30 bg-primary/5" : "border-border/40 bg-background"}`}>
+                              <div className="flex items-center justify-between gap-3 mb-1.5">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium truncate">{menu.label}</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">{menu.path}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {menu.actions.map(action => {
+                                  const meta = ACTION_META[action];
+                                  const Icon = meta.icon;
+                                  const enabled = !!perm[action];
+                                  return (
+                                    <button
+                                      key={action}
+                                      type="button"
+                                      onClick={() => toggleAction(menu.key, action)}
+                                      title={meta.desc}
+                                      className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition-colors ${enabled ? "border-primary/60 bg-primary/15 text-primary" : "border-border/50 bg-background text-muted-foreground hover:border-primary/40"}`}
+                                    >
+                                      <Icon className="w-3 h-3 shrink-0" />
+                                      <span>{meta.label}</span>
+                                      {enabled && <Check className="w-2.5 h-2.5 ml-0.5 shrink-0" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Sub-funcionalidades */}
-                      {mod.features.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Funcionalidades específicas</p>
-                          <div className="space-y-1">
-                            {mod.features.map(feat => {
-                              const enabled = !!perm.features[feat.key];
-                              return (
-                                <label
-                                  key={feat.key}
-                                  className="flex items-start gap-3 rounded-md px-2 py-1.5 hover:bg-muted/40 cursor-pointer"
-                                >
-                                  <Switch checked={enabled} onCheckedChange={() => toggleFeature(mod.key, feat.key)} className="mt-0.5" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-medium">{feat.label}</p>
-                                    {feat.description && <p className="text-[10px] text-muted-foreground">{feat.description}</p>}
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               );
             })}
+            {Object.keys(filteredMenusByGroup).length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">Nenhum menu corresponde à busca "{permSearch}"</p>
+            )}
           </div>
 
           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
-            <strong>Dica:</strong> as permissões só passam a valer após o colaborador ter um login criado na aba <em>Acesso</em>. Sem login vinculado, ele aparece no cadastro mas não acessa o sistema.
+            <strong>Dica:</strong> as permissões só passam a valer após o colaborador ter um login criado na aba <em>Acesso</em>. Administradores ignoram este filtro e vêem tudo.
           </div>
         </TabsContent>
+
 
         {/* TAB 7: DOCUMENTOS */}
         <TabsContent value="documentos" className="space-y-4 mt-4">
