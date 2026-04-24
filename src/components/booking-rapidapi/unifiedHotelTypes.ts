@@ -61,6 +61,8 @@ export interface UnifiedHotel {
   ratingTheme?: string;
   /** ID composto do Hotels.com ("regionId_propertyId") usado nos endpoints de detalhe */
   propertyIdComposite?: string;
+  /** True quando o preço é tarifa de membro/loyalty (pode diferir do preço público no site) */
+  isMemberPrice?: boolean;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
