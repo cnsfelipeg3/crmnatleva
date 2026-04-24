@@ -132,6 +132,7 @@ export default function SaleDetail() {
     toast({ title: "Produtos recalculados!", description: `Array atualizado para: ${novos.join(", ")}` });
   };
 
+  const handleSaveEdit = async () => {
     setSaving(true);
     try {
       const receivedValue = parseFloat(editForm.received_value) || 0;
