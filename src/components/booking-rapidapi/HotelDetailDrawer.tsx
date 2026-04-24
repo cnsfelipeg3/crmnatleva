@@ -215,11 +215,16 @@ export function HotelDetailDrawer({
     }
   };
 
-  const openOnBooking = () => {
-    const url =
-      h.url || `https://www.booking.com/hotel.html?hotel_id=${hotelId}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+  const bookingExternalUrl = buildBookingSearchUrl({
+    hotelName,
+    arrival,
+    departure,
+    adults,
+    childrenAges,
+    rooms,
+  });
+
+  const openOnBooking = () => openExternal(bookingExternalUrl);
 
   // Hotel photos — combinando main + photoUrls + rooms[].photos
   const allPhotos: { url: string; id?: string | number }[] = [];
