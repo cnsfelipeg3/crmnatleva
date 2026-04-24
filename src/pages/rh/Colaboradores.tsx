@@ -255,7 +255,7 @@ export default function Colaboradores() {
       </Card>
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
           <DialogHeader><DialogTitle>{form.id ? "Editar" : "Novo"} Colaborador</DialogTitle></DialogHeader>
           <EmployeeFormTabs form={form} setForm={setForm} onSave={handleSave} employees={employees} />
         </DialogContent>
