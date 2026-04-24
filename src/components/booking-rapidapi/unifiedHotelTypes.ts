@@ -104,6 +104,8 @@ export interface HotelscomLodgingCard {
   __typename?: string;
   id: string;
   propertyId?: string;
+  featuredHeader?: { text?: string } | null;
+  callOut?: { text?: string } | null;
   headingSection?: {
     heading?: string;
     messages?: Array<{ text?: string }>;
@@ -111,6 +113,7 @@ export interface HotelscomLodgingCard {
     amenities?: Array<{ icon?: { id?: string; description?: string }; text?: string }>;
   };
   priceSection?: {
+    badge?: { text?: string; theme?: string };
     priceSummary?: {
       optionsV2?: Array<{
         formattedDisplayPrice?: string;
@@ -140,7 +143,7 @@ export interface HotelscomLodgingCard {
   };
   summarySections?: Array<{
     guestRatingSectionV2?: {
-      badge?: { text?: string; accessibility?: string };
+      badge?: { text?: string; accessibility?: string; theme?: string };
       phrases?: Array<{
         phraseParts?: Array<{ text?: string; accessibility?: string }>;
       }>;
@@ -152,7 +155,91 @@ export interface HotelscomLodgingCard {
   cardLink?: {
     resource?: { value?: string };
   };
+  analyticsEvents?: Array<{
+    attribute?: { name?: string; content?: string };
+  }>;
   [key: string]: unknown;
+}
+
+/** Traduz captions comuns de fotos do Hotels.com pt-BR */
+function translatePhotoCaption(en?: string): string | undefined {
+  if (!en) return undefined;
+  const map: Array<[RegExp, string]> = [
+    [/\breception\b/i, "Recepção"],
+    [/\blobby\b/i, "Lobby"],
+    [/\bexterior\b/i, "Exterior"],
+    [/\bfacade\b/i, "Fachada"],
+    [/\bpool\b/i, "Piscina"],
+    [/\bgym\b|\bfitness\b/i, "Academia"],
+    [/\bbar\b/i, "Bar"],
+    [/\brestaurant\b/i, "Restaurante"],
+    [/\bsuite\b/i, "Suíte"],
+    [/\bbedroom\b/i, "Quarto"],
+    [/\bbathroom\b/i, "Banheiro"],
+    [/\bbeach\b/i, "Praia"],
+    [/\bview\b/i, "Vista"],
+    [/\bspa\b/i, "Spa"],
+    [/\bbreakfast\b/i, "Café da manhã"],
+    [/\bterrace\b|\bbalcony\b/i, "Terraço"],
+    [/\blounge\b/i, "Lounge"],
+  ];
+  // Pega só a primeira parte antes de "."
+  const first = en.split(".")[0].trim();
+  for (const [re, pt] of map) {
+    if (re.test(first)) return pt;
+  }
+  return first;
+}
+
+/** Extrai lat/long do parâmetro `latLong=lat,long` da URL do Hotels.com */
+function extractLatLongFromUrl(url?: string): { lat?: number; lng?: number } {
+  if (!url) return {};
+  const m = url.match(/latLong=(-?\d+\.?\d*)[,%]+(-?\d+\.?\d*)/);
+  if (!m) return {};
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  return {
+    lat: Number.isFinite(lat) ? lat : undefined,
+    lng: Number.isFinite(lng) ? lng : undefined,
+  };
+}
+
+/** Extrai bairro do parâmetro `destination=` da URL do Hotels.com */
+function extractNeighborhoodFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const m = url.match(/destination=([^&]+)/);
+  if (!m) return undefined;
+  try {
+    const decoded = decodeURIComponent(m[1].replace(/\+/g, " "));
+    return decoded.split(",")[0]?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Extrai badges promocionais do bloco analyticsEvents.product_list */
+function extractPromoBadges(card: HotelscomLodgingCard): string[] {
+  const badges: string[] = [];
+  const productListEvent = card.analyticsEvents?.find(
+    (e) => e.attribute?.name === "product_list",
+  );
+  if (!productListEvent?.attribute?.content) return badges;
+  try {
+    const parsed = JSON.parse(productListEvent.attribute.content);
+    const item = Array.isArray(parsed) ? parsed[0] : parsed;
+    const rawBadges: string[] = item?.lodging_product?.badges ?? [];
+    for (const b of rawBadges) {
+      if (/Public_Promo/i.test(b)) badges.push("Promoção pública");
+      else if (/Member/i.test(b)) badges.push("Oferta para membros");
+      else if (/VIP/i.test(b)) badges.push("VIP");
+      else badges.push(b.replace(/_/g, " "));
+    }
+    if (item?.free_cancellation_bool === true) badges.push("Cancelamento grátis");
+    if (item?.earn_eligible_bool === true) badges.push("Elegível a pontos");
+  } catch {
+    /* ignore */
+  }
+  return badges;
 }
 
 // ============================================================
