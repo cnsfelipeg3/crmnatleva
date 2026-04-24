@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import PanelHelpButton from "./PanelHelpButton";
+import PermissionGuard from "./PermissionGuard";
 import { MinimalLoader } from "./AppLoaders";
 import DeferredRender from "./DeferredRender";
 import { useIsMobile } from "@/hooks/use-mobile";
