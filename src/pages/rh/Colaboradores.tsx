@@ -86,6 +86,7 @@ export default function Colaboradores() {
       work_schedule_end: form.work_schedule_end || "18:00",
       lunch_duration_minutes: Number(form.lunch_duration_minutes) || 60,
       work_days: form.work_days || ["seg", "ter", "qua", "qui", "sex"],
+      daily_schedule: form.daily_schedule ?? null,
       permissions: form.permissions || {},
       termination_date,
     };
