@@ -621,23 +621,33 @@ function geoDistanceKm(
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-/** Score 0–1 de similaridade entre 2 hotéis (nome + geo) */
+/** Score 0–1 de similaridade entre 2 hotéis (nome + geo).
+ *  Geo é o sinal mais confiável — coordenadas próximas indicam mesma propriedade.
+ */
 function similarityScore(a: UnifiedHotel, b: UnifiedHotel): number {
   const ta = tokensFromName(a.name);
   const tb = tokensFromName(b.name);
-  if (ta.size === 0 || tb.size === 0) return 0;
+  const hasNames = ta.size > 0 && tb.size > 0;
   let inter = 0;
-  for (const t of ta) if (tb.has(t)) inter++;
-  const jaccard = inter / (ta.size + tb.size - inter);
+  if (hasNames) {
+    for (const t of ta) if (tb.has(t)) inter++;
+  }
+  const jaccard = hasNames ? inter / (ta.size + tb.size - inter) : 0;
 
   const dist = geoDistanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
-  // Geo boost: se < 80m → mesma propriedade praticamente certa
+
+  // Geo é prova forte: coordenadas muito próximas = mesma propriedade
   if (typeof dist === "number") {
-    if (dist < 0.08 && jaccard >= 0.34) return 1; // praticamente colado + algum nome match
-    if (dist < 0.25 && jaccard >= 0.5) return 0.95;
-    if (dist > 1.5) return Math.min(jaccard, 0.4); // longe → não é o mesmo
+    if (dist < 0.05) return 1;                          // <50m: certeza
+    if (dist < 0.15 && jaccard >= 0.2) return 0.95;     // <150m + algum nome em comum
+    if (dist < 0.3 && jaccard >= 0.35) return 0.9;      // <300m + nome razoável
+    if (dist < 0.6 && jaccard >= 0.6) return 0.88;      // <600m + nome forte
+    if (dist > 1.5) return Math.min(jaccard, 0.4);      // longe → não é o mesmo
   }
-  return jaccard;
+
+  // Sem geo: só nome. Exige match forte pra evitar falsos positivos.
+  if (jaccard >= 0.7) return jaccard;
+  return jaccard * 0.7;
 }
 
 function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
@@ -680,24 +690,30 @@ export function groupHotelsByIdentity(
   }
 
   // ---------- ETAPA 2: merge fuzzy (nome + geo) entre buckets ----------
-  type Cluster = { key: string; members: UnifiedHotel[]; centroid: UnifiedHotel };
+  type Cluster = { key: string; members: UnifiedHotel[] };
   const clusters: Cluster[] = [];
   for (const [key, members] of buckets) {
-    // Centroide = primeiro Booking se houver, senão primeiro
-    const centroid =
-      members.find((m) => m.source === "booking") ?? members[0];
-
-    // Tenta encaixar em cluster existente
-    let merged = false;
+    // Tenta encaixar em cluster existente — compara contra TODOS os membros
+    // (não só centroide) e usa o melhor score, pra capturar matches assimétricos.
+    let bestCluster: Cluster | null = null;
+    let bestScore = 0;
     for (const c of clusters) {
-      const score = similarityScore(centroid, c.centroid);
-      if (score >= 0.85) {
-        c.members.push(...members);
-        merged = true;
-        break;
+      for (const candidate of members) {
+        for (const existing of c.members) {
+          const score = similarityScore(candidate, existing);
+          if (score > bestScore) {
+            bestScore = score;
+            bestCluster = c;
+          }
+        }
       }
     }
-    if (!merged) clusters.push({ key, members: [...members], centroid });
+    // Threshold: 0.8 — calibrado pra reduzir falsos negativos sem juntar hotéis distintos.
+    if (bestCluster && bestScore >= 0.8) {
+      bestCluster.members.push(...members);
+    } else {
+      clusters.push({ key, members: [...members] });
+    }
   }
 
   const result: UnifiedHotelGroup[] = [];
@@ -804,16 +820,25 @@ export function groupHotelsByIdentity(
   }
 
   result.sort((a, b) => {
+    // 1) Grupos com 2 fontes (Booking + Hotels.com) primeiro — comparação ativa
     const aBucket = a.hasBooking && a.hasHotelscom ? 0 : a.hasBooking ? 1 : 2;
     const bBucket = b.hasBooking && b.hasHotelscom ? 0 : b.hasBooking ? 1 : 2;
     if (aBucket !== bBucket) return aBucket - bBucket;
 
+    // 2) Dentro do bucket de 2 fontes, prioriza maior economia (delta entre fontes)
+    if (aBucket === 0) {
+      const deltaDiff = b.priceDeltaPercent - a.priceDeltaPercent;
+      if (Math.abs(deltaDiff) >= 3) return deltaDiff;
+    }
+
+    // 3) Reputação: review count e score
     const reviewCountDiff = (b.reviewCount ?? -1) - (a.reviewCount ?? -1);
     if (reviewCountDiff !== 0) return reviewCountDiff;
 
     const reviewScoreDiff = (b.reviewScore ?? -1) - (a.reviewScore ?? -1);
     if (reviewScoreDiff !== 0) return reviewScoreDiff;
 
+    // 4) Preço como desempate final
     const pa = a.bestOffer?.priceTotal;
     const pb = b.bestOffer?.priceTotal;
     if (typeof pa !== "number" && typeof pb !== "number") return 0;
