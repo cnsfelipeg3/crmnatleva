@@ -91,24 +91,22 @@ function OfferRow({
       </div>
       <div className="flex flex-col items-end shrink-0">
         {offer.priceStriked &&
-          offer.priceStriked > (offer.priceTotal ?? 0) &&
-          !offer.isEstimatedPrice && (
+          offer.priceStriked > (offer.priceTotal ?? 0) && (
             <span className="text-[10px] text-muted-foreground line-through leading-none">
               {formatPriceBRL(offer.priceStriked, offer.priceCurrency)}
             </span>
           )}
-        {offer.isEstimatedPrice ? (
-          <span className="text-[11px] font-semibold text-orange-700 dark:text-orange-400 leading-tight">
-            ver no site
-          </span>
-        ) : (
-          <span
-            className={cn(
-              "text-sm font-bold leading-tight",
-              isBest ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
-            )}
-          >
-            {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
+        <span
+          className={cn(
+            "text-sm font-bold leading-tight",
+            isBest ? "text-emerald-700 dark:text-emerald-400" : "text-foreground",
+          )}
+        >
+          {formatPriceBRL(offer.priceTotal, offer.priceCurrency)}
+        </span>
+        {offer.isEstimatedPrice && (
+          <span className="text-[9px] text-orange-700/80 dark:text-orange-400/80 leading-none mt-0.5">
+            valor estimado
           </span>
         )}
         {offer.isMemberPrice && !offer.isEstimatedPrice && (
