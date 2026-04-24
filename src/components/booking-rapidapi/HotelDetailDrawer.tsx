@@ -248,13 +248,8 @@ export function HotelDetailDrawer({
     return true;
   });
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-hidden p-0 sm:max-w-3xl"
-      >
-        <div className="flex h-full flex-col">
+  const inner = (
+    <div className="flex h-full flex-col">
           {/* HEADER */}
           <SheetHeader className="shrink-0 border-b bg-background p-4">
             <div className="flex items-start justify-between gap-3">
