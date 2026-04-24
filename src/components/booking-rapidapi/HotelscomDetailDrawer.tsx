@@ -384,6 +384,26 @@ export function HotelscomDetailDrawer({
             </TabsContent>
 
             <TabsContent value="info" className="mt-4 space-y-4">
+              {promoBadges.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                    <Sparkles className="h-4 w-4 text-rose-500" />
+                    Selos & Promoções
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {promoBadges.map((b, i) => (
+                      <Badge
+                        key={i}
+                        variant="outline"
+                        className="border-rose-300 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30"
+                      >
+                        ⭐ {b}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
               {amenities.length > 0 && (
                 <Card className="p-4">
                   <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
