@@ -15,7 +15,8 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound, Building2, UserCheck } from "lucide-react";
+import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound, Building2, UserCheck, RefreshCw } from "lucide-react";
+import { inferProductSlugsFromSale, normalizeProductsToSlugs } from "@/lib/productTypes";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
@@ -95,7 +96,42 @@ export default function SaleDetail() {
     setEditing(false);
   };
 
-  const handleSaveEdit = async () => {
+  const handleRecalcProducts = async () => {
+    if (!sale) return;
+    const antes = normalizeProductsToSlugs(sale.products ?? []);
+    const novos = inferProductSlugsFromSale({
+      airline: sale.airline,
+      origin_iata: sale.origin_iata,
+      destination_iata: sale.destination_iata,
+      departure_date: sale.departure_date,
+      hotel_name: sale.hotel_name,
+      hotel_city: sale.hotel_city,
+      hotel_checkin_date: sale.hotel_checkin_date,
+      hotel_reservation_code: sale.hotel_reservation_code,
+      hotel_address: sale.hotel_address,
+      airCost: 0,
+      hotelCost: 0,
+      flightSegmentsCount: segments.length,
+      hotelEntriesCount: sale.hotel_name ? 1 : 0,
+      // Preserva produtos explícitos (Seguro, Transfer, etc.) já existentes
+      explicitOtherSlugs: antes.filter(s => !["aereo", "hospedagem", "pacote"].includes(s)),
+    });
+
+    if (JSON.stringify(antes) === JSON.stringify(novos)) {
+      toast({ title: "Produtos já estão corretos", description: "Nenhuma mudança necessária." });
+      return;
+    }
+    if (!confirm(`Produtos atuais: ${antes.join(", ") || "(vazio)"}\nNovos: ${novos.join(", ")}\n\nAtualizar?`)) return;
+
+    const { error } = await supabase.from("sales").update({ products: novos }).eq("id", id);
+    if (error) {
+      toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" });
+      return;
+    }
+    setSale({ ...sale, products: novos });
+    toast({ title: "Produtos recalculados!", description: `Array atualizado para: ${novos.join(", ")}` });
+  };
+
     setSaving(true);
     try {
       const receivedValue = parseFloat(editForm.received_value) || 0;
@@ -356,6 +392,9 @@ export default function SaleDetail() {
           ) : (
             <>
               <Button variant="outline" size="sm" onClick={() => navigate(`/sales/${id}/edit`)}><Pencil className="w-4 h-4 mr-1" /> Editar</Button>
+              <Button variant="outline" size="sm" onClick={handleRecalcProducts}>
+                <RefreshCw className="w-3.5 h-3.5 mr-1" /> Recalcular produtos
+              </Button>
               <Button variant="outline" size="sm" onClick={() => setPortalOpen(true)} className="text-accent border-accent/30 hover:bg-accent/10">
                 <Globe className="w-4 h-4 mr-1" /> Portal do Cliente
               </Button>
