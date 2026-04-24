@@ -239,24 +239,38 @@ export default function BookingSearchPage() {
     });
   }, [hotelscomData?.cards, rates]);
 
-  // Filtro client-side por nome
-  const filteredBookingHotels = useMemo(() => {
-    const list = bookingData?.hotels ?? [];
-    if (!nameQuery.trim()) return list;
-    const q = nameQuery.toLowerCase();
-    return list.filter((h) => (h.name || "").toLowerCase().includes(q));
-  }, [bookingData?.hotels, nameQuery]);
+  // Normalizar Booking
+  const bookingUnified: UnifiedHotel[] = useMemo(() => {
+    if (!bookingData?.hotels) return [];
+    return bookingData.hotels.map(normalizeBookingHotel);
+  }, [bookingData?.hotels]);
 
-  const filteredHotelscom = useMemo(() => {
-    if (!nameQuery.trim()) return hotelscomUnified;
-    const q = nameQuery.toLowerCase();
-    return hotelscomUnified.filter((h) => h.name.toLowerCase().includes(q));
-  }, [hotelscomUnified, nameQuery]);
+  // Combinar fontes ativas
+  const combinedHotels: UnifiedHotel[] = useMemo(() => {
+    const list: UnifiedHotel[] = [];
+    if (sources.booking) list.push(...bookingUnified);
+    if (sources.hotelscom) list.push(...hotelscomUnified);
+    return list;
+  }, [bookingUnified, hotelscomUnified, sources.booking, sources.hotelscom]);
 
-  // Contadores de página atual (após filtro local de nome)
-  const bookingPageCount = filteredBookingHotels.length;
-  const hotelscomPageCount = filteredHotelscom.length;
-  const pageCount = bookingPageCount + hotelscomPageCount;
+  // Agrupar por identidade (Trivago-style)
+  const groupedHotels: UnifiedHotelGroup[] = useMemo(
+    () => groupHotelsByIdentity(combinedHotels),
+    [combinedHotels],
+  );
+
+  // Filtro client-side por nome (aplicado nos grupos)
+  const filteredGroups = useMemo(() => {
+    if (!nameQuery.trim()) return groupedHotels;
+    const q = nameQuery.toLowerCase();
+    return groupedHotels.filter((g) => g.name.toLowerCase().includes(q));
+  }, [groupedHotels, nameQuery]);
+
+  // Contadores
+  const bookingPageCount = bookingUnified.length;
+  const hotelscomPageCount = hotelscomUnified.length;
+  const pageCount = filteredGroups.length;
+  const unifiedCount = groupedHotels.filter((g) => g.offers.length > 1).length;
 
   // Totais reais retornados pelas APIs (todas as páginas)
   const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
@@ -291,21 +305,16 @@ export default function BookingSearchPage() {
     });
   };
 
-  const handleBookingClick = (hotel: BookingHotel) => {
-    setSelectedBookingHotel(hotel);
-    setBookingDrawerOpen(true);
+  const handleCardClick = (group: UnifiedHotelGroup) => {
+    setSelectedGroup(group);
+    setInitialTab(undefined);
+    setDrawerOpen(true);
   };
 
-  const handleHotelscomClick = (unified: UnifiedHotel) => {
-    setSelectedHotelscomCard(unified.raw as HotelscomLodgingCard);
-    setSelectedHotelscomConverted({
-      priceTotal: unified.priceTotal,
-      priceStriked: unified.priceStriked,
-      priceTaxes: unified.priceTaxes,
-      pricePerNight: unified.pricePerNight,
-      currency: unified.priceCurrency,
-    });
-    setHotelscomDrawerOpen(true);
+  const handleOfferClick = (offer: UnifiedHotelOffer, group: UnifiedHotelGroup) => {
+    setSelectedGroup(group);
+    setInitialTab(offer.source);
+    setDrawerOpen(true);
   };
 
   return (
@@ -513,22 +522,14 @@ export default function BookingSearchPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sources.booking &&
-                filteredBookingHotels.map((h) => (
-                  <HotelCard
-                    key={`booking:${h.hotel_id}`}
-                    hotel={h}
-                    onClick={handleBookingClick}
-                  />
-                ))}
-              {sources.hotelscom &&
-                filteredHotelscom.map((h) => (
-                  <HotelscomCard
-                    key={h.uid}
-                    hotel={h}
-                    onClick={handleHotelscomClick}
-                  />
-                ))}
+              {filteredGroups.map((group) => (
+                <UnifiedHotelCard
+                  key={group.groupKey}
+                  group={group}
+                  onCardClick={handleCardClick}
+                  onOfferClick={handleOfferClick}
+                />
+              ))}
             </div>
           )}
 
@@ -560,25 +561,17 @@ export default function BookingSearchPage() {
         </div>
       </div>
 
-      {/* Drawers */}
-      <HotelDetailDrawer
-        hotel={selectedBookingHotel}
-        open={bookingDrawerOpen}
-        onOpenChange={setBookingDrawerOpen}
+      {/* Drawer unificado (1 hotel = N abas de providers) */}
+      <UnifiedHotelDetailDrawer
+        group={selectedGroup}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
         arrival={searchParams?.arrival ?? null}
         departure={searchParams?.departure ?? null}
         adults={searchParams?.adults ?? 1}
         childrenAges={searchParams?.children ?? []}
         rooms={searchParams?.rooms ?? 1}
-      />
-      <HotelscomDetailDrawer
-        card={selectedHotelscomCard}
-        open={hotelscomDrawerOpen}
-        onOpenChange={setHotelscomDrawerOpen}
-        arrival={searchParams?.arrival ?? null}
-        departure={searchParams?.departure ?? null}
-        adults={searchParams?.adults ?? 1}
-        converted={selectedHotelscomConverted ?? undefined}
+        initialTab={initialTab}
       />
     </div>
   );
