@@ -39,6 +39,12 @@ import { useExchangeRates } from "@/hooks/useExchangeRates";
 import { convertPriceToBRL } from "./unifiedHotelTypes";
 import type { HotelscomLodgingCard } from "./unifiedHotelTypes";
 import {
+  translateHotelscomCaption,
+  translateHotelscomRatingWord,
+  translateHotelscomText,
+  translateHotelscomDistance,
+} from "./hotelscomLocalization";
+import {
   extractGallery,
   extractRooms as extractRoomsRich,
   extractAmenityGroups,
@@ -96,7 +102,7 @@ function translateMessage(raw: string | undefined, converted?: Converted): strin
     return `${fmtBRL(converted.pricePerNight, converted.currency || "BRL")}/noite`;
   }
   s = s.replace(/\bnightly\b/i, "/noite");
-  return s;
+  return translateHotelscomText(s);
 }
 
 function translateAmenity(text?: string): string {
@@ -121,33 +127,11 @@ function translateAmenity(text?: string): string {
     Restaurant: "Restaurante",
     Bar: "Bar",
   };
-  return map[text] ?? text;
+  return map[text] ?? translateHotelscomText(text);
 }
 
 function translateCaption(en?: string): string | undefined {
-  if (!en) return undefined;
-  const first = en.split(".")[0].trim();
-  const map: Array<[RegExp, string]> = [
-    [/\breception\b/i, "Recepção"],
-    [/\blobby\b/i, "Lobby"],
-    [/\bexterior\b/i, "Exterior"],
-    [/\bfacade\b/i, "Fachada"],
-    [/\bpool\b/i, "Piscina"],
-    [/\bgym\b|\bfitness\b/i, "Academia"],
-    [/\bbar\b/i, "Bar"],
-    [/\brestaurant\b/i, "Restaurante"],
-    [/\bsuite\b/i, "Suíte"],
-    [/\bbedroom\b/i, "Quarto"],
-    [/\bbathroom\b/i, "Banheiro"],
-    [/\bbeach\b/i, "Praia"],
-    [/\bview\b/i, "Vista"],
-    [/\bspa\b/i, "Spa"],
-    [/\bbreakfast\b/i, "Café da manhã"],
-    [/\bterrace\b|\bbalcony\b/i, "Terraço"],
-    [/\blounge\b/i, "Lounge"],
-  ];
-  for (const [re, pt] of map) if (re.test(first)) return pt;
-  return first;
+  return translateHotelscomCaption(en);
 }
 
 // Extratores ricos vivem em ./hotelscomNormalizers
