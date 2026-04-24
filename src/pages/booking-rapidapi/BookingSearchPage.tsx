@@ -305,21 +305,16 @@ export default function BookingSearchPage() {
     });
   };
 
-  const handleBookingClick = (hotel: BookingHotel) => {
-    setSelectedBookingHotel(hotel);
-    setBookingDrawerOpen(true);
+  const handleCardClick = (group: UnifiedHotelGroup) => {
+    setSelectedGroup(group);
+    setInitialTab(undefined);
+    setDrawerOpen(true);
   };
 
-  const handleHotelscomClick = (unified: UnifiedHotel) => {
-    setSelectedHotelscomCard(unified.raw as HotelscomLodgingCard);
-    setSelectedHotelscomConverted({
-      priceTotal: unified.priceTotal,
-      priceStriked: unified.priceStriked,
-      priceTaxes: unified.priceTaxes,
-      pricePerNight: unified.pricePerNight,
-      currency: unified.priceCurrency,
-    });
-    setHotelscomDrawerOpen(true);
+  const handleOfferClick = (offer: UnifiedHotelOffer, group: UnifiedHotelGroup) => {
+    setSelectedGroup(group);
+    setInitialTab(offer.source);
+    setDrawerOpen(true);
   };
 
   return (
