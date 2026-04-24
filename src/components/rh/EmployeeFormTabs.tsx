@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquare, Upload, Trash2, ChevronDown, ChevronRight, Check, X, Eye, Plus, Pencil, Download, CheckCircle2, Search } from "lucide-react";
 import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTemplate } from "@/lib/systemMenus";
+import CommissionRulesEditor from "@/components/rh/CommissionRulesEditor";
 
 const POSITIONS = ["SDR", "Vendas", "Consultor", "Operação", "Financeiro", "Admin", "Marketing", "Atendimento"];
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
@@ -360,7 +361,12 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                 <Label>Comissão habilitada</Label>
               </div>
               {form.commission_enabled && (
-                <div><Label>% de comissão</Label><Input type="number" step="0.1" value={f("commission_percent")} onChange={e => set("commission_percent", e.target.value)} /></div>
+                <div className="pt-2 border-t border-border/50">
+                  <CommissionRulesEditor
+                    value={form.commission_rules}
+                    onChange={(rules) => set("commission_rules", rules)}
+                  />
+                </div>
               )}
             </>
           )}

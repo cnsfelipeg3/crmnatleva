@@ -80,6 +80,7 @@ export default function Colaboradores() {
       remuneration_type: form.remuneration_type || "fixo",
       commission_enabled: form.commission_enabled || false,
       commission_percent: Number(form.commission_percent) || 0,
+      commission_rules: form.commission_rules ?? { mode: "default", base: "individual", tiers: [] },
       weekly_hours: Number(form.weekly_hours) || 44,
       work_schedule_start: form.work_schedule_start || "09:00",
       work_schedule_end: form.work_schedule_end || "18:00",
