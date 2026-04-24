@@ -621,23 +621,33 @@ function geoDistanceKm(
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-/** Score 0–1 de similaridade entre 2 hotéis (nome + geo) */
+/** Score 0–1 de similaridade entre 2 hotéis (nome + geo).
+ *  Geo é o sinal mais confiável — coordenadas próximas indicam mesma propriedade.
+ */
 function similarityScore(a: UnifiedHotel, b: UnifiedHotel): number {
   const ta = tokensFromName(a.name);
   const tb = tokensFromName(b.name);
-  if (ta.size === 0 || tb.size === 0) return 0;
+  const hasNames = ta.size > 0 && tb.size > 0;
   let inter = 0;
-  for (const t of ta) if (tb.has(t)) inter++;
-  const jaccard = inter / (ta.size + tb.size - inter);
+  if (hasNames) {
+    for (const t of ta) if (tb.has(t)) inter++;
+  }
+  const jaccard = hasNames ? inter / (ta.size + tb.size - inter) : 0;
 
   const dist = geoDistanceKm(a.latitude, a.longitude, b.latitude, b.longitude);
-  // Geo boost: se < 80m → mesma propriedade praticamente certa
+
+  // Geo é prova forte: coordenadas muito próximas = mesma propriedade
   if (typeof dist === "number") {
-    if (dist < 0.08 && jaccard >= 0.34) return 1; // praticamente colado + algum nome match
-    if (dist < 0.25 && jaccard >= 0.5) return 0.95;
-    if (dist > 1.5) return Math.min(jaccard, 0.4); // longe → não é o mesmo
+    if (dist < 0.05) return 1;                          // <50m: certeza
+    if (dist < 0.15 && jaccard >= 0.2) return 0.95;     // <150m + algum nome em comum
+    if (dist < 0.3 && jaccard >= 0.35) return 0.9;      // <300m + nome razoável
+    if (dist < 0.6 && jaccard >= 0.6) return 0.88;      // <600m + nome forte
+    if (dist > 1.5) return Math.min(jaccard, 0.4);      // longe → não é o mesmo
   }
-  return jaccard;
+
+  // Sem geo: só nome. Exige match forte pra evitar falsos positivos.
+  if (jaccard >= 0.7) return jaccard;
+  return jaccard * 0.7;
 }
 
 function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
