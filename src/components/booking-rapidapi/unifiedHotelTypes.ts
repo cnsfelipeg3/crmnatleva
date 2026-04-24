@@ -650,7 +650,7 @@ export function groupHotelsByIdentity(
   }
 
   const result: UnifiedHotelGroup[] = [];
-  for (const [key, members] of groups) {
+  for (const { key, members } of clusters) {
     const primary =
       members.find((m) => m.source === "booking") ?? members[0];
     const reviewRepresentative = [...members].sort(compareReviewStrength)[0] ?? primary;
