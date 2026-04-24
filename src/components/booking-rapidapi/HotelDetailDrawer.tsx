@@ -484,13 +484,13 @@ export function HotelDetailDrawer({
                             <Badge variant="secondary">{wifiScore.toFixed(1)}</Badge>
                           </div>
                         )}
-                        {breakfastScore && (breakfastScore.review_score ?? 0) > 0 && (
+                        {breakfastScore && (Number(breakfastScore.review_score) || 0) > 0 && (
                           <div className="flex items-center justify-between">
                             <span className="flex items-center gap-1">
-                              <Coffee className="h-3 w-3" /> Café da manhã
+                              <Coffee className="h-4 w-4" /> Café da manhã
                             </span>
                             <Badge variant="secondary">
-                              {breakfastScore.review_score?.toFixed(1)} ·{" "}
+                              {Number(breakfastScore.review_score).toFixed(1)} ·{" "}
                               {breakfastScore.review_score_word}
                             </Badge>
                           </div>
