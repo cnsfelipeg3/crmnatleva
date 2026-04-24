@@ -696,99 +696,156 @@ export function HotelscomDetailDrawer({
                 <Skeleton className="h-32 w-full" />
               </div>
             )}
-            {!detailsLoading && rooms.length === 0 && (
+            {!detailsLoading && richRooms.length === 0 && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 Nenhuma opção de quarto disponível
               </div>
             )}
-            {rooms.map((room: any, idx: number) => {
-              const roomName =
-                room?.header?.text ?? room?.name ?? room?.title ?? `Quarto ${idx + 1}`;
-              const roomPhotos: string[] = (() => {
-                const ph = room?.unitGallery?.gallery ?? room?.images ?? room?.photos ?? [];
-                if (Array.isArray(ph)) {
-                  return ph
-                    .map((p: any) => p?.url ?? p?.image?.url ?? p?.media?.url)
-                    .filter(Boolean) as string[];
-                }
-                return [];
-              })();
-              const bedInfo: string | undefined =
-                room?.features?.find?.((f: any) => /bed/i.test(f?.text ?? ""))?.text ??
-                room?.bedTypes?.[0]?.description;
-              const ratePlans: any[] = room?.ratePlans ?? room?.rates ?? [];
-              const cheapestRate = ratePlans[0];
-              const ratePriceFormatted =
-                cheapestRate?.priceDetails?.[0]?.totalPriceMessage ??
-                cheapestRate?.price?.lead?.formatted ??
-                cheapestRate?.price?.total?.formatted;
-              const ratePriceUSD = (() => {
-                const v =
-                  cheapestRate?.price?.lead?.amount ??
-                  cheapestRate?.price?.total?.amount ??
-                  cheapestRate?.priceDetails?.[0]?.total?.amount;
-                return typeof v === "number" ? v : undefined;
-              })();
-              const ratePriceBRL = ratePriceUSD
-                ? convertPriceToBRL(ratePriceUSD, "USD", rates).value
+            {richRooms.map((room, idx) => {
+              const cheapest = room.rates[0];
+              // Preço total em BRL (converte do USD se necessário)
+              const totalUSD = cheapest?.totalValue;
+              const totalCurrency = cheapest?.currency ?? "USD";
+              const totalBRL = typeof totalUSD === "number"
+                ? convertPriceToBRL(totalUSD, totalCurrency, rates).value
                 : undefined;
-              const cancellation: string | undefined =
-                cheapestRate?.cancellationPolicy?.heading ??
-                cheapestRate?.cancellationPolicy?.text;
+              const perNightUSD = cheapest?.perNightValue;
+              const perNightBRL = typeof perNightUSD === "number"
+                ? convertPriceToBRL(perNightUSD, totalCurrency, rates).value
+                : undefined;
+              const strikeUSD = cheapest?.strikeValue;
+              const strikeBRL = typeof strikeUSD === "number"
+                ? convertPriceToBRL(strikeUSD, totalCurrency, rates).value
+                : undefined;
 
               return (
-                <Card key={idx} className="p-4 space-y-3">
+                <Card key={room.id || idx} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h5 className="font-semibold text-sm flex items-center gap-2">
                         <BedDouble className="h-4 w-4 text-primary" />
-                        {roomName}
+                        {room.name}
                       </h5>
-                      {bedInfo && (
-                        <p className="text-xs text-muted-foreground mt-1">{bedInfo}</p>
+                      {room.features.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {room.features.slice(0, 5).map((f, i) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] gap-1",
+                                f.positive && "border-emerald-300 text-emerald-700 dark:text-emerald-400",
+                              )}
+                            >
+                              {f.text}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      {ratePriceBRL ? (
+                      {strikeBRL && (
+                        <div className="text-[11px] text-muted-foreground line-through">
+                          {fmtBRL(strikeBRL, "BRL")}
+                        </div>
+                      )}
+                      {totalBRL ? (
                         <>
                           <div className="font-bold text-base">
-                            {fmtBRL(ratePriceBRL, "BRL")}
+                            {fmtBRL(totalBRL, "BRL")}
                           </div>
+                          {perNightBRL && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {fmtBRL(perNightBRL, "BRL")}/noite
+                            </p>
+                          )}
                           <p className="text-[10px] text-muted-foreground">
-                            convertido do USD
+                            {cheapest?.taxesLabel === "Total with taxes and fees"
+                              ? "com impostos"
+                              : "convertido do " + totalCurrency}
                           </p>
                         </>
-                      ) : ratePriceFormatted ? (
-                        <div className="font-bold text-base">{ratePriceFormatted}</div>
+                      ) : cheapest?.totalFormatted ? (
+                        <div className="font-bold text-base">
+                          {cheapest.totalFormatted}
+                        </div>
                       ) : null}
                     </div>
                   </div>
 
-                  {roomPhotos.length > 0 && (
+                  {room.images.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto pb-1">
-                      {roomPhotos.slice(0, 6).map((url, i) => (
+                      {room.images.slice(0, 8).map((img, i) => (
                         <img
                           key={i}
-                          src={url}
-                          alt={`${roomName} foto ${i + 1}`}
+                          src={img.url}
+                          alt={img.caption ?? `${room.name} foto ${i + 1}`}
                           loading="lazy"
-                          className="h-20 w-28 rounded-md object-cover shrink-0 bg-muted"
+                          className="h-24 w-32 rounded-md object-cover shrink-0 bg-muted"
                         />
                       ))}
                     </div>
                   )}
 
-                  {cancellation && (
-                    <div className="flex items-start gap-2 text-xs">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground/80">{cancellation}</span>
-                    </div>
-                  )}
+                  {/* Tarifas (formas de pagamento, cancelamento, escassez) */}
+                  <div className="space-y-2">
+                    {room.rates.slice(0, 3).map((rate, ri) => (
+                      <div
+                        key={ri}
+                        className="rounded-md border bg-muted/30 p-2.5 space-y-1.5"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {rate.paymentLabel && (
+                            <Badge variant="secondary" className="text-[10px] gap-1">
+                              <CreditCard className="h-2.5 w-2.5" />
+                              {rate.paymentLabel}
+                            </Badge>
+                          )}
+                          {rate.cancellationLabel && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-emerald-300 text-emerald-700 dark:text-emerald-400 gap-1"
+                            >
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                              {/free cancellation/i.test(rate.cancellationLabel)
+                                ? "Cancelamento grátis"
+                                : rate.cancellationLabel}
+                            </Badge>
+                          )}
+                          {rate.dealBadge && (
+                            <Badge className="text-[10px] bg-rose-500 hover:bg-rose-500 text-white">
+                              🔥 {rate.dealBadge}
+                            </Badge>
+                          )}
+                        </div>
+                        {rate.paymentDescription && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {translateMessage(rate.paymentDescription)}
+                          </p>
+                        )}
+                        {rate.scarcityMessage && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-500 font-medium">
+                            ⚡ {translateMessage(rate.scarcityMessage)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
-                  {ratePlans.length > 1 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      + {ratePlans.length - 1} outras tarifas disponíveis
-                    </p>
+                  {room.amenities.length > 0 && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        Ver {room.amenities.length} comodidades do quarto
+                      </summary>
+                      <div className="mt-2 grid grid-cols-2 gap-1">
+                        {room.amenities.map((a, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span className="text-foreground/80">{translateAmenity(a)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   )}
                 </Card>
               );
