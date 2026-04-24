@@ -30,7 +30,7 @@ import PassengerSelector, { type SelectedPassenger } from "@/components/Passenge
 import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsEditor";
 import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
-import { getProductSlug } from "@/lib/productTypes";
+import { getProductSlug, inferProductSlugsFromSale } from "@/lib/productTypes";
 
 /* ─── Types ────────────────────────────────────────────── */
 
