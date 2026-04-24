@@ -133,12 +133,9 @@ export default function DashboardFilters({
             <SelectTrigger className="w-[130px] h-8 text-xs glass-card"><SelectValue placeholder="Produto" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Produtos</SelectItem>
-              <SelectItem value="Passagem Aérea">Passagem Aérea</SelectItem>
-              <SelectItem value="Hotel">Hotel</SelectItem>
-              <SelectItem value="Seguro Viagem">Seguro Viagem</SelectItem>
-              <SelectItem value="Passeios">Passeios</SelectItem>
-              <SelectItem value="Cruzeiro">Cruzeiro</SelectItem>
-              <SelectItem value="Transfer">Transfer</SelectItem>
+              {productCatalog.map(p => (
+                <SelectItem key={p.slug} value={p.slug}>{p.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
