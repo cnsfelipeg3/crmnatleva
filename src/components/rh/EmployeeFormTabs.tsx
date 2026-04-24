@@ -366,34 +366,147 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
           )}
         </TabsContent>
 
-        {/* TAB 4: CARGA HORÁRIA */}
-        <TabsContent value="horario" className="space-y-3 mt-4">
-          <div><Label>Carga horária semanal (horas)</Label><Input type="number" value={f("weekly_hours") || 44} onChange={e => set("weekly_hours", Number(e.target.value))} /></div>
-          <div className="grid grid-cols-2 gap-3">
-            <div><Label>Entrada</Label><Input type="time" value={f("work_schedule_start") || "09:00"} onChange={e => set("work_schedule_start", e.target.value)} /></div>
-            <div><Label>Saída</Label><Input type="time" value={f("work_schedule_end") || "18:00"} onChange={e => set("work_schedule_end", e.target.value)} /></div>
-          </div>
-          <div><Label>Intervalo (minutos)</Label><Input type="number" value={f("lunch_duration_minutes") || 60} onChange={e => set("lunch_duration_minutes", Number(e.target.value))} /></div>
-          <div>
-            <Label>Dias trabalhados</Label>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {WORK_DAYS_OPTIONS.map(d => {
-                const active = (form.work_days || ["seg", "ter", "qua", "qui", "sex"]).includes(d.value);
-                return (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => toggleWorkDay(d.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium border transition-colors ${
-                      active ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:border-primary/50"
-                    }`}
-                  >
-                    {d.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        {/* TAB 4: CARGA HORÁRIA — DETALHADA POR DIA */}
+        <TabsContent value="horario" className="space-y-4 mt-4">
+          {(() => {
+            const MODALITIES = [
+              { value: "presencial", label: "Presencial", color: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
+              { value: "home_office", label: "Home Office", color: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
+              { value: "hibrido",    label: "Híbrido",     color: "bg-purple-500/15 text-purple-600 border-purple-500/30" },
+              { value: "folga",      label: "Folga",       color: "bg-muted text-muted-foreground border-border" },
+            ] as const;
+            type DaySchedule = { active: boolean; modality: string; start: string; end: string; lunch_minutes: number };
+            const defaultDay = (active: boolean): DaySchedule => ({
+              active,
+              modality: active ? "presencial" : "folga",
+              start: form.work_schedule_start || "09:00",
+              end: form.work_schedule_end || "18:00",
+              lunch_minutes: form.lunch_duration_minutes ?? 60,
+            });
+            const schedule: Record<string, DaySchedule> = form.daily_schedule || WORK_DAYS_OPTIONS.reduce((acc, d) => {
+              const isWeekday = ["seg","ter","qua","qui","sex"].includes(d.value);
+              acc[d.value] = defaultDay(isWeekday);
+              return acc;
+            }, {} as Record<string, DaySchedule>);
+
+            const updateDay = (day: string, patch: Partial<DaySchedule>) => {
+              const next = { ...schedule, [day]: { ...schedule[day], ...patch } };
+              // mantém work_days sincronizado (compatibilidade)
+              const work_days = WORK_DAYS_OPTIONS.filter(d => next[d.value]?.active && next[d.value]?.modality !== "folga").map(d => d.value);
+              setForm({ ...form, daily_schedule: next, work_days });
+            };
+
+            // Soma carga horária semanal (informativo)
+            const totalHours = WORK_DAYS_OPTIONS.reduce((sum, d) => {
+              const s = schedule[d.value];
+              if (!s?.active || s.modality === "folga") return sum;
+              const [sh, sm] = s.start.split(":").map(Number);
+              const [eh, em] = s.end.split(":").map(Number);
+              const mins = (eh * 60 + em) - (sh * 60 + sm) - (s.lunch_minutes || 0);
+              return sum + Math.max(0, mins) / 60;
+            }, 0);
+
+            return (
+              <>
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 p-3">
+                  <div>
+                    <p className="text-sm font-medium">Carga horária semanal calculada</p>
+                    <p className="text-xs text-muted-foreground">Soma automática dos dias ativos abaixo</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-semibold text-primary">{totalHours.toFixed(1)}h</p>
+                    <Input
+                      type="number"
+                      className="w-24 h-7 text-xs mt-1"
+                      placeholder="Meta CLT"
+                      value={f("weekly_hours") || ""}
+                      onChange={e => set("weekly_hours", Number(e.target.value))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {WORK_DAYS_OPTIONS.map(d => {
+                    const s = schedule[d.value] || defaultDay(false);
+                    const isOff = !s.active || s.modality === "folga";
+                    const modMeta = MODALITIES.find(m => m.value === s.modality) || MODALITIES[3];
+                    return (
+                      <div key={d.value} className={`rounded-lg border p-3 transition-colors ${isOff ? "bg-muted/20 border-border" : "bg-background border-primary/30"}`}>
+                        <div className="flex items-center gap-3 flex-wrap">
+                          <div className="flex items-center gap-2 min-w-[110px]">
+                            <Switch checked={s.active && s.modality !== "folga"} onCheckedChange={v => updateDay(d.value, { active: v, modality: v ? (s.modality === "folga" ? "presencial" : s.modality) : "folga" })} />
+                            <span className="text-sm font-semibold w-10">{d.label}</span>
+                          </div>
+
+                          {!isOff && (
+                            <>
+                              <div className="flex gap-1 flex-wrap">
+                                {MODALITIES.filter(m => m.value !== "folga").map(m => (
+                                  <button
+                                    key={m.value}
+                                    type="button"
+                                    onClick={() => updateDay(d.value, { modality: m.value })}
+                                    className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors ${s.modality === m.value ? m.color : "bg-muted/40 text-muted-foreground border-border hover:border-primary/40"}`}
+                                  >
+                                    {m.label}
+                                  </button>
+                                ))}
+                              </div>
+
+                              <div className="flex items-center gap-2 ml-auto flex-wrap">
+                                <div className="flex items-center gap-1">
+                                  <Label className="text-[10px] text-muted-foreground">Entrada</Label>
+                                  <Input type="time" className="h-8 w-24 text-xs" value={s.start} onChange={e => updateDay(d.value, { start: e.target.value })} />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Label className="text-[10px] text-muted-foreground">Saída</Label>
+                                  <Input type="time" className="h-8 w-24 text-xs" value={s.end} onChange={e => updateDay(d.value, { end: e.target.value })} />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Label className="text-[10px] text-muted-foreground">Intervalo (min)</Label>
+                                  <Input type="number" min={0} className="h-8 w-16 text-xs" value={s.lunch_minutes} onChange={e => updateDay(d.value, { lunch_minutes: Number(e.target.value) })} />
+                                </div>
+                              </div>
+                            </>
+                          )}
+
+                          {isOff && (
+                            <Badge variant="outline" className="ml-auto text-xs">Folga</Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const next: Record<string, DaySchedule> = {};
+                    WORK_DAYS_OPTIONS.forEach(d => {
+                      const wd = ["seg","ter","qua","qui","sex"].includes(d.value);
+                      next[d.value] = { active: wd, modality: wd ? "presencial" : "folga", start: "09:00", end: "18:00", lunch_minutes: 60 };
+                    });
+                    setForm({ ...form, daily_schedule: next, work_days: ["seg","ter","qua","qui","sex"] });
+                  }}>Padrão Comercial (Seg-Sex 9h-18h)</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const next: Record<string, DaySchedule> = {};
+                    WORK_DAYS_OPTIONS.forEach(d => {
+                      const wd = d.value !== "dom";
+                      next[d.value] = { active: wd, modality: wd ? "presencial" : "folga", start: "09:00", end: d.value === "sab" ? "13:00" : "18:00", lunch_minutes: d.value === "sab" ? 0 : 60 };
+                    });
+                    setForm({ ...form, daily_schedule: next, work_days: ["seg","ter","qua","qui","sex","sab"] });
+                  }}>6x1 (Seg-Sáb)</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => {
+                    const next: Record<string, DaySchedule> = {};
+                    WORK_DAYS_OPTIONS.forEach(d => {
+                      next[d.value] = { active: true, modality: "home_office", start: "09:00", end: d.value === "sab" || d.value === "dom" ? "13:00" : "18:00", lunch_minutes: 60 };
+                    });
+                    setForm({ ...form, daily_schedule: next, work_days: ["seg","ter","qua","qui","sex","sab","dom"] });
+                  }}>100% Home Office</Button>
+                </div>
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* TAB 5: ACESSO AO SISTEMA */}
