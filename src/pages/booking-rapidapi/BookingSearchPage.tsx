@@ -522,22 +522,14 @@ export default function BookingSearchPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {sources.booking &&
-                filteredBookingHotels.map((h) => (
-                  <HotelCard
-                    key={`booking:${h.hotel_id}`}
-                    hotel={h}
-                    onClick={handleBookingClick}
-                  />
-                ))}
-              {sources.hotelscom &&
-                filteredHotelscom.map((h) => (
-                  <HotelscomCard
-                    key={h.uid}
-                    hotel={h}
-                    onClick={handleHotelscomClick}
-                  />
-                ))}
+              {filteredGroups.map((group) => (
+                <UnifiedHotelCard
+                  key={group.groupKey}
+                  group={group}
+                  onCardClick={handleCardClick}
+                  onOfferClick={handleOfferClick}
+                />
+              ))}
             </div>
           )}
 
@@ -569,25 +561,17 @@ export default function BookingSearchPage() {
         </div>
       </div>
 
-      {/* Drawers */}
-      <HotelDetailDrawer
-        hotel={selectedBookingHotel}
-        open={bookingDrawerOpen}
-        onOpenChange={setBookingDrawerOpen}
+      {/* Drawer unificado (1 hotel = N abas de providers) */}
+      <UnifiedHotelDetailDrawer
+        group={selectedGroup}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
         arrival={searchParams?.arrival ?? null}
         departure={searchParams?.departure ?? null}
         adults={searchParams?.adults ?? 1}
         childrenAges={searchParams?.children ?? []}
         rooms={searchParams?.rooms ?? 1}
-      />
-      <HotelscomDetailDrawer
-        card={selectedHotelscomCard}
-        open={hotelscomDrawerOpen}
-        onOpenChange={setHotelscomDrawerOpen}
-        arrival={searchParams?.arrival ?? null}
-        departure={searchParams?.departure ?? null}
-        adults={searchParams?.adults ?? 1}
-        converted={selectedHotelscomConverted ?? undefined}
+        initialTab={initialTab}
       />
     </div>
   );
