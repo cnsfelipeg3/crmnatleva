@@ -5188,6 +5188,48 @@ export type Database = {
           },
         ]
       }
+      product_types: {
+        Row: {
+          category: string | null
+          created_at: string
+          icon_color: string | null
+          icon_name: string | null
+          id: string
+          is_active: boolean
+          is_composite: boolean
+          label: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          icon_color?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_composite?: boolean
+          label: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          icon_color?: string | null
+          icon_name?: string | null
+          id?: string
+          is_active?: boolean
+          is_composite?: boolean
+          label?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -6156,6 +6198,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sales_products_backup_2026_04_24: {
+        Row: {
+          backed_up_at: string | null
+          products_original: string[] | null
+          sale_id: string | null
+        }
+        Insert: {
+          backed_up_at?: string | null
+          products_original?: string[] | null
+          sale_id?: string | null
+        }
+        Update: {
+          backed_up_at?: string | null
+          products_original?: string[] | null
+          sale_id?: string | null
+        }
+        Relationships: []
       }
       simulated_leads: {
         Row: {
