@@ -62,6 +62,8 @@ interface Props {
   adults: number;
   childrenAges: number[];
   rooms: number;
+  /** Quando true, renderiza só o conteúdo interno (sem wrapper Sheet) — usado pelo UnifiedHotelDetailDrawer */
+  embedded?: boolean;
 }
 
 // ============================================================
