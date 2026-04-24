@@ -126,6 +126,7 @@ export function HotelscomDetailDrawer({
   const originalPriceFormatted =
     priceOpt?.formattedDisplayPrice ?? priceOpt?.displayPrice?.formatted;
   const originalStriked = priceOpt?.strikeOut?.formatted;
+  const discountBadgeText = card.priceSection?.badge?.text;
 
   const rating = card.summarySections?.[0]?.guestRatingSectionV2;
   const ratingScore = rating?.badge?.text;
@@ -138,6 +139,70 @@ export function HotelscomDetailDrawer({
   const perNightMsg = card.priceSection?.priceSummary?.displayMessagesV2?.[0]?.lineItems?.[0];
   const perNightText =
     perNightMsg?.state === "REASSURANCE_DISPLAY_QUALIFIER" ? perNightMsg.value : undefined;
+
+  // Extrair badges promo do analyticsEvents
+  const promoBadges: string[] = (() => {
+    const out: string[] = [];
+    const ev = (card as any).analyticsEvents?.find?.(
+      (e: any) => e?.attribute?.name === "product_list",
+    );
+    if (!ev?.attribute?.content) return out;
+    try {
+      const parsed = JSON.parse(ev.attribute.content);
+      const item = Array.isArray(parsed) ? parsed[0] : parsed;
+      const raw: string[] = item?.lodging_product?.badges ?? [];
+      for (const b of raw) {
+        if (/Public_Promo/i.test(b)) out.push("Promoção pública");
+        else if (/Member/i.test(b)) out.push("Oferta para membros");
+        else if (/VIP/i.test(b)) out.push("VIP");
+        else out.push(b.replace(/_/g, " "));
+      }
+      if (item?.free_cancellation_bool === true) out.push("Cancelamento grátis");
+      if (item?.earn_eligible_bool === true) out.push("Elegível a pontos");
+    } catch {
+      /* ignore */
+    }
+    return out;
+  })();
+
+  // Bairro extraído da URL externa
+  const neighborhood: string | undefined = (() => {
+    if (!externalUrl) return undefined;
+    const m = externalUrl.match(/destination=([^&]+)/);
+    if (!m) return undefined;
+    try {
+      return decodeURIComponent(m[1].replace(/\+/g, " ")).split(",")[0]?.trim();
+    } catch {
+      return undefined;
+    }
+  })();
+
+  // Tradução de captions
+  const translateCaption = (en?: string): string | undefined => {
+    if (!en) return undefined;
+    const first = en.split(".")[0].trim();
+    const map: Array<[RegExp, string]> = [
+      [/\breception\b/i, "Recepção"],
+      [/\blobby\b/i, "Lobby"],
+      [/\bexterior\b/i, "Exterior"],
+      [/\bfacade\b/i, "Fachada"],
+      [/\bpool\b/i, "Piscina"],
+      [/\bgym\b|\bfitness\b/i, "Academia"],
+      [/\bbar\b/i, "Bar"],
+      [/\brestaurant\b/i, "Restaurante"],
+      [/\bsuite\b/i, "Suíte"],
+      [/\bbedroom\b/i, "Quarto"],
+      [/\bbathroom\b/i, "Banheiro"],
+      [/\bbeach\b/i, "Praia"],
+      [/\bview\b/i, "Vista"],
+      [/\bspa\b/i, "Spa"],
+      [/\bbreakfast\b/i, "Café da manhã"],
+      [/\bterrace\b|\bbalcony\b/i, "Terraço"],
+      [/\blounge\b/i, "Lounge"],
+    ];
+    for (const [re, pt] of map) if (re.test(first)) return pt;
+    return first;
+  };
 
   const copyInfo = async () => {
     const totalStr = converted?.priceTotal
