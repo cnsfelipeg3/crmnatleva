@@ -231,6 +231,7 @@ export function UnifiedHotelDetailDrawer({
                     priceTaxes: hotelscomOffer?.priceTaxes,
                     pricePerNight: hotelscomOffer?.pricePerNight,
                     currency: hotelscomOffer?.priceCurrency,
+                    isMemberPrice: hotelscomOffer?.isMemberPrice,
                   }}
                   embedded
                 />
