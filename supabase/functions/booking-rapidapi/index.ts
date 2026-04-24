@@ -172,17 +172,64 @@ async function callRapidApi(
   const qs = new URLSearchParams(params).toString();
   const url = `${base}${endpoint}${qs ? `?${qs}` : ""}`;
 
-  const res = await fetch(url, {
-    method: "GET",
-    headers: {
-      "x-rapidapi-host": host,
-      "x-rapidapi-key": apiKey,
-      "Content-Type": "application/json",
-    },
-  });
+  // Retry com backoff em erros transitórios (502/503/504/timeout) do provedor RapidAPI.
+  const MAX_ATTEMPTS = 3;
+  const PER_ATTEMPT_TIMEOUT_MS = 25_000;
+  let lastStatus = 0;
+  let lastData: unknown = null;
+  let lastError: unknown = null;
 
-  const data = await res.json().catch(() => ({ raw: "<invalid json>" }));
-  return { data, status: res.status };
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PER_ATTEMPT_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: "GET",
+        headers: {
+          "x-rapidapi-host": host,
+          "x-rapidapi-key": apiKey,
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      const data = await res.json().catch(() => ({ raw: "<invalid json>" }));
+      lastStatus = res.status;
+      lastData = data;
+
+      const isTransient = res.status === 502 || res.status === 503 || res.status === 504;
+      if (!isTransient) {
+        return { data, status: res.status };
+      }
+      console.warn(
+        `[booking-rapidapi] ${action ?? endpoint} attempt ${attempt}/${MAX_ATTEMPTS} returned ${res.status}; retrying…`,
+      );
+    } catch (err) {
+      clearTimeout(timer);
+      lastError = err;
+      console.warn(
+        `[booking-rapidapi] ${action ?? endpoint} attempt ${attempt}/${MAX_ATTEMPTS} failed: ${(err as Error)?.message}`,
+      );
+    }
+
+    if (attempt < MAX_ATTEMPTS) {
+      // Backoff: 800ms, 2000ms
+      await new Promise((r) => setTimeout(r, attempt === 1 ? 800 : 2000));
+    }
+  }
+
+  if (lastStatus > 0) {
+    return { data: lastData, status: lastStatus };
+  }
+  // Se nem fetch completou (timeout/network), devolve 504 sintético pra UI tratar.
+  return {
+    data: {
+      error: "upstream_unreachable",
+      message: (lastError as Error)?.message ?? "RapidAPI provider unreachable",
+    },
+    status: 504,
+  };
 }
 
 function assertParams(params: Record<string, any>, required: string[]) {
