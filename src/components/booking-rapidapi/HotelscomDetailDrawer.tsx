@@ -38,6 +38,17 @@ import { useHotelscomFullDetails } from "@/hooks/useBookingRapidApi";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
 import { convertPriceToBRL } from "./unifiedHotelTypes";
 import type { HotelscomLodgingCard } from "./unifiedHotelTypes";
+import {
+  extractGallery,
+  extractRooms as extractRoomsRich,
+  extractAmenityGroups,
+  extractLocation,
+  extractRatingSummary,
+  extractReviewsList,
+  extractHeadline,
+  extractAllOfferPerks,
+  type HotelscomRoom,
+} from "./hotelscomNormalizers";
 
 interface Converted {
   priceTotal?: number;
