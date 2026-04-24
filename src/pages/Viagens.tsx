@@ -16,6 +16,7 @@ import {
   Clock, Shield, Eye, ExternalLink, Radio, Zap, Info, ChevronRight,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import DeleteSaleButton from "@/components/DeleteSaleButton";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -390,9 +391,16 @@ export default function Viagens() {
                     <TableCell className="text-xs text-right font-medium">{fmt(trip.received_value || 0)}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{sellerNames[trip.seller_id || ""] || "—"}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={e => { e.stopPropagation(); navigate(`/sales/${trip.id}`); }}>
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
+                      <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => navigate(`/sales/${trip.id}`)}>
+                          <ExternalLink className="w-3 h-3" />
+                        </Button>
+                        <DeleteSaleButton
+                          saleId={trip.id}
+                          saleLabel={`${trip.display_id} — ${trip.name}`}
+                          onDeleted={(id) => setSales(prev => prev.filter(s => s.id !== id))}
+                        />
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
