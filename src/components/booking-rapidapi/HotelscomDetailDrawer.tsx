@@ -110,6 +110,7 @@ export function HotelscomDetailDrawer({
   departure,
   adults,
   converted,
+  embedded = false,
 }: Props) {
   const [galleryIdx, setGalleryIdx] = useState<number | null>(null);
 
