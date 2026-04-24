@@ -88,7 +88,8 @@ function toRpcPeriod(p: string): string {
 }
 
 export default function Dashboard() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, profile, isLoading: authLoading } = useAuth();
+  const isPresidentNathalia = (profile?.email || user?.email || "").toLowerCase() === "nathalia@natleva.com";
 
   // Filters
   const [period, setPeriod] = useState("all");
@@ -446,6 +447,22 @@ export default function Dashboard() {
   return (
     <div className="p-4 md:p-6 space-y-5 md:space-y-6 animate-fade-in relative">
       <div className="fixed inset-0 pointer-events-none opacity-[0.015] bg-grid-pattern" />
+
+      {isPresidentNathalia && (
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-5 py-4 md:px-6 md:py-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl md:text-3xl" aria-hidden>👑</span>
+            <div>
+              <h2 className="text-lg md:text-xl font-serif text-foreground">
+                Bem-vinda, Presidente! Como está seu dia hoje?
+              </h2>
+              <p className="text-xs md:text-sm text-muted-foreground mt-0.5">
+                Aqui está o panorama geral da NatLeva agora mesmo.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <DashboardFilters
         period={period} setPeriod={setPeriod}
