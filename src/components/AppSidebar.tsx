@@ -17,6 +17,8 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { prefetchRoute, prefetchAllRoutes } from "@/lib/routePrefetch";
+import { usePermissions } from "@/hooks/usePermissions";
+import { MENU_BY_PATH } from "@/lib/systemMenus";
 
 const navItems = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
