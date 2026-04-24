@@ -45,12 +45,12 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary relative overflow-hidden items-center justify-center">
+      <div className="hidden lg:flex lg:w-1/2 bg-sidebar relative overflow-hidden items-center justify-center">
         <div className="absolute inset-0 opacity-10">
           {[...Array(5)].map((_, i) => (
             <Plane
               key={i}
-              className="absolute text-primary-foreground"
+              className="absolute text-sidebar-accent-foreground"
               style={{
                 width: `${40 + i * 20}px`,
                 height: `${40 + i * 20}px`,
