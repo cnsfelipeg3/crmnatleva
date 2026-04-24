@@ -674,6 +674,8 @@ export function HotelscomDetailDrawer({
                 </ul>
               </Card>
             )}
+
+            {amenitiesShort.length > 0 && (
               <Card className="p-4">
                 <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
                   <Sparkles className="h-4 w-4 text-primary" />
