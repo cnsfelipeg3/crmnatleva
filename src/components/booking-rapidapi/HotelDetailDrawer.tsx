@@ -805,6 +805,17 @@ export function HotelDetailDrawer({
             </ScrollArea>
           </Tabs>
         </div>
+  );
+
+  if (embedded) return inner;
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="w-full overflow-hidden p-0 sm:max-w-3xl"
+      >
+        {inner}
       </SheetContent>
     </Sheet>
   );
