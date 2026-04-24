@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/accordion";
 import { Filter, X, ChevronDown, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useExchangeRates } from "@/hooks/useExchangeRates";
 import type { HotelFilter, HotelFiltersState } from "./types";
 
 interface Props {
