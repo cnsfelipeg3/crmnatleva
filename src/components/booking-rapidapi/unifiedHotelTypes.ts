@@ -615,16 +615,38 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
 export function groupHotelsByIdentity(
   hotels: UnifiedHotel[],
 ): UnifiedHotelGroup[] {
-  const groups = new Map<string, UnifiedHotel[]>();
+  // ---------- ETAPA 1: bucketização por chave normalizada ----------
+  // Hotéis com mesma chave de nome são agrupados direto.
+  // Depois, fazemos um 2º passe fuzzy entre buckets pra unificar
+  // os que escaparam (ex.: "Ritz Carlton" vs "The Ritz-Carlton, Maceió").
+  const buckets = new Map<string, UnifiedHotel[]>();
   for (const h of hotels) {
     const nameKey = normalizeForMatch(h.name);
     if (!nameKey) continue;
-    const existing = groups.get(nameKey);
-    if (existing) {
-      existing.push(h);
-    } else {
-      groups.set(nameKey, [h]);
+    const existing = buckets.get(nameKey);
+    if (existing) existing.push(h);
+    else buckets.set(nameKey, [h]);
+  }
+
+  // ---------- ETAPA 2: merge fuzzy (nome + geo) entre buckets ----------
+  type Cluster = { key: string; members: UnifiedHotel[]; centroid: UnifiedHotel };
+  const clusters: Cluster[] = [];
+  for (const [key, members] of buckets) {
+    // Centroide = primeiro Booking se houver, senão primeiro
+    const centroid =
+      members.find((m) => m.source === "booking") ?? members[0];
+
+    // Tenta encaixar em cluster existente
+    let merged = false;
+    for (const c of clusters) {
+      const score = similarityScore(centroid, c.centroid);
+      if (score >= 0.85) {
+        c.members.push(...members);
+        merged = true;
+        break;
+      }
     }
+    if (!merged) clusters.push({ key, members: [...members], centroid });
   }
 
   const result: UnifiedHotelGroup[] = [];
