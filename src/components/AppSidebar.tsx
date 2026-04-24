@@ -256,101 +256,149 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       </div>
 
       <nav className="relative flex-1 py-3 px-2 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => renderNavItem(item))}
+        {filterItems(navItems).map((item) => renderNavItem(item))}
 
         {/* Clientes */}
-        {renderGroupButton("Clientes", Users, clientesOpen, () => setClientesOpen(!clientesOpen))}
-        {clientesOpen && !isCollapsed && renderSubGroup(clientesItems)}
+        {(() => {
+          const items = filterItems(clientesItems);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Clientes", Users, clientesOpen, () => setClientesOpen(!clientesOpen))}
+            {clientesOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* Viagens */}
-        {renderGroupButton("Viagens", Plane, viagensOpen, () => setViagensOpen(!viagensOpen))}
-        {viagensOpen && !isCollapsed && renderSubGroup(viagensItems)}
+        {(() => {
+          const items = filterItems(viagensItems);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Viagens", Plane, viagensOpen, () => setViagensOpen(!viagensOpen))}
+            {viagensOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
-        {/* AI Team section */}
-        {renderGroupButton("Batalhão NatLeva", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
-        {aiTeamOpen && !isCollapsed && renderSubGroup([
-          { to: "/ai-team", icon: Brain, label: "Mission Control" },
-          { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
-          { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
-          { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
-          { to: "/ai-team/skills", icon: Zap, label: "Skills" },
-          { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
-          { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
-          { to: "/ai-team/academia", icon: Star, label: "Academia" },
-          { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
-          { to: "/ai-team/performance", icon: BarChart3, label: "Performance" },
-          { to: "/ai-team/config", icon: Cog, label: "Configurações" },
-          { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
-          { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
-          { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
-        ])}
+        {/* AI Team */}
+        {(() => {
+          const items = filterItems([
+            { to: "/ai-team", icon: Brain, label: "Mission Control" },
+            { to: "/ai-team/equipe", icon: Users, label: "Equipe" },
+            { to: "/ai-team/evolution", icon: Sparkles, label: "Evolution Engine" },
+            { to: "/ai-team/conhecimento", icon: BookOpen, label: "Conhecimento" },
+            { to: "/ai-team/skills", icon: Zap, label: "Skills" },
+            { to: "/ai-team/workflow", icon: GitBranch, label: "Flow Builder" },
+            { to: "/ai-team/memoria", icon: Database, label: "Memória & Fiscal" },
+            { to: "/ai-team/academia", icon: Star, label: "Academia" },
+            { to: "/ai-team/simulador", icon: MessageSquare, label: "Simulador" },
+            { to: "/ai-team/performance", icon: BarChart3, label: "Performance" },
+            { to: "/ai-team/config", icon: Cog, label: "Configurações" },
+            { to: "/implementacao/estrategia-ia", icon: Shield, label: "⚖️ Regras Globais" },
+            { to: "/implementacao/aprendizados-ia", icon: Sparkles, label: "Aprendizados IA" },
+            { to: "/implementacao/cerebro-natleva", icon: Zap, label: "Cérebro NatLeva" },
+          ]);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Batalhão NatLeva", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
+            {aiTeamOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* Operação Diária */}
-        {renderGroupButton("Operação Diária", Zap, operacaoOpen, () => setOperacaoOpen(!operacaoOpen))}
-        {operacaoOpen && !isCollapsed && renderSubGroup([
-          { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
-          { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
-          { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
-          { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
-          { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
-        ])}
+        {(() => {
+          const items = filterItems([
+            { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
+            { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
+            { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
+            { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
+            { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
+          ]);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Operação Diária", Zap, operacaoOpen, () => setOperacaoOpen(!operacaoOpen))}
+            {operacaoOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* Implementação */}
-        {renderGroupButton("Implementação", PackageOpen, implOpen, () => setImplOpen(!implOpen))}
-        {implOpen && !isCollapsed && renderSubGroup([
-          { to: "/import", icon: FileUp, label: "Importar Planilhas" },
-          { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
-          { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
-        ])}
+        {(() => {
+          const items = filterItems([
+            { to: "/import", icon: FileUp, label: "Importar Planilhas" },
+            { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
+            { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
+          ]);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Implementação", PackageOpen, implOpen, () => setImplOpen(!implOpen))}
+            {implOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* Portal do Viajante */}
-        {renderGroupButton("Portal do Viajante", Globe, portalAdminOpen, () => setPortalAdminOpen(!portalAdminOpen))}
-        {portalAdminOpen && !isCollapsed && (
-          <div className="space-y-0.5 ml-2 border-l border-border/10 pl-1">
-            {[
-              { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
-              { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
-              { to: "/portal-admin/clientes", icon: Users, label: "Clientes" },
-              { to: "/portal-admin/documentos", icon: FileText, label: "Documentos" },
-              { to: "/itinerario", icon: FileText, label: "Itinerários" },
-              { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
-              { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
-            ].map((item) => renderNavItem(item, true))}
-            <a
-              href="/portal/login"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={onNavigate}
-              className="flex items-center gap-3 pl-8 px-3 py-2 rounded-lg text-xs font-medium text-champagne/70 hover:bg-primary/5 hover:text-champagne transition-all duration-200"
-            >
-              <TestTube className="w-4 h-4 shrink-0" />
-              <span>Acessar ambiente teste</span>
-              <ArrowUpRight className="w-3 h-3 ml-auto opacity-50" />
-            </a>
-          </div>
-        )}
+        {(() => {
+          const items = filterItems([
+            { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
+            { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
+            { to: "/portal-admin/clientes", icon: Users, label: "Clientes" },
+            { to: "/portal-admin/documentos", icon: FileText, label: "Documentos" },
+            { to: "/itinerario", icon: FileText, label: "Itinerários" },
+            { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
+            { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
+          ]);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Portal do Viajante", Globe, portalAdminOpen, () => setPortalAdminOpen(!portalAdminOpen))}
+            {portalAdminOpen && !isCollapsed && (
+              <div className="space-y-0.5 ml-2 border-l border-border/10 pl-1">
+                {items.map((item) => renderNavItem(item, true))}
+                <a
+                  href="/portal/login"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={onNavigate}
+                  className="flex items-center gap-3 pl-8 px-3 py-2 rounded-lg text-xs font-medium text-champagne/70 hover:bg-primary/5 hover:text-champagne transition-all duration-200"
+                >
+                  <TestTube className="w-4 h-4 shrink-0" />
+                  <span>Acessar ambiente teste</span>
+                  <ArrowUpRight className="w-3 h-3 ml-auto opacity-50" />
+                </a>
+              </div>
+            )}
+          </>);
+        })()}
 
         {/* Finance */}
-        {renderGroupButton("Financeiro", DollarSign, financeOpen, () => setFinanceOpen(!financeOpen))}
-        {financeOpen && !isCollapsed && renderSubGroup(financeItems)}
+        {(() => {
+          const items = filterItems(financeItems);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("Financeiro", DollarSign, financeOpen, () => setFinanceOpen(!financeOpen))}
+            {financeOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* RH */}
-        {renderGroupButton("RH", Users2, rhOpen, () => setRhOpen(!rhOpen))}
-        {rhOpen && !isCollapsed && renderSubGroup([
-          { to: "/rh", icon: BarChart3, label: "Visão Geral" },
-          { to: "/rh/colaboradores", icon: UserCheck, label: "Colaboradores" },
-          { to: "/rh/ponto", icon: Clock, label: "Ponto" },
-          { to: "/rh/folha", icon: Receipt, label: "Folha & Pagamentos" },
-          { to: "/rh/metas", icon: Target, label: "Metas & Bônus" },
-          { to: "/rh/desempenho", icon: Star, label: "Desempenho" },
-          { to: "/rh/feedbacks", icon: MessageSquare, label: "Feedbacks & 1:1" },
-          { to: "/rh/advertencias", icon: ShieldAlert, label: "Advertências" },
-          { to: "/rh/documentos", icon: FileArchive, label: "Contratos & Docs" },
-          { to: "/rh/permissoes", icon: Shield, label: "Permissões" },
-          { to: "/rh/clima", icon: Smile, label: "Clima do Time" },
-          { to: "/rh/relatorios", icon: PieChart, label: "Relatórios" },
-          { to: "/rh/config", icon: Cog, label: "Configurações" },
-        ])}
+        {(() => {
+          const items = filterItems([
+            { to: "/rh", icon: BarChart3, label: "Visão Geral" },
+            { to: "/rh/colaboradores", icon: UserCheck, label: "Colaboradores" },
+            { to: "/rh/ponto", icon: Clock, label: "Ponto" },
+            { to: "/rh/folha", icon: Receipt, label: "Folha & Pagamentos" },
+            { to: "/rh/metas", icon: Target, label: "Metas & Bônus" },
+            { to: "/rh/desempenho", icon: Star, label: "Desempenho" },
+            { to: "/rh/feedbacks", icon: MessageSquare, label: "Feedbacks & 1:1" },
+            { to: "/rh/advertencias", icon: ShieldAlert, label: "Advertências" },
+            { to: "/rh/documentos", icon: FileArchive, label: "Contratos & Docs" },
+            { to: "/rh/permissoes", icon: Shield, label: "Permissões" },
+            { to: "/rh/clima", icon: Smile, label: "Clima do Time" },
+            { to: "/rh/relatorios", icon: PieChart, label: "Relatórios" },
+            { to: "/rh/config", icon: Cog, label: "Configurações" },
+          ]);
+          if (items.length === 0) return null;
+          return (<>
+            {renderGroupButton("RH", Users2, rhOpen, () => setRhOpen(!rhOpen))}
+            {rhOpen && !isCollapsed && renderSubGroup(items)}
+          </>);
+        })()}
 
         {/* Admin */}
         {role === "admin" && (
