@@ -415,6 +415,7 @@ export function normalizeHotelscomHotel(
     promoBadges: promoBadges.length > 0 ? promoBadges : undefined,
     neighborhood,
     propertyIdComposite: card.propertyId,
+    isMemberPrice,
     raw: card,
   };
 }
