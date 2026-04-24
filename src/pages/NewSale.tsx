@@ -815,7 +815,7 @@ export default function NewSale() {
               status: isPaid ? "recebido" : "pendente",
               received_date: isPaid ? (p.payment_date || todayStr) : null,
               due_date: p.due_date || p.payment_date || todayStr,
-              seller_id: user?.id || null,
+              seller_id: (isAdmin && form.seller_id) ? form.seller_id : (user?.id || null),
               created_by: user?.id || null,
               installment_number: 1,
               installment_total: p.installments,
