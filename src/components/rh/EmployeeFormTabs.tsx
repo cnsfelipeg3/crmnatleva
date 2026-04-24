@@ -105,9 +105,12 @@ interface EmployeeFormTabsProps {
 export default function EmployeeFormTabs({ form, setForm, onSave, employees }: EmployeeFormTabsProps) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [createUser, setCreateUser] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
-  const [userPassword, setUserPassword] = useState("");
+  const createUser = !!form._createUser;
+  const setCreateUser = (v: boolean) => setForm({ ...form, _createUser: v, _userEmail: v ? (form._userEmail || form.email || "") : form._userEmail });
+  const userEmail = form._userEmail || "";
+  const setUserEmail = (v: string) => setForm({ ...form, _userEmail: v });
+  const userPassword = form._userPassword || "";
+  const setUserPassword = (v: string) => setForm({ ...form, _userPassword: v });
   const [permSearch, setPermSearch] = useState("");
   const [expandedGroup, setExpandedGroup] = useState<string | null>("Principal");
   const [activePreset, setActivePreset] = useState<RoleTemplate | null>(null);
