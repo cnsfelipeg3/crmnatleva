@@ -126,6 +126,7 @@ export function HotelscomDetailDrawer({
   const originalPriceFormatted =
     priceOpt?.formattedDisplayPrice ?? priceOpt?.displayPrice?.formatted;
   const originalStriked = priceOpt?.strikeOut?.formatted;
+  const discountBadgeText = card.priceSection?.badge?.text;
 
   const rating = card.summarySections?.[0]?.guestRatingSectionV2;
   const ratingScore = rating?.badge?.text;
@@ -138,6 +139,70 @@ export function HotelscomDetailDrawer({
   const perNightMsg = card.priceSection?.priceSummary?.displayMessagesV2?.[0]?.lineItems?.[0];
   const perNightText =
     perNightMsg?.state === "REASSURANCE_DISPLAY_QUALIFIER" ? perNightMsg.value : undefined;
+
+  // Extrair badges promo do analyticsEvents
+  const promoBadges: string[] = (() => {
+    const out: string[] = [];
+    const ev = (card as any).analyticsEvents?.find?.(
+      (e: any) => e?.attribute?.name === "product_list",
+    );
+    if (!ev?.attribute?.content) return out;
+    try {
+      const parsed = JSON.parse(ev.attribute.content);
+      const item = Array.isArray(parsed) ? parsed[0] : parsed;
+      const raw: string[] = item?.lodging_product?.badges ?? [];
+      for (const b of raw) {
+        if (/Public_Promo/i.test(b)) out.push("Promoção pública");
+        else if (/Member/i.test(b)) out.push("Oferta para membros");
+        else if (/VIP/i.test(b)) out.push("VIP");
+        else out.push(b.replace(/_/g, " "));
+      }
+      if (item?.free_cancellation_bool === true) out.push("Cancelamento grátis");
+      if (item?.earn_eligible_bool === true) out.push("Elegível a pontos");
+    } catch {
+      /* ignore */
+    }
+    return out;
+  })();
+
+  // Bairro extraído da URL externa
+  const neighborhood: string | undefined = (() => {
+    if (!externalUrl) return undefined;
+    const m = externalUrl.match(/destination=([^&]+)/);
+    if (!m) return undefined;
+    try {
+      return decodeURIComponent(m[1].replace(/\+/g, " ")).split(",")[0]?.trim();
+    } catch {
+      return undefined;
+    }
+  })();
+
+  // Tradução de captions
+  const translateCaption = (en?: string): string | undefined => {
+    if (!en) return undefined;
+    const first = en.split(".")[0].trim();
+    const map: Array<[RegExp, string]> = [
+      [/\breception\b/i, "Recepção"],
+      [/\blobby\b/i, "Lobby"],
+      [/\bexterior\b/i, "Exterior"],
+      [/\bfacade\b/i, "Fachada"],
+      [/\bpool\b/i, "Piscina"],
+      [/\bgym\b|\bfitness\b/i, "Academia"],
+      [/\bbar\b/i, "Bar"],
+      [/\brestaurant\b/i, "Restaurante"],
+      [/\bsuite\b/i, "Suíte"],
+      [/\bbedroom\b/i, "Quarto"],
+      [/\bbathroom\b/i, "Banheiro"],
+      [/\bbeach\b/i, "Praia"],
+      [/\bview\b/i, "Vista"],
+      [/\bspa\b/i, "Spa"],
+      [/\bbreakfast\b/i, "Café da manhã"],
+      [/\bterrace\b|\bbalcony\b/i, "Terraço"],
+      [/\blounge\b/i, "Lounge"],
+    ];
+    for (const [re, pt] of map) if (re.test(first)) return pt;
+    return first;
+  };
 
   const copyInfo = async () => {
     const totalStr = converted?.priceTotal
@@ -182,16 +247,21 @@ export function HotelscomDetailDrawer({
           <SheetHeader className="p-5 border-b space-y-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-rose-500 text-white hover:bg-rose-500">
                     Hotels.com
                   </Badge>
+                  {discountBadgeText && (
+                    <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive font-bold">
+                      🔥 {discountBadgeText}
+                    </Badge>
+                  )}
                 </div>
                 <SheetTitle className="text-xl leading-tight">{name}</SheetTitle>
-                {location && (
+                {(location || neighborhood) && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    <span>{location}</span>
+                    <span>{[location, neighborhood].filter(Boolean).join(" · ")}</span>
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
@@ -261,10 +331,9 @@ export function HotelscomDetailDrawer({
           </SheetHeader>
 
           <Tabs defaultValue="photos" className="p-5">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="photos">Fotos ({photos.length})</TabsTrigger>
               <TabsTrigger value="info">Informações</TabsTrigger>
-              <TabsTrigger value="raw">Dados</TabsTrigger>
             </TabsList>
 
             <TabsContent value="photos" className="mt-4">
@@ -280,6 +349,7 @@ export function HotelscomDetailDrawer({
                       (p.media as any)?.url_max500 ??
                       p.media?.url;
                     if (!url) return null;
+                    const captionPt = translateCaption(p.media?.description);
                     return (
                       <button
                         key={idx}
@@ -295,6 +365,11 @@ export function HotelscomDetailDrawer({
                           loading="lazy"
                           className="h-full w-full object-cover"
                         />
+                        {captionPt && (
+                          <div className="absolute top-1 left-1 right-1 truncate inline-flex items-center rounded bg-background/85 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium text-foreground shadow-sm">
+                            {captionPt}
+                          </div>
+                        )}
                         {idx === 0 && (
                           <div className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded bg-background/90 backdrop-blur px-1.5 py-0.5 text-[10px] font-medium">
                             <ImageIcon className="h-2.5 w-2.5" />
@@ -309,6 +384,26 @@ export function HotelscomDetailDrawer({
             </TabsContent>
 
             <TabsContent value="info" className="mt-4 space-y-4">
+              {promoBadges.length > 0 && (
+                <Card className="p-4">
+                  <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                    <Sparkles className="h-4 w-4 text-rose-500" />
+                    Selos & Promoções
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {promoBadges.map((b, i) => (
+                      <Badge
+                        key={i}
+                        variant="outline"
+                        className="border-rose-300 text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30"
+                      >
+                        ⭐ {b}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              )}
+
               {amenities.length > 0 && (
                 <Card className="p-4">
                   <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
@@ -392,19 +487,6 @@ export function HotelscomDetailDrawer({
                   </div>
                 </Card>
               )}
-            </TabsContent>
-
-            <TabsContent value="raw" className="mt-4">
-              <Card className="p-3">
-                <details>
-                  <summary className="text-xs font-medium cursor-pointer text-muted-foreground mb-2">
-                    Ver JSON bruto (debug)
-                  </summary>
-                  <pre className="text-[10px] overflow-x-auto bg-muted p-2 rounded mt-2 max-h-96">
-                    {JSON.stringify(card, null, 2)}
-                  </pre>
-                </details>
-              </Card>
             </TabsContent>
           </Tabs>
       </div>

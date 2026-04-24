@@ -47,6 +47,18 @@ export interface UnifiedHotel {
   amenities?: string[];
   /** Link pra página do hotel no site original */
   externalUrl?: string;
+  /** Selo de desconto formatado (ex: "$67 off") */
+  discountBadge?: string;
+  /** Legendas das fotos (mesma ordem de photoUrls) */
+  photoCaptions?: string[];
+  /** Selos de promoção (ex: "Promoção pública", "Cancelamento grátis") */
+  promoBadges?: string[];
+  /** Frase pronta de preço (ex: "Price was $252, price is now $185 for 3 nights") */
+  accessibilityPriceLabel?: string;
+  /** Bairro / região extraída da URL */
+  neighborhood?: string;
+  /** Tema do badge de nota (positive/neutral/negative) — pra cor */
+  ratingTheme?: string;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
@@ -92,6 +104,8 @@ export interface HotelscomLodgingCard {
   __typename?: string;
   id: string;
   propertyId?: string;
+  featuredHeader?: { text?: string } | null;
+  callOut?: { text?: string } | null;
   headingSection?: {
     heading?: string;
     messages?: Array<{ text?: string }>;
@@ -99,6 +113,7 @@ export interface HotelscomLodgingCard {
     amenities?: Array<{ icon?: { id?: string; description?: string }; text?: string }>;
   };
   priceSection?: {
+    badge?: { text?: string; theme?: string };
     priceSummary?: {
       optionsV2?: Array<{
         formattedDisplayPrice?: string;
@@ -128,7 +143,7 @@ export interface HotelscomLodgingCard {
   };
   summarySections?: Array<{
     guestRatingSectionV2?: {
-      badge?: { text?: string; accessibility?: string };
+      badge?: { text?: string; accessibility?: string; theme?: string };
       phrases?: Array<{
         phraseParts?: Array<{ text?: string; accessibility?: string }>;
       }>;
@@ -140,7 +155,91 @@ export interface HotelscomLodgingCard {
   cardLink?: {
     resource?: { value?: string };
   };
+  analyticsEvents?: Array<{
+    attribute?: { name?: string; content?: string };
+  }>;
   [key: string]: unknown;
+}
+
+/** Traduz captions comuns de fotos do Hotels.com pt-BR */
+function translatePhotoCaption(en?: string): string | undefined {
+  if (!en) return undefined;
+  const map: Array<[RegExp, string]> = [
+    [/\breception\b/i, "Recepção"],
+    [/\blobby\b/i, "Lobby"],
+    [/\bexterior\b/i, "Exterior"],
+    [/\bfacade\b/i, "Fachada"],
+    [/\bpool\b/i, "Piscina"],
+    [/\bgym\b|\bfitness\b/i, "Academia"],
+    [/\bbar\b/i, "Bar"],
+    [/\brestaurant\b/i, "Restaurante"],
+    [/\bsuite\b/i, "Suíte"],
+    [/\bbedroom\b/i, "Quarto"],
+    [/\bbathroom\b/i, "Banheiro"],
+    [/\bbeach\b/i, "Praia"],
+    [/\bview\b/i, "Vista"],
+    [/\bspa\b/i, "Spa"],
+    [/\bbreakfast\b/i, "Café da manhã"],
+    [/\bterrace\b|\bbalcony\b/i, "Terraço"],
+    [/\blounge\b/i, "Lounge"],
+  ];
+  // Pega só a primeira parte antes de "."
+  const first = en.split(".")[0].trim();
+  for (const [re, pt] of map) {
+    if (re.test(first)) return pt;
+  }
+  return first;
+}
+
+/** Extrai lat/long do parâmetro `latLong=lat,long` da URL do Hotels.com */
+function extractLatLongFromUrl(url?: string): { lat?: number; lng?: number } {
+  if (!url) return {};
+  const m = url.match(/latLong=(-?\d+\.?\d*)[,%]+(-?\d+\.?\d*)/);
+  if (!m) return {};
+  const lat = parseFloat(m[1]);
+  const lng = parseFloat(m[2]);
+  return {
+    lat: Number.isFinite(lat) ? lat : undefined,
+    lng: Number.isFinite(lng) ? lng : undefined,
+  };
+}
+
+/** Extrai bairro do parâmetro `destination=` da URL do Hotels.com */
+function extractNeighborhoodFromUrl(url?: string): string | undefined {
+  if (!url) return undefined;
+  const m = url.match(/destination=([^&]+)/);
+  if (!m) return undefined;
+  try {
+    const decoded = decodeURIComponent(m[1].replace(/\+/g, " "));
+    return decoded.split(",")[0]?.trim() || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Extrai badges promocionais do bloco analyticsEvents.product_list */
+function extractPromoBadges(card: HotelscomLodgingCard): string[] {
+  const badges: string[] = [];
+  const productListEvent = card.analyticsEvents?.find(
+    (e) => e.attribute?.name === "product_list",
+  );
+  if (!productListEvent?.attribute?.content) return badges;
+  try {
+    const parsed = JSON.parse(productListEvent.attribute.content);
+    const item = Array.isArray(parsed) ? parsed[0] : parsed;
+    const rawBadges: string[] = item?.lodging_product?.badges ?? [];
+    for (const b of rawBadges) {
+      if (/Public_Promo/i.test(b)) badges.push("Promoção pública");
+      else if (/Member/i.test(b)) badges.push("Oferta para membros");
+      else if (/VIP/i.test(b)) badges.push("VIP");
+      else badges.push(b.replace(/_/g, " "));
+    }
+    if (item?.free_cancellation_bool === true) badges.push("Cancelamento grátis");
+    if (item?.earn_eligible_bool === true) badges.push("Elegível a pontos");
+  } catch {
+    /* ignore */
+  }
+  return badges;
 }
 
 // ============================================================
@@ -207,12 +306,15 @@ export function normalizeHotelscomHotel(
     pricePerNight = extractNumber(firstMsg.value);
   }
 
-  // Fotos
+  // Fotos + legendas
   const mediaItems = card.mediaSection?.gallery?.media ?? [];
   const photoUrls = mediaItems
     .map((m) => m.media?.url)
     .filter((u): u is string => !!u);
   const photoUrl = photoUrls[0];
+  const photoCaptions = mediaItems
+    .map((m) => translatePhotoCaption(m.media?.description))
+    .filter((c): c is string => !!c);
 
   // Rating
   const ratingBadge = card.summarySections?.[0]?.guestRatingSectionV2?.badge;
@@ -220,6 +322,7 @@ export function normalizeHotelscomHotel(
   const reviewScore = reviewScoreStr
     ? parseFloat(reviewScoreStr.replace(",", "."))
     : undefined;
+  const ratingTheme = ratingBadge?.theme;
 
   const phrases = card.summarySections?.[0]?.guestRatingSectionV2?.phrases;
   const reviewScoreWord = phrases?.[0]?.phraseParts?.[0]?.text;
@@ -255,18 +358,29 @@ export function normalizeHotelscomHotel(
   // URL externa
   const externalUrl = card.cardLink?.resource?.value;
 
+  // Selo de desconto, frase de preço, lat/long, bairro, badges promo
+  const discountBadge = card.priceSection?.badge?.text;
+  const accessibilityPriceLabel = priceOptV2?.accessibilityLabel;
+  const { lat, lng } = extractLatLongFromUrl(externalUrl);
+  const neighborhood = extractNeighborhoodFromUrl(externalUrl);
+  const promoBadges = extractPromoBadges(card);
+
   return {
     source: "hotelscom",
     id: card.id,
     uid: `hotelscom:${card.id}`,
     name: heading,
     location,
+    latitude: lat,
+    longitude: lng,
     photoUrl,
     photoUrls,
+    photoCaptions,
     stars: Number.isFinite(stars as number) ? (stars as number) : undefined,
     reviewScore,
     reviewScoreWord,
     reviewCount,
+    ratingTheme,
     priceTotal,
     priceCurrency,
     priceStriked,
@@ -275,6 +389,10 @@ export function normalizeHotelscomHotel(
     freeCancellation,
     amenities,
     externalUrl,
+    discountBadge,
+    accessibilityPriceLabel,
+    promoBadges: promoBadges.length > 0 ? promoBadges : undefined,
+    neighborhood,
     raw: card,
   };
 }
@@ -361,6 +479,9 @@ export interface UnifiedHotelOffer {
   freeCancellation?: boolean;
   breakfastIncluded?: boolean;
   externalUrl?: string;
+  discountBadge?: string;
+  promoBadges?: string[];
+  accessibilityPriceLabel?: string;
   raw?: unknown;
 }
 
@@ -414,6 +535,9 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     freeCancellation: h.freeCancellation,
     breakfastIncluded: h.breakfastIncluded,
     externalUrl: h.externalUrl,
+    discountBadge: h.discountBadge,
+    promoBadges: h.promoBadges,
+    accessibilityPriceLabel: h.accessibilityPriceLabel,
     raw: h.raw,
   };
 }
