@@ -133,12 +133,15 @@ interface BlockCardProps {
   roomDetails?: BookingRoomDetails;
   hotelId: string | number;
   currency: string;
+  /** URL final (já construída) pra abrir esse hotel no Booking.com */
+  bookingUrl: string;
 }
 
 export function HotelDetailBlockCard({
   block,
   roomDetails,
   hotelId,
+  bookingUrl,
 }: BlockCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState<number | null>(null);
