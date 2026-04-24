@@ -153,8 +153,8 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
         <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
       <td className="px-2 py-3">
-        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="sm" onClick={() => onNavigate(sale.id)}><Eye className="w-4 h-4" /></Button>
+        <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
           <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
         </div>
       </td>
