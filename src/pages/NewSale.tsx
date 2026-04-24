@@ -936,7 +936,7 @@ export default function NewSale() {
                     </div>
                     <div>
                       <p className={cn("text-sm font-medium", form.lead_type === "agencia" ? "text-foreground" : "text-muted-foreground")}>Lead da Agência</p>
-                      <p className="text-[11px] text-muted-foreground">Comissão 15% sobre lucro</p>
+                      <p className="text-[11px] text-muted-foreground">Lead recebido pela agência</p>
                     </div>
                   </button>
                   <button
