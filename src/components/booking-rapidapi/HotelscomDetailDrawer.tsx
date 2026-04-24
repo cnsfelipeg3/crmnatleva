@@ -67,6 +67,8 @@ interface Converted {
   priceTaxes?: number;
   pricePerNight?: number;
   currency?: string;
+  /** Tarifa "Member Price" da Hotels.com — pode diferir do preço público. */
+  isMemberPrice?: boolean;
 }
 
 interface Props {
