@@ -360,7 +360,12 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                 <Label>Comissão habilitada</Label>
               </div>
               {form.commission_enabled && (
-                <div><Label>% de comissão</Label><Input type="number" step="0.1" value={f("commission_percent")} onChange={e => set("commission_percent", e.target.value)} /></div>
+                <div className="pt-2 border-t border-border/50">
+                  <CommissionRulesEditor
+                    value={form.commission_rules}
+                    onChange={(rules) => set("commission_rules", rules)}
+                  />
+                </div>
               )}
             </>
           )}
