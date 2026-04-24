@@ -13,7 +13,18 @@ export type BookingAction =
   | "getLanguages"
   | "hotelscomAutocomplete"
   | "hotelscomSearch"
-  | "hotelscomDetails";
+  | "hotelscomDetails"
+  | "hotelscomContent"
+  | "hotelscomGallery"
+  | "hotelscomAmenities"
+  | "hotelscomOffers"
+  | "hotelscomSummary"
+  | "hotelscomLocation"
+  | "hotelscomRatingSummary"
+  | "hotelscomHighlights"
+  | "hotelscomReviewsList"
+  | "hotelscomReviewsSummary"
+  | "hotelscomHeadline";
 
 export interface BookingDestination {
   dest_id: string;
