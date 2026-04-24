@@ -94,6 +94,20 @@ export function HotelscomCard({ hotel, onClick }: Props) {
           </div>
         )}
 
+        {hotel.promoBadges && hotel.promoBadges.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {hotel.promoBadges.slice(0, 2).map((b, i) => (
+              <Badge
+                key={i}
+                variant="outline"
+                className="text-[9px] px-1.5 py-0 h-4 border-rose-300 text-rose-700 dark:text-rose-400"
+              >
+                {b}
+              </Badge>
+            ))}
+          </div>
+        )}
+
         {typeof hotel.reviewCount === "number" && hotel.reviewCount > 0 && (
           <div className="text-xs text-muted-foreground">
             {hotel.reviewCount.toLocaleString("pt-BR")} avaliações
