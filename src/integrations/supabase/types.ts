@@ -2742,6 +2742,50 @@ export type Database = {
           },
         ]
       }
+      employee_permissions: {
+        Row: {
+          can_create: boolean
+          can_delete: boolean
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          employee_id: string
+          id: string
+          menu_key: string
+          updated_at: string
+        }
+        Insert: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          employee_id: string
+          id?: string
+          menu_key: string
+          updated_at?: string
+        }
+        Update: {
+          can_create?: boolean
+          can_delete?: boolean
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          employee_id?: string
+          id?: string
+          menu_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_permissions_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           address_cep: string | null
@@ -7629,6 +7673,10 @@ export type Database = {
       deduplicate_sales: { Args: never; Returns: Json }
       extract_person_name: { Args: { raw_name: string }; Returns: string }
       get_portal_client_id: { Args: { _user_id: string }; Returns: string }
+      has_menu_permission: {
+        Args: { _action: string; _menu_key: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
