@@ -85,6 +85,8 @@ export default function Sales() {
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { catalog: productCatalog } = useProductTypes();
+
 
   useEffect(() => {
     if (authLoading) return;
