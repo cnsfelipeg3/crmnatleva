@@ -147,19 +147,36 @@ export interface HotelscomLodgingCard {
 // Normalizador HOTELS.COM → UnifiedHotel
 // ============================================================
 
-/** Extrai número de uma string tipo "$249 total" ou "R$ 1.200" */
+/**
+ * Extrai número de uma string formatada em moeda.
+ * Suporta locale BR ("R$ 1.684,50") e EN-US ("$1,684.50" ou "$1,167").
+ * A heurística: se a string contém o símbolo "R$", trata como BR (vírgula = decimal,
+ * ponto = milhar). Caso contrário, trata como EN-US (vírgula = milhar, ponto = decimal).
+ */
 function extractNumber(str?: string): number | undefined {
   if (!str) return undefined;
-  const m = str.replace(/\./g, "").match(/[\d,]+/);
+  // captura apenas dígitos, vírgulas e pontos do primeiro número
+  const m = str.match(/[\d.,]+/);
   if (!m) return undefined;
-  const n = parseFloat(m[0].replace(",", "."));
+  let raw = m[0];
+
+  const isBRL = /R\$/i.test(str);
+  if (isBRL) {
+    // BR: remove pontos (milhar) e troca vírgula por ponto (decimal)
+    raw = raw.replace(/\./g, "").replace(",", ".");
+  } else {
+    // EN-US: remove vírgulas (milhar). Ponto já é decimal.
+    raw = raw.replace(/,/g, "");
+  }
+
+  const n = parseFloat(raw);
   return Number.isFinite(n) ? n : undefined;
 }
 
 /** Detecta moeda a partir do símbolo no texto formatado */
 function detectCurrency(str?: string): string {
   if (!str) return "USD";
-  if (str.includes("R$")) return "BRL";
+  if (/R\$/i.test(str)) return "BRL";
   if (str.includes("€")) return "EUR";
   if (str.includes("£")) return "GBP";
   if (str.includes("$")) return "USD";
