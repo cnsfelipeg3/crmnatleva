@@ -319,6 +319,7 @@ export default function Sales() {
                     <div className="flex flex-col items-end gap-1">
                       <Badge variant="outline" className={cn("text-[10px] shrink-0", statusColor[sale.status] || "")}>{sale.status}</Badge>
                       {renderLeadBadge(sale.lead_type)}
+                      <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={handleDeleted} />
                     </div>
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
