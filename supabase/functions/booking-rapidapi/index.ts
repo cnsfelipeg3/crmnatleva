@@ -32,7 +32,18 @@ const CACHE_TTL: Record<string, number> = {
   // ---- Hotels.com (provider ntd119) ----
   hotelscomAutocomplete: 60 * 60 * 24 * 7, // 7 dias
   hotelscomSearch: 60 * 60,                // 1h
-  hotelscomDetails: 60 * 60 * 24,          // 1 dia
+  hotelscomDetails: 60 * 60 * 24,          // 1 dia (legado, mantido por compat)
+  hotelscomContent: 60 * 60 * 24,
+  hotelscomGallery: 60 * 60 * 24 * 3,
+  hotelscomAmenities: 60 * 60 * 24 * 3,
+  hotelscomOffers: 60 * 30,
+  hotelscomSummary: 60 * 60 * 24,
+  hotelscomLocation: 60 * 60 * 24 * 3,
+  hotelscomRatingSummary: 60 * 60 * 12,
+  hotelscomHighlights: 60 * 60 * 24,
+  hotelscomReviewsList: 60 * 60 * 12,
+  hotelscomReviewsSummary: 60 * 60 * 12,
+  hotelscomHeadline: 60 * 60 * 24,
   // ---- Voos ----
   searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
   searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
@@ -55,7 +66,18 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   // ---- Hotels.com (host diferente, roteado via HOTELSCOM_HOST) ----
   hotelscomAutocomplete: "/hotels/auto-complete",
   hotelscomSearch: "/hotels/search",
-  hotelscomDetails: "/hotels/details",
+  hotelscomDetails: "/hotels/details-content", // alias compat
+  hotelscomContent: "/hotels/details-content",
+  hotelscomGallery: "/hotels/details-gallery",
+  hotelscomAmenities: "/hotels/details-amenities",
+  hotelscomOffers: "/hotels/details-offers",
+  hotelscomSummary: "/hotels/details-summary",
+  hotelscomLocation: "/hotels/details-location",
+  hotelscomRatingSummary: "/hotels/details-rating-summary",
+  hotelscomHighlights: "/hotels/details-highlights",
+  hotelscomReviewsList: "/hotels/reviews-list",
+  hotelscomReviewsSummary: "/hotels/reviews-summary",
+  hotelscomHeadline: "/hotels/details-headline",
   // ---- Voos ----
   searchFlightDestinations: "/api/v1/flights/searchDestination",
   searchFlights: "/api/v1/flights/searchFlights",
@@ -153,6 +175,17 @@ const HOTELSCOM_ACTIONS = new Set([
   "hotelscomAutocomplete",
   "hotelscomSearch",
   "hotelscomDetails",
+  "hotelscomContent",
+  "hotelscomGallery",
+  "hotelscomAmenities",
+  "hotelscomOffers",
+  "hotelscomSummary",
+  "hotelscomLocation",
+  "hotelscomRatingSummary",
+  "hotelscomHighlights",
+  "hotelscomReviewsList",
+  "hotelscomReviewsSummary",
+  "hotelscomHeadline",
 ]);
 
 async function callRapidApi(
@@ -382,12 +415,34 @@ function buildParams(
       return p;
     }
 
-    case "hotelscomDetails": {
-      assertParams(input, ["hotel_id"]);
+    case "hotelscomDetails":
+    case "hotelscomContent":
+    case "hotelscomGallery":
+    case "hotelscomAmenities":
+    case "hotelscomSummary":
+    case "hotelscomLocation":
+    case "hotelscomRatingSummary":
+    case "hotelscomHighlights":
+    case "hotelscomReviewsList":
+    case "hotelscomReviewsSummary":
+    case "hotelscomHeadline": {
+      assertParams(input, ["propertyId"]);
       return {
-        hotel_id: String(input.hotel_id),
-        locale: String(input.locale ?? "pt_BR"),
-        currency: String(input.currency ?? "BRL"),
+        propertyId: String(input.propertyId),
+        domain: String(input.domain ?? "US"),
+        locale: String(input.locale ?? "en_US"),
+      };
+    }
+
+    case "hotelscomOffers": {
+      assertParams(input, ["propertyId", "checkinDate", "checkoutDate"]);
+      return {
+        propertyId: String(input.propertyId),
+        checkinDate: String(input.checkinDate),
+        checkoutDate: String(input.checkoutDate),
+        adults: String(input.adults ?? 1),
+        domain: String(input.domain ?? "US"),
+        locale: String(input.locale ?? "en_US"),
       };
     }
 
