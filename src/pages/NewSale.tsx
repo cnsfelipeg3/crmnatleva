@@ -85,6 +85,22 @@ export default function NewSale() {
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = !!editId;
 
+  // Lista de colaboradores (apenas para admins selecionarem o vendedor da venda)
+  const { data: employeesList = [] } = useQuery({
+    queryKey: ["employees-for-seller-select"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employees")
+        .select("id, user_id, full_name, email, status")
+        .eq("status", "ativo")
+        .not("user_id", "is", null)
+        .order("full_name");
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   // Upload & extraction
   const [dragOver, setDragOver] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
