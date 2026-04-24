@@ -163,6 +163,7 @@ export default function NewSale() {
           locator: (sale.locators as string[])?.join(", ") || "", connections: (sale.connections as string[])?.join(", ") || "",
           miles_program: sale.miles_program || "", emission_source: sale.emission_source || "",
           lead_type: (sale.lead_type as "agencia" | "organico") || "agencia",
+          seller_id: sale.seller_id || "",
           received_value: sale.received_value ? String(sale.received_value) : "",
           paid_value: "", payment_gateway: "", payment_installments: "1",
         });
