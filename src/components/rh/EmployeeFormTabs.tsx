@@ -78,35 +78,53 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
   const [createUser, setCreateUser] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
+  const [permSearch, setPermSearch] = useState("");
+  const [expandedGroup, setExpandedGroup] = useState<string | null>("Principal");
+  const [activePreset, setActivePreset] = useState<RoleTemplate | null>(null);
+  const [permsLoaded, setPermsLoaded] = useState(false);
 
-  // Migra permissões antigas (string por módulo) para o novo formato granular
-  const rawPermissions = form.permissions || {};
-  const permissions: PermissionsMap = MODULE_CATALOG.reduce((acc, mod) => {
-    const existing = rawPermissions[mod.key];
-    if (existing && typeof existing === "object" && "actions" in existing) {
-      acc[mod.key] = existing as ModulePerm;
-    } else if (typeof existing === "string") {
-      // legacy: "total" | "parcial" | "sem_acesso"
-      if (existing === "total") acc[mod.key] = { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) };
-      else if (existing === "parcial") acc[mod.key] = { actions: ["view"], features: {} };
-      else acc[mod.key] = emptyModulePerm();
-    } else {
-      acc[mod.key] = emptyModulePerm();
-    }
-    return acc;
-  }, {} as PermissionsMap);
-
-  const [expandedModule, setExpandedModule] = useState<string | null>(null);
-  const [activePreset, setActivePreset] = useState<string | null>(null);
+  // Permissões em formato { menu_key: { view, create, edit, delete } } — armazenadas em form.permissions
+  const permissions: PermissionsMap = (form.permissions && typeof form.permissions === "object" && !Array.isArray(form.permissions))
+    ? (form.permissions as PermissionsMap)
+    : {};
 
   useEffect(() => {
-    if (form.id) loadDocuments();
+    if (form.id) {
+      loadDocuments();
+      loadPermissionsFromDb();
+    } else {
+      setPermsLoaded(true);
+    }
   }, [form.id]);
 
   const loadDocuments = async () => {
     if (!form.id) return;
     const { data } = await supabase.from("employee_documents").select("*").eq("employee_id", form.id).order("created_at", { ascending: false });
     setDocuments(data || []);
+  };
+
+  const loadPermissionsFromDb = async () => {
+    if (!form.id) return;
+    const { data } = await (supabase as any)
+      .from("employee_permissions")
+      .select("menu_key, can_view, can_create, can_edit, can_delete")
+      .eq("employee_id", form.id);
+    if (data && data.length > 0) {
+      const map: PermissionsMap = {};
+      for (const row of data as any[]) {
+        const p: MenuPerm = {};
+        if (row.can_view) p.view = true;
+        if (row.can_create) p.create = true;
+        if (row.can_edit) p.edit = true;
+        if (row.can_delete) p.delete = true;
+        map[row.menu_key] = p;
+      }
+      // Só sobrescreve form.permissions se o form ainda não tem nada gravado
+      if (!form.permissions || Object.keys(form.permissions).length === 0) {
+        setForm({ ...form, permissions: map });
+      }
+    }
+    setPermsLoaded(true);
   };
 
   const f = (key: string) => form[key] || "";
@@ -117,50 +135,79 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
     set("work_days", days.includes(day) ? days.filter(d => d !== day) : [...days, day]);
   };
 
-  const setModulePerm = (modKey: string, next: ModulePerm) => {
-    set("permissions", { ...permissions, [modKey]: next });
+  const setMenuPerm = (menuKey: string, next: MenuPerm) => {
+    const cleaned = { ...next };
+    // limpa chaves false pra manter o objeto enxuto
+    (Object.keys(cleaned) as MenuAction[]).forEach(k => { if (!cleaned[k]) delete cleaned[k]; });
+    const nextAll = { ...permissions, [menuKey]: cleaned };
+    if (Object.keys(cleaned).length === 0) delete nextAll[menuKey];
+    set("permissions", nextAll);
     setActivePreset(null);
   };
 
-  const toggleAction = (modKey: string, action: PermAction) => {
-    const current = permissions[modKey] || emptyModulePerm();
-    const has = current.actions.includes(action);
-    let nextActions = has ? current.actions.filter(a => a !== action) : [...current.actions, action];
+  const toggleAction = (menuKey: string, action: MenuAction) => {
+    const current = permissions[menuKey] || emptyPerm();
+    const has = !!current[action];
+    const next: MenuPerm = { ...current, [action]: !has };
     // Regra: se ativar qualquer ação, garante "view" também
-    if (!has && action !== "view" && !nextActions.includes("view")) nextActions = ["view", ...nextActions];
+    if (!has && action !== "view") next.view = true;
     // Regra: se remover "view", remove tudo
-    if (has && action === "view") nextActions = [];
-    setModulePerm(modKey, { ...current, actions: nextActions });
+    if (has && action === "view") {
+      next.create = false; next.edit = false; next.delete = false;
+    }
+    setMenuPerm(menuKey, next);
   };
 
-  const toggleFeature = (modKey: string, featKey: string) => {
-    const current = permissions[modKey] || emptyModulePerm();
-    setModulePerm(modKey, { ...current, features: { ...current.features, [featKey]: !current.features[featKey] } });
+  const setGroupActions = (group: string, mode: "all" | "view" | "none") => {
+    const next = { ...permissions };
+    for (const menu of SYSTEM_MENUS.filter(m => m.group === group)) {
+      if (mode === "none") { delete next[menu.key]; continue; }
+      const p: MenuPerm = {};
+      if (mode === "all") {
+        for (const a of menu.actions) p[a] = true;
+      } else if (mode === "view") {
+        if (menu.actions.includes("view")) p.view = true;
+      }
+      if (Object.keys(p).length > 0) next[menu.key] = p; else delete next[menu.key];
+    }
+    set("permissions", next);
+    setActivePreset(null);
   };
 
-  const setAllActions = (modKey: string, mode: "all" | "none" | "readonly") => {
-    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
-    if (mode === "all") setModulePerm(modKey, { actions: [...mod.actions], features: Object.fromEntries(mod.features.map(f => [f.key, true])) });
-    else if (mode === "readonly") setModulePerm(modKey, { actions: ["view"], features: {} });
-    else setModulePerm(modKey, emptyModulePerm());
-  };
-
-  const applyPreset = (presetKey: string) => {
-    const preset = PERMISSION_PRESETS[presetKey];
-    if (!preset) return;
-    set("permissions", preset.build());
+  const applyPreset = (presetKey: RoleTemplate) => {
+    const built = buildFromTemplate(presetKey);
+    set("permissions", built);
     setActivePreset(presetKey);
-    toast.success(`Perfil "${preset.label}" aplicado`);
+    toast.success(`Perfil "${PERMISSION_PRESETS[presetKey].label}" aplicado`);
   };
 
-  const moduleStatus = (modKey: string): "total" | "custom" | "readonly" | "none" => {
-    const mod = MODULE_CATALOG.find(m => m.key === modKey)!;
-    const p = permissions[modKey] || emptyModulePerm();
-    if (p.actions.length === 0) return "none";
-    if (p.actions.length === 1 && p.actions[0] === "view" && Object.values(p.features).every(v => !v)) return "readonly";
-    if (p.actions.length === mod.actions.length && mod.features.every(f => p.features[f.key])) return "total";
+  const groupStatus = (group: string): "total" | "custom" | "readonly" | "none" => {
+    const menus = SYSTEM_MENUS.filter(m => m.group === group);
+    let totalCount = 0, viewOnlyCount = 0, anyCount = 0;
+    for (const menu of menus) {
+      const p = permissions[menu.key];
+      if (!p || Object.keys(p).length === 0) continue;
+      anyCount++;
+      const hasAll = menu.actions.every(a => p[a]);
+      if (hasAll) totalCount++;
+      else if (p.view && !p.create && !p.edit && !p.delete) viewOnlyCount++;
+    }
+    if (anyCount === 0) return "none";
+    if (totalCount === menus.length) return "total";
+    if (viewOnlyCount === menus.length) return "readonly";
     return "custom";
   };
+
+  // Filtra menus pela busca
+  const filteredMenusByGroup = MENU_GROUPS.reduce((acc, group) => {
+    const menus = SYSTEM_MENUS.filter(m => m.group === group);
+    const filtered = permSearch
+      ? menus.filter(m => m.label.toLowerCase().includes(permSearch.toLowerCase()) || m.path.toLowerCase().includes(permSearch.toLowerCase()))
+      : menus;
+    if (filtered.length > 0) acc[group] = filtered;
+    return acc;
+  }, {} as Record<string, typeof SYSTEM_MENUS>);
+
 
   const handleUploadDoc = async (e: React.ChangeEvent<HTMLInputElement>, docType: string) => {
     if (!form.id || !e.target.files?.length) return;
