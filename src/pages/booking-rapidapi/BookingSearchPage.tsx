@@ -400,8 +400,18 @@ export default function BookingSearchPage() {
       </Card>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {searchParams && (
-          <div className="hidden lg:block w-72 shrink-0">
+        {searchParams && !filtersCollapsed && (
+          <div className="hidden lg:block w-72 shrink-0 relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFiltersCollapsed(true)}
+              className="absolute -right-3 top-2 z-10 h-7 w-7 rounded-full bg-background border shadow-sm"
+              aria-label="Recolher filtros"
+              title="Recolher filtros"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
             <HotelFiltersSidebar
               filters={filtersData?.filters}
               isLoading={filtersLoading}
