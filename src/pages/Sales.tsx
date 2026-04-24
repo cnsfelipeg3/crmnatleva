@@ -233,6 +233,9 @@ export default function Sales() {
     return { all: t(sales), filtered: t(filtered) };
   }, [sales, filtered]);
 
+  const handleNavigateSale = useCallback((id: string) => navigate(`/sales/${id}`), [navigate]);
+  const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
+
   const handleExport = () => {
     const headers = ["ID", "Nome", "Status", "Origem", "Destino", "PAX", "Receita", "Custo", "Lucro", "Margem%", "Lead", "Data Ida", "Data Volta"];
     const rows = filtered.map(s => [
