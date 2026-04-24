@@ -444,6 +444,17 @@ export default function BookingSearchPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {filtersCollapsed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFiltersCollapsed(false)}
+                    className="hidden lg:inline-flex"
+                  >
+                    <PanelLeftOpen className="h-4 w-4 mr-2" />
+                    Mostrar filtros
+                  </Button>
+                )}
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="lg:hidden">
