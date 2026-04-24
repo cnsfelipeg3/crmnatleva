@@ -201,7 +201,7 @@ export default function Colaboradores() {
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.position}</TableCell>
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.department}</TableCell>
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge variant="outline">{e.contract_type}</Badge></TableCell>
-                  <TableCell className="font-mono text-xs cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.hire_date}</TableCell>
+                  <TableCell className="font-mono text-xs cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>{e.hire_date ? e.hire_date.split('-').reverse().join('/') : '-'}</TableCell>
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge className={statusColor(e.status)}>{e.status}</Badge></TableCell>
                   <TableCell className="text-right font-mono cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>R$ {Number(e.base_salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
