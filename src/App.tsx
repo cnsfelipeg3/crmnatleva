@@ -21,6 +21,7 @@ const lazyRetry = (fn: () => Promise<any>) =>
 const AppLayout = lazyRetry(() => import("@/components/AppLayout"));
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
+const EmployeeDashboard = lazy(() => import("@/pages/EmployeeDashboard"));
 const Sales = lazy(() => import("@/pages/Sales"));
 const SaleDetail = lazy(() => import("@/pages/SaleDetail"));
 const NewSale = lazy(() => import("@/pages/NewSale"));
@@ -197,7 +198,7 @@ function AppRoutes() {
         {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<DashboardSwitch />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/sales/new" element={<NewSale />} />
           <Route path="/sales/:id/edit" element={<NewSale />} />
