@@ -415,12 +415,34 @@ function buildParams(
       return p;
     }
 
-    case "hotelscomDetails": {
-      assertParams(input, ["hotel_id"]);
+    case "hotelscomDetails":
+    case "hotelscomContent":
+    case "hotelscomGallery":
+    case "hotelscomAmenities":
+    case "hotelscomSummary":
+    case "hotelscomLocation":
+    case "hotelscomRatingSummary":
+    case "hotelscomHighlights":
+    case "hotelscomReviewsList":
+    case "hotelscomReviewsSummary":
+    case "hotelscomHeadline": {
+      assertParams(input, ["propertyId"]);
       return {
-        hotel_id: String(input.hotel_id),
-        locale: String(input.locale ?? "pt_BR"),
-        currency: String(input.currency ?? "BRL"),
+        propertyId: String(input.propertyId),
+        domain: String(input.domain ?? "US"),
+        locale: String(input.locale ?? "en_US"),
+      };
+    }
+
+    case "hotelscomOffers": {
+      assertParams(input, ["propertyId", "checkinDate", "checkoutDate"]);
+      return {
+        propertyId: String(input.propertyId),
+        checkinDate: String(input.checkinDate),
+        checkoutDate: String(input.checkoutDate),
+        adults: String(input.adults ?? 1),
+        domain: String(input.domain ?? "US"),
+        locale: String(input.locale ?? "en_US"),
       };
     }
 
