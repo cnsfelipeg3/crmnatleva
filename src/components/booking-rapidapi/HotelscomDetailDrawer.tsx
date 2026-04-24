@@ -296,9 +296,14 @@ export function HotelscomDetailDrawer({
   const rates = exchangeData?.rates ?? null;
 
   // Galeria completa (do details-gallery), com fallback pras 3 fotos do card
+  const galleryData = useMemo(
+    () => extractGallery(details?.gallery),
+    [details?.gallery],
+  );
   const fullGalleryPhotos = useMemo(() => {
-    const fromDetails = extractGalleryPhotos(details?.gallery);
-    if (fromDetails.length > 0) return fromDetails;
+    if (galleryData.photos.length > 0) {
+      return galleryData.photos.map((p) => ({ url: p.url, caption: p.caption }));
+    }
     const fromCard = card?.mediaSection?.gallery?.media ?? [];
     return fromCard
       .map((p) => ({
@@ -310,20 +315,35 @@ export function HotelscomDetailDrawer({
         caption: p.media?.description,
       }))
       .filter((p) => p.url);
-  }, [details?.gallery, card]);
+  }, [galleryData, card]);
 
-  const rooms = useMemo(() => extractRooms(details?.offers), [details?.offers]);
+  const richRooms = useMemo<HotelscomRoom[]>(
+    () => extractRoomsRich(details?.offers),
+    [details?.offers],
+  );
   const amenitiesGroups = useMemo(
-    () => extractAmenitiesGroups(details?.amenities),
+    () => extractAmenityGroups(details?.amenities),
     [details?.amenities],
   );
-  const reviews = useMemo(
-    () => extractReviews(details?.reviewsList),
+  const reviewsRich = useMemo(
+    () => extractReviewsList(details?.reviewsList),
     [details?.reviewsList],
   );
-  const categoryScores = useMemo(
-    () => extractCategoryScores(details?.ratingSummary),
+  const ratingSummary = useMemo(
+    () => extractRatingSummary(details?.ratingSummary),
     [details?.ratingSummary],
+  );
+  const locationRich = useMemo(
+    () => extractLocation(details?.location),
+    [details?.location],
+  );
+  const headlineRich = useMemo(
+    () => extractHeadline(details?.headline),
+    [details?.headline],
+  );
+  const offerPerks = useMemo(
+    () => extractAllOfferPerks(details?.offers),
+    [details?.offers],
   );
 
   if (!card) return null;
