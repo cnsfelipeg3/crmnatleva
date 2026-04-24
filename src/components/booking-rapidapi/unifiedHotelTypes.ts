@@ -690,24 +690,30 @@ export function groupHotelsByIdentity(
   }
 
   // ---------- ETAPA 2: merge fuzzy (nome + geo) entre buckets ----------
-  type Cluster = { key: string; members: UnifiedHotel[]; centroid: UnifiedHotel };
+  type Cluster = { key: string; members: UnifiedHotel[] };
   const clusters: Cluster[] = [];
   for (const [key, members] of buckets) {
-    // Centroide = primeiro Booking se houver, senão primeiro
-    const centroid =
-      members.find((m) => m.source === "booking") ?? members[0];
-
-    // Tenta encaixar em cluster existente
-    let merged = false;
+    // Tenta encaixar em cluster existente — compara contra TODOS os membros
+    // (não só centroide) e usa o melhor score, pra capturar matches assimétricos.
+    let bestCluster: Cluster | null = null;
+    let bestScore = 0;
     for (const c of clusters) {
-      const score = similarityScore(centroid, c.centroid);
-      if (score >= 0.85) {
-        c.members.push(...members);
-        merged = true;
-        break;
+      for (const candidate of members) {
+        for (const existing of c.members) {
+          const score = similarityScore(candidate, existing);
+          if (score > bestScore) {
+            bestScore = score;
+            bestCluster = c;
+          }
+        }
       }
     }
-    if (!merged) clusters.push({ key, members: [...members], centroid });
+    // Threshold: 0.8 — calibrado pra reduzir falsos negativos sem juntar hotéis distintos.
+    if (bestCluster && bestScore >= 0.8) {
+      bestCluster.members.push(...members);
+    } else {
+      clusters.push({ key, members: [...members] });
+    }
   }
 
   const result: UnifiedHotelGroup[] = [];
