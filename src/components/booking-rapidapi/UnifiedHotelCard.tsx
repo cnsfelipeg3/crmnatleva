@@ -129,13 +129,8 @@ export function UnifiedHotelCard({ group, onOfferClick, onCardClick }: Props) {
           </div>
         )}
 
-        {/* Badge "Economia X%" — só se múltiplas ofertas e delta ≥ 3% */}
-        {offers.length > 1 && priceDeltaPercent >= 3 && typeof savings === "number" && (
-          <Badge className="absolute top-2 left-2 bg-emerald-600 text-white gap-1 shadow">
-            <TrendingDown className="h-3 w-3" />
-            −{priceDeltaPercent}% comparando
-          </Badge>
-        )}
+        {/* Badge "Economia X%" foi removido daqui pra não estragar a foto.
+            O delta agora aparece embaixo, junto ao preço (ver bloco abaixo). */}
       </div>
 
       {/* Conteúdo */}
@@ -190,15 +185,22 @@ export function UnifiedHotelCard({ group, onOfferClick, onCardClick }: Props) {
             />
           ))}
 
-          <div className="flex items-center justify-between mt-1 pt-1">
-            <span className="text-[10px] text-muted-foreground">
+          <div className="flex items-center justify-between mt-1 pt-1 gap-2">
+            <span className="text-[10px] text-muted-foreground truncate">
               {offers.length === 1
                 ? "total da estadia"
                 : `${offers.length} fontes · total da estadia`}
             </span>
-            <span className="text-xs text-primary font-medium shrink-0">
-              Ver detalhes
-            </span>
+            {offers.length > 1 && priceDeltaPercent >= 3 && typeof savings === "number" ? (
+              <span className="inline-flex items-center gap-1 text-[10px] font-medium text-emerald-700 dark:text-emerald-400 shrink-0">
+                <TrendingDown className="h-3 w-3" />
+                economize {priceDeltaPercent}%
+              </span>
+            ) : (
+              <span className="text-xs text-primary font-medium shrink-0">
+                Ver detalhes
+              </span>
+            )}
           </div>
         </div>
       </div>

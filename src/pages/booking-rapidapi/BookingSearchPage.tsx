@@ -7,6 +7,8 @@ import {
   Cloud,
   SlidersHorizontal,
   Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import { Button } from "@/components/ui/button";
@@ -120,6 +122,7 @@ export default function BookingSearchPage() {
   );
 
   const [currentPage, setCurrentPage] = useState(1);
+  const [filtersCollapsed, setFiltersCollapsed] = useState(false);
 
   // Drawer unificado (1 hotel = vários providers em tabs)
   const [selectedGroup, setSelectedGroup] = useState<UnifiedHotelGroup | null>(null);
@@ -397,8 +400,18 @@ export default function BookingSearchPage() {
       </Card>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {searchParams && (
-          <div className="hidden lg:block w-72 shrink-0">
+        {searchParams && !filtersCollapsed && (
+          <div className="hidden lg:block w-72 shrink-0 relative">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setFiltersCollapsed(true)}
+              className="absolute -right-3 top-2 z-10 h-7 w-7 rounded-full bg-background border shadow-sm"
+              aria-label="Recolher filtros"
+              title="Recolher filtros"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </Button>
             <HotelFiltersSidebar
               filters={filtersData?.filters}
               isLoading={filtersLoading}
@@ -431,6 +444,17 @@ export default function BookingSearchPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {filtersCollapsed && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setFiltersCollapsed(false)}
+                    className="hidden lg:inline-flex"
+                  >
+                    <PanelLeftOpen className="h-4 w-4 mr-2" />
+                    Mostrar filtros
+                  </Button>
+                )}
                 <Sheet>
                   <SheetTrigger asChild>
                     <Button variant="outline" size="sm" className="lg:hidden">
