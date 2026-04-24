@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { getProductLabel } from "@/lib/productTypes";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import FlightRegistrationSection from "@/components/FlightRegistrationSection";
 import AirCostBlocksEditor, { type AirCostBlock, createEmptyAirCostBlock, calcBlockCost } from "@/components/AirCostBlocksEditor";
@@ -668,10 +669,10 @@ export default function NewSale() {
       // Tariff conditions
       const tariffConditions: any[] = [];
       if (airTariff.fare_name) {
-        tariffConditions.push({ sale_id: saleId, product_type: "aereo", product_label: "Aéreo", ...airTariff });
+        tariffConditions.push({ sale_id: saleId, product_type: "aereo", product_label: getProductLabel("aereo"), ...airTariff });
       }
       if (hotelTariff.fare_name) {
-        tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: "Hospedagem", ...hotelTariff });
+        tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: getProductLabel("hospedagem"), ...hotelTariff });
       }
       // Product-level tariffs
       for (const p of otherProducts) {
@@ -845,8 +846,8 @@ export default function NewSale() {
           {[
             { id: "info", icon: FileText, label: "Venda" },
             { id: "passageiros", icon: Users, label: "Passageiros" },
-            { id: "aereo", icon: Plane, label: "Aéreo" },
-            { id: "hospedagem", icon: Hotel, label: "Hospedagem" },
+            { id: "aereo", icon: Plane, label: getProductLabel("aereo") },
+            { id: "hospedagem", icon: Hotel, label: getProductLabel("hospedagem") },
             { id: "produtos", icon: ShoppingBag, label: "Produtos" },
             { id: "pagamentos", icon: DollarSign, label: "Pagamentos" },
             { id: "anexos", icon: Paperclip, label: "Anexos / IA" },
@@ -1010,7 +1011,7 @@ export default function NewSale() {
             <TariffConditionsCard
               value={airTariff}
               onChange={setAirTariff}
-              productLabel="Aéreo"
+              productLabel={getProductLabel("aereo")}
               compact
             />
             <StepNavigation />
@@ -1021,7 +1022,7 @@ export default function NewSale() {
         <TabsContent value="hospedagem">
           <div className="space-y-4">
             <Card className="p-6">
-              <SectionTitle icon={Hotel} title="Hospedagem" subtitle="Cadastre uma ou mais hospedagens com seus custos individuais" />
+              <SectionTitle icon={Hotel} title={getProductLabel("hospedagem")} subtitle="Cadastre uma ou mais hospedagens com seus custos individuais" />
             </Card>
 
             <HotelEntriesEditor
@@ -1036,7 +1037,7 @@ export default function NewSale() {
             <TariffConditionsCard
               value={hotelTariff}
               onChange={setHotelTariff}
-              productLabel="Hospedagem"
+              productLabel={getProductLabel("hospedagem")}
               compact
             />
             <StepNavigation />
