@@ -406,8 +406,7 @@ export function normalizeHotelscomHotel(
   const promoBadges = extractPromoBadges(card);
   const topCurMatch = externalUrl?.match(/[?&]top_cur=([^&]+)/i);
   const topCur = topCurMatch?.[1]?.toUpperCase();
-  const isEstimatedPrice =
-    source === undefined ? false : !!topCur && topCur !== "BRL";
+  const isEstimatedPrice = !!topCur && topCur !== "BRL";
 
   return {
     source: "hotelscom",
