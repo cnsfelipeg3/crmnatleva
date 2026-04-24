@@ -412,7 +412,7 @@ export default function Sales() {
                           </span>
                         </th>
                       ))}
-                      <th className="px-2 py-3"></th>
+                      <th className="px-2 py-3 text-center font-semibold text-muted-foreground text-xs">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
