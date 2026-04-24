@@ -580,16 +580,16 @@ export default function SaleDetail() {
               {/* Route visual */}
               <div className="flex items-center justify-center gap-6 py-4 mb-3">
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.origin_city, sale.origin_iata) || "?"}</p>
-                  {(sale.origin_city || sale.origin_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.origin_city, sale.origin_iata)}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.origin_city, routeEndpoints.originIata) || "?"}</p>
+                  {(sale.origin_city || routeEndpoints.originIata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.origin_city, routeEndpoints.originIata)}</p>}
                 </div>
                 <div className="flex-1 max-w-[200px] relative">
                   <div className="border-t-2 border-dashed border-border" />
                   <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 text-primary bg-card p-0.5" />
                 </div>
                 <div className="text-center">
-                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.destination_city, sale.destination_iata) || "?"}</p>
-                  {(sale.destination_city || sale.destination_iata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.destination_city, sale.destination_iata)}</p>}
+                  <p className="text-3xl font-bold font-mono text-primary">{routeCode(sale.destination_city, routeEndpoints.destinationIata) || "?"}</p>
+                  {(sale.destination_city || routeEndpoints.destinationIata) && <p className="text-[10px] text-muted-foreground mt-0.5">{routeLabel(sale.destination_city, routeEndpoints.destinationIata)}</p>}
                 </div>
               </div>
 
