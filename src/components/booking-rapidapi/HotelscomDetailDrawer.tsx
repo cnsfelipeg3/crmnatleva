@@ -247,16 +247,21 @@ export function HotelscomDetailDrawer({
           <SheetHeader className="p-5 border-b space-y-3">
             <div className="flex items-start gap-3">
               <div className="flex-1 min-w-0 space-y-2">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge className="bg-rose-500 text-white hover:bg-rose-500">
                     Hotels.com
                   </Badge>
+                  {discountBadgeText && (
+                    <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive font-bold">
+                      🔥 {discountBadgeText}
+                    </Badge>
+                  )}
                 </div>
                 <SheetTitle className="text-xl leading-tight">{name}</SheetTitle>
-                {location && (
+                {(location || neighborhood) && (
                   <div className="flex items-center gap-1 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    <span>{location}</span>
+                    <span>{[location, neighborhood].filter(Boolean).join(" · ")}</span>
                   </div>
                 )}
                 <div className="flex flex-wrap items-center gap-2">
