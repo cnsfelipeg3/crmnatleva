@@ -370,10 +370,10 @@ export default function Sales() {
                     <col style={{ width: "9%" }} />
                     <col style={{ width: "9%" }} />
                     <col style={{ width: "9%" }} />
+                    <col style={{ width: "5%" }} />
                     <col style={{ width: "5.5%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "2.5%" }} />
+                    <col style={{ width: "5%" }} />
+                    <col style={{ width: "5%" }} />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
