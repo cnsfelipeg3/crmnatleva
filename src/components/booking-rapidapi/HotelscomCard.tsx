@@ -53,6 +53,13 @@ export function HotelscomCard({ hotel, onClick }: Props) {
           Hotels.com
         </div>
 
+        {/* Selo de desconto — abaixo do badge da fonte */}
+        {hotel.discountBadge && (
+          <div className="absolute top-9 left-2 inline-flex items-center rounded-md bg-destructive/95 backdrop-blur px-2 py-1 text-[10px] font-bold text-destructive-foreground shadow">
+            {hotel.discountBadge}
+          </div>
+        )}
+
         {typeof hotel.reviewScore === "number" && (
           <div className="absolute top-2 right-2 inline-flex items-center gap-1 rounded-md bg-background/90 backdrop-blur px-2 py-1 text-xs font-semibold shadow">
             <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
