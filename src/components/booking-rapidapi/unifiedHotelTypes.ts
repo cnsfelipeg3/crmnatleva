@@ -61,6 +61,8 @@ export interface UnifiedHotel {
   ratingTheme?: string;
   /** ID composto do Hotels.com ("regionId_propertyId") usado nos endpoints de detalhe */
   propertyIdComposite?: string;
+  /** True quando o preço é tarifa de membro/loyalty (pode diferir do preço público no site) */
+  isMemberPrice?: boolean;
   /** Dados brutos originais pra debug/detalhamento */
   raw?: unknown;
 }
@@ -290,7 +292,11 @@ export function normalizeHotelscomHotel(
   const heading = card.headingSection?.heading || "Hotel sem nome";
   const location = card.headingSection?.messages?.[0]?.text;
 
-  // Preço principal
+  // Preço principal — formattedDisplayPrice é geralmente o TOTAL da estadia
+  // (confirmado pelo accessibilityLabel "for N nights"). A API ntd119 retorna
+  // valores em USD por padrão e os preços costumam ser tarifas promocionais
+  // ("Member Price") que diferem do site público. Por isso exibimos per-night
+  // calculado também, pra o vendedor sanity-check.
   const priceOptV2 = card.priceSection?.priceSummary?.optionsV2?.[0];
   const priceFormatted =
     priceOptV2?.formattedDisplayPrice ?? priceOptV2?.displayPrice?.formatted;
@@ -300,13 +306,26 @@ export function normalizeHotelscomHotel(
   const priceStriked =
     priceOptV2?.strikeOut?.amount ?? extractNumber(strikedFormatted);
 
-  // Preço por noite (em displayMessagesV2)
+  // Preço por noite (procura em todos os displayMessagesV2)
   let pricePerNight: number | undefined;
-  const firstMsg = card.priceSection?.priceSummary?.displayMessagesV2?.[0]
-    ?.lineItems?.[0];
-  if (firstMsg?.state === "REASSURANCE_DISPLAY_QUALIFIER") {
-    pricePerNight = extractNumber(firstMsg.value);
+  const dmList = card.priceSection?.priceSummary?.displayMessagesV2 ?? [];
+  for (const dm of dmList) {
+    for (const li of dm?.lineItems ?? []) {
+      if (
+        li?.state === "REASSURANCE_DISPLAY_QUALIFIER" &&
+        typeof li.value === "string" &&
+        /night/i.test(li.value)
+      ) {
+        pricePerNight = extractNumber(li.value);
+        break;
+      }
+    }
+    if (pricePerNight) break;
   }
+
+  // Detecta se é tarifa de membro/promocional (badge "Member Price")
+  const badgeText = card.priceSection?.badge?.text ?? "";
+  const isMemberPrice = /member|loyalty|signed.in/i.test(badgeText);
 
   // Fotos + legendas
   const mediaItems = card.mediaSection?.gallery?.media ?? [];
@@ -396,6 +415,7 @@ export function normalizeHotelscomHotel(
     promoBadges: promoBadges.length > 0 ? promoBadges : undefined,
     neighborhood,
     propertyIdComposite: card.propertyId,
+    isMemberPrice,
     raw: card,
   };
 }
@@ -487,6 +507,8 @@ export interface UnifiedHotelOffer {
   accessibilityPriceLabel?: string;
   /** ID composto do Hotels.com ("regionId_propertyId") — usado pra buscar detalhes ricos */
   propertyIdComposite?: string;
+  /** True quando o preço é tarifa de membro/loyalty (não bate com o preço público) */
+  isMemberPrice?: boolean;
   raw?: unknown;
 }
 
@@ -608,6 +630,7 @@ function toOffer(h: UnifiedHotel): UnifiedHotelOffer {
     promoBadges: h.promoBadges,
     accessibilityPriceLabel: h.accessibilityPriceLabel,
     propertyIdComposite: h.propertyIdComposite,
+    isMemberPrice: h.isMemberPrice,
     raw: h.raw,
   };
 }
