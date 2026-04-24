@@ -21,7 +21,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { MENU_BY_PATH } from "@/lib/systemMenus";
 
 const navItems = [
-  { to: "/dashboard", icon: Home, label: "Home", alwaysVisible: true },
+  { to: "/dashboard", icon: Home, label: "Início", alwaysVisible: true },
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
