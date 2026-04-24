@@ -4,7 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { iataToLabel, normalizeProducts } from "@/lib/iataUtils";
+import { iataToLabel } from "@/lib/iataUtils";
+import { normalizeProductsToSlugs, getProductLabel } from "@/lib/productTypes";
 import { PieChart, Pie, Cell as PieCell } from "recharts";
 
 const PIE_COLORS = [
@@ -53,9 +54,10 @@ export default function CommercialSection({ filtered, segments, sellerNames }: P
 
   const productData = useMemo(() => {
     const c: Record<string, Sale[]> = {};
-    filtered.forEach(s => normalizeProducts(s.products || []).forEach(p => {
-      if (!c[p]) c[p] = [];
-      c[p].push(s);
+    filtered.forEach(s => normalizeProductsToSlugs(s.products || []).forEach(slug => {
+      const label = getProductLabel(slug);
+      if (!c[label]) c[label] = [];
+      c[label].push(s);
     }));
     const all = Object.entries(c).map(([name, sales]) => ({ name, value: sales.length, sales })).sort((a, b) => b.value - a.value);
     const total = all.reduce((s, v) => s + v.value, 0);

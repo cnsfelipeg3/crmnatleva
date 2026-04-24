@@ -5,6 +5,7 @@ import { Plus, Activity, X, Filter, SlidersHorizontal, Crown } from "lucide-reac
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useProductTypes } from "@/lib/productTypes";
 
 interface Props {
   period: string; setPeriod: (v: string) => void;
@@ -42,6 +43,7 @@ export default function DashboardFilters({
 }: Props) {
   const navigate = useNavigate();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const { catalog: productCatalog } = useProductTypes();
 
   const applyPreset = (preset: typeof STRATEGIC_PRESETS[0]) => {
     onClearAll();
@@ -133,12 +135,9 @@ export default function DashboardFilters({
             <SelectTrigger className="w-[130px] h-8 text-xs glass-card"><SelectValue placeholder="Produto" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Produtos</SelectItem>
-              <SelectItem value="Passagem Aérea">Passagem Aérea</SelectItem>
-              <SelectItem value="Hotel">Hotel</SelectItem>
-              <SelectItem value="Seguro Viagem">Seguro Viagem</SelectItem>
-              <SelectItem value="Passeios">Passeios</SelectItem>
-              <SelectItem value="Cruzeiro">Cruzeiro</SelectItem>
-              <SelectItem value="Transfer">Transfer</SelectItem>
+              {productCatalog.map(p => (
+                <SelectItem key={p.slug} value={p.slug}>{p.label}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 

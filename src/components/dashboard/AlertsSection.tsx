@@ -6,6 +6,7 @@ import { AlertTriangle, FileWarning, ShieldAlert, Lightbulb, TrendingDown, Trend
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { iataToLabel } from "@/lib/iataUtils";
+import { hasProduct } from "@/lib/productTypes";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +84,7 @@ export default function AlertsSection({ filtered, sellerNames, clients }: Props)
         a.push({ type: "warning", icon: AlertTriangle, msg: `${s.display_id} — Margem baixa: ${(s.margin || 0).toFixed(1)}%`, saleId: s.id });
       if (s.status === "Emitido" && (!s.locators || s.locators.length === 0 || s.locators.every(l => !l)))
         a.push({ type: "error", icon: FileWarning, msg: `${s.display_id} — Localizador vazio (Emitido)`, saleId: s.id });
-      if (s.is_international && !s.hotel_name && s.products?.includes("Hotel"))
+      if (s.is_international && !s.hotel_name && hasProduct(s.products, "hospedagem"))
         a.push({ type: "info", icon: ShieldAlert, msg: `${s.display_id} — Internacional sem hotel`, saleId: s.id });
     });
     return a.slice(0, 15);

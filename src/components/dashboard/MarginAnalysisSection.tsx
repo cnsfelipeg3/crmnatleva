@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { iataToLabel, normalizeProducts } from "@/lib/iataUtils";
+import { iataToLabel } from "@/lib/iataUtils";
+import { normalizeProductsToSlugs, getProductLabel } from "@/lib/productTypes";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
@@ -51,12 +52,13 @@ export default function MarginAnalysisSection({ filtered, sellerNames, getRegion
   const productMargin = useMemo(() => {
     const map: Record<string, { name: string; receita: number; lucro: number; margem: number[]; count: number }> = {};
     filtered.forEach(s => {
-      normalizeProducts(s.products || []).forEach(p => {
-        if (!map[p]) map[p] = { name: p, receita: 0, lucro: 0, margem: [], count: 0 };
-        map[p].receita += s.received_value || 0;
-        map[p].lucro += (s.received_value || 0) - (s.total_cost || 0);
-        map[p].margem.push(s.margin || 0);
-        map[p].count++;
+      normalizeProductsToSlugs(s.products || []).forEach(slug => {
+        const label = getProductLabel(slug);
+        if (!map[label]) map[label] = { name: label, receita: 0, lucro: 0, margem: [], count: 0 };
+        map[label].receita += s.received_value || 0;
+        map[label].lucro += (s.received_value || 0) - (s.total_cost || 0);
+        map[label].margem.push(s.margin || 0);
+        map[label].count++;
       });
     });
     return Object.values(map)
