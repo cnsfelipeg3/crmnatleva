@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquare, Upload, Trash2, ChevronDown, ChevronRight, Check, X, Eye, Plus, Pencil, Download, CheckCircle2, Search } from "lucide-react";
 import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTemplate } from "@/lib/systemMenus";
+import CommissionRulesEditor from "@/components/rh/CommissionRulesEditor";
 
 const POSITIONS = ["SDR", "Vendas", "Consultor", "Operação", "Financeiro", "Admin", "Marketing", "Atendimento"];
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
