@@ -102,6 +102,18 @@ export default function Colaboradores() {
     load();
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    const { error } = await supabase.from("employees").delete().eq("id", deleteTarget.id);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+    } else {
+      toast.success(`${deleteTarget.full_name} foi excluído`);
+      setDeleteTarget(null);
+      load();
+    }
+  };
+
   const exportCSV = () => {
     const headers = "Nome,Cargo,Área,Contrato,Status,Salário,Admissão\n";
     const rows = filtered.map(e => `"${e.full_name}","${e.position}","${e.department}","${e.contract_type}","${e.status}",${e.base_salary},"${e.hire_date}"`).join("\n");
