@@ -18,7 +18,11 @@ import {
   Wallet,
   CalendarHeart,
   Image as ImageIcon,
+  MessagesSquare,
 } from "lucide-react";
+
+// Emails que enxergam ações exclusivas de gestor (Feedback 1:1 etc.)
+const MANAGER_EMAILS = ["arthurlessa713@gmail.com"];
 
 interface QuickAction {
   menuKey: string;
@@ -152,7 +156,25 @@ export default function EmployeeDashboard() {
 
   if (loading) return null;
 
-  const visible = QUICK_ACTIONS.filter((a) => can(a.menuKey, "view"));
+  const isManager = MANAGER_EMAILS.includes((profile?.email || "").toLowerCase());
+
+  const managerActions: QuickAction[] = isManager
+    ? [
+        {
+          menuKey: "rh.feedbacks",
+          title: "Feedback 1:1",
+          description: "Registrar feedbacks para colaboradores.",
+          path: "/rh/feedbacks",
+          icon: MessagesSquare,
+          accent: "from-rose-500/15 to-rose-500/5",
+        },
+      ]
+    : [];
+
+  const visible = [
+    ...managerActions,
+    ...QUICK_ACTIONS.filter((a) => can(a.menuKey, "view")),
+  ];
 
   const firstName = (profile?.full_name || "").split(" ")[0] || "olá";
   const greeting = (() => {
