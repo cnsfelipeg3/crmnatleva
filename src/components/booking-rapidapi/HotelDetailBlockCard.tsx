@@ -216,7 +216,7 @@ export function HotelDetailBlockCard({
             .filter(Boolean)
             .join(", ")}`
         : null,
-      `🔗 https://www.booking.com/hotel.html?hotel_id=${hotelId}`,
+      `🔗 ${bookingUrl}`,
     ].filter(Boolean);
     try {
       await navigator.clipboard.writeText(lines.join("\n"));
