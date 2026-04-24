@@ -479,6 +479,9 @@ export interface UnifiedHotelOffer {
   freeCancellation?: boolean;
   breakfastIncluded?: boolean;
   externalUrl?: string;
+  discountBadge?: string;
+  promoBadges?: string[];
+  accessibilityPriceLabel?: string;
   raw?: unknown;
 }
 
