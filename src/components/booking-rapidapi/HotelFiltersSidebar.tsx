@@ -89,17 +89,34 @@ function PriceSliderWithHistogram({
   value: [number, number];
   onChange: (v: [number, number]) => void;
 }) {
-  const min = Number(filter.min ?? 0);
-  const max = Number(filter.max ?? 10000);
-  const step = Number(filter.minPriceStep ?? 50);
+  const { data: exchangeData } = useExchangeRates();
+  const rates = exchangeData?.rates ?? null;
+
+  const sourceCurrency = (filter.currency || "BRL").toUpperCase();
+  const rate =
+    sourceCurrency === "BRL"
+      ? 1
+      : rates && rates[sourceCurrency]
+        ? rates[sourceCurrency]
+        : null;
+
+  const rawMin = Number(filter.min ?? 0);
+  const rawMax = Number(filter.max ?? 10000);
+  const rawStep = Number(filter.minPriceStep ?? 50);
+
+  const displayCurrency = rate ? "BRL" : sourceCurrency;
+  const displayFactor = rate ?? 1;
+  const min = Math.round(rawMin * displayFactor);
+  const max = Math.round(rawMax * displayFactor);
+  const step = Math.max(10, Math.round(rawStep * displayFactor));
+
   const hist = filter.histogram ?? [];
   const maxBar = Math.max(...hist, 1);
-  const currency = filter.currency || "BRL";
 
   const fmt = (v: number) =>
     new Intl.NumberFormat("pt-BR", {
       style: "currency",
-      currency,
+      currency: displayCurrency,
       maximumFractionDigits: 0,
     }).format(v);
 
@@ -138,6 +155,11 @@ function PriceSliderWithHistogram({
         <span>até</span>
         <span className="font-medium text-foreground">{fmt(value[1])}</span>
       </div>
+      {rate && sourceCurrency !== "BRL" && (
+        <p className="text-[10px] text-muted-foreground">
+          Convertido de {sourceCurrency} (1 {sourceCurrency} ≈ R$ {rate.toFixed(2)})
+        </p>
+      )}
     </div>
   );
 }
