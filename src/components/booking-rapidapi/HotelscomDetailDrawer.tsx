@@ -38,6 +38,17 @@ import { useHotelscomFullDetails } from "@/hooks/useBookingRapidApi";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
 import { convertPriceToBRL } from "./unifiedHotelTypes";
 import type { HotelscomLodgingCard } from "./unifiedHotelTypes";
+import {
+  extractGallery,
+  extractRooms as extractRoomsRich,
+  extractAmenityGroups,
+  extractLocation,
+  extractRatingSummary,
+  extractReviewsList,
+  extractHeadline,
+  extractAllOfferPerks,
+  type HotelscomRoom,
+} from "./hotelscomNormalizers";
 
 interface Converted {
   priceTotal?: number;
@@ -139,124 +150,7 @@ function translateCaption(en?: string): string | undefined {
   return first;
 }
 
-/** Coleta fotos da resposta details-gallery — formato pode variar. */
-function extractGalleryPhotos(gallery: any): Array<{ url: string; caption?: string }> {
-  if (!gallery) return [];
-  const out: Array<{ url: string; caption?: string }> = [];
-  // Tenta vários caminhos comuns
-  const candidates: any[] = [
-    gallery?.propertyGallery?.images,
-    gallery?.images,
-    gallery?.media,
-    gallery?.gallery?.media,
-    gallery?.propertyImages,
-  ];
-  for (const arr of candidates) {
-    if (Array.isArray(arr)) {
-      for (const item of arr) {
-        const url =
-          item?.image?.url ??
-          item?.url ??
-          item?.media?.url ??
-          item?.fullImage?.url;
-        const caption =
-          item?.image?.description ??
-          item?.description ??
-          item?.media?.description ??
-          item?.subjectId;
-        if (url) out.push({ url, caption });
-      }
-      if (out.length > 0) return out;
-    }
-  }
-  return out;
-}
-
-/** Extrai lista de quartos/ofertas do details-offers. */
-function extractRooms(offers: any): any[] {
-  if (!offers) return [];
-  const candidates: any[] = [
-    offers?.categorizedListings,
-    offers?.units,
-    offers?.rooms,
-    offers?.offerListings,
-    offers?.propertyOffers?.units,
-  ];
-  for (const arr of candidates) {
-    if (Array.isArray(arr) && arr.length > 0) return arr;
-  }
-  return [];
-}
-
-/** Extrai amenities estruturadas. */
-function extractAmenitiesGroups(amenities: any): Array<{ title: string; items: string[] }> {
-  if (!amenities) return [];
-  const groups: Array<{ title: string; items: string[] }> = [];
-  const candidates: any[] = [
-    amenities?.amenitiesGroups,
-    amenities?.groups,
-    amenities?.amenityCategories,
-    amenities?.propertyContentSectionGroups,
-  ];
-  for (const arr of candidates) {
-    if (Array.isArray(arr)) {
-      for (const g of arr) {
-        const title = g?.heading ?? g?.title ?? g?.name ?? "Comodidades";
-        const items: string[] = [];
-        const itemsArr =
-          g?.contents ?? g?.amenities ?? g?.items ?? g?.contentItems ?? [];
-        if (Array.isArray(itemsArr)) {
-          for (const it of itemsArr) {
-            const t = typeof it === "string" ? it : it?.text ?? it?.name ?? it?.title;
-            if (t) items.push(t);
-          }
-        }
-        if (items.length > 0) groups.push({ title, items });
-      }
-      if (groups.length > 0) return groups;
-    }
-  }
-  return groups;
-}
-
-/** Extrai reviews individuais. */
-function extractReviews(reviewsList: any): any[] {
-  if (!reviewsList) return [];
-  const candidates: any[] = [
-    reviewsList?.reviews,
-    reviewsList?.reviewList?.reviews,
-    reviewsList?.items,
-  ];
-  for (const arr of candidates) {
-    if (Array.isArray(arr) && arr.length > 0) return arr;
-  }
-  return [];
-}
-
-/** Extrai score categorizado do summary. */
-function extractCategoryScores(
-  ratingSummary: any,
-): Array<{ label: string; score: number }> {
-  if (!ratingSummary) return [];
-  const out: Array<{ label: string; score: number }> = [];
-  const candidates: any[] = [
-    ratingSummary?.categories,
-    ratingSummary?.subRatings,
-    ratingSummary?.guestSubRatings,
-    ratingSummary?.scoreCategories,
-  ];
-  for (const arr of candidates) {
-    if (Array.isArray(arr)) {
-      for (const c of arr) {
-        const label = c?.label ?? c?.title ?? c?.name;
-        const score = typeof c?.score === "number" ? c.score : parseFloat(c?.score);
-        if (label && Number.isFinite(score)) out.push({ label, score });
-      }
-      if (out.length > 0) return out;
-    }
-  }
-  return out;
-}
+// Extratores ricos vivem em ./hotelscomNormalizers
 
 export function HotelscomDetailDrawer({
   card,
@@ -285,9 +179,14 @@ export function HotelscomDetailDrawer({
   const rates = exchangeData?.rates ?? null;
 
   // Galeria completa (do details-gallery), com fallback pras 3 fotos do card
+  const galleryData = useMemo(
+    () => extractGallery(details?.gallery),
+    [details?.gallery],
+  );
   const fullGalleryPhotos = useMemo(() => {
-    const fromDetails = extractGalleryPhotos(details?.gallery);
-    if (fromDetails.length > 0) return fromDetails;
+    if (galleryData.photos.length > 0) {
+      return galleryData.photos.map((p) => ({ url: p.url, caption: p.caption }));
+    }
     const fromCard = card?.mediaSection?.gallery?.media ?? [];
     return fromCard
       .map((p) => ({
@@ -299,20 +198,35 @@ export function HotelscomDetailDrawer({
         caption: p.media?.description,
       }))
       .filter((p) => p.url);
-  }, [details?.gallery, card]);
+  }, [galleryData, card]);
 
-  const rooms = useMemo(() => extractRooms(details?.offers), [details?.offers]);
+  const richRooms = useMemo<HotelscomRoom[]>(
+    () => extractRoomsRich(details?.offers),
+    [details?.offers],
+  );
   const amenitiesGroups = useMemo(
-    () => extractAmenitiesGroups(details?.amenities),
+    () => extractAmenityGroups(details?.amenities),
     [details?.amenities],
   );
-  const reviews = useMemo(
-    () => extractReviews(details?.reviewsList),
+  const reviewsRich = useMemo(
+    () => extractReviewsList(details?.reviewsList),
     [details?.reviewsList],
   );
-  const categoryScores = useMemo(
-    () => extractCategoryScores(details?.ratingSummary),
+  const ratingSummary = useMemo(
+    () => extractRatingSummary(details?.ratingSummary),
     [details?.ratingSummary],
+  );
+  const locationRich = useMemo(
+    () => extractLocation(details?.location),
+    [details?.location],
+  );
+  const headlineRich = useMemo(
+    () => extractHeadline(details?.headline),
+    [details?.headline],
+  );
+  const offerPerks = useMemo(
+    () => extractAllOfferPerks(details?.offers),
+    [details?.offers],
   );
 
   if (!card) return null;
@@ -409,16 +323,12 @@ export function HotelscomDetailDrawer({
     return out;
   })();
 
-  // Localização (lat/lng do details-location)
-  const loc = details?.location;
-  const latitude: number | undefined =
-    loc?.coordinates?.latitude ?? loc?.latitude ?? loc?.location?.latitude;
-  const longitude: number | undefined =
-    loc?.coordinates?.longitude ?? loc?.longitude ?? loc?.location?.longitude;
-  const fullAddress: string | undefined =
-    loc?.address?.fullAddress ?? loc?.address?.text ?? loc?.fullAddress;
-  const nearby: any[] =
-    loc?.nearbyLocations ?? loc?.pointsOfInterest ?? loc?.attractions ?? [];
+  // Localização (preferimos o normalizer rico)
+  const latitude: number | undefined = locationRich.latitude;
+  const longitude: number | undefined = locationRich.longitude;
+  const fullAddress: string | undefined = locationRich.address;
+  const editorialLocation: string | undefined = locationRich.editorial;
+  const nearby = locationRich.nearby;
 
   // Políticas (do content)
   const policies: Array<{ title: string; body: string }> = (() => {
@@ -577,14 +487,14 @@ export function HotelscomDetailDrawer({
           <TabsList className="w-full grid grid-cols-4 lg:grid-cols-7 h-auto gap-1">
             <TabsTrigger value="overview" className="text-xs">Visão</TabsTrigger>
             <TabsTrigger value="rooms" className="text-xs">
-              Quartos {rooms.length > 0 && `(${rooms.length})`}
+              Quartos {richRooms.length > 0 && `(${richRooms.length})`}
             </TabsTrigger>
             <TabsTrigger value="photos" className="text-xs">
               Fotos ({fullGalleryPhotos.length})
             </TabsTrigger>
             <TabsTrigger value="amenities" className="text-xs">Comodidades</TabsTrigger>
             <TabsTrigger value="reviews" className="text-xs">
-              Avaliações {reviews.length > 0 && `(${reviews.length})`}
+              Avaliações {reviewsRich.length > 0 && `(${reviewsRich.length})`}
             </TabsTrigger>
             <TabsTrigger value="location" className="text-xs">Local</TabsTrigger>
             <TabsTrigger value="policies" className="text-xs">Políticas</TabsTrigger>
@@ -609,6 +519,42 @@ export function HotelscomDetailDrawer({
                     </Badge>
                   ))}
                 </div>
+              </Card>
+            )}
+
+            {offerPerks.length > 0 && (
+              <Card className="p-4">
+                <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Todas as ofertas incluem
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                  {offerPerks.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                      <span className="text-foreground/80">
+                        {translateAmenity(p.text)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {headlineRich.supportingMessages.length > 0 && (
+              <Card className="p-4">
+                <h4 className="flex items-center gap-2 text-sm font-semibold mb-3">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  Destaques
+                </h4>
+                <ul className="space-y-1.5">
+                  {headlineRich.supportingMessages.map((m, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs">
+                      <span className="text-primary mt-0.5">•</span>
+                      <span className="text-foreground/80">{m}</span>
+                    </li>
+                  ))}
+                </ul>
               </Card>
             )}
 
@@ -665,99 +611,156 @@ export function HotelscomDetailDrawer({
                 <Skeleton className="h-32 w-full" />
               </div>
             )}
-            {!detailsLoading && rooms.length === 0 && (
+            {!detailsLoading && richRooms.length === 0 && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 Nenhuma opção de quarto disponível
               </div>
             )}
-            {rooms.map((room: any, idx: number) => {
-              const roomName =
-                room?.header?.text ?? room?.name ?? room?.title ?? `Quarto ${idx + 1}`;
-              const roomPhotos: string[] = (() => {
-                const ph = room?.unitGallery?.gallery ?? room?.images ?? room?.photos ?? [];
-                if (Array.isArray(ph)) {
-                  return ph
-                    .map((p: any) => p?.url ?? p?.image?.url ?? p?.media?.url)
-                    .filter(Boolean) as string[];
-                }
-                return [];
-              })();
-              const bedInfo: string | undefined =
-                room?.features?.find?.((f: any) => /bed/i.test(f?.text ?? ""))?.text ??
-                room?.bedTypes?.[0]?.description;
-              const ratePlans: any[] = room?.ratePlans ?? room?.rates ?? [];
-              const cheapestRate = ratePlans[0];
-              const ratePriceFormatted =
-                cheapestRate?.priceDetails?.[0]?.totalPriceMessage ??
-                cheapestRate?.price?.lead?.formatted ??
-                cheapestRate?.price?.total?.formatted;
-              const ratePriceUSD = (() => {
-                const v =
-                  cheapestRate?.price?.lead?.amount ??
-                  cheapestRate?.price?.total?.amount ??
-                  cheapestRate?.priceDetails?.[0]?.total?.amount;
-                return typeof v === "number" ? v : undefined;
-              })();
-              const ratePriceBRL = ratePriceUSD
-                ? convertPriceToBRL(ratePriceUSD, "USD", rates).value
+            {richRooms.map((room, idx) => {
+              const cheapest = room.rates[0];
+              // Preço total em BRL (converte do USD se necessário)
+              const totalUSD = cheapest?.totalValue;
+              const totalCurrency = cheapest?.currency ?? "USD";
+              const totalBRL = typeof totalUSD === "number"
+                ? convertPriceToBRL(totalUSD, totalCurrency, rates).value
                 : undefined;
-              const cancellation: string | undefined =
-                cheapestRate?.cancellationPolicy?.heading ??
-                cheapestRate?.cancellationPolicy?.text;
+              const perNightUSD = cheapest?.perNightValue;
+              const perNightBRL = typeof perNightUSD === "number"
+                ? convertPriceToBRL(perNightUSD, totalCurrency, rates).value
+                : undefined;
+              const strikeUSD = cheapest?.strikeValue;
+              const strikeBRL = typeof strikeUSD === "number"
+                ? convertPriceToBRL(strikeUSD, totalCurrency, rates).value
+                : undefined;
 
               return (
-                <Card key={idx} className="p-4 space-y-3">
+                <Card key={room.id || idx} className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
                       <h5 className="font-semibold text-sm flex items-center gap-2">
                         <BedDouble className="h-4 w-4 text-primary" />
-                        {roomName}
+                        {room.name}
                       </h5>
-                      {bedInfo && (
-                        <p className="text-xs text-muted-foreground mt-1">{bedInfo}</p>
+                      {room.features.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {room.features.slice(0, 5).map((f, i) => (
+                            <Badge
+                              key={i}
+                              variant="outline"
+                              className={cn(
+                                "text-[10px] gap-1",
+                                f.positive && "border-emerald-300 text-emerald-700 dark:text-emerald-400",
+                              )}
+                            >
+                              {f.text}
+                            </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
                     <div className="text-right shrink-0">
-                      {ratePriceBRL ? (
+                      {strikeBRL && (
+                        <div className="text-[11px] text-muted-foreground line-through">
+                          {fmtBRL(strikeBRL, "BRL")}
+                        </div>
+                      )}
+                      {totalBRL ? (
                         <>
                           <div className="font-bold text-base">
-                            {fmtBRL(ratePriceBRL, "BRL")}
+                            {fmtBRL(totalBRL, "BRL")}
                           </div>
+                          {perNightBRL && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {fmtBRL(perNightBRL, "BRL")}/noite
+                            </p>
+                          )}
                           <p className="text-[10px] text-muted-foreground">
-                            convertido do USD
+                            {cheapest?.taxesLabel === "Total with taxes and fees"
+                              ? "com impostos"
+                              : "convertido do " + totalCurrency}
                           </p>
                         </>
-                      ) : ratePriceFormatted ? (
-                        <div className="font-bold text-base">{ratePriceFormatted}</div>
+                      ) : cheapest?.totalFormatted ? (
+                        <div className="font-bold text-base">
+                          {cheapest.totalFormatted}
+                        </div>
                       ) : null}
                     </div>
                   </div>
 
-                  {roomPhotos.length > 0 && (
+                  {room.images.length > 0 && (
                     <div className="flex gap-2 overflow-x-auto pb-1">
-                      {roomPhotos.slice(0, 6).map((url, i) => (
+                      {room.images.slice(0, 8).map((img, i) => (
                         <img
                           key={i}
-                          src={url}
-                          alt={`${roomName} foto ${i + 1}`}
+                          src={img.url}
+                          alt={img.caption ?? `${room.name} foto ${i + 1}`}
                           loading="lazy"
-                          className="h-20 w-28 rounded-md object-cover shrink-0 bg-muted"
+                          className="h-24 w-32 rounded-md object-cover shrink-0 bg-muted"
                         />
                       ))}
                     </div>
                   )}
 
-                  {cancellation && (
-                    <div className="flex items-start gap-2 text-xs">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 mt-0.5 shrink-0" />
-                      <span className="text-foreground/80">{cancellation}</span>
-                    </div>
-                  )}
+                  {/* Tarifas (formas de pagamento, cancelamento, escassez) */}
+                  <div className="space-y-2">
+                    {room.rates.slice(0, 3).map((rate, ri) => (
+                      <div
+                        key={ri}
+                        className="rounded-md border bg-muted/30 p-2.5 space-y-1.5"
+                      >
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {rate.paymentLabel && (
+                            <Badge variant="secondary" className="text-[10px] gap-1">
+                              <CreditCard className="h-2.5 w-2.5" />
+                              {rate.paymentLabel}
+                            </Badge>
+                          )}
+                          {rate.cancellationLabel && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] border-emerald-300 text-emerald-700 dark:text-emerald-400 gap-1"
+                            >
+                              <CheckCircle2 className="h-2.5 w-2.5" />
+                              {/free cancellation/i.test(rate.cancellationLabel)
+                                ? "Cancelamento grátis"
+                                : rate.cancellationLabel}
+                            </Badge>
+                          )}
+                          {rate.dealBadge && (
+                            <Badge className="text-[10px] bg-rose-500 hover:bg-rose-500 text-white">
+                              🔥 {rate.dealBadge}
+                            </Badge>
+                          )}
+                        </div>
+                        {rate.paymentDescription && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {translateMessage(rate.paymentDescription)}
+                          </p>
+                        )}
+                        {rate.scarcityMessage && (
+                          <p className="text-[11px] text-amber-700 dark:text-amber-500 font-medium">
+                            ⚡ {translateMessage(rate.scarcityMessage)}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
 
-                  {ratePlans.length > 1 && (
-                    <p className="text-[11px] text-muted-foreground">
-                      + {ratePlans.length - 1} outras tarifas disponíveis
-                    </p>
+                  {room.amenities.length > 0 && (
+                    <details className="text-xs">
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                        Ver {room.amenities.length} comodidades do quarto
+                      </summary>
+                      <div className="mt-2 grid grid-cols-2 gap-1">
+                        {room.amenities.map((a, i) => (
+                          <div key={i} className="flex items-center gap-1.5">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                            <span className="text-foreground/80">{translateAmenity(a)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </details>
                   )}
                 </Card>
               );
@@ -824,7 +827,7 @@ export function HotelscomDetailDrawer({
                   {g.items.map((it, j) => (
                     <div key={j} className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
-                      <span className="text-foreground/80">{it}</span>
+                      <span className="text-foreground/80">{translateAmenity(it.text)}</span>
                     </div>
                   ))}
                 </div>
@@ -834,66 +837,61 @@ export function HotelscomDetailDrawer({
 
           {/* AVALIAÇÕES */}
           <TabsContent value="reviews" className="mt-4 space-y-3">
-            {categoryScores.length > 0 && (
+            {(ratingSummary.score || ratingSummary.totalReviews) && (
               <Card className="p-4">
-                <h5 className="font-semibold text-sm mb-3">Notas por categoria</h5>
-                <div className="space-y-2">
-                  {categoryScores.map((c, i) => (
-                    <div key={i} className="flex items-center gap-3 text-xs">
-                      <span className="w-32 shrink-0 text-muted-foreground">
-                        {c.label}
-                      </span>
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-500"
-                          style={{ width: `${(c.score / 10) * 100}%` }}
-                        />
+                <div className="flex items-center gap-3">
+                  <div className="text-3xl font-bold text-primary">
+                    {ratingSummary.score ?? "—"}
+                  </div>
+                  <div>
+                    {ratingSummary.label && (
+                      <div className="font-semibold text-sm">{ratingSummary.label}</div>
+                    )}
+                    {ratingSummary.totalReviews && (
+                      <div className="text-xs text-muted-foreground">
+                        {ratingSummary.totalReviews.toLocaleString("pt-BR")} avaliações
                       </div>
-                      <span className="w-8 text-right font-semibold">
-                        {c.score.toFixed(1)}
-                      </span>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
               </Card>
             )}
 
-            {detailsLoading && reviews.length === 0 && (
+            {detailsLoading && reviewsRich.length === 0 && (
               <Skeleton className="h-32 w-full" />
             )}
-            {reviews.length === 0 && !detailsLoading && categoryScores.length === 0 && (
+            {reviewsRich.length === 0 && !detailsLoading && !ratingSummary.score && (
               <div className="text-center py-8 text-sm text-muted-foreground">
                 Nenhuma avaliação detalhada disponível
               </div>
             )}
-            {reviews.slice(0, 10).map((r: any, i: number) => {
-              const author = r?.reviewAuthorAttribution?.text ?? r?.author ?? "Hóspede";
-              const score = r?.ratingOverall ?? r?.rating?.overall ?? r?.score;
-              const text = r?.text ?? r?.reviewText ?? r?.title;
-              const date = r?.submissionTime?.longDateFormat ?? r?.date;
-              return (
-                <Card key={i} className="p-4 space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-xs">
-                      <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="font-medium">{author}</span>
-                      {date && (
-                        <span className="text-muted-foreground">· {date}</span>
-                      )}
-                    </div>
-                    {score && (
-                      <Badge variant="secondary" className="gap-1">
-                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                        {typeof score === "number" ? score.toFixed(1) : score}
-                      </Badge>
+            {reviewsRich.slice(0, 12).map((r, i) => (
+              <Card key={r.id || i} className="p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs min-w-0">
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="font-medium truncate">
+                      {r.authorContext ?? "Hóspede"}
+                    </span>
+                    {r.date && (
+                      <span className="text-muted-foreground shrink-0">· {r.date}</span>
                     )}
                   </div>
-                  {text && (
-                    <p className="text-xs text-foreground/80 line-clamp-4">{text}</p>
+                  {r.score && (
+                    <Badge variant="secondary" className="gap-1 shrink-0">
+                      <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                      {r.score}
+                    </Badge>
                   )}
-                </Card>
-              );
-            })}
+                </div>
+                {r.title && (
+                  <p className="text-xs font-semibold text-foreground/90">{r.title}</p>
+                )}
+                {r.text && (
+                  <p className="text-xs text-foreground/80 line-clamp-5">{r.text}</p>
+                )}
+              </Card>
+            ))}
           </TabsContent>
 
           {/* LOCALIZAÇÃO */}
@@ -923,30 +921,32 @@ export function HotelscomDetailDrawer({
               )}
             </Card>
 
+            {editorialLocation && (
+              <Card className="p-4">
+                <h5 className="font-semibold text-sm mb-2">Sobre a localização</h5>
+                <p className="text-xs text-foreground/80 whitespace-pre-line">
+                  {editorialLocation}
+                </p>
+              </Card>
+            )}
+
             {nearby.length > 0 && (
               <Card className="p-4">
                 <h5 className="font-semibold text-sm mb-2">Pontos próximos</h5>
                 <div className="space-y-1.5">
-                  {nearby.slice(0, 12).map((n: any, i: number) => {
-                    const label = n?.name ?? n?.label ?? n?.text;
-                    const distance = n?.distance ?? n?.distanceText;
-                    if (!label) return null;
-                    return (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between text-xs"
-                      >
-                        <span className="text-foreground/80">{label}</span>
-                        {distance && (
-                          <span className="text-muted-foreground shrink-0">
-                            {typeof distance === "string"
-                              ? distance
-                              : `${distance.value} ${distance.unit ?? ""}`}
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {nearby.slice(0, 15).map((n, i) => (
+                    <div
+                      key={i}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
+                      <span className="text-foreground/80 truncate">{n.name}</span>
+                      {n.distance && (
+                        <span className="text-muted-foreground shrink-0">
+                          {n.distance}
+                        </span>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </Card>
             )}
