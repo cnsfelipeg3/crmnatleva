@@ -331,12 +331,30 @@ export function normalizeHotelscomHotel(
     leadPriceFormatted ??
     priceOptV2?.formattedDisplayPrice ??
     priceOptV2?.displayPrice?.formatted;
-  const priceTotal = extractNumber(priceFormatted);
-  const priceCurrency = detectCurrency(priceFormatted);
+  const rawPriceTotal = extractNumber(priceFormatted);
+  const detectedCurrency = detectCurrency(priceFormatted);
 
-  const strikedFormatted = strikeoutPriceFormatted ?? priceOptV2?.strikeOut?.formatted;
+  const rawStrikedFormatted = strikeoutPriceFormatted ?? priceOptV2?.strikeOut?.formatted;
+  let rawPriceStriked =
+    extractNumber(rawStrikedFormatted) ?? priceOptV2?.strikeOut?.amount;
+
+  // Conversão pra BRL quando a API devolve em outra moeda (geralmente USD).
+  // Taxa fixa conservadora — preço final exato é sempre o do site, mas assim
+  // o card já mostra um valor útil em vez de esconder atrás de "ver no site".
+  const FX_TO_BRL: Record<string, number> = { USD: 5.2, EUR: 5.6, GBP: 6.5, BRL: 1 };
+  const fxRate = FX_TO_BRL[detectedCurrency] ?? 1;
+  const needsConversion = detectedCurrency !== "BRL" && fxRate !== 1;
+
+  const priceTotal =
+    needsConversion && typeof rawPriceTotal === "number"
+      ? Math.round(rawPriceTotal * fxRate)
+      : rawPriceTotal;
+  const priceCurrency = needsConversion ? "BRL" : detectedCurrency;
   let priceStriked =
-    extractNumber(strikedFormatted) ?? priceOptV2?.strikeOut?.amount;
+    needsConversion && typeof rawPriceStriked === "number"
+      ? Math.round(rawPriceStriked * fxRate)
+      : rawPriceStriked;
+
   // Só mantém riscado se for maior que o total (segurança)
   if (priceStriked && priceTotal && priceStriked <= priceTotal) {
     priceStriked = undefined;
