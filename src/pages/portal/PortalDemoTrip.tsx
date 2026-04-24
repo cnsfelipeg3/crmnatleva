@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import { iataToLabel } from "@/lib/iataUtils";
+import { getProductLabel } from "@/lib/productTypes";
 
 const fmt = (v: number) => v?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) || "R$ 0,00";
 const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
@@ -220,7 +221,7 @@ export default function PortalDemoTrip() {
 
         {/* Hotels */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <Section title="Hospedagem" icon={Hotel}>
+          <Section title={getProductLabel("hospedagem")} icon={Hotel}>
             <div className="space-y-3">
               {hotels.map((h) => (
                 <div key={h.id} className="p-4 rounded-xl bg-muted/30 border border-border/50">

@@ -13,6 +13,7 @@ import {
   ChevronRight, ChevronLeft, Check, Plus, Trash2, Send, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getProductLabel } from "@/lib/productTypes";
 
 const STEPS = [
   { id: 0, label: "Destino", icon: MapPin },
@@ -408,9 +409,9 @@ export default function PortalNewQuote() {
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-muted-foreground mb-1 block">Precisa de algo mais?</label>
                   {[
-                    { icon: Hotel, label: "Hospedagem", value: hotelNeeded, toggle: () => setHotelNeeded(!hotelNeeded) },
-                    { icon: Car, label: "Transfer / Transporte", value: transferNeeded, toggle: () => setTransferNeeded(!transferNeeded) },
-                    { icon: Shield, label: "Seguro Viagem", value: insuranceNeeded, toggle: () => setInsuranceNeeded(!insuranceNeeded) },
+                    { icon: Hotel, label: getProductLabel("hospedagem"),    value: hotelNeeded,     toggle: () => setHotelNeeded(!hotelNeeded) },
+                    { icon: Car,   label: getProductLabel("transfer"),       value: transferNeeded,  toggle: () => setTransferNeeded(!transferNeeded) },
+                    { icon: Shield,label: getProductLabel("seguro-viagem"),  value: insuranceNeeded, toggle: () => setInsuranceNeeded(!insuranceNeeded) },
                   ].map((item) => (
                     <button
                       key={item.label}
@@ -492,7 +493,7 @@ export default function PortalNewQuote() {
                     ...(tripType === "roundtrip" ? [{ label: "Volta", value: returnDate ? new Date(returnDate + "T12:00:00").toLocaleDateString("pt-BR") : "—" }] : []),
                     { label: "Viajantes", value: `${adults} adulto${adults > 1 ? "s" : ""}${children ? `, ${children} criança${children > 1 ? "s" : ""}` : ""}${infants ? `, ${infants} bebê${infants > 1 ? "s" : ""}` : ""}` },
                     { label: "Classe", value: CABIN_OPTIONS.find((c) => c.value === cabinClass)?.label || cabinClass },
-                    ...(hotelNeeded ? [{ label: "Hotel", value: "Sim" }] : []),
+                    ...(hotelNeeded ? [{ label: getProductLabel("hospedagem"), value: "Sim" }] : []),
                     ...(transferNeeded ? [{ label: "Transfer", value: "Sim" }] : []),
                     ...(insuranceNeeded ? [{ label: "Seguro", value: "Sim" }] : []),
                     ...(budgetRange ? [{ label: "Orçamento", value: BUDGET_OPTIONS.find((b) => b.value === budgetRange)?.label || budgetRange }] : []),

@@ -8,6 +8,7 @@ import {
   CheckCircle2, File, Image as ImageIcon, FileSpreadsheet,
 } from "lucide-react";
 import { toast } from "sonner";
+import { getProductLabel } from "@/lib/productTypes";
 
 interface Attachment {
   id: string;
@@ -27,15 +28,18 @@ interface PortalDocumentsCenterProps {
   services: any[];
 }
 
+// CATEGORY_MAP usa attachment.category (taxonomia própria de anexos), mas os labels
+// dos tipos cobertos pelo catálogo de produtos vêm de getProductLabel — fonte única.
+// Categorias exclusivas de anexos (comprovante/roteiro/outros) ficam locais.
 const CATEGORY_MAP: Record<string, { label: string; icon: any; color: string; priority: number }> = {
-  aereo: { label: "Aéreo", icon: Plane, color: "text-info", priority: 1 },
-  hotel: { label: "Hospedagem", icon: Hotel, color: "text-accent", priority: 2 },
-  voucher: { label: "Hospedagem", icon: Hotel, color: "text-accent", priority: 2 },
-  seguro: { label: "Seguro Viagem", icon: Shield, color: "text-warning", priority: 3 },
-  ingresso: { label: "Ingressos", icon: Ticket, color: "text-primary", priority: 4 },
-  comprovante: { label: "Financeiro", icon: CreditCard, color: "text-success", priority: 5 },
-  roteiro: { label: "Itinerário", icon: MapPin, color: "text-info", priority: 6 },
-  outros: { label: "Outros", icon: FolderOpen, color: "text-muted-foreground", priority: 7 },
+  aereo:       { label: getProductLabel("aereo"),         icon: Plane,      color: "text-info",              priority: 1 },
+  hotel:       { label: getProductLabel("hospedagem"),    icon: Hotel,      color: "text-accent",            priority: 2 },
+  voucher:     { label: getProductLabel("hospedagem"),    icon: Hotel,      color: "text-accent",            priority: 2 },
+  seguro:      { label: getProductLabel("seguro-viagem"), icon: Shield,     color: "text-warning",           priority: 3 },
+  ingresso:    { label: getProductLabel("ingressos"),     icon: Ticket,     color: "text-primary",           priority: 4 },
+  comprovante: { label: "Financeiro",                     icon: CreditCard, color: "text-success",           priority: 5 },
+  roteiro:     { label: "Itinerário",                     icon: MapPin,     color: "text-info",              priority: 6 },
+  outros:      { label: getProductLabel("outros"),        icon: FolderOpen, color: "text-muted-foreground",  priority: 7 },
 };
 
 function getCategory(cat: string) {

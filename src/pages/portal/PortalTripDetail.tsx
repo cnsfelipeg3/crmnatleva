@@ -23,6 +23,7 @@ import {
 import PortalJourneyMap from "@/components/portal/PortalJourneyMap";
 import PortalChecklist from "@/components/portal/PortalChecklist";
 import PortalDocumentsCenter from "@/components/portal/PortalDocumentsCenter";
+import { getProductLabel } from "@/lib/productTypes";
 import PortalTimeline from "@/components/portal/PortalTimeline";
 import PortalCalendar from "@/components/portal/PortalCalendar";
 import WeatherForecast from "@/components/portal/WeatherForecast";
@@ -671,7 +672,7 @@ export default function PortalTripDetail() {
           {/* ── Hospedagem ── */}
           {allHotels.length > 0 && (
             <div id="hospedagem" data-section className="scroll-mt-28">
-              <SectionHeader id="hospedagem-header" icon={Hotel} title="Hospedagem" subtitle="Seus hotéis e acomodações" count={allHotels.length}>
+              <SectionHeader id="hospedagem-header" icon={Hotel} title={getProductLabel("hospedagem")} subtitle="Seus hotéis e acomodações" count={allHotels.length}>
                 <div className="space-y-4">
                   {allHotels.map((h: any, i: number) => (
                     <HotelCard key={h.id || i} hotel={h} index={i} />
