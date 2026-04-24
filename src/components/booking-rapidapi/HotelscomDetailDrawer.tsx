@@ -912,7 +912,7 @@ export function HotelscomDetailDrawer({
                   {g.items.map((it, j) => (
                     <div key={j} className="flex items-center gap-2 text-xs">
                       <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
-                      <span className="text-foreground/80">{it}</span>
+                      <span className="text-foreground/80">{translateAmenity(it.text)}</span>
                     </div>
                   ))}
                 </div>
