@@ -93,7 +93,9 @@ export default function AppLayout() {
         <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
           <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
-              <Outlet />
+              <PermissionGuard>
+                <Outlet />
+              </PermissionGuard>
             </div>
           </Suspense>
         </main>
@@ -144,7 +146,9 @@ export default function AppLayout() {
         <main className={cn("flex-1 overflow-auto min-h-0", isImmersive && "overflow-hidden")}>
           <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
-              <Outlet />
+              <PermissionGuard>
+                <Outlet />
+              </PermissionGuard>
             </div>
           </Suspense>
         </main>
