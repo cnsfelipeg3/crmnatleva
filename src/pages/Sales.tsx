@@ -234,6 +234,7 @@ export default function Sales() {
 
   const handleNavigateSale = useCallback((id: string) => navigate(`/sales/${id}`), [navigate]);
   const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
+  const handleDeleted = useCallback((id: string) => setSales((prev) => prev.filter((s) => s.id !== id)), []);
 
   const handleExport = () => {
     const headers = ["ID", "Nome", "Status", "Origem", "Destino", "PAX", "Receita", "Custo", "Lucro", "Margem%", "Lead", "Data Ida", "Data Volta"];
@@ -421,6 +422,7 @@ export default function Sales() {
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
+                        onDeleted={handleDeleted}
                       />
                     ))}
                   </tbody>
