@@ -17,10 +17,6 @@ import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct }
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-// Slugs cujo ícone NÃO deve aparecer quando há cia aérea (logo da cia já cobre o aéreo)
-const AERO_SLUGS = new Set(["aereo", "pacote", "remarcacao-aereo"]);
-
-
 const statusColor: Record<string, string> = {
   Fechado: "bg-success/15 text-success border-success/20",
   "Em andamento": "bg-warning/15 text-warning-foreground border-warning/20",
