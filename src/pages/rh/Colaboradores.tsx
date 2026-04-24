@@ -26,6 +26,7 @@ export default function Colaboradores() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<any>({});
   const [loading, setLoading] = useState(true);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
 
   const load = async () => {
     setLoading(true);
