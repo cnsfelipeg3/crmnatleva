@@ -420,8 +420,9 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
           )}
         </TabsContent>
 
-        {/* TAB 6: PERMISSÕES GRANULARES */}
+        {/* TAB 6: PERMISSÕES GRANULARES — BASEADO EM MENUS REAIS DO SISTEMA */}
         <TabsContent value="permissoes" className="space-y-4 mt-4">
+          {/* Perfis pré-configurados */}
           <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
             <div className="flex items-start justify-between gap-3 mb-2">
               <div>
@@ -435,7 +436,7 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
               )}
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {Object.entries(PERMISSION_PRESETS).map(([key, preset]) => (
+              {(Object.entries(PERMISSION_PRESETS) as [RoleTemplate, typeof PERMISSION_PRESETS[RoleTemplate]][]).map(([key, preset]) => (
                 <button
                   key={key}
                   type="button"
@@ -449,12 +450,31 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
             </div>
           </div>
 
+          {/* Busca de menus */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar menu por nome ou rota (ex: vendas, /financeiro)..."
+              value={permSearch}
+              onChange={e => setPermSearch(e.target.value)}
+              className="pl-9 h-9 text-xs"
+            />
+          </div>
+
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Menus do sistema ({SYSTEM_MENUS.length} totais)
+            </p>
+            <p className="text-[10px] text-muted-foreground">
+              {Object.values(permissions).filter(p => Object.keys(p).length > 0).length} com acesso liberado
+            </p>
+          </div>
+
+          {/* Lista por GRUPO -> MENUS */}
           <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Permissões por módulo</p>
-            {MODULE_CATALOG.map(mod => {
-              const perm = permissions[mod.key] || emptyModulePerm();
-              const status = moduleStatus(mod.key);
-              const isOpen = expandedModule === mod.key;
+            {Object.entries(filteredMenusByGroup).map(([group, menus]) => {
+              const status = groupStatus(group);
+              const isOpen = expandedGroup === group || !!permSearch;
               const statusBadge = {
                 total:    { label: "Acesso total",   className: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" },
                 custom:   { label: "Personalizado",  className: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
@@ -462,96 +482,89 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                 none:     { label: "Sem acesso",     className: "bg-muted text-muted-foreground border-border" },
               }[status];
               return (
-                <div key={mod.key} className="rounded-lg border border-border/60 overflow-hidden">
+                <div key={group} className="rounded-lg border border-border/60 overflow-hidden">
                   <button
                     type="button"
-                    onClick={() => setExpandedModule(isOpen ? null : mod.key)}
+                    onClick={() => setExpandedGroup(isOpen && !permSearch ? null : group)}
                     className="w-full flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/30 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {isOpen ? <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />}
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold">{mod.label}</p>
-                        <p className="text-[11px] text-muted-foreground truncate">{mod.description}</p>
+                        <p className="text-sm font-semibold">{group}</p>
+                        <p className="text-[11px] text-muted-foreground">{menus.length} menus</p>
                       </div>
                     </div>
                     <Badge variant="outline" className={`text-[10px] shrink-0 ${statusBadge.className}`}>{statusBadge.label}</Badge>
                   </button>
 
                   {isOpen && (
-                    <div className="border-t border-border/60 bg-muted/10 px-4 py-3 space-y-4">
-                      {/* Atalhos */}
+                    <div className="border-t border-border/60 bg-muted/10 px-3 py-3 space-y-3">
+                      {/* Atalhos de grupo */}
                       <div className="flex flex-wrap gap-1.5">
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "all")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "all")}>
                           <Check className="w-3 h-3 mr-1" /> Liberar tudo
                         </Button>
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "readonly")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "view")}>
                           <Eye className="w-3 h-3 mr-1" /> Somente leitura
                         </Button>
-                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setAllActions(mod.key, "none")}>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => setGroupActions(group, "none")}>
                           <X className="w-3 h-3 mr-1" /> Bloquear tudo
                         </Button>
                       </div>
 
-                      {/* Ações (verbos) */}
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Ações permitidas</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                          {mod.actions.map(action => {
-                            const meta = ACTION_META[action];
-                            const Icon = meta.icon;
-                            const enabled = perm.actions.includes(action);
-                            return (
-                              <button
-                                key={action}
-                                type="button"
-                                onClick={() => toggleAction(mod.key, action)}
-                                title={meta.desc}
-                                className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition-colors ${enabled ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 bg-background text-muted-foreground hover:border-primary/40"}`}
-                              >
-                                <Icon className="w-3.5 h-3.5 shrink-0" />
-                                <span className="truncate">{meta.label}</span>
-                                {enabled && <Check className="w-3 h-3 ml-auto shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      {/* Lista de menus do grupo */}
+                      <div className="space-y-1.5">
+                        {menus.map(menu => {
+                          const perm = permissions[menu.key] || emptyPerm();
+                          const hasAny = Object.keys(perm).length > 0;
+                          return (
+                            <div key={menu.key} className={`rounded-md border px-3 py-2 ${hasAny ? "border-primary/30 bg-primary/5" : "border-border/40 bg-background"}`}>
+                              <div className="flex items-center justify-between gap-3 mb-1.5">
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-medium truncate">{menu.label}</p>
+                                  <p className="text-[10px] text-muted-foreground font-mono truncate">{menu.path}</p>
+                                </div>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {menu.actions.map(action => {
+                                  const meta = ACTION_META[action];
+                                  const Icon = meta.icon;
+                                  const enabled = !!perm[action];
+                                  return (
+                                    <button
+                                      key={action}
+                                      type="button"
+                                      onClick={() => toggleAction(menu.key, action)}
+                                      title={meta.desc}
+                                      className={`flex items-center gap-1 rounded-md border px-2 py-1 text-[10px] transition-colors ${enabled ? "border-primary/60 bg-primary/15 text-primary" : "border-border/50 bg-background text-muted-foreground hover:border-primary/40"}`}
+                                    >
+                                      <Icon className="w-3 h-3 shrink-0" />
+                                      <span>{meta.label}</span>
+                                      {enabled && <Check className="w-2.5 h-2.5 ml-0.5 shrink-0" />}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-
-                      {/* Sub-funcionalidades */}
-                      {mod.features.length > 0 && (
-                        <div>
-                          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Funcionalidades específicas</p>
-                          <div className="space-y-1">
-                            {mod.features.map(feat => {
-                              const enabled = !!perm.features[feat.key];
-                              return (
-                                <label
-                                  key={feat.key}
-                                  className="flex items-start gap-3 rounded-md px-2 py-1.5 hover:bg-muted/40 cursor-pointer"
-                                >
-                                  <Switch checked={enabled} onCheckedChange={() => toggleFeature(mod.key, feat.key)} className="mt-0.5" />
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-xs font-medium">{feat.label}</p>
-                                    {feat.description && <p className="text-[10px] text-muted-foreground">{feat.description}</p>}
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               );
             })}
+            {Object.keys(filteredMenusByGroup).length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-6">Nenhum menu corresponde à busca "{permSearch}"</p>
+            )}
           </div>
 
           <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-[11px] text-amber-700 dark:text-amber-400">
-            <strong>Dica:</strong> as permissões só passam a valer após o colaborador ter um login criado na aba <em>Acesso</em>. Sem login vinculado, ele aparece no cadastro mas não acessa o sistema.
+            <strong>Dica:</strong> as permissões só passam a valer após o colaborador ter um login criado na aba <em>Acesso</em>. Administradores ignoram este filtro e vêem tudo.
           </div>
         </TabsContent>
+
 
         {/* TAB 7: DOCUMENTOS */}
         <TabsContent value="documentos" className="space-y-4 mt-4">
