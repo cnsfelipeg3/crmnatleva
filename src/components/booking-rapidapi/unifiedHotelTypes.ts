@@ -507,6 +507,8 @@ export interface UnifiedHotelOffer {
   accessibilityPriceLabel?: string;
   /** ID composto do Hotels.com ("regionId_propertyId") — usado pra buscar detalhes ricos */
   propertyIdComposite?: string;
+  /** True quando o preço é tarifa de membro/loyalty (não bate com o preço público) */
+  isMemberPrice?: boolean;
   raw?: unknown;
 }
 
