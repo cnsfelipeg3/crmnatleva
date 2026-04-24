@@ -121,18 +121,10 @@ export default function BookingSearchPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Drawers (um por fonte)
-  const [selectedBookingHotel, setSelectedBookingHotel] = useState<BookingHotel | null>(null);
-  const [bookingDrawerOpen, setBookingDrawerOpen] = useState(false);
-  const [selectedHotelscomCard, setSelectedHotelscomCard] = useState<HotelscomLodgingCard | null>(null);
-  const [hotelscomDrawerOpen, setHotelscomDrawerOpen] = useState(false);
-  const [selectedHotelscomConverted, setSelectedHotelscomConverted] = useState<{
-    priceTotal?: number;
-    priceStriked?: number;
-    priceTaxes?: number;
-    pricePerNight?: number;
-    currency?: string;
-  } | null>(null);
+  // Drawer unificado (1 hotel = vários providers em tabs)
+  const [selectedGroup, setSelectedGroup] = useState<UnifiedHotelGroup | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [initialTab, setInitialTab] = useState<HotelSource | undefined>(undefined);
 
   // Taxas de câmbio (pra converter USD do Hotels.com → BRL)
   const { data: exchangeData } = useExchangeRates();
