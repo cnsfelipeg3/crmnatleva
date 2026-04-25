@@ -585,7 +585,7 @@ export default function PortalConcierge() {
                       )}
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
-                          <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
                             <Select
                               value={msg.generatedAudio.selectedLang || msg.generatedAudio.lang}
                               onValueChange={(newLang) => {
@@ -593,7 +593,7 @@ export default function PortalConcierge() {
                               }}
                               disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
                             >
-                              <SelectTrigger className="w-[140px] h-8 text-xs border-border/40 bg-card/60">
+                              <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-8 text-xs border-border/40 bg-card/60">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -611,7 +611,7 @@ export default function PortalConcierge() {
                             <button
                               onClick={() => playGeneratedAudio(i)}
                               disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
-                              className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60"
+                              className="flex items-center justify-center gap-2 flex-1 px-3 py-2 sm:py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 active:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60 min-h-[36px]"
                             >
                               {msg.generatedAudio.status === "speaking" ? (
                                 <>
@@ -637,8 +637,8 @@ export default function PortalConcierge() {
                   )}
                 </div>
                 {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <UserIcon className="w-4 h-4 text-muted-foreground" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                   </div>
                 )}
               </motion.div>
@@ -646,9 +646,9 @@ export default function PortalConcierge() {
           </AnimatePresence>
 
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-accent" />
+            <div className="flex gap-2 sm:gap-3 justify-start">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
               </div>
               <div className="bg-muted/60 rounded-2xl px-4 py-3">
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
