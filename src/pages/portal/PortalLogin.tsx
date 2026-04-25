@@ -21,46 +21,60 @@ export default function PortalLogin() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      toast.error("Credenciais inválidas. Verifique e tente novamente.");
-      setLoading(false);
-      return;
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Erro ao verificar acesso.");
-      setLoading(false);
-      return;
-    }
-
-    // Check if user is admin (bypass portal_access check)
-    const { data: adminRole } = await (supabase as any)
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (!adminRole) {
-      const { data: portal } = await (supabase as any)
-        .from("portal_access")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("is_active", true)
-        .single();
-
-      if (!portal) {
-        toast.error("Você não tem acesso ao portal de viagens.");
-        await supabase.auth.signOut();
-        setLoading(false);
+    try {
+      const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !signInData?.user) {
+        toast.error("Credenciais inválidas. Verifique e tente novamente.");
         return;
       }
-    }
 
-    toast.success("Bem-vindo ao seu portal de viagens!");
-    navigate("/portal");
+      const userId = signInData.user.id;
+
+      // Check if user is admin (bypass portal_access check)
+      const { data: adminRole, error: adminErr } = await (supabase as any)
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (adminErr) {
+        console.error("Erro ao verificar role admin:", adminErr);
+      }
+
+      if (!adminRole) {
+        // Use maybeSingle to avoid throwing on 0 rows; pick first active access if multiple
+        const { data: portalRows, error: portalErr } = await (supabase as any)
+          .from("portal_access")
+          .select("id, client_id, is_active")
+          .eq("user_id", userId)
+          .eq("is_active", true)
+          .limit(1);
+
+        if (portalErr) {
+          console.error("Erro ao buscar portal_access:", portalErr);
+          toast.error("Erro ao verificar acesso ao portal. Tente novamente.");
+          await supabase.auth.signOut();
+          return;
+        }
+
+        const portal = portalRows?.[0];
+        if (!portal) {
+          toast.error("Este e-mail não tem acesso ao portal do viajante. Use o CRM principal se você é colaborador.");
+          await supabase.auth.signOut();
+          return;
+        }
+      }
+
+      toast.success("Bem-vindo ao seu portal de viagens!");
+      navigate("/portal");
+    } catch (err: any) {
+      console.error("Erro inesperado no login do portal:", err);
+      toast.error("Ocorreu um erro inesperado. Tente novamente.");
+      try { await supabase.auth.signOut(); } catch {}
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
