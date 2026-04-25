@@ -657,9 +657,12 @@ export default function PortalConcierge() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="sticky bottom-4 mt-4">
-          <div className="rounded-3xl border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg p-2.5">
+        {/* Input — sticky no desktop, fixed bottom no mobile com safe-area */}
+        <div
+          className="sticky bottom-2 sm:bottom-4 mt-3 sm:mt-4"
+          style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
+        >
+          <div className="rounded-3xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-lg p-2 sm:p-2.5">
             {isRecording ? (
               <AudioRecorder
                 onCancel={() => setIsRecording(false)}
@@ -674,20 +677,22 @@ export default function PortalConcierge() {
                         <img src={img} alt="preview" className="w-16 h-16 object-cover rounded-xl" />
                         <button
                           onClick={() => removeImage(idx)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                          className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                          aria-label="Remover imagem"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-1.5 sm:gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={attachedImages.length >= 4 || isLoading}
-                    className="p-2.5 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-2.5 sm:p-2.5 rounded-2xl hover:bg-muted/60 active:bg-muted text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Anexar imagem"
+                    aria-label="Anexar imagem"
                   >
                     <ImageIcon className="w-5 h-5" />
                   </button>
@@ -707,17 +712,22 @@ export default function PortalConcierge() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={onKeyDown}
-                    placeholder="Pergunte qualquer coisa sobre viagens..."
+                    placeholder="Pergunte sobre viagens..."
                     rows={1}
-                    className="flex-1 resize-none bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[180px]"
+                    enterKeyHint="send"
+                    autoCapitalize="sentences"
+                    autoCorrect="on"
+                    className="flex-1 resize-none bg-transparent outline-none text-base sm:text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[140px] sm:max-h-[180px]"
+                    style={{ fontSize: "16px" }}
                     disabled={isLoading}
                   />
                   {canSend ? (
                     <button
                       onClick={() => send()}
                       disabled={isLoading}
-                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 active:bg-accent/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Enviar"
+                      aria-label="Enviar"
                     >
                       {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
@@ -725,8 +735,9 @@ export default function PortalConcierge() {
                     <button
                       onClick={() => setIsRecording(true)}
                       disabled={isLoading}
-                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 active:bg-accent/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Gravar áudio"
+                      aria-label="Gravar áudio"
                     >
                       <Mic className="w-5 h-5" />
                     </button>
@@ -735,7 +746,7 @@ export default function PortalConcierge() {
               </>
             )}
           </div>
-          <p className="text-center text-[10px] text-muted-foreground mt-2">
+          <p className="text-center text-[10px] text-muted-foreground mt-1.5 sm:mt-2 px-2">
             Concierge.IA pode errar — confirme informações críticas antes de viajar.
           </p>
         </div>
