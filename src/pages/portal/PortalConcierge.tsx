@@ -476,44 +476,54 @@ export default function PortalConcierge() {
 
   return (
     <PortalLayout>
-      <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col" style={{ minHeight: "calc(100vh - 180px)" }}>
-        {/* Header */}
+      {/*
+        Mobile-first: ocupa a viewport visível real (dvh evita corte da barra do iOS).
+        Em md+ volta ao layout centralizado tradicional.
+      */}
+      <div
+        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col"
+        style={{ minHeight: "calc(100dvh - 96px)" }}
+      >
+        {/* Header — compacto no mobile, expansivo no desktop */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="text-center mb-4 sm:mb-6"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-2 sm:mb-3">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-accent">Concierge.IA</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-foreground">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black tracking-tight sm:tracking-tighter text-foreground leading-tight">
             Seu concierge pessoal de viagens
           </h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
+          <p className="hidden sm:block text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
             Pergunte por texto, foto ou áudio. Roteiros, restaurantes, dicas locais — ou descubra que lugar é aquele da sua foto.
+          </p>
+          <p className="sm:hidden text-xs text-muted-foreground mt-1.5 px-2">
+            Texto, foto ou áudio. Roteiros, dicas locais e descobertas.
           </p>
         </motion.div>
 
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto space-y-5 pb-4 px-1"
-          style={{ scrollbarWidth: "thin" }}
+          className="flex-1 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
+          style={{ scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
         >
           {messages.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="py-10"
+              className="py-4 sm:py-10"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-left px-4 py-3 rounded-2xl border border-border/40 bg-card/40 hover:bg-card hover:border-accent/30 transition-all text-sm text-foreground/80 hover:text-foreground"
+                    className="text-left px-4 py-3.5 rounded-2xl border border-border/40 bg-card/40 hover:bg-card active:bg-card hover:border-accent/30 active:border-accent/30 transition-all text-sm text-foreground/80 hover:text-foreground min-h-[56px]"
                   >
                     {s}
                   </button>
@@ -528,15 +538,15 @@ export default function PortalConcierge() {
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-2 sm:gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="w-4 h-4 text-accent" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                  className={`max-w-[88%] sm:max-w-[85%] rounded-2xl px-3.5 sm:px-4 py-2.5 break-words ${
                     msg.role === "user"
                       ? "bg-accent text-accent-foreground"
                       : "bg-muted/60 text-foreground"
@@ -575,7 +585,7 @@ export default function PortalConcierge() {
                       )}
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
-                          <div className="flex items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 bg-background/60 rounded-2xl p-2 border border-border/40">
                             <Select
                               value={msg.generatedAudio.selectedLang || msg.generatedAudio.lang}
                               onValueChange={(newLang) => {
@@ -583,7 +593,7 @@ export default function PortalConcierge() {
                               }}
                               disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
                             >
-                              <SelectTrigger className="w-[140px] h-8 text-xs border-border/40 bg-card/60">
+                              <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-8 text-xs border-border/40 bg-card/60">
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
@@ -601,7 +611,7 @@ export default function PortalConcierge() {
                             <button
                               onClick={() => playGeneratedAudio(i)}
                               disabled={msg.generatedAudio.status === "speaking" || msg.generatedAudio.status === "translating"}
-                              className="flex items-center gap-2 flex-1 px-3 py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60"
+                              className="flex items-center justify-center gap-2 flex-1 px-3 py-2 sm:py-1.5 rounded-xl bg-accent/10 hover:bg-accent/20 active:bg-accent/20 text-accent text-xs font-semibold transition-all disabled:opacity-60 min-h-[36px]"
                             >
                               {msg.generatedAudio.status === "speaking" ? (
                                 <>
@@ -627,8 +637,8 @@ export default function PortalConcierge() {
                   )}
                 </div>
                 {msg.role === "user" && (
-                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <UserIcon className="w-4 h-4 text-muted-foreground" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <UserIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
                   </div>
                 )}
               </motion.div>
@@ -636,9 +646,9 @@ export default function PortalConcierge() {
           </AnimatePresence>
 
           {isLoading && messages[messages.length - 1]?.role !== "assistant" && (
-            <div className="flex gap-3 justify-start">
-              <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 text-accent" />
+            <div className="flex gap-2 sm:gap-3 justify-start">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
               </div>
               <div className="bg-muted/60 rounded-2xl px-4 py-3">
                 <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
@@ -647,9 +657,12 @@ export default function PortalConcierge() {
           )}
         </div>
 
-        {/* Input */}
-        <div className="sticky bottom-4 mt-4">
-          <div className="rounded-3xl border border-border/60 bg-card/90 backdrop-blur-xl shadow-lg p-2.5">
+        {/* Input — sticky no desktop, fixed bottom no mobile com safe-area */}
+        <div
+          className="sticky bottom-2 sm:bottom-4 mt-3 sm:mt-4"
+          style={{ paddingBottom: "max(0px, env(safe-area-inset-bottom))" }}
+        >
+          <div className="rounded-3xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-lg p-2 sm:p-2.5">
             {isRecording ? (
               <AudioRecorder
                 onCancel={() => setIsRecording(false)}
@@ -664,20 +677,22 @@ export default function PortalConcierge() {
                         <img src={img} alt="preview" className="w-16 h-16 object-cover rounded-xl" />
                         <button
                           onClick={() => removeImage(idx)}
-                          className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                          className="absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center shadow-md"
+                          aria-label="Remover imagem"
                         >
-                          <X className="w-3 h-3" />
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-                <div className="flex items-end gap-2">
+                <div className="flex items-end gap-1.5 sm:gap-2">
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     disabled={attachedImages.length >= 4 || isLoading}
-                    className="p-2.5 rounded-2xl hover:bg-muted/60 text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="p-2.5 sm:p-2.5 rounded-2xl hover:bg-muted/60 active:bg-muted text-muted-foreground hover:text-foreground transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                     title="Anexar imagem"
+                    aria-label="Anexar imagem"
                   >
                     <ImageIcon className="w-5 h-5" />
                   </button>
@@ -697,17 +712,22 @@ export default function PortalConcierge() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={onKeyDown}
-                    placeholder="Pergunte qualquer coisa sobre viagens..."
+                    placeholder="Pergunte sobre viagens..."
                     rows={1}
-                    className="flex-1 resize-none bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[180px]"
+                    enterKeyHint="send"
+                    autoCapitalize="sentences"
+                    autoCorrect="on"
+                    className="flex-1 resize-none bg-transparent outline-none text-base sm:text-sm text-foreground placeholder:text-muted-foreground py-2 px-1 max-h-[140px] sm:max-h-[180px]"
+                    style={{ fontSize: "16px" }}
                     disabled={isLoading}
                   />
                   {canSend ? (
                     <button
                       onClick={() => send()}
                       disabled={isLoading}
-                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 active:bg-accent/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Enviar"
+                      aria-label="Enviar"
                     >
                       {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
@@ -715,8 +735,9 @@ export default function PortalConcierge() {
                     <button
                       onClick={() => setIsRecording(true)}
                       disabled={isLoading}
-                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      className="p-2.5 rounded-2xl bg-accent text-accent-foreground hover:bg-accent/90 active:bg-accent/80 transition-all disabled:opacity-40 disabled:cursor-not-allowed min-w-[44px] min-h-[44px] flex items-center justify-center"
                       title="Gravar áudio"
+                      aria-label="Gravar áudio"
                     >
                       <Mic className="w-5 h-5" />
                     </button>
@@ -725,7 +746,7 @@ export default function PortalConcierge() {
               </>
             )}
           </div>
-          <p className="text-center text-[10px] text-muted-foreground mt-2">
+          <p className="text-center text-[10px] text-muted-foreground mt-1.5 sm:mt-2 px-2">
             Concierge.IA pode errar — confirme informações críticas antes de viajar.
           </p>
         </div>
