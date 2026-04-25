@@ -476,44 +476,54 @@ export default function PortalConcierge() {
 
   return (
     <PortalLayout>
-      <div className="max-w-3xl mx-auto px-4 py-6 flex flex-col" style={{ minHeight: "calc(100vh - 180px)" }}>
-        {/* Header */}
+      {/*
+        Mobile-first: ocupa a viewport visível real (dvh evita corte da barra do iOS).
+        Em md+ volta ao layout centralizado tradicional.
+      */}
+      <div
+        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col"
+        style={{ minHeight: "calc(100dvh - 96px)" }}
+      >
+        {/* Header — compacto no mobile, expansivo no desktop */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-6"
+          className="text-center mb-4 sm:mb-6"
         >
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-3">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 mb-2 sm:mb-3">
             <Sparkles className="w-3.5 h-3.5 text-accent" />
             <span className="text-[11px] uppercase tracking-[0.2em] font-bold text-accent">Concierge.IA</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-black tracking-tighter text-foreground">
+          <h1 className="text-xl sm:text-3xl md:text-4xl font-black tracking-tight sm:tracking-tighter text-foreground leading-tight">
             Seu concierge pessoal de viagens
           </h1>
-          <p className="text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
+          <p className="hidden sm:block text-sm text-muted-foreground mt-2 max-w-xl mx-auto">
             Pergunte por texto, foto ou áudio. Roteiros, restaurantes, dicas locais — ou descubra que lugar é aquele da sua foto.
+          </p>
+          <p className="sm:hidden text-xs text-muted-foreground mt-1.5 px-2">
+            Texto, foto ou áudio. Roteiros, dicas locais e descobertas.
           </p>
         </motion.div>
 
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto space-y-5 pb-4 px-1"
-          style={{ scrollbarWidth: "thin" }}
+          className="flex-1 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
+          style={{ scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
         >
           {messages.length === 0 && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="py-10"
+              className="py-4 sm:py-10"
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
                 {SUGGESTIONS.map((s) => (
                   <button
                     key={s}
                     onClick={() => send(s)}
-                    className="text-left px-4 py-3 rounded-2xl border border-border/40 bg-card/40 hover:bg-card hover:border-accent/30 transition-all text-sm text-foreground/80 hover:text-foreground"
+                    className="text-left px-4 py-3.5 rounded-2xl border border-border/40 bg-card/40 hover:bg-card active:bg-card hover:border-accent/30 active:border-accent/30 transition-all text-sm text-foreground/80 hover:text-foreground min-h-[56px]"
                   >
                     {s}
                   </button>
@@ -528,15 +538,15 @@ export default function PortalConcierge() {
                 key={i}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex gap-2 sm:gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 {msg.role === "assistant" && (
-                  <div className="w-8 h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Bot className="w-4 h-4 text-accent" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Bot className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-accent" />
                   </div>
                 )}
                 <div
-                  className={`max-w-[85%] rounded-2xl px-4 py-2.5 ${
+                  className={`max-w-[88%] sm:max-w-[85%] rounded-2xl px-3.5 sm:px-4 py-2.5 break-words ${
                     msg.role === "user"
                       ? "bg-accent text-accent-foreground"
                       : "bg-muted/60 text-foreground"
