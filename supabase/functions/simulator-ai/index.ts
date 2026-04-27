@@ -44,7 +44,7 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
         return { model: "claude-sonnet-4-20250514", stream: true, maxTokens: 800 };
       case "agent":
       default:
-        return { model: "claude-sonnet-4-20250514", stream: true, maxTokens: 1200 };
+        return { model: "claude-sonnet-4-20250514", stream: true, maxTokens: 600 };
     }
   }
 
@@ -58,7 +58,7 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
     case "deep":
       return { model: "google/gemini-2.5-pro", stream: false, maxTokens: 3000 };
     default:
-      return { model: "google/gemini-3-flash-preview", stream: true, maxTokens: 1200 };
+      return { model: "google/gemini-3-flash-preview", stream: true, maxTokens: 600 };
   }
 }
 

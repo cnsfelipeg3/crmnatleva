@@ -216,7 +216,7 @@ export default function SimuladorChameleonMode() {
     });
 
     // Kick off the conversation loop
-    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 500);
+    setTimeout(() => runConversationStep(p, [msg], firstAgent, agents, maxEx, 0, sType, chId), 150);
   }, [globalRulesBlock, agencyConfig, kbContent, agentBehaviors]);
 
   // ─── Conversation step (agent responds, then chameleon responds) ───
@@ -350,7 +350,7 @@ export default function SimuladorChameleonMode() {
       if (abortRef.current) return;
 
       // ── Step 2: Chameleon responds (reduced delay for speed) ──
-      await new Promise(r => setTimeout(r, 800 + Math.random() * 700));
+      await new Promise(r => setTimeout(r, 200 + Math.random() * 200));
       if (abortRef.current) return;
 
       setStatusText(`🦎 ${p.nome} está digitando...`);
@@ -394,7 +394,7 @@ export default function SimuladorChameleonMode() {
 
       // Continue loop (reduced delay)
       if (!abortRef.current && newExchanges < maxEx) {
-        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 600);
+        setTimeout(() => runConversationStep(p, finalMessages, nextAgentId, agents, maxEx, newExchanges, sType, chId), 200);
       } else {
         runDebrief(p, finalMessages, sType, chId);
       }

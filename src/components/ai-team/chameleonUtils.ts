@@ -165,6 +165,13 @@ const MOTIVATION_COMPOSITION: Record<string, string[]> = {
   "férias em família": ["família com filhos", "casal + filhos adolescentes"],
   "férias escolares": ["família com filhos", "casal + filhos adolescentes"],
   "despedida de solteira": ["grupo de amigos"],
+  "evento especial": ["casal", "solo", "grupo de amigos"],
+  "descanso": ["casal", "solo", "mãe e filha"],
+  "aventura": ["solo", "casal", "grupo de amigos"],
+  "formatura": ["grupo de amigos", "solo"],
+  "comemoração de promoção": ["casal", "solo"],
+  "primeira viagem internacional": ["casal", "solo", "família com filhos"],
+  "presente de aniversário": ["casal", "solo", "mãe e filha"],
 };
 
 // ─── Experience ↔ Destination coherence ───
@@ -248,9 +255,14 @@ export function generateRandomProfile(): ChameleonProfile {
 
   // 2. Derive composition coherently from motivation
   const allowedComps = MOTIVATION_COMPOSITION[motivacao];
-  const comp = allowedComps
-    ? COMPOSICOES.find(c => c.label === pick(allowedComps)) || pick(COMPOSICOES)
-    : pick(COMPOSICOES);
+  let comp;
+  if (allowedComps) {
+    comp = COMPOSICOES.find(c => c.label === pick(allowedComps)) || pick(COMPOSICOES);
+  } else {
+    // sem motivação mapeada → qualquer composição EXCETO corporativo
+    const nonCorpComps = COMPOSICOES.filter(c => c.label !== "corporativo");
+    comp = pick(nonCorpComps);
+  }
 
   // 3. Determine experience
   const isGroup = !["solo", "casal", "mãe e filha"].includes(comp.label);
@@ -273,7 +285,21 @@ export function generateRandomProfile(): ChameleonProfile {
   // 5. Pick budget coherent with destination + composition
   const minBudget = MIN_BUDGET_BY_TIER[tier][isGroup ? "group" : "solo"];
   const validBudgets = budgetAtLeast(minBudget);
-  const orc = pick(validBudgets);
+  // Distribuição realista de mercado (não uniform):
+  // medio: 50%, baixo: 20%, alto: 20%, ilimitado: 5%, nao_definido: 5%
+  const BUDGET_WEIGHTS: Record<string, number> = {
+    baixo: 20,
+    medio: 50,
+    alto: 20,
+    ilimitado: 5,
+    nao_definido: 5,
+  };
+  const weighted: { label: string; value: string }[] = [];
+  for (const b of validBudgets) {
+    const w = BUDGET_WEIGHTS[b.value] ?? 5;
+    for (let i = 0; i < w; i++) weighted.push(b);
+  }
+  const orc = pick(weighted);
 
   return {
     nome,
@@ -399,6 +425,7 @@ MENSAGEM 17+ (Documentação/Fechamento): Pergunte sobre visto, documentação, 
 export function buildChameleonSystemPrompt(profile: ChameleonProfile, challengeOverride?: string): string {
   // Determine typing style based on age/personality
   const isYoung = profile.idade < 35;
+  const isProfessionalSenior = profile.idade >= 40 && /(médic|advogad|engenheir|empresári|executiv|gerente|jornalist|arquitet|psic[óo]log)/i.test(profile.profissao);
   const isAnxious = profile.personalidade.includes("ansioso") || profile.personalidade.includes("empolgado");
   const isDetailed = profile.personalidade.includes("detalhista") || profile.personalidade.includes("VIP");
   const isShy = profile.personalidade.includes("indeciso") || profile.personalidade.includes("desconfiado");
@@ -437,7 +464,13 @@ FORMATO OBRIGATÓRIO:
 - ${messageLength}
 - Use abreviações naturais: ${typoExamples}
 - Cometa erros de digitação REAIS ocasionalmente (trocar letras, esquecer acento, juntar palavras)
-- ${isYoung ? "Sem pontuação formal. Minúsculas. Sem vírgulas perfeitas." : "Pontuação básica mas não perfeita."}
+- ${
+  isProfessionalSenior
+    ? "Pontuação correta. Maiúsculas no início de frase. Pode usar abreviações comuns (vc, tb) mas com moderação. Mantém tom respeitoso."
+    : isYoung
+      ? "Sem pontuação formal. Minúsculas. Sem vírgulas perfeitas. Abreviações soltas."
+      : "Pontuação básica mas não perfeita. Mistura abreviações (tb, vc) com palavras inteiras."
+}
 - Máximo 1 emoji por mensagem, e só quando natural (muitas msgs sem emoji nenhum)
 - NUNCA use bullet points, listas, travessões ou formatação rica
 - NUNCA escreva parágrafos longos como se fosse um email
@@ -455,6 +488,12 @@ ${isYoung ? `"oi to querendo viajar pra ${profile.destino} vcs fazem?"
 "Entendi, e o hotel é bom mesmo? Vi umas avaliações..."` }
 
 ═══ COMO VOCÊ SE COMPORTA ═══
+
+SAUDAÇÃO REALISTA (CRÍTICO):
+- Você cumprimenta APENAS na 1ª mensagem da conversa. Daí em diante, NUNCA mais diga "boa tarde", "bom dia", "boa noite", "olá", "oi" no INÍCIO de uma mensagem.
+- Cliente real só cumprimenta 1 vez e segue conversando. Repetir "Boa tarde, tudo bem?" a cada mensagem é comportamento de chatbot, não de humano.
+- Se o agente perguntar "tudo bem?", você responde naturalmente ("tudo, e vc?" ou pula direto pro assunto), mas NÃO inicia sua mensagem com saudação de período.
+- Exceção: se a conversa parou por horas e está sendo retomada no dia seguinte, pode cumprimentar de novo (mas isso não acontece dentro de 1 sessão de Camaleão).
 
 REVELAÇÃO GRADUAL:
 - ${revealStrategy}
@@ -544,6 +583,10 @@ export function buildFirstChameleonMessage(profile: ChameleonProfile): string {
     `oi, uma amiga indicou vcs. quero ir pra ${profile.destino}`,
     `oi tudo bem? queria cotar uma viagem`,
     `oie, vcs trabalham com ${profile.destino}?`,
+    // novas variações sem saudação:
+    `vcs fazem ${profile.destino}? to pesquisando`,
+    `to querendo cotar uma viagem pra ${profile.destino}, conseguem ajudar?`,
+    `pacote pra ${profile.destino}, vcs montam?`,
   ];
 
   // Formal first messages
