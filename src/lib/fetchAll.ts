@@ -5,6 +5,8 @@ interface FetchAllOptions {
   maxRows?: number;
   cacheMs?: number;
   bypassCache?: boolean;
+  // Optional simple filters applied via `.is()` (e.g. { excluded_at: null }).
+  isFilters?: Record<string, null | boolean>;
 }
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
