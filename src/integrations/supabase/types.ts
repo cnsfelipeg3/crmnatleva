@@ -2368,6 +2368,8 @@ export type Database = {
           display_name: string | null
           engagement_level: string | null
           estimated_margin: number | null
+          excluded_at: string | null
+          excluded_reason: string | null
           external_conversation_id: string | null
           external_id: string | null
           funnel_stage: string | null
@@ -2406,6 +2408,8 @@ export type Database = {
           display_name?: string | null
           engagement_level?: string | null
           estimated_margin?: number | null
+          excluded_at?: string | null
+          excluded_reason?: string | null
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
@@ -2444,6 +2448,8 @@ export type Database = {
           display_name?: string | null
           engagement_level?: string | null
           estimated_margin?: number | null
+          excluded_at?: string | null
+          excluded_reason?: string | null
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null

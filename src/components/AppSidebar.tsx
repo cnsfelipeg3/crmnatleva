@@ -416,6 +416,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
             {renderGroupButton("Admin", Shield, adminOpen, () => setAdminOpen(!adminOpen))}
             {adminOpen && !isCollapsed && renderSubGroup([
               { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
+              { to: "/admin/conversas-excluidas", icon: Inbox, label: "Conversas Excluídas" },
               { to: "/settings", icon: Settings, label: "Configurações" },
             ])}
           </>

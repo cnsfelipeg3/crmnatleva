@@ -541,6 +541,7 @@ function OperacaoInboxInner() {
         order: { column: "last_message_at", ascending: false },
         cacheMs: 0,
         bypassCache: true,
+        isFilters: { excluded_at: null },
       });
 
       if (data && data.length > 0) {

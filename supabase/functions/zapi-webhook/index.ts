@@ -189,12 +189,29 @@ async function upsertConversation(
 
   const { data: existingConv } = await supabase
     .from("conversations")
-    .select("id, unread_count, contact_name")
+    .select("id, unread_count, contact_name, excluded_at")
     .or(`phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalId}`)
     .limit(1)
     .maybeSingle();
 
   if (existingConv) {
+    // Soft-delete handling:
+    // - If conversation is excluded and the message is from the agency (fromMe),
+    //   ignore silently to avoid resurrecting closed contacts on outbound noise.
+    // - If excluded and the contact sends a new message (!fromMe), auto-reopen
+    //   by clearing excluded_at/excluded_reason BEFORE the upsert.
+    if (existingConv.excluded_at) {
+      if (fromMe) {
+        console.log("[Webhook] Skipping fromMe upsert for excluded conversation:", existingConv.id);
+        return existingConv.id;
+      }
+      console.log("[Webhook] Auto-reopening excluded conversation:", existingConv.id);
+      await supabase.from("conversations").update({
+        excluded_at: null,
+        excluded_reason: null,
+      }).eq("id", existingConv.id);
+    }
+
     const updateData: Record<string, unknown> = {
       last_message_at: timestampIso,
       last_message_preview: preview,
@@ -316,17 +333,17 @@ async function handleExclude(supabase: any, cleanPhone: string, excludeMsg: stri
     .maybeSingle();
 
   if (conv?.id) {
+    // Soft-delete: mark as excluded instead of removing rows.
+    // History is preserved so it can be reactivated later from the admin panel.
     await supabase.from("conversations").update({
+      excluded_at: new Date().toISOString(),
+      excluded_reason: excludeMsg || "excluded_by_router",
       last_message_preview: "__CONTACT_EXCLUDED__",
-      unread_count: -1,
+      unread_count: 0,
     }).eq("id", conv.id);
-    await new Promise(r => setTimeout(r, 300));
-    await supabase.from("messages").delete().eq("conversation_id", conv.id);
-    await supabase.from("conversation_messages").delete().eq("conversation_id", conv.id);
-    await supabase.from("conversations").delete().eq("id", conv.id);
   }
-  await supabase.from("zapi_messages").delete().eq("phone", cleanPhone);
-  await supabase.from("zapi_contacts").delete().eq("phone", cleanPhone);
+  // NOTE: zapi_messages / zapi_contacts / messages / conversation_messages are
+  // intentionally preserved so the conversation can be fully restored.
 }
 
 // ═══════════════════════════════════════════════════════════════

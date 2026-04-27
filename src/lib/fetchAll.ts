@@ -5,6 +5,8 @@ interface FetchAllOptions {
   maxRows?: number;
   cacheMs?: number;
   bypassCache?: boolean;
+  // Optional simple filters applied via `.is()` (e.g. { excluded_at: null }).
+  isFilters?: Record<string, null | boolean>;
 }
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
@@ -67,6 +69,12 @@ export async function fetchAllRows(
       let query = (supabase.from as any)(table)
         .select(select)
         .range(from, to);
+
+      if (options?.isFilters) {
+        for (const [col, val] of Object.entries(options.isFilters)) {
+          query = query.is(col, val);
+        }
+      }
 
       if (options?.order) {
         query = query.order(options.order.column, {
