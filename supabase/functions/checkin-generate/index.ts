@@ -42,6 +42,38 @@ serve(async (req) => {
       existingMap.set(key, t);
     });
 
+    // Track which (sale_id|direction) already have a segment-based task
+    // so we can skip the fallback (and clean up legacy fallbacks).
+    const segmentDirSet = new Set<string>();
+    (existingTasks || []).forEach((t: any) => {
+      if (t.segment_id) segmentDirSet.add(`${t.sale_id}|${t.direction}`);
+    });
+    if (segments) {
+      for (const seg of segments) {
+        segmentDirSet.add(`${seg.sale_id}|${seg.direction}`);
+      }
+    }
+
+    // Delete legacy fallback tasks (no segment_id) when a segment-based task exists
+    // for the same (sale_id, direction). Keeps CONCLUIDO/CANCELADO untouched.
+    const fallbackIdsToDelete: string[] = [];
+    (existingTasks || []).forEach((t: any) => {
+      if (!t.segment_id
+        && segmentDirSet.has(`${t.sale_id}|${t.direction}`)
+        && t.status !== "CONCLUIDO"
+        && t.status !== "CANCELADO") {
+        fallbackIdsToDelete.push(t.id);
+      }
+    });
+    if (fallbackIdsToDelete.length > 0) {
+      await supabase.from("checkin_tasks").delete().in("id", fallbackIdsToDelete);
+      fallbackIdsToDelete.forEach(id => {
+        for (const [k, v] of existingMap.entries()) {
+          if (v.id === id) existingMap.delete(k);
+        }
+      });
+    }
+
     const now = new Date();
     const tasksToCreate: any[] = [];
     const tasksToUpdate: any[] = [];
