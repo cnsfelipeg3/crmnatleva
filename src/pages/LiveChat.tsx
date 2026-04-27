@@ -476,7 +476,7 @@ export default function LiveChat() {
   useEffect(() => {
     const loadDbConversations = async () => {
       await initPersistence();
-      const { data } = await supabase.from("conversations").select("*").order("last_message_at", { ascending: false }).limit(200);
+      const { data } = await supabase.from("conversations").select("*").is("excluded_at", null).order("last_message_at", { ascending: false }).limit(200);
       if (data && data.length > 0) {
         // For conversations with empty last_message_preview, fetch the latest message
         const convIdsNeedingPreview = data.filter(c => !c.last_message_preview).map(c => c.id);
