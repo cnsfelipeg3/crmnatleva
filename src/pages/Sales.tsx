@@ -358,22 +358,22 @@ export default function Sales() {
             {/* Desktop table view */}
             <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full text-sm min-w-[1280px]">
                   <colgroup>
-                    <col style={{ width: "14%" }} />
-                    <col style={{ width: "8%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "4%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "5.5%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "5%" }} />
+                    <col style={{ minWidth: "200px" }} />
+                    <col style={{ minWidth: "100px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "50px" }} />
+                    <col style={{ minWidth: "80px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "70px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "100px" }} />
+                    <col style={{ minWidth: "90px" }} />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/50">
