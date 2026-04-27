@@ -508,7 +508,7 @@ export default function PortalConcierge() {
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
+          className="flex-1 min-h-0 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
           style={{ scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
         >
           {messages.length === 0 && (
