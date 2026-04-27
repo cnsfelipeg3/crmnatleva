@@ -553,13 +553,14 @@ export default function NewSale() {
       const voltaSegs = validSegs.filter(s => s.direction === "volta");
       const derivedOrigin = form.origin_iata || (idaSegs.length > 0 ? idaSegs[0].origin_iata : validSegs[0]?.origin_iata) || null;
       const derivedDestination = form.destination_iata || (idaSegs.length > 0 ? idaSegs[idaSegs.length - 1].destination_iata : validSegs[validSegs.length - 1]?.destination_iata) || null;
-      const derivedDeparture = form.departure_date
-        || (idaSegs.find(s => s.departure_date)?.departure_date)
+      // Segmentos aéreos são a fonte da verdade quando existirem (edições no aéreo refletem na coluna principal).
+      // Só caímos para o valor manual do form quando não há segmento correspondente.
+      const segDeparture = (idaSegs.find(s => s.departure_date)?.departure_date)
         || (validSegs.find(s => s.departure_date)?.departure_date)
         || null;
-      const derivedReturn = form.return_date
-        || (voltaSegs.find(s => s.departure_date)?.departure_date)
-        || null;
+      const segReturn = (voltaSegs.find(s => s.departure_date)?.departure_date) || null;
+      const derivedDeparture = segDeparture || form.departure_date || null;
+      const derivedReturn = segReturn || form.return_date || null;
 
       const salePayload = {
         name: smartCapitalizeName(form.name),
