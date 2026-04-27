@@ -9,7 +9,7 @@ const FUNNEL_AGENT_IDS = ["maya", "atlas", "habibi", "nemo", "dante", "luna", "n
 // Keywords per specialist — used to route "destinos" docs accurately
 const SPECIALIST_KEYWORDS: Record<string, RegExp> = {
   habibi: /\b(dubai|abu\s*dhabi|emirados|maldivas|turquia|istambul|oriente|catar|qatar|oman|bahrein|arabia|marrocos|egito|jordania)\b/i,
-  nemo: /\b(orlando|disney|universal|miami|nova\s*york|new\s*york|estados\s*unidos|eua|usa|las\s*vegas|california|los\s*angeles|hawaii|cancun|punta\s*cana|caribe|mexico|colombia|cartagena|peru|machu\s*picchu|santiago|buenos\s*aires|bariloche|ushuaia|patagonia)\b/i,
+  nemo: /\b(orlando|disney|universal|miami|nova\s*york|new\s*york|estados\s*unidos|eua|usa|las\s*vegas|california|los\s*angeles|hawaii|cancun|punta\s*cana|caribe|mexico|colombia|cartagena|peru|machu\s*picchu|santiago|buenos\s*aires|bariloche|ushuaia|patagonia|brasil|brasileir[oa]|nordeste|sudeste|maceio|alagoas|fernando\s*de\s*noronha|noronha|gramado|canela|serra\s*ga[uú]cha|rio\s+grande\s+do\s+sul|salvador|bahia|fortaleza|natal|jo[aã]o\s*pessoa|recife|pernambuco|porto\s+de\s+galinhas|jericoacoara|jeri|lencois\s*maranhenses|chapada\s+(?:diamantina|dos\s*veadeiros)|bonito|pantanal|foz\s+do\s+igua[cç]u|iguassu|manaus|amazonas|amazonia|belem|florianopolis|balneario\s*camboriu|paraty|buzios|ilha\s+grande|angra\s+dos\s+reis|rio\s+de\s+janeiro|sao\s+paulo|ouro\s+preto|tiradentes|praia\s+do\s+frances|praia\s+do\s+gunga|marechal\s*deodoro)\b/i,
   dante: /\b(europa|paris|fran[çc]a|italia|roma|veneza|floren[çc]a|espanha|madrid|barcelona|portugal|lisboa|porto|londres|london|inglaterra|grecia|santorini|atenas|su[ií][çc]a|alemanha|holanda|amsterdam|croacia|rep[úu]blica\s*tcheca|praga|austria|viena|irlanda|escocia|noruega|islandia)\b/i,
 };
 
