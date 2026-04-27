@@ -481,8 +481,8 @@ export default function PortalConcierge() {
         Em md+ volta ao layout centralizado tradicional.
       */}
       <div
-        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col"
-        style={{ minHeight: "calc(100dvh - 96px)" }}
+        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col min-h-0"
+        style={{ height: "calc(100dvh - 96px)" }}
       >
         {/* Header — compacto no mobile, expansivo no desktop */}
         <motion.div
@@ -508,7 +508,7 @@ export default function PortalConcierge() {
         {/* Messages */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
+          className="flex-1 min-h-0 overflow-y-auto space-y-4 sm:space-y-5 pb-3 px-0.5 sm:px-1 overscroll-contain"
           style={{ scrollbarWidth: "thin", WebkitOverflowScrolling: "touch" }}
         >
           {messages.length === 0 && (
