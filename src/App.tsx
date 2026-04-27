@@ -92,6 +92,7 @@ const FechamentoFornecedores = lazy(() => import("@/pages/financeiro/FechamentoF
 
 // Admin
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
+const ConversasExcluidas = lazy(() => import("@/pages/admin/ConversasExcluidas"));
 
 // Portal Admin
 const PortalAdminDashboard = lazy(() => import("@/pages/portal-admin/PortalAdminDashboard"));
