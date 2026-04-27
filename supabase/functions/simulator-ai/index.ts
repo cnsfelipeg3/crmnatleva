@@ -48,13 +48,16 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
   }
 
   // Default Lovable AI Gateway models
+  // NOTE: gpt-5-mini is a reasoning model and adds 20-40s latency before first token,
+  // which causes the Camaleão simulator to appear stuck on "está respondendo...".
+  // Gemini Flash is non-reasoning, streams immediately, and handles large prompts (20k+ chars) reliably.
   switch (type) {
     case "evaluate":
     case "debrief":
     case "deep":
-      return { model: "openai/gpt-5", stream: false, maxTokens: 3000 };
+      return { model: "google/gemini-2.5-pro", stream: false, maxTokens: 3000 };
     default:
-      return { model: "openai/gpt-5-mini", stream: true, maxTokens: 1200 };
+      return { model: "google/gemini-3-flash-preview", stream: true, maxTokens: 1200 };
   }
 }
 
