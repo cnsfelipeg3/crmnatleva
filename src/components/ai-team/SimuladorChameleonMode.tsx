@@ -382,11 +382,18 @@ export default function SimuladorChameleonMode() {
 
       if (abortRef.current) return;
 
+      // Salvaguarda anti-saudação repetida no LEAD: se o Camaleão já cumprimentou
+      // em alguma mensagem anterior, remove a saudação inicial desta resposta.
+      const leadHistoryTexts = updatedMessages
+        .filter((m) => m.role === "lead")
+        .map((m) => m.content);
+      const cleanedLead = stripRepeatedGreeting(chameleonResponse, leadHistoryTexts);
+
       const leadMsg: ChameleonMessage = {
         role: "lead",
-        content: chameleonResponse,
+        content: cleanedLead,
         timestamp: Date.now(),
-        sentiment: detectSentiment([...updatedMessages, { role: "lead", content: chameleonResponse, timestamp: Date.now() }]),
+        sentiment: detectSentiment([...updatedMessages, { role: "lead", content: cleanedLead, timestamp: Date.now() }]),
       };
 
       const finalMessages = [...updatedMessages, leadMsg];
