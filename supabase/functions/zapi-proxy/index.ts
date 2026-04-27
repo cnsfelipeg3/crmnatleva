@@ -377,6 +377,60 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // === AUTH GUARD ===
+  // Garante que somente usuários autenticados (e employees ativos, quando aplicável)
+  // possam chamar esta função. Sem isso, qualquer um com a URL pública conseguiria
+  // disparar mensagens via Z-API.
+  try {
+    const authHeader = req.headers.get("Authorization") || req.headers.get("authorization");
+    if (!authHeader || !authHeader.toLowerCase().startsWith("bearer ")) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    const jwt = authHeader.slice(7).trim();
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({ error: "server_misconfigured" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: userData, error: userErr } = await adminClient.auth.getUser(jwt);
+    const userId = userData?.user?.id;
+
+    if (userErr || !userId) {
+      return new Response(
+        JSON.stringify({ error: "unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Se houver registro em employees e estiver inativo, bloqueia.
+    // Admins do CRM podem não ter employee — nesse caso seguimos.
+    const { data: employee } = await adminClient
+      .from("employees")
+      .select("id, is_active")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (employee && employee.is_active === false) {
+      return new Response(
+        JSON.stringify({ error: "forbidden", reason: "employee_inactive" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+  } catch (authError: any) {
+    console.error("[Z-API] auth guard error:", authError?.message || authError);
+    return new Response(
+      JSON.stringify({ error: "unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     if (!INSTANCE_ID || !TOKEN) {
       return new Response(
