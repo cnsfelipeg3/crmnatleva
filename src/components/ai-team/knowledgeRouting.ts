@@ -65,6 +65,14 @@ export function routeKnowledgeDocsByAgent(docs: KnowledgeDocRecord[]): Record<st
       pushDoc(routed, "nemo", content);
       pushDoc(routed, "luna", content);
     }
+    if (
+      title.includes("brasil") ||
+      title.includes("nordeste") ||
+      title.includes("sudeste")
+    ) {
+      pushDoc(routed, "nemo", content);
+      pushDoc(routed, "luna", content);
+    }
     if (title.includes("europa")) {
       pushDoc(routed, "dante", content);
       pushDoc(routed, "luna", content);
