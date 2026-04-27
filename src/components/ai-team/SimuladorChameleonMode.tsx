@@ -19,7 +19,7 @@ import { useGlobalRules, buildGlobalRulesBlock } from "@/hooks/useGlobalRules";
 import { useAgencyConfig } from "@/hooks/useAgencyConfig";
 import { buildKnowledgeBlocksByAgent } from "@/components/ai-team/knowledgeRouting";
 import { debugLog } from "@/lib/debugMode";
-import { enforceAgentFormatting, stripRepeatedLeadingName } from "./agentFormatting";
+import { enforceAgentFormatting, stripRepeatedLeadingName, stripRepeatedGreeting } from "./agentFormatting";
 import { fullCompliancePipeline } from "./complianceEngine";
 import ChameleonConfig, { type SessionType } from "./ChameleonConfig";
 import {
@@ -280,6 +280,12 @@ export default function SimuladorChameleonMode() {
 
       // ── Post-processing: enforce formatting (identical to manual simulator) ──
       let cleanResponse = enforceAgentFormatting(agentResponse);
+
+      // Salvaguarda anti-saudação repetida: passa só o histórico DO AGENTE
+      const agentHistoryTexts = currentMessages
+        .filter((m) => m.role === "agent")
+        .map((m) => m.content);
+      cleanResponse = stripRepeatedGreeting(cleanResponse, agentHistoryTexts);
 
       // ── Compliance Engine: validate against all rules ──
       try {
