@@ -417,6 +417,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
             {adminOpen && !isCollapsed && renderSubGroup([
               { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
               { to: "/admin/conversas-excluidas", icon: Inbox, label: "Conversas Excluídas" },
+              { to: "/admin/regras-globais", icon: ScrollText, label: "Regras Globais Agentes" },
               { to: "/settings", icon: Settings, label: "Configurações" },
             ])}
           </>

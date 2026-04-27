@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { fetchGlobalRules } from "../_shared/agent_global_rules.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -232,8 +233,9 @@ async function callAnthropic(
   });
 }
 
-// ─── BEHAVIORAL DIRECTIVES (injected into ALL agent prompts) ───
-const NATLEVA_BEHAVIOR_CORE = `
+// ─── BEHAVIORAL DIRECTIVES (FALLBACK — usado se o banco estiver vazio/indisponível) ───
+// IMPORTANTE: NÃO REMOVER. Atua como fallback determinístico do agent_global_rules.
+const NATLEVA_BEHAVIOR_CORE_FALLBACK = `
 DIRETIVAS COMPORTAMENTAIS NATLEVA (PRIORIDADE MÁXIMA):
 
 1. RAPPORT NATURAL: Reconheça brevemente o que o lead disse, mas SEM frases de validação artificiais. NÃO comece com "Que linda ideia", "Adorei saber disso", "Que incrível". Apenas demonstre que leu e entendeu, e siga a conversa com naturalidade. Se não há nada genuíno para comentar, vá direto ao ponto.
@@ -310,10 +312,20 @@ serve(async (req) => {
     const saudacaoAtual = brasilHour < 12 ? "bom dia" : brasilHour < 18 ? "boa tarde" : "boa noite";
     const greetingRule = `\nREGRA DE SAUDACAO — HORARIO ATUAL:\nAgora sao ${String(brasilHour).padStart(2, "0")}h no horario de Brasilia. A saudacao correta e "${saudacaoAtual}".\n- Se o cliente disser "bom dia", "boa tarde" ou "boa noite", RESPONDA COM "${saudacaoAtual}" (a saudacao correta para o horario atual).\n- Se o cliente NAO usar saudacao de periodo, voce tambem NAO precisa usar.\n`;
 
-    // Inject NATLEVA_BEHAVIOR_CORE + greeting into system prompt for agent-type calls
+    // ─── Fetch DB rules (with fallback) ───
+    const sbUrl = Deno.env.get("SUPABASE_URL") || "";
+    const sbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const dbRules = (sbUrl && sbKey)
+      ? await fetchGlobalRules(sbUrl, sbKey, "simulator")
+      : {};
+    const behaviorCoreFromDb = dbRules["natleva_behavior_core"];
+    const effectiveBehaviorCore = behaviorCoreFromDb || NATLEVA_BEHAVIOR_CORE_FALLBACK;
+    console.log(`[simulator-ai] behavior_core source: ${behaviorCoreFromDb ? "db" : "fallback"}`);
+
+    // Inject effectiveBehaviorCore + greeting into system prompt for agent-type calls
     let enrichedSystemPrompt = systemPrompt || "";
     if (type !== "price_image" && enrichedSystemPrompt) {
-      enrichedSystemPrompt = greetingRule + NATLEVA_BEHAVIOR_CORE + "\n\n" + enrichedSystemPrompt;
+      enrichedSystemPrompt = greetingRule + effectiveBehaviorCore + "\n\n" + enrichedSystemPrompt;
     }
 
     // Build messages array
