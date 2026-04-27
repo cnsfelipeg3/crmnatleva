@@ -239,7 +239,7 @@ export function stripRepeatedGreeting(
 ): string {
   if (!text || !agentHistory || agentHistory.length === 0) return text;
 
-  const greetingDetect = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite|olá|ola|oi+|hello|hi)\b/i;
+  const greetingDetect = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite|olá|ola|oi+|hello|hi)(?![A-Za-zÀ-ÿ])/i;
   const hasGreetedBefore = agentHistory.some(
     (msg) => typeof msg === "string" && greetingDetect.test(msg)
   );
