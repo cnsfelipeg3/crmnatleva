@@ -824,6 +824,45 @@ export default function NewSale() {
         }
       }
 
+      // ═══ Upload de anexos para o Storage + tabela attachments ═══
+      // Os arquivos da aba "Anexos / IA" precisam ser persistidos para aparecerem
+      // depois em SaleDetail (que lê de public.attachments).
+      if (files.length > 0) {
+        const failedUploads: string[] = [];
+        for (const file of files) {
+          try {
+            const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+            const path = `sales/${saleId}/${Date.now()}_${safeName}`;
+            const { error: upErr } = await supabase.storage
+              .from("sale-attachments")
+              .upload(path, file, { upsert: false, contentType: file.type || undefined });
+            if (upErr) throw upErr;
+            const { data: urlData } = supabase.storage.from("sale-attachments").getPublicUrl(path);
+            const { error: insErr } = await supabase.from("attachments").insert({
+              sale_id: saleId,
+              file_name: file.name,
+              file_type: file.type || null,
+              file_url: urlData.publicUrl,
+              category: "outros",
+              uploaded_by: user?.id || null,
+            });
+            if (insErr) throw insErr;
+          } catch (upErr: any) {
+            console.error("Falha ao subir anexo", file.name, upErr);
+            failedUploads.push(file.name);
+          }
+        }
+        if (failedUploads.length > 0) {
+          toast({
+            title: "Alguns anexos não foram salvos",
+            description: `Falhou: ${failedUploads.join(", ")}. A venda foi salva — você pode reenviar pela tela da venda.`,
+            variant: "destructive",
+          });
+        } else {
+          setFiles([]);
+        }
+      }
+
       toast({ title: isEditMode ? "Venda atualizada com sucesso!" : "Venda salva com sucesso!" });
       try { await Promise.all([supabase.functions.invoke("checkin-generate"), supabase.functions.invoke("lodging-generate")]); } catch {}
       navigate(isEditMode ? `/sales/${editId}` : "/sales");
