@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { debugLog } from "@/lib/debugMode";
 import { clearComplianceCache } from "./complianceEngine";
-import { enforceAgentFormatting } from "./agentFormatting";
+import { enforceAgentFormatting, stripRepeatedGreeting } from "./agentFormatting";
 import { Send, RotateCcw, Loader2, FileText, Trophy, Plane, MapPin, ChevronDown, Users, X, Mic } from "lucide-react";
 import NathOpinionButton from "./NathOpinionButton";
 import ViewProposalButton from "./ViewProposalButton";
@@ -372,7 +372,12 @@ export default function SimuladorManualMode() {
         console.error("[AGENT] Empty response from AI — suppressed technical error message");
         debugLog("[AGENT] Resposta vazia da IA — erro técnico suprimido (não exposto ao cliente)");
       } else {
-        const cleanedText = enforceAgentFormatting(agentText);
+        let cleanedText = enforceAgentFormatting(agentText);
+        const recentAgentMessages = messagesRef.current
+          .filter((m) => m.role === "agent")
+          .map((m) => m.content)
+          .slice(-10);
+        cleanedText = stripRepeatedGreeting(cleanedText, recentAgentMessages);
         const committed = commitAgentMessage(cleanedText);
 
         if (!committed) {
