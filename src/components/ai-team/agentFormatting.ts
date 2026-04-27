@@ -222,3 +222,42 @@ export function stripRepeatedLeadingName(currentMsg: string, previousAgentMsg?: 
 
   return sanitizeClientNameUsage(currentMsg, nameInfo, [previousAgentMsg]);
 }
+
+/**
+ * Remove saudação repetida + reintrodução do "tudo bem por aqui"
+ * quando o agente JÁ cumprimentou em alguma mensagem anterior.
+ *
+ * @param text          A nova resposta do agente (já passou por enforceAgentFormatting)
+ * @param agentHistory  Lista de mensagens anteriores DO AGENTE (apenas role=agent),
+ *                      em ordem cronológica.
+ * @returns             Texto sem saudação inicial, ou texto original se a
+ *                      remoção esvaziaria a mensagem ou se não há histórico.
+ */
+export function stripRepeatedGreeting(
+  text: string,
+  agentHistory: string[],
+): string {
+  if (!text || !agentHistory || agentHistory.length === 0) return text;
+
+  const greetingDetect = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite|olá|ola|oi+|hello|hi)(?![A-Za-zÀ-ÿ])/i;
+  const hasGreetedBefore = agentHistory.some(
+    (msg) => typeof msg === "string" && greetingDetect.test(msg)
+  );
+  if (!hasGreetedBefore) return text;
+
+  if (!greetingDetect.test(text)) return text;
+
+  const stripPattern = new RegExp(
+    "^\\s*(bom\\s+dia|boa\\s+tarde|boa\\s+noite|olá|ola|oi+|hello|hi)" +
+      "[^.!?\\n]*[.!?]+\\s*" +
+      "(?:tudo\\s+(?:bem|ótimo|otimo|certo|tranquilo)" +
+      "[^.!?\\n]*[.!?]+\\s*)?",
+    "i"
+  );
+
+  const stripped = text.replace(stripPattern, "").trim();
+
+  if (!stripped || stripped.length < 3) return text;
+
+  return stripped;
+}
