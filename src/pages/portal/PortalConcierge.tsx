@@ -481,8 +481,8 @@ export default function PortalConcierge() {
         Em md+ volta ao layout centralizado tradicional.
       */}
       <div
-        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col"
-        style={{ minHeight: "calc(100dvh - 96px)" }}
+        className="max-w-3xl mx-auto w-full px-3 sm:px-4 pt-3 sm:pt-6 flex flex-col min-h-0"
+        style={{ height: "calc(100dvh - 96px)" }}
       >
         {/* Header — compacto no mobile, expansivo no desktop */}
         <motion.div
