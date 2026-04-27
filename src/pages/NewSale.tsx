@@ -607,7 +607,7 @@ export default function NewSale() {
         // INSERT new sale
         const { data: saleData, error: saleError } = await supabase.from("sales").insert({
           ...salePayload,
-          status: "Rascunho", created_by: user?.id,
+          status: "Concluída", created_by: user?.id,
         }).select("id").single();
         if (saleError) throw saleError;
         saleId = (saleData as any).id;

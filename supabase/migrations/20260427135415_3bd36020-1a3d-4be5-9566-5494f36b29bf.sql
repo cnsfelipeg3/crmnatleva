@@ -1,0 +1,1 @@
+UPDATE public.sales SET status = 'Concluída' WHERE status = 'Rascunho';
