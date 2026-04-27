@@ -189,12 +189,29 @@ async function upsertConversation(
 
   const { data: existingConv } = await supabase
     .from("conversations")
-    .select("id, unread_count, contact_name")
+    .select("id, unread_count, contact_name, excluded_at")
     .or(`phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalId}`)
     .limit(1)
     .maybeSingle();
 
   if (existingConv) {
+    // Soft-delete handling:
+    // - If conversation is excluded and the message is from the agency (fromMe),
+    //   ignore silently to avoid resurrecting closed contacts on outbound noise.
+    // - If excluded and the contact sends a new message (!fromMe), auto-reopen
+    //   by clearing excluded_at/excluded_reason BEFORE the upsert.
+    if (existingConv.excluded_at) {
+      if (fromMe) {
+        console.log("[Webhook] Skipping fromMe upsert for excluded conversation:", existingConv.id);
+        return existingConv.id;
+      }
+      console.log("[Webhook] Auto-reopening excluded conversation:", existingConv.id);
+      await supabase.from("conversations").update({
+        excluded_at: null,
+        excluded_reason: null,
+      }).eq("id", existingConv.id);
+    }
+
     const updateData: Record<string, unknown> = {
       last_message_at: timestampIso,
       last_message_preview: preview,
