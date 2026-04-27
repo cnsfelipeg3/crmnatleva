@@ -275,6 +275,7 @@ function AppRoutes() {
 
           {/* Admin */}
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/conversas-excluidas" element={<ConversasExcluidas />} />
 
           {/* Portal Admin */}
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />
