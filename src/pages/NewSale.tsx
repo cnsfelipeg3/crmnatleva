@@ -570,7 +570,7 @@ export default function NewSale() {
         link_chat: form.link_chat || null,
         origin_iata: derivedOrigin, origin_city: null,
         destination_iata: derivedDestination, destination_city: null,
-        departure_date: form.departure_date || null, return_date: form.return_date || null,
+        departure_date: derivedDeparture, return_date: derivedReturn,
         airline: form.airline || null, flight_class: form.flight_class || null,
         locators: groupLocators.length > 0 ? groupLocators : (form.locator ? [form.locator] : []),
         connections: form.connections ? form.connections.split(",").map(c => c.trim()) : [],
