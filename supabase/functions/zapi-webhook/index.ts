@@ -333,17 +333,17 @@ async function handleExclude(supabase: any, cleanPhone: string, excludeMsg: stri
     .maybeSingle();
 
   if (conv?.id) {
+    // Soft-delete: mark as excluded instead of removing rows.
+    // History is preserved so it can be reactivated later from the admin panel.
     await supabase.from("conversations").update({
+      excluded_at: new Date().toISOString(),
+      excluded_reason: excludeMsg || "excluded_by_router",
       last_message_preview: "__CONTACT_EXCLUDED__",
-      unread_count: -1,
+      unread_count: 0,
     }).eq("id", conv.id);
-    await new Promise(r => setTimeout(r, 300));
-    await supabase.from("messages").delete().eq("conversation_id", conv.id);
-    await supabase.from("conversation_messages").delete().eq("conversation_id", conv.id);
-    await supabase.from("conversations").delete().eq("id", conv.id);
   }
-  await supabase.from("zapi_messages").delete().eq("phone", cleanPhone);
-  await supabase.from("zapi_contacts").delete().eq("phone", cleanPhone);
+  // NOTE: zapi_messages / zapi_contacts / messages / conversation_messages are
+  // intentionally preserved so the conversation can be fully restored.
 }
 
 // ═══════════════════════════════════════════════════════════════
