@@ -547,11 +547,19 @@ export default function NewSale() {
         explicitOtherSlugs: otherProducts.map(p => p.type),
       });
 
-      // Auto-derive origin/destination from segments if not set manually
+      // Auto-derive origin/destination + datas a partir dos segmentos quando não preenchidos manualmente
       const validSegs = segments.filter(s => s.origin_iata && s.destination_iata);
       const idaSegs = validSegs.filter(s => s.direction === "ida");
+      const voltaSegs = validSegs.filter(s => s.direction === "volta");
       const derivedOrigin = form.origin_iata || (idaSegs.length > 0 ? idaSegs[0].origin_iata : validSegs[0]?.origin_iata) || null;
       const derivedDestination = form.destination_iata || (idaSegs.length > 0 ? idaSegs[idaSegs.length - 1].destination_iata : validSegs[validSegs.length - 1]?.destination_iata) || null;
+      const derivedDeparture = form.departure_date
+        || (idaSegs.find(s => s.departure_date)?.departure_date)
+        || (validSegs.find(s => s.departure_date)?.departure_date)
+        || null;
+      const derivedReturn = form.return_date
+        || (voltaSegs.find(s => s.departure_date)?.departure_date)
+        || null;
 
       const salePayload = {
         name: smartCapitalizeName(form.name),
@@ -562,7 +570,7 @@ export default function NewSale() {
         link_chat: form.link_chat || null,
         origin_iata: derivedOrigin, origin_city: null,
         destination_iata: derivedDestination, destination_city: null,
-        departure_date: form.departure_date || null, return_date: form.return_date || null,
+        departure_date: derivedDeparture, return_date: derivedReturn,
         airline: form.airline || null, flight_class: form.flight_class || null,
         locators: groupLocators.length > 0 ? groupLocators : (form.locator ? [form.locator] : []),
         connections: form.connections ? form.connections.split(",").map(c => c.trim()) : [],
