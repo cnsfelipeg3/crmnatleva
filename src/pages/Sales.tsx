@@ -149,11 +149,11 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
           ? <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
-      <td className="px-1 py-3">
-        <Badge variant="outline" className={cn("text-[10px]", statusColor[sale.status] || "")}>{sale.status}</Badge>
+      <td className="px-2 py-3">
+        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
       <td className="px-2 py-3">
-        <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
           <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
         </div>
@@ -358,22 +358,22 @@ export default function Sales() {
             {/* Desktop table view */}
             <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm table-fixed">
+                <table className="w-full text-sm min-w-[1280px]">
                   <colgroup>
-                    <col style={{ width: "14%" }} />
-                    <col style={{ width: "8%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "7%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "4%" }} />
-                    <col style={{ width: "6%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "9%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "5.5%" }} />
-                    <col style={{ width: "5%" }} />
-                    <col style={{ width: "5%" }} />
+                    <col style={{ minWidth: "200px" }} />
+                    <col style={{ minWidth: "100px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "50px" }} />
+                    <col style={{ minWidth: "80px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "110px" }} />
+                    <col style={{ minWidth: "70px" }} />
+                    <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "100px" }} />
+                    <col style={{ minWidth: "90px" }} />
                   </colgroup>
                   <thead>
                     <tr className="border-b border-border bg-muted/50">

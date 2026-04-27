@@ -1753,32 +1753,41 @@ export type Database = {
       checkin_passenger_details: {
         Row: {
           boarding_pass_file_name: string | null
+          boarding_pass_file_names: string[]
           boarding_pass_url: string | null
+          boarding_pass_urls: string[]
           checkin_task_id: string
           created_at: string | null
           id: string
           passenger_id: string
           seat: string | null
+          seats: string[]
           updated_at: string | null
         }
         Insert: {
           boarding_pass_file_name?: string | null
+          boarding_pass_file_names?: string[]
           boarding_pass_url?: string | null
+          boarding_pass_urls?: string[]
           checkin_task_id: string
           created_at?: string | null
           id?: string
           passenger_id: string
           seat?: string | null
+          seats?: string[]
           updated_at?: string | null
         }
         Update: {
           boarding_pass_file_name?: string | null
+          boarding_pass_file_names?: string[]
           boarding_pass_url?: string | null
+          boarding_pass_urls?: string[]
           checkin_task_id?: string
           created_at?: string | null
           id?: string
           passenger_id?: string
           seat?: string | null
+          seats?: string[]
           updated_at?: string | null
         }
         Relationships: [
