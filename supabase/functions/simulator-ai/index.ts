@@ -58,7 +58,9 @@ function getModelConfig(type: CallType, provider: string): { model: string; stre
     case "deep":
       return { model: "google/gemini-2.5-pro", stream: false, maxTokens: 3000 };
     default:
-      return { model: "google/gemini-3-flash-preview", stream: true, maxTokens: 600 };
+      // gemini-2.5-flash-lite: TTFT ~3-5x menor que flash-preview, ideal pra respostas curtas (≤70 palavras)
+      // do Camaleão. Mantém qualidade suficiente pra Maya/Atlas (qualificação) e demais agentes.
+      return { model: "google/gemini-2.5-flash-lite", stream: true, maxTokens: 600 };
   }
 }
 

@@ -269,7 +269,11 @@ export default function SimuladorChameleonMode() {
       }
 
       // Build history in OpenAI format
-      const history = currentMessages.map(m => ({
+      // Performance: trunca para os últimos 12 turnos para manter TTFT baixo
+      // (input grande explode latência do gateway, especialmente com KB injetada).
+      const HISTORY_WINDOW = 12;
+      const recentMessages = currentMessages.slice(-HISTORY_WINDOW);
+      const history = recentMessages.map(m => ({
         role: m.role === "lead" ? "user" : "assistant",
         content: m.content,
       }));
@@ -362,7 +366,10 @@ export default function SimuladorChameleonMode() {
       const chameleonSysPrompt = buildChameleonSystemPrompt(p, challengeOverride);
 
       // Build conversation from Chameleon's perspective
-      const chameleonHistory = updatedMessages.map(m => ({
+      // Performance: mesma janela de 12 turnos do agente para evitar inflar input.
+      const HISTORY_WINDOW_LEAD = 12;
+      const recentForLead = updatedMessages.slice(-HISTORY_WINDOW_LEAD);
+      const chameleonHistory = recentForLead.map(m => ({
         role: m.role === "lead" ? "assistant" : "user",
         content: m.role === "agent" ? `Nath (agente): ${m.content}` : m.content,
       }));
