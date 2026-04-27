@@ -1,3 +1,6 @@
+// TODO (segurança): validar shared secret no header `X-NatLeva-Token` contra a env var
+// `ZAPI_WEBHOOK_SECRET` para evitar webhooks forjados. Esta função precisa permanecer
+// pública (verify_jwt = false) porque o Z-API não envia JWT.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
