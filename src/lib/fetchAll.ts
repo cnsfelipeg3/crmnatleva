@@ -70,6 +70,12 @@ export async function fetchAllRows(
         .select(select)
         .range(from, to);
 
+      if (options?.isFilters) {
+        for (const [col, val] of Object.entries(options.isFilters)) {
+          query = query.is(col, val);
+        }
+      }
+
       if (options?.order) {
         query = query.order(options.order.column, {
           ascending: options.order.ascending ?? true,
