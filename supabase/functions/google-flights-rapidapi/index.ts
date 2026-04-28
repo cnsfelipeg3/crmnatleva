@@ -356,9 +356,89 @@ serve(async (req) => {
       });
     }
 
-    // 2) Upstream
+    // 2) Upstream — para searchFlights, faz auto-paginação até MAX_PAGES
     const endpoint = ACTION_ENDPOINTS[action];
-    const { data, status } = await callRapidApi(endpoint, params, action);
+    let { data, status } = await callRapidApi(endpoint, params, action);
+
+    if (action === "searchFlights" && status >= 200 && status < 300) {
+      const MAX_PAGES = 5; // 1 inicial + 4 próximas (~ até 100-150 voos)
+      const mergedTop: any[] = [];
+      const mergedOther: any[] = [];
+      let pageData: any = data;
+      let pagesFetched = 0;
+
+      function extractNextToken(d: any): string | null {
+        // DataCrawler já testou múltiplos formatos · cobrir todos
+        return (
+          d?.data?.next_token ??
+          d?.data?.itineraries?.next_token ??
+          d?.data?.nextToken ??
+          d?.next_token ??
+          d?.nextToken ??
+          null
+        );
+      }
+
+      // Página 1 já está em "data"
+      const itin0 = pageData?.data?.itineraries ?? {};
+      if (Array.isArray(itin0.topFlights)) mergedTop.push(...itin0.topFlights);
+      if (Array.isArray(itin0.otherFlights)) mergedOther.push(...itin0.otherFlights);
+      pagesFetched = 1;
+
+      let nextToken = extractNextToken(pageData);
+      while (nextToken && pagesFetched < MAX_PAGES) {
+        try {
+          const nextParams = { ...params, next_token: nextToken };
+          const { data: nextData, status: nextStatus } = await callRapidApi(endpoint, nextParams, action + "_next");
+          if (nextStatus < 200 || nextStatus >= 300) break;
+          const itinN = (nextData as any)?.data?.itineraries ?? {};
+          const addedTop = Array.isArray(itinN.topFlights) ? itinN.topFlights.length : 0;
+          const addedOther = Array.isArray(itinN.otherFlights) ? itinN.otherFlights.length : 0;
+          if (Array.isArray(itinN.topFlights)) mergedTop.push(...itinN.topFlights);
+          if (Array.isArray(itinN.otherFlights)) mergedOther.push(...itinN.otherFlights);
+          pagesFetched += 1;
+          console.log(`[gflights] page ${pagesFetched} → +${addedTop} top, +${addedOther} other`);
+          if (addedTop + addedOther === 0) break; // página vazia · evita loop
+          nextToken = extractNextToken(nextData);
+        } catch (e) {
+          console.warn(`[gflights] pagination break: ${(e as Error)?.message}`);
+          break;
+        }
+      }
+
+      // Reconstroi o payload com todas as páginas mescladas + dedupe leve por booking_token/key
+      const dedupeKey = (it: any) =>
+        it?.booking_token ?? it?.departure_token ?? JSON.stringify({
+          p: it?.price,
+          d: it?.duration?.raw ?? it?.duration,
+          f: (it?.flights ?? []).map((l: any) => `${l?.flight_number}-${l?.departure_airport?.time}`).join("|"),
+        });
+      const seen = new Set<string>();
+      const dedupe = (arr: any[]) => arr.filter((it) => {
+        const k = dedupeKey(it);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+
+      const finalTop = dedupe(mergedTop);
+      const finalOther = dedupe(mergedOther);
+
+      console.log(`[gflights] ✓ search complete · ${pagesFetched} page(s) · ${finalTop.length} top + ${finalOther.length} other`);
+
+      data = {
+        ...(pageData as object),
+        data: {
+          ...((pageData as any)?.data ?? {}),
+          itineraries: {
+            ...((pageData as any)?.data?.itineraries ?? {}),
+            topFlights: finalTop,
+            otherFlights: finalOther,
+          },
+          __pagination: { pages_fetched: pagesFetched, total_top: finalTop.length, total_other: finalOther.length },
+        },
+      };
+    }
 
     if (status >= 200 && status < 300) {
       await writeCache(action, params, data);

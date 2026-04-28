@@ -327,7 +327,14 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
         other_flights: otherRaw.map(mapItinerary),
         price_insights: priceInsights,
         price_history: priceHistory,
-        search_metadata: { source: "DataCrawler", action: "searchFlights", count: allItins.length },
+        search_metadata: {
+          source: "DataCrawler",
+          action: "searchFlights",
+          count: allItins.length,
+          pages_fetched: root?.__pagination?.pages_fetched ?? 1,
+          total_top: root?.__pagination?.total_top ?? topRaw.length,
+          total_other: root?.__pagination?.total_other ?? otherRaw.length,
+        },
         fetched_at: typeof data?.timestamp === "number"
           ? new Date(data.timestamp).toISOString()
           : new Date().toISOString(),
