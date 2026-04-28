@@ -202,6 +202,27 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
   const recognitionRef = useRef<any>(null);
   const discover = useDiscoverDestinations();
   const data = discover.data;
+  const { history: cacheHistory, append: appendCachePoint, clear: clearCacheHistory } =
+    useDiscoverCacheHistory();
+
+  // Registra ponto no histórico sempre que vier um cache_stats novo
+  const lastRegisteredTsRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!data?.success || !data.cache_stats) return;
+    // dedupe · evita re-append se o componente re-renderizar com o mesmo data
+    const fingerprint =
+      data.cache_stats.cache_hits * 10_000 +
+      data.cache_stats.api_calls * 100 +
+      data.cache_stats.total_checked;
+    if (lastRegisteredTsRef.current === fingerprint) return;
+    lastRegisteredTsRef.current = fingerprint;
+    appendCachePoint({
+      cache_hits: data.cache_stats.cache_hits,
+      api_calls: data.cache_stats.api_calls,
+      total_checked: data.cache_stats.total_checked,
+      hit_rate_percent: data.cache_stats.hit_rate_percent,
+    });
+  }, [data, appendCachePoint]);
 
   // Live extract local (debounced 350ms)
   useEffect(() => {
