@@ -108,7 +108,7 @@ export default function GoogleFlightsSearchPage() {
     () => (urlParams.get("outerTab") as "search" | "discover") || "search",
   );
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
-  const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
+  const { filters, setFilters, autoApply, setAutoApply } = useGFlightFiltersStorage();
   const [showPriceHistory, setShowPriceHistory] = useState(false);
   // Hint da Discover IA · usado pra construir um voo sintético quando a DataCrawler
   // não devolve topFlights mas a Discover já tinha cotação válida.
