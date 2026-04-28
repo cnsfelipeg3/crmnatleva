@@ -258,7 +258,7 @@ function GFlightInlineFiltersImpl({
         <button
           type="button"
           aria-pressed={filters.bagCarryOn}
-          aria-label="Apenas voos com bagagem de mão inclusa"
+          aria-label={`Bagagem de mão inclusa${filters.bagCarryOn ? " · ativo" : ""}`}
           onClick={() => onChange({ ...filters, bagCarryOn: !filters.bagCarryOn })}
           className={cn(
             "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
@@ -274,7 +274,7 @@ function GFlightInlineFiltersImpl({
         <button
           type="button"
           aria-pressed={filters.bagChecked}
-          aria-label="Apenas voos com bagagem despachada inclusa"
+          aria-label={`Bagagem despachada inclusa${filters.bagChecked ? " · ativo" : ""}`}
           onClick={() => onChange({ ...filters, bagChecked: !filters.bagChecked })}
           className={cn(
             "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
