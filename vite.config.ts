@@ -93,12 +93,17 @@ export default defineConfig(({ mode }) => ({
     include: [
       "react",
       "react-dom",
+      "react-dom/client",
+      "react/jsx-runtime",
       "react-router-dom",
       "@tanstack/react-query",
       "@supabase/supabase-js",
       "lucide-react",
       "date-fns",
       "sonner",
+      "clsx",
+      "tailwind-merge",
+      "class-variance-authority",
       // Lodash é CommonJS · precisa ser pre-bundled pelo Vite pra
       // expor named e default exports. Submódulos comuns devem ser
       // listados explicitamente porque Vite não detecta auto.
