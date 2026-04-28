@@ -126,7 +126,10 @@ export default defineConfig(({ mode }) => ({
       "three",
       "@react-three/fiber",
       "@react-three/drei",
-      "recharts",
+      // recharts REMOVIDO do exclude · ele importa `lodash/get` como CJS
+      // internamente e, fora do pre-bundle, o browser falha com
+      // "does not provide an export named 'default'". Deixar o Vite
+      // pre-bundleá-lo resolve a interop CJS↔ESM via esbuild.
       "framer-motion",
       "monaco-editor",
       "mermaid",
