@@ -424,3 +424,15 @@ function RoutesMapInner({ routes, height = "400px", sales = [], onSaleClick, onD
     </div>
   );
 }
+
+export default function RoutesMap(props: RoutesMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa de rotas indisponível"
+        className="rounded-lg border border-border"
+      />
+    );
+  }
+  return <RoutesMapInner {...props} />;
+}
