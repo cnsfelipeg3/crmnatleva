@@ -235,8 +235,40 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     setRecording(true);
   }
 
-  // Pronto: só precisa de texto razoável (>= 20 chars). Geo/orçamento são bônus.
-  const ready = useMemo(() => story.trim().length >= 20, [story]);
+  // ─── VALIDAÇÃO + NORMALIZAÇÃO DO STORY ──────────────────────────
+  // Normaliza: trim, colapsa whitespace múltiplo, remove caracteres
+  // de controle invisíveis. NÃO altera o que está no textarea (UX),
+  // só calcula uma versão limpa pra validação.
+  const normalizedStory = useMemo(() => {
+    return story
+      .replace(/[\u0000-\u001F\u007F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, [story]);
+
+  const wordCount = useMemo(
+    () => (normalizedStory ? normalizedStory.split(/\s+/).filter(Boolean).length : 0),
+    [normalizedStory],
+  );
+
+  // Detecção mínima de idioma latino · evita lixo (emojis puros, "asdf")
+  const looksLatin = useMemo(() => {
+    if (!normalizedStory) return false;
+    const letters = normalizedStory.replace(/[^a-zA-ZáàâãéèêíïóôõöúüçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ]/g, "");
+    return letters.length >= 12;
+  }, [normalizedStory]);
+
+  // Motivo determinístico pelo qual o botão pode estar desabilitado
+  const disabledReason = useMemo<string | null>(() => {
+    if (discover.isPending) return "Buscando destinos…";
+    if (normalizedStory.length === 0) return "Comece escrevendo sua história";
+    if (normalizedStory.length < 20) return `Faltam ${20 - normalizedStory.length} caracteres pra começar`;
+    if (wordCount < 4) return "Conta um pouco mais · pelo menos 4 palavras";
+    if (!looksLatin) return "Texto não reconhecido · escreva em português";
+    return null;
+  }, [normalizedStory, wordCount, looksLatin, discover.isPending]);
+
+  const ready = disabledReason === null;
 
   // Hints visuais do que ajudaria a melhorar o resultado
   const hints = useMemo(() => {
@@ -249,9 +281,58 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     return h;
   }, [extract, story]);
 
+  // ─── DEPURAÇÃO ──────────────────────────────────────────────────
+  const lastReadyRef = useRef<{ ready: boolean; reason: string | null } | null>(null);
+  useEffect(() => {
+    const prev = lastReadyRef.current;
+    if (!prev || prev.ready !== ready || prev.reason !== disabledReason) {
+      // eslint-disable-next-line no-console
+      console.debug("[Discover] ready=", ready, "reason=", disabledReason, {
+        chars: normalizedStory.length,
+        words: wordCount,
+        looksLatin,
+        isPending: discover.isPending,
+        extract,
+      });
+      lastReadyRef.current = { ready, reason: disabledReason };
+    }
+  }, [ready, disabledReason, normalizedStory.length, wordCount, looksLatin, discover.isPending, extract]);
+
   function handleSubmit() {
-    if (story.trim().length < 10) return;
-    discover.mutate({ naturalQuery: story.trim() });
+    if (!ready) {
+      // eslint-disable-next-line no-console
+      console.warn("[Discover] submit bloqueado:", disabledReason);
+      return;
+    }
+    discover.mutate({ naturalQuery: normalizedStory });
+  }
+
+  // ─── AUTO-RERUN ─────────────────────────────────────────────────
+  // Se o usuário tentou submeter quando ainda não estava pronto, refaz
+  // a busca automaticamente assim que o critério ficar válido.
+  const wantsAutoSubmitRef = useRef(false);
+  useEffect(() => {
+    if (
+      wantsAutoSubmitRef.current &&
+      ready &&
+      !discover.isPending &&
+      !data?.success
+    ) {
+      wantsAutoSubmitRef.current = false;
+      // eslint-disable-next-line no-console
+      console.debug("[Discover] auto-rerun: critério atingido após edição");
+      discover.mutate({ naturalQuery: normalizedStory });
+    }
+  }, [ready, discover.isPending, data?.success, normalizedStory, discover]);
+
+  function handleSubmitClick() {
+    if (!ready) {
+      wantsAutoSubmitRef.current = true;
+      // eslint-disable-next-line no-console
+      console.warn("[Discover] aguardando critério ficar válido:", disabledReason);
+      return;
+    }
+    handleSubmit();
   }
 
   if (discover.isPending) {
@@ -282,7 +363,7 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
                 placeholder="Aniversário de 10 anos de casamento, queremos algo memorável e fora do óbvio..."
                 className="flex-1 min-h-[140px] md:min-h-[180px] p-4 md:p-5 text-base md:text-lg leading-relaxed bg-transparent resize-none focus:outline-none placeholder:text-muted-foreground/50"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && ready) handleSubmit();
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmitClick();
                 }}
               />
               <button
@@ -323,22 +404,58 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
             </div>
           )}
 
-          {/* CTA · sempre visível, desabilitado se texto curto */}
+          {/* CTA · SEMPRE visível. Quando bloqueado, mostra o motivo
+               · clique mesmo bloqueado deixa "agendado" pra auto-rerun */}
           <div className="flex flex-col items-center gap-2 pt-2">
             <Button
               size="lg"
-              onClick={handleSubmit}
-              disabled={!ready}
-              className="h-14 px-8 text-base bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-xl shadow-primary/25 gap-2 disabled:opacity-40 disabled:shadow-none"
+              onClick={handleSubmitClick}
+              aria-disabled={!ready}
+              data-ready={ready}
+              data-reason={disabledReason ?? "ok"}
+              title={disabledReason ?? "Pronto pra descobrir"}
+              className={cn(
+                "h-14 px-8 text-base shadow-xl gap-2 transition-all",
+                ready
+                  ? "bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-primary/25"
+                  : "bg-muted text-muted-foreground hover:bg-muted shadow-none cursor-not-allowed",
+              )}
             >
               <Sparkles className="h-5 w-5" />
-              {ready ? "Descobrir destinos perfeitos" : "Conta um pouco mais da sua viagem…"}
-              {ready && <ArrowRight className="h-5 w-5" />}
+              {discover.isPending
+                ? "Buscando…"
+                : ready
+                ? "Descobrir destinos perfeitos"
+                : (wantsAutoSubmitRef.current ? "Aguardando você completar…" : "Pesquisar")}
+              {ready && !discover.isPending && <ArrowRight className="h-5 w-5" />}
             </Button>
+
+            {/* Motivo do bloqueio · sempre visível quando há */}
+            {!ready && disabledReason && (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  ⚠️ {disabledReason}
+                </span>
+                {wantsAutoSubmitRef.current && (
+                  <span className="text-[10px] text-muted-foreground italic">
+                    A busca dispara sozinha quando você completar
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Hints opcionais quando já está pronto */}
             {ready && hints.length > 0 && (
               <p className="text-[11px] text-muted-foreground italic">
                 Dica: você pode adicionar {hints.join(" · ")} pra refinar
               </p>
+            )}
+
+            {/* Telemetria mínima · só em dev */}
+            {import.meta.env.DEV && (
+              <code className="text-[9px] text-muted-foreground/60 font-mono">
+                debug · chars:{normalizedStory.length} · words:{wordCount} · latin:{String(looksLatin)} · pending:{String(discover.isPending)}
+              </code>
             )}
           </div>
 
