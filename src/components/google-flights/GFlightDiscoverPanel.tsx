@@ -436,12 +436,48 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
       )}
 
       {data?.success && data.results.length === 0 && (
-        <Alert>
-          <AlertDescription>
-            Nenhum destino encontrado com esses critérios. Tente um orçamento maior, período diferente
-            ou flexibilizar o estilo.
-          </AlertDescription>
-        </Alert>
+        <Card className="p-5 border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-background">
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 shrink-0 rounded-full bg-amber-500/15 flex items-center justify-center">
+              <Compass className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1 space-y-2">
+              <h3 className="text-sm font-semibold">Nenhum destino caiu no orçamento desta vez</h3>
+              <p className="text-xs text-muted-foreground">
+                A gente buscou em <strong>{data.totalCandidates}</strong> destinos
+                {data.totalWithFlights > 0
+                  ? ` · ${data.totalWithFlights} retornaram preços, mas nenhum coube no orçamento.`
+                  : " · nenhum voo voltou da API neste momento (pode ser limite temporário do provedor)."}
+              </p>
+              <div className="flex flex-wrap gap-2 pt-1">
+                <Button size="sm" variant="outline" onClick={() => handleSubmit()} className="h-7 text-xs gap-1">
+                  <Sparkles className="h-3 w-3" /> Tentar de novo
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setBudget((b) => Math.min(50000, b + 3000))}
+                  className="h-7 text-xs"
+                >
+                  + R$ 3.000 no orçamento
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setMonthOffset((m) => Math.min(12, m + 2))}
+                  className="h-7 text-xs"
+                >
+                  Adiar 2 meses
+                </Button>
+                {moods.length > 0 && (
+                  <Button size="sm" variant="outline" onClick={() => setMoods([])} className="h-7 text-xs">
+                    Limpar estilos
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
       )}
     </div>
   );
