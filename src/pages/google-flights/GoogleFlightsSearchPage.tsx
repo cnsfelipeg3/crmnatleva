@@ -34,6 +34,7 @@ import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItine
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightInlineFilters } from "@/components/google-flights/GFlightInlineFilters";
+import { useGFlightFiltersStorage } from "@/hooks/useGFlightFiltersStorage";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
 import { toast } from "sonner";
