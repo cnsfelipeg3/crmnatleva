@@ -1,7 +1,17 @@
 // Validação de consistência entre return_date manual e trip_length derivado
 // dos segmentos aéreos · evita inconsistências em gráficos/relatórios.
 
-import { parseLocalDate } from "@/lib/dateUtils";
+// Parse YYYY-MM-DD como data local · evita shift de timezone (GMT-3 → -1 dia).
+function parseLocalDate(d: string): Date | null {
+  if (!d) return null;
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (!m) {
+    const fallback = new Date(d);
+    return Number.isFinite(fallback.getTime()) ? fallback : null;
+  }
+  const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return Number.isFinite(dt.getTime()) ? dt : null;
+}
 
 export interface TripDateInputs {
   /** Data de partida manual (form.departure_date) — string YYYY-MM-DD. */
