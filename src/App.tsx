@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
+import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
 import PerfDebugOverlay from "@/components/PerfDebugOverlay";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
