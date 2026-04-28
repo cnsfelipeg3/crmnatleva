@@ -532,6 +532,18 @@ export default function NewSale() {
       setActiveTab("info");
       return;
     }
+    // Validação automática · trip_length manual vs. derivado dos segmentos
+    if (tripLengthCheck.hasMismatch) {
+      toast({
+        title: tripLengthCheck.severity === "error"
+          ? "Inconsistência grave nas datas da viagem"
+          : "Atenção · datas da viagem inconsistentes",
+        description: tripLengthCheck.message + " Confira a aba Aéreo antes de salvar para evitar distorção em gráficos e relatórios.",
+        variant: tripLengthCheck.severity === "error" ? "destructive" : "default",
+        duration: 8000,
+      });
+      // Não bloqueia o save · apenas alerta. Usuário decide.
+    }
     setSaving(true);
     try {
       // Use first hotel for legacy fields (declarado antes para alimentar a inferência)
