@@ -108,6 +108,24 @@ export default function GoogleFlightsSearchPage() {
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
   const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
+  // Hint da Discover IA · usado pra construir um voo sintético quando a DataCrawler
+  // não devolve topFlights mas a Discover já tinha cotação válida.
+  const [discoverHint, setDiscoverHint] = useState<{
+    iata: string;
+    city: string;
+    country: string;
+    minPrice: number;
+    sampleFlight: any;
+    flightDeparture?: string | null;
+    flightArrival?: string | null;
+    flightDuration?: string | null;
+    flightStops?: number;
+    flightAirline?: string | null;
+    flightAirlineLogo?: string | null;
+    outbound_date: string;
+    return_date?: string;
+    origin: string;
+  } | null>(null);
 
   const [tripMode, setTripMode] = useState<"round" | "oneway" | "multi">(
     () => (initial.ret ? "round" : "oneway"),
