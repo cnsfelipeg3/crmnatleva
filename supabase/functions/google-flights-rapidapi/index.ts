@@ -207,9 +207,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
         travel_class: String(input.travel_class ?? "ECONOMY"),
         adults: String(input.adults ?? 1),
         show_hidden: String(input.show_hidden ?? "0"),
-        currency: String(input.currency ?? defaults.currency),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+      currency: defaults.currency,
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
       if (input.return_date) p.return_date = String(input.return_date);
       if (input.children !== undefined) p.children = String(input.children);
@@ -235,9 +235,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
         outbound_date: String(input.outbound_date),
         travel_class: String(input.travel_class ?? "ECONOMY"),
         adults: String(input.adults ?? 1),
-        currency: String(input.currency ?? defaults.currency),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+        currency: defaults.currency,
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
       if (input.return_date) p.return_date = String(input.return_date);
       if (input.trip_length !== undefined) p.trip_length = String(input.trip_length);
@@ -251,9 +251,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
         outbound_date: String(input.outbound_date),
         travel_class: String(input.travel_class ?? "ECONOMY"),
         adults: String(input.adults ?? 1),
-        currency: String(input.currency ?? defaults.currency),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+        currency: defaults.currency,
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
       if (input.return_date) p.return_date = String(input.return_date);
       return p;
@@ -267,9 +267,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       }
       return {
         booking_token: String(token),
-        currency: String(input.currency ?? defaults.currency),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+        currency: defaults.currency,
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
     }
     case "getBookingURL": {
@@ -281,9 +281,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       }
       return {
         token: String(token),
-        currency: String(input.currency ?? defaults.currency),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+        currency: defaults.currency,
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
     }
     case "getLanguages":
