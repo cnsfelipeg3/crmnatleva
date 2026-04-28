@@ -79,6 +79,45 @@ export interface GFlightItinerary {
   [k: string]: unknown;
 }
 
+// Provider/agent que oferece o voo (retornado por getBookingDetails)
+export interface GBookingProvider {
+  id: string;
+  title: string;
+  website?: string;
+  price: number;
+  is_airline: boolean;
+  individualBooking?: boolean;
+  token?: string;
+  logo?: string;
+}
+
+// Filtros laterais
+export interface GFlightFilters {
+  stops: ("0" | "1" | "2+")[];
+  airlines: string[];
+  priceMin: number;
+  priceMax: number;
+  durationMaxMin: number;
+  depHourFrom: number;
+  depHourTo: number;
+  bagCarryOn: boolean;
+  bagChecked: boolean;
+  sortBy: "price_asc" | "duration_asc" | "departure_asc" | "co2_asc";
+}
+
+export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
+  stops: ["0", "1", "2+"],
+  airlines: [],
+  priceMin: 0,
+  priceMax: 0,
+  durationMaxMin: 0,
+  depHourFrom: 0,
+  depHourTo: 24,
+  bagCarryOn: false,
+  bagChecked: false,
+  sortBy: "price_asc",
+};
+
 export interface GPriceInsights {
   lowest_price?: number;
   highest_price?: number;
