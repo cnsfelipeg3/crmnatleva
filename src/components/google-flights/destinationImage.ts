@@ -310,55 +310,163 @@ const REGION_FALLBACK: Record<string, string> = {
 // Mapa cidade → país (chaves normalizadas) · usado quando country não é informado.
 // Cobre as cidades de CITY_PHOTOS para inferir o país via destino.
 const CITY_TO_COUNTRY: Record<string, string> = {
-  // Europa
-  "paris": "franca", "londres": "reino-unido", "london": "reino-unido",
+  // ===== Europa =====
+  "paris": "franca", "nice": "franca", "lyon": "franca", "marselha": "franca", "marseille": "franca",
+  "bordeaux": "franca", "cannes": "franca", "estrasburgo": "franca", "strasbourg": "franca",
+  "toulouse": "franca", "montpellier": "franca",
+  "londres": "reino-unido", "london": "reino-unido", "manchester": "reino-unido",
+  "liverpool": "reino-unido", "birmingham": "reino-unido", "bristol": "reino-unido",
+  "edimburgo": "escocia", "edinburgh": "escocia", "glasgow": "escocia",
   "roma": "italia", "rome": "italia", "veneza": "italia", "venice": "italia",
   "florenca": "italia", "florence": "italia", "milao": "italia", "milan": "italia",
-  "napoles": "italia", "naples": "italia",
-  "barcelona": "espanha", "madrid": "espanha",
-  "lisboa": "portugal", "lisbon": "portugal", "porto": "portugal",
-  "amsterda": "holanda", "amsterdam": "holanda",
-  "berlim": "alemanha", "berlin": "alemanha",
+  "napoles": "italia", "naples": "italia", "turim": "italia", "turin": "italia",
+  "bolonha": "italia", "bologna": "italia", "verona": "italia", "pisa": "italia",
+  "palermo": "italia", "catania": "italia", "amalfi": "italia", "capri": "italia",
+  "sicilia": "italia", "sardenha": "italia", "cinque-terre": "italia",
+  "barcelona": "espanha", "madrid": "espanha", "sevilha": "espanha", "seville": "espanha",
+  "valencia": "espanha", "malaga": "espanha", "granada": "espanha", "bilbao": "espanha",
+  "ibiza": "espanha", "mallorca": "espanha", "palma-de-mallorca": "espanha",
+  "tenerife": "espanha", "san-sebastian": "espanha",
+  "lisboa": "portugal", "lisbon": "portugal", "porto": "portugal", "madeira": "portugal",
+  "funchal": "portugal", "algarve": "portugal", "faro": "portugal", "cascais": "portugal",
+  "sintra": "portugal", "coimbra": "portugal", "braga": "portugal", "acores": "portugal",
+  "amsterda": "holanda", "amsterdam": "holanda", "roterda": "holanda", "rotterdam": "holanda",
+  "haia": "holanda", "the-hague": "holanda", "utrecht": "holanda",
+  "berlim": "alemanha", "berlin": "alemanha", "munique": "alemanha", "munich": "alemanha",
+  "munchen": "alemanha", "frankfurt": "alemanha", "hamburgo": "alemanha", "hamburg": "alemanha",
+  "colonia": "alemanha", "cologne": "alemanha", "dusseldorf": "alemanha", "stuttgart": "alemanha",
   "praga": "republica-tcheca", "prague": "republica-tcheca",
-  "viena": "austria", "vienna": "austria",
+  "viena": "austria", "vienna": "austria", "salzburgo": "austria", "salzburg": "austria",
+  "innsbruck": "austria",
+  "bruxelas": "belgica", "brussels": "belgica", "bruges": "belgica", "antuerpia": "belgica",
+  "antwerp": "belgica",
   "atenas": "grecia", "athens": "grecia", "santorini": "grecia", "mykonos": "grecia",
-  "dublin": "irlanda",
-  "edimburgo": "escocia", "edinburgh": "escocia",
-  "zurique": "suica", "zurich": "suica", "genebra": "suica", "geneva": "suica", "interlaken": "suica",
-  "estocolmo": "suecia", "stockholm": "suecia",
+  "creta": "grecia", "rodes": "grecia", "rhodes": "grecia", "corfu": "grecia",
+  "dublin": "irlanda", "cork": "irlanda", "galway": "irlanda",
+  "zurique": "suica", "zurich": "suica", "genebra": "suica", "geneva": "suica",
+  "interlaken": "suica", "lucerna": "suica", "lucerne": "suica", "basileia": "suica",
+  "basel": "suica", "berna": "suica", "bern": "suica",
+  "estocolmo": "suecia", "stockholm": "suecia", "gotemburgo": "suecia", "gothenburg": "suecia",
   "copenhague": "dinamarca", "copenhagen": "dinamarca",
-  "oslo": "noruega", "reykjavik": "islandia",
-  // Caribe / Américas
+  "oslo": "noruega", "bergen": "noruega", "tromso": "noruega",
+  "helsinque": "finlandia", "helsinki": "finlandia",
+  "reykjavik": "islandia",
+  "varsovia": "polonia", "warsaw": "polonia", "cracovia": "polonia", "krakow": "polonia",
+  "budapeste": "hungria", "budapest": "hungria",
+  "istambul": "turquia", "istanbul": "turquia", "capadocia": "turquia", "cappadocia": "turquia",
+  "antalya": "turquia",
+  "dubrovnik": "croacia", "split": "croacia", "zagreb": "croacia",
+  "moscou": "russia", "moscow": "russia", "sao-petersburgo": "russia", "st-petersburg": "russia",
+
+  // ===== América do Norte =====
+  "miami": "usa", "orlando": "usa", "tampa": "usa", "fort-lauderdale": "usa", "key-west": "usa",
+  "nova-york": "usa", "new-york": "usa", "boston": "usa", "filadelfia": "usa", "philadelphia": "usa",
+  "washington": "usa", "washington-dc": "usa", "atlanta": "usa", "charlotte": "usa",
+  "nashville": "usa", "new-orleans": "usa", "nova-orleans": "usa",
+  "los-angeles": "usa", "san-diego": "usa", "las-vegas": "usa", "san-francisco": "usa",
+  "sao-francisco": "usa", "seattle": "usa", "portland": "usa", "denver": "usa",
+  "chicago": "usa", "houston": "usa", "dallas": "usa", "austin": "usa", "phoenix": "usa",
+  "honolulu": "usa", "havai": "usa", "hawaii": "usa", "maui": "usa",
+  "sao-paul": "usa", "saint-paul": "usa", "minneapolis": "usa",
+  "sao-louis": "usa", "saint-louis": "usa",
+  "toronto": "canada", "montreal": "canada", "vancouver": "canada", "ottawa": "canada",
+  "quebec": "canada", "calgary": "canada", "banff": "canada",
   "cancun": "mexico", "playa-del-carmen": "mexico", "tulum": "mexico", "cidade-do-mexico": "mexico",
-  "punta-cana": "republica-dominicana",
-  "aruba": "aruba", "curacao": "curacao", "nassau": "bahamas", "havana": "cuba",
-  "san-juan": "usa",
-  "miami": "usa", "orlando": "usa", "nova-york": "usa", "new-york": "usa",
-  "los-angeles": "usa", "las-vegas": "usa", "san-francisco": "usa", "chicago": "usa",
-  "toronto": "canada",
+  "ciudad-de-mexico": "mexico", "mexico-city": "mexico", "puerto-vallarta": "mexico",
+  "los-cabos": "mexico", "cabo-san-lucas": "mexico", "cozumel": "mexico", "merida": "mexico",
+  "guadalajara": "mexico", "oaxaca": "mexico",
+
+  // ===== Caribe / América Central =====
+  "punta-cana": "republica-dominicana", "santo-domingo": "republica-dominicana",
+  "puerto-plata": "republica-dominicana",
+  "aruba": "aruba", "oranjestad": "aruba",
+  "curacao": "curacao", "willemstad": "curacao",
+  "nassau": "bahamas", "exuma": "bahamas", "bahamas": "bahamas",
+  "havana": "cuba", "varadero": "cuba", "cayo-coco": "cuba",
+  "san-juan": "usa", "porto-rico": "usa",
+  "montego-bay": "jamaica", "kingston": "jamaica", "ocho-rios": "jamaica",
+  "san-jose": "costa-rica", "costa-rica": "costa-rica",
+  "cidade-do-panama": "panama", "panama-city": "panama",
+  "antigua": "antigua", "barbados": "barbados", "saint-lucia": "saint-lucia",
+  "sao-lucia": "saint-lucia",
+
+  // ===== América do Sul =====
   "buenos-aires": "argentina", "bariloche": "argentina", "mendoza": "argentina",
-  "santiago": "chile", "santiago-do-chile": "chile",
-  "lima": "peru", "cusco": "peru",
-  // Brasil
+  "ushuaia": "argentina", "el-calafate": "argentina", "salta": "argentina",
+  "santiago": "chile", "santiago-do-chile": "chile", "valparaiso": "chile",
+  "san-pedro-de-atacama": "chile", "atacama": "chile", "ilha-de-pascoa": "chile",
+  "easter-island": "chile",
+  "lima": "peru", "cusco": "peru", "machu-picchu": "peru", "arequipa": "peru",
+  "bogota": "colombia", "cartagena": "colombia", "medellin": "colombia",
+  "santa-marta": "colombia",
+  "montevideo": "uruguai", "montevideu": "uruguai", "punta-del-este": "uruguai",
+  "colonia-del-sacramento": "uruguai",
+  "assuncao": "paraguai", "asuncion": "paraguai",
+  "la-paz": "bolivia", "uyuni": "bolivia", "salar-de-uyuni": "bolivia",
+  "quito": "equador", "galapagos": "equador",
+  "caracas": "venezuela",
+
+  // ===== Brasil =====
   "rio-de-janeiro": "brasil", "rio": "brasil", "fernando-de-noronha": "brasil",
   "salvador": "brasil", "florianopolis": "brasil", "porto-de-galinhas": "brasil",
   "jericoacoara": "brasil", "fortaleza": "brasil", "maceio": "brasil",
-  "natal": "brasil", "recife": "brasil", "gramado": "brasil",
-  "foz-do-iguacu": "brasil", "iguacu": "brasil", "brasilia": "brasil", "sao-paulo": "brasil",
-  // OM / África
+  "natal": "brasil", "recife": "brasil", "gramado": "brasil", "canela": "brasil",
+  "foz-do-iguacu": "brasil", "iguacu": "brasil", "brasilia": "brasil",
+  "sao-paulo": "brasil", "sao-paul-br": "brasil", "campinas": "brasil",
+  "belo-horizonte": "brasil", "ouro-preto": "brasil", "tiradentes": "brasil",
+  "curitiba": "brasil", "porto-alegre": "brasil", "vitoria": "brasil",
+  "manaus": "brasil", "belem": "brasil", "goiania": "brasil",
+  "cuiaba": "brasil", "campo-grande": "brasil", "bonito": "brasil", "pantanal": "brasil",
+  "sao-luis": "brasil", "joao-pessoa": "brasil", "aracaju": "brasil",
+  "trancoso": "brasil", "porto-seguro": "brasil", "morro-de-sao-paulo": "brasil",
+  "lencois-maranhenses": "brasil", "chapada-diamantina": "brasil",
+  "alter-do-chao": "brasil", "buzios": "brasil", "paraty": "brasil", "ilhabela": "brasil",
+  "ubatuba": "brasil", "campos-do-jordao": "brasil", "sao-miguel-dos-milagres": "brasil",
+  "japaratinga": "brasil", "milos": "grecia",
+
+  // ===== Oriente Médio / África =====
   "dubai": "emirados-arabes-unidos", "abu-dhabi": "emirados-arabes-unidos",
-  "doha": "catar", "marrakech": "marrocos", "cairo": "egito",
+  "doha": "catar", "tel-aviv": "israel", "jerusalem": "israel",
+  "amma": "jordania", "amman": "jordania", "petra": "jordania",
+  "muscat": "oma", "riyadh": "arabia-saudita",
+  "marrakech": "marrocos", "marraquexe": "marrocos", "casablanca": "marrocos",
+  "fes": "marrocos", "rabat": "marrocos", "chefchaouen": "marrocos",
+  "cairo": "egito", "luxor": "egito", "sharm-el-sheikh": "egito",
   "cape-town": "africa-do-sul", "cidade-do-cabo": "africa-do-sul",
-  // Ásia
+  "joanesburgo": "africa-do-sul", "johannesburg": "africa-do-sul",
+  "kruger": "africa-do-sul",
+  "nairobi": "quenia", "masai-mara": "quenia",
+  "zanzibar": "tanzania", "serengeti": "tanzania", "kilimanjaro": "tanzania",
+  "victoria-falls": "zimbabue", "cataratas-vitoria": "zimbabue",
+
+  // ===== Ásia =====
   "toquio": "japao", "tokyo": "japao", "kyoto": "japao", "quioto": "japao",
-  "seul": "coreia-do-sul", "seoul": "coreia-do-sul",
-  "bangkok": "tailandia", "phuket": "tailandia",
-  "bali": "indonesia",
+  "osaka": "japao", "hiroshima": "japao", "nagoya": "japao", "okinawa": "japao",
+  "hokkaido": "japao", "sapporo": "japao",
+  "seul": "coreia-do-sul", "seoul": "coreia-do-sul", "busan": "coreia-do-sul",
+  "pequim": "china", "beijing": "china", "shanghai": "china", "xangai": "china",
+  "hong-kong": "china", "macau": "china", "guangzhou": "china",
+  "bangkok": "tailandia", "phuket": "tailandia", "chiang-mai": "tailandia",
+  "krabi": "tailandia", "koh-samui": "tailandia", "pattaya": "tailandia",
+  "bali": "indonesia", "ubud": "indonesia", "jakarta": "indonesia", "yogyakarta": "indonesia",
+  "lombok": "indonesia",
   "singapura": "singapura", "singapore": "singapura",
-  "hong-kong": "china",
-  "maldivas": "maldivas", "maldives": "maldivas",
-  // Oceania
-  "sydney": "australia", "melbourne": "australia",
+  "kuala-lumpur": "malasia", "penang": "malasia", "langkawi": "malasia",
+  "manila": "filipinas", "cebu": "filipinas", "boracay": "filipinas", "palawan": "filipinas",
+  "hanoi": "vietna", "ho-chi-minh": "vietna", "ha-long": "vietna", "halong": "vietna",
+  "siem-reap": "camboja", "phnom-penh": "camboja", "angkor": "camboja",
+  "delhi": "india", "nova-delhi": "india", "new-delhi": "india", "mumbai": "india",
+  "bombaim": "india", "agra": "india", "jaipur": "india", "goa": "india",
+  "colombo": "sri-lanka",
+  "kathmandu": "nepal", "katmandu": "nepal",
+  "maldivas": "maldivas", "maldives": "maldivas", "male": "maldivas",
+  "taipei": "taiwan",
+
+  // ===== Oceania =====
+  "sydney": "australia", "melbourne": "australia", "brisbane": "australia",
+  "perth": "australia", "cairns": "australia", "gold-coast": "australia",
+  "auckland": "nova-zelandia", "queenstown": "nova-zelandia", "wellington": "nova-zelandia",
+  "fiji": "fiji", "bora-bora": "polinesia-francesa", "tahiti": "polinesia-francesa",
 };
 
 // Fallback final · paisagem genérica de viagem (Unsplash CDN direto)
@@ -412,6 +520,20 @@ function normalize(s?: string): string {
   out = out.replace(/\(.*?\)/g, "");
   out = out.replace(/[,/·|].*$/g, "");
   out = out.replace(/\s-\s.*$/g, "");
+
+  // Expande abreviações comuns ANTES de remover pontos
+  // "st." / "st " / "saint " -> "sao " (alinhando com chaves canônicas pt-br)
+  // ex: "St. Paul" -> "sao paul" -> alias canônico
+  out = out.replace(/\bst\.?\s+/g, "sao ");
+  out = out.replace(/\bsaint\s+/g, "sao ");
+  out = out.replace(/\bsainte\s+/g, "sao ");
+  out = out.replace(/\bs\.\s+/g, "sao ");
+  // "Ft." / "Fort " mantemos como "fort"
+  out = out.replace(/\bft\.?\s+/g, "fort ");
+  // "Mt." -> "monte"
+  out = out.replace(/\bmt\.?\s+/g, "monte ");
+  // "N.Y." colapsa
+  out = out.replace(/\bn\.?\s*y\.?\b/g, "ny");
 
   // Troca separadores por hífen
   out = out.replace(/[_./\\]+/g, "-");
