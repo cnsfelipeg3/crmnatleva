@@ -367,6 +367,10 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
         fetched_at: typeof data?.timestamp === "number"
           ? new Date(data.timestamp).toISOString()
           : new Date().toISOString(),
+        rapidapi_calls: typeof root?.__rapidapi_calls === "number" ? root.__rapidapi_calls : undefined,
+        trip_type: (root?.__trip_type === "one_way" || root?.__trip_type === "round_trip" || root?.__trip_type === "multi_city")
+          ? root.__trip_type
+          : undefined,
         __cache: !!data?.__cache,
       } as GSearchFlightsResult & { __cache?: boolean };
     },
