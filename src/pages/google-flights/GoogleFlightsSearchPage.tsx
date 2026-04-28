@@ -109,6 +109,14 @@ export default function GoogleFlightsSearchPage() {
   const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
 
+  const [tripMode, setTripMode] = useState<"round" | "oneway" | "multi">(
+    () => (initial.ret ? "round" : "oneway"),
+  );
+  const [multiLegs, setMultiLegs] = useState<MultiLeg[]>([
+    { from: null, to: null, date: undefined },
+    { from: null, to: null, date: undefined },
+  ]);
+
   const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
     if (!initial.from || !initial.to || !initial.dep) return null;
     return {
@@ -145,33 +153,40 @@ export default function GoogleFlightsSearchPage() {
   }, [snapshot, tab, setUrlParams]);
 
   const searchInput: SearchGFlightsInput | null = snapshot
-    ? {
-        departure_id: snapshot.from.id,
-        arrival_id: snapshot.to.id,
-        outbound_date: snapshot.outbound_date,
-        return_date: snapshot.return_date,
-        adults: snapshot.adults,
-        travel_class: snapshot.travel_class,
-        currency: "BRL",
-      }
+    ? (snapshot.multi_legs && snapshot.multi_legs.length >= 2
+        ? {
+            departure_id: snapshot.multi_legs[0].departure_id,
+            arrival_id: snapshot.multi_legs[snapshot.multi_legs.length - 1].arrival_id,
+            outbound_date: snapshot.multi_legs[0].date,
+            adults: snapshot.adults,
+            travel_class: snapshot.travel_class,
+            currency: "BRL",
+            trip_type: "3",
+            multi_city_json: JSON.stringify(snapshot.multi_legs),
+            legs: snapshot.multi_legs,
+          }
+        : {
+            departure_id: snapshot.from.id,
+            arrival_id: snapshot.to.id,
+            outbound_date: snapshot.outbound_date,
+            return_date: snapshot.return_date,
+            adults: snapshot.adults,
+            travel_class: snapshot.travel_class,
+            currency: "BRL",
+            trip_type: snapshot.return_date ? "1" : "2",
+          })
     : null;
 
   const { data: results, isLoading, isError, error } = useSearchGFlights(searchInput);
-  // PriceGraph alimenta tanto a aba Tendência quanto a aba Calendário (fallback do getCalendarPicker quebrado).
-  // Carregamos sempre que houver snapshot pra ter insights agregados na lista também.
   const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, !!snapshot);
-  // getCalendarPicker desabilitado · plano RapidAPI atual não inclui esse endpoint (retorna 403).
-  // Usamos o priceGraphToCalendar como fonte única do calendário.
   const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, false);
 
-  // Calendário final: prioriza dados do getCalendarPicker; se vier vazio, deriva do priceGraph.
   const calendar: GCalendarDay[] = useMemo(() => {
     if (calendarApi.length > 0) return calendarApi;
     return priceGraphToCalendar(trend);
   }, [calendarApi, trend]);
   const calLoading = calApiLoading || (calendarApi.length === 0 && trendLoading);
 
-  // Insights agregados a partir do priceGraph (60+ dias de janela)
   const trendInsights = useMemo(() => {
     const prices = trend.map(p => p.price).filter((p): p is number => typeof p === "number" && Number.isFinite(p));
     if (!prices.length) return null;
@@ -191,9 +206,6 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  // Inteligência de preço agora vem direto de results.price_insight (derivado em useSearchGFlights)
-
-  // Indicador "atualizado há X min" baseado em fetched_at
   const [, forceTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => forceTick((n) => n + 1), 30_000);
@@ -211,15 +223,41 @@ export default function GoogleFlightsSearchPage() {
     return `atualizado há ${h}h`;
   }, [results?.fetched_at]);
 
-  const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
+  const canSearch = useMemo(() => {
+    if (tripMode === "multi") {
+      return multiLegs.length >= 2 && multiLegs.every(l => l.from && l.to && l.date);
+    }
+    return !!from && !!to && !!outboundDate;
+  }, [tripMode, multiLegs, from, to, outboundDate]);
 
   const handleSearch = () => {
+    if (tripMode === "multi") {
+      const valid = multiLegs.length >= 2 && multiLegs.every(l => l.from && l.to && l.date);
+      if (!valid) {
+        toast.error("Preencha origem, destino e data de cada trecho");
+        return;
+      }
+      setSnapshot({
+        from: multiLegs[0].from!,
+        to: multiLegs[multiLegs.length - 1].to!,
+        outbound_date: format(multiLegs[0].date!, "yyyy-MM-dd"),
+        return_date: undefined,
+        adults,
+        travel_class: travelClass,
+        multi_legs: multiLegs.map(l => ({
+          departure_id: l.from!.id,
+          arrival_id: l.to!.id,
+          date: format(l.date!, "yyyy-MM-dd"),
+        })),
+      });
+      return;
+    }
     if (!from || !to || !outboundDate) return;
     setSnapshot({
       from,
       to,
       outbound_date: format(outboundDate, "yyyy-MM-dd"),
-      return_date: returnDate ? format(returnDate, "yyyy-MM-dd") : undefined,
+      return_date: tripMode === "round" && returnDate ? format(returnDate, "yyyy-MM-dd") : undefined,
       adults,
       travel_class: travelClass,
     });
