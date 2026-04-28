@@ -409,26 +409,37 @@ export default function GoogleFlightsSearchPage() {
       <Card id="gflights-results-anchor" className="p-4 md:p-5">
         <div className="space-y-4">
           {/* Toggle de modo */}
-          <div className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <div
+            className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1"
+            role="radiogroup"
+            aria-label="Tipo de viagem"
+          >
             {([
               { v: "round", label: "Ida e volta" },
               { v: "oneway", label: "Só ida" },
               { v: "multi", label: "Multi-trecho" },
-            ] as const).map((m) => (
-              <button
-                key={m.v}
-                type="button"
-                onClick={() => setTripMode(m.v)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                  tripMode === m.v
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
+            ] as const).map((m) => {
+              const checked = tripMode === m.v;
+              return (
+                <button
+                  key={m.v}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  tabIndex={checked ? 0 : -1}
+                  onClick={() => setTripMode(m.v)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    checked
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
           </div>
 
           {tripMode === "multi" ? (
