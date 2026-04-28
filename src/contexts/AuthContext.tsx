@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Cache auth data to avoid re-fetching on every navigation
   const cachedUserIdRef = useRef<string | null>(null);
+  const profileLoadedRef = useRef(false);
   // Cache user_roles per userId for 30 minutes — invalidated by AdminUsers / PermissoesAcessos
   const rolesCacheRef = useRef<Map<string, { role: UserRole; fetchedAt: number }>>(new Map());
   const ROLES_CACHE_MS = 30 * 60_000;
@@ -42,11 +43,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setRole(DEFAULT_ROLE);
       cachedUserIdRef.current = null;
+      profileLoadedRef.current = false;
       return;
     }
 
-    // Skip re-fetch if already loaded for this user
-    if (!forceRefresh && cachedUserIdRef.current === userId && profile) {
+    // Skip re-fetch if already loaded for this user (uses ref to avoid re-creating callback)
+    if (!forceRefresh && cachedUserIdRef.current === userId && profileLoadedRef.current) {
       return;
     }
 
