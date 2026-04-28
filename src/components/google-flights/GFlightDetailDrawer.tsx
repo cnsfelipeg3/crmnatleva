@@ -170,15 +170,18 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   // Fallback: se não tiver token ou der erro, usa provider.website cru.
   async function handleReserveProvider(p: GBookingProvider) {
     const reserveId = `${p.id}-${p.title}`;
+    console.log("[gflights:reserve] provider clicked", { id: p.id, title: p.title, hasToken: !!p.token, tokenPreview: p.token?.slice(0, 30), website: p.website });
     if (!p.token) {
-      // Fallback direto para o site
+      console.warn("[gflights:reserve] no provider token · falling back to website", p.website);
       if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
       else toast.error("Link de reserva indisponível neste canal");
       return;
     }
     setReservingId(reserveId);
     try {
+      console.log("[gflights:reserve] calling getBookingURL with token preview", p.token.slice(0, 30));
       const data = await invokeGFlights<any>("getBookingURL", { token: p.token });
+      console.log("[gflights:reserve] getBookingURL response", data);
       if (data && data.status === false) {
         toast.error("Não foi possível obter o link direto. Abrindo site do canal.");
         if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
@@ -186,6 +189,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
       }
       const link = typeof data?.data === "string" ? data.data : null;
       if (!link) {
+        console.warn("[gflights:reserve] no link in response · fallback");
         if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
         else toast.error("Link de reserva indisponível");
         return;

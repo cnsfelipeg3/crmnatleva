@@ -422,7 +422,7 @@ export function useFlightBookingDetails(
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["gflights", "getBookingDetails", input, bookingToken],
+    queryKey: ["gflights", "getBookingDetails", "v2-token", input, bookingToken],
     queryFn: async (): Promise<GBookingDetailsResponse> => {
       const empty: GBookingDetailsResponse = { providers: [], bag_info: null };
       if (!input || !bookingToken) return empty;
