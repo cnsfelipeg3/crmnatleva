@@ -14,11 +14,11 @@ import { Button } from "@/components/ui/button";
  */
 export function isLeafletAvailable(): boolean {
   try {
-    // @ts-expect-error · L pode ser undefined em runtime se o bundle quebrou
-    if (!L || typeof L !== "object") return false;
-    if (typeof (L as any).map !== "function") return false;
-    if (typeof (L as any).tileLayer !== "function") return false;
-    if (typeof (L as any).marker !== "function") return false;
+    const mod = L as unknown as Record<string, unknown> | undefined | null;
+    if (!mod || typeof mod !== "object") return false;
+    if (typeof mod.map !== "function") return false;
+    if (typeof mod.tileLayer !== "function") return false;
+    if (typeof mod.marker !== "function") return false;
     return true;
   } catch {
     return false;
