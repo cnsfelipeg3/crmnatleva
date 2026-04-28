@@ -338,6 +338,53 @@ export default function TripDetail() {
         </Button>
       </div>
 
+      {/* Aviso · divergência entre return_date manual e segmentos aéreos */}
+      {tripLengthCheck.hasMismatch && (
+        <Alert
+          variant={tripLengthCheck.severity === "error" ? "destructive" : "default"}
+          className={tripLengthCheck.severity === "error"
+            ? ""
+            : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300"}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle className="flex items-center gap-2">
+            Duração da viagem inconsistente
+            <Badge variant="outline" className="text-[10px]">
+              Δ {tripLengthCheck.diffDays != null && tripLengthCheck.diffDays > 0 ? "+" : ""}
+              {tripLengthCheck.diffDays}d
+            </Badge>
+          </AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p className="text-sm">{tripLengthCheck.message}</p>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span>
+                Manual: <strong>{tripLengthCheck.formTripLength ?? "?"}d</strong>
+                {tripEnd && <> · retorno {formatDateBR(tripEnd)}</>}
+              </span>
+              <span>·</span>
+              <span>
+                Voos: <strong>{tripLengthCheck.segTripLength ?? "?"}d</strong>
+                {tripLengthCheck.suggestedReturnDate && (
+                  <> · sugerido {formatDateBR(tripLengthCheck.suggestedReturnDate)}</>
+                )}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {tripLengthCheck.suggestedReturnDate && (
+                <Button size="sm" variant="outline" onClick={copySuggestedReturn}>
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copiar data sugerida
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate(`/sales/${id}`)}>
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                Corrigir na venda
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Info cards row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4 space-y-1">
