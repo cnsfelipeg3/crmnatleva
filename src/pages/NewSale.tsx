@@ -1090,6 +1090,26 @@ export default function NewSale() {
         {/* ═══════════════ 3. AÉREO ═══════════════ */}
         <TabsContent value="aereo">
           <div className="space-y-4">
+            {tripLengthCheck.hasMismatch && (
+              <div className={cn(
+                "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm",
+                tripLengthCheck.severity === "error"
+                  ? "border-destructive/40 bg-destructive/5 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+              )}>
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="font-semibold">Validação automática · </strong>
+                  {tripLengthCheck.message}
+                  <span className="block text-xs opacity-80 mt-1">
+                    Manual: {form.departure_date || "?"} → {form.return_date || "?"}
+                    {tripLengthCheck.formTripLength != null && ` (${tripLengthCheck.formTripLength}d)`}
+                    {" · "}
+                    Voos: {tripLengthCheck.segTripLength != null ? `${tripLengthCheck.segTripLength}d` : "?"}
+                  </span>
+                </div>
+              </div>
+            )}
             {/* Flight structure */}
             <FlightRegistrationSection
               segments={segments}
