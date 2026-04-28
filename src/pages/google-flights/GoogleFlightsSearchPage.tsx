@@ -276,6 +276,20 @@ export default function GoogleFlightsSearchPage() {
     });
   };
 
+  // Atalho global · Cmd/Ctrl+Enter dispara busca quando aba "search" ativa.
+  useEffect(() => {
+    if (outerTab !== "search") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
+      if (!canSearch || isLoading) return;
+      e.preventDefault();
+      handleSearch();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outerTab, canSearch, isLoading, from, to, outboundDate, returnDate, adults, travelClass, tripMode, multiLegs]);
+
   const swap = () => {
     const f = from;
     const t = to;
