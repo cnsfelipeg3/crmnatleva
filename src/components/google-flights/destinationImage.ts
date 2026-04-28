@@ -88,16 +88,21 @@ const CITY_PHOTOS: Record<string, string> = {
   "mendoza": "https://images.unsplash.com/photo-1601042879364-f3947d3f9c16?w=1600&q=80&auto=format&fit=crop",
 
   // Brasil
-  "rio-de-janeiro": "https://images.unsplash.com/photo-1483729558449-99ef09a8c325?w=1600&q=80&auto=format&fit=crop",
+  "rio-de-janeiro": "https://images.unsplash.com/photo-1516306580123-e6e52b1b7b5f?w=1600&q=80&auto=format&fit=crop",
+  "rio": "https://images.unsplash.com/photo-1516306580123-e6e52b1b7b5f?w=1600&q=80&auto=format&fit=crop",
   "fernando-de-noronha": "https://images.unsplash.com/photo-1564415300324-b3bd2c83b27d?w=1600&q=80&auto=format&fit=crop",
-  "salvador": "https://images.unsplash.com/photo-1551272744-3e7c8e7eaa50?w=1600&q=80&auto=format&fit=crop",
+  "salvador": "https://images.unsplash.com/photo-1591375372269-f3463effe5fc?w=1600&q=80&auto=format&fit=crop",
   "florianopolis": "https://images.unsplash.com/photo-1518684079-3c830dcef090?w=1600&q=80&auto=format&fit=crop",
-  "porto-de-galinhas": "https://images.unsplash.com/photo-1583286814682-6cb7d59ca6f1?w=1600&q=80&auto=format&fit=crop",
+  "porto-de-galinhas": "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?w=1600&q=80&auto=format&fit=crop",
   "jericoacoara": "https://images.unsplash.com/photo-1602002418082-a4443e081dd1?w=1600&q=80&auto=format&fit=crop",
-  "fortaleza": "https://images.unsplash.com/photo-1564604644537-0c87a45f4f53?w=1600&q=80&auto=format&fit=crop",
-  "maceio": "https://images.unsplash.com/photo-1599050751795-6cdaafbc2319?w=1600&q=80&auto=format&fit=crop",
-  "natal": "https://images.unsplash.com/photo-1583286814682-6cb7d59ca6f1?w=1600&q=80&auto=format&fit=crop",
+  "fortaleza": "https://images.unsplash.com/photo-1518638150340-f706e86654de?w=1600&q=80&auto=format&fit=crop",
+  "maceio": "https://images.unsplash.com/photo-1622467827417-bbe2237067a9?w=1600&q=80&auto=format&fit=crop",
+  "natal": "https://images.unsplash.com/photo-1544550581-5f7ceaf7f992?w=1600&q=80&auto=format&fit=crop",
+  "recife": "https://images.unsplash.com/photo-1583531352515-8884af319dc7?w=1600&q=80&auto=format&fit=crop",
   "gramado": "https://images.unsplash.com/photo-1574006559292-b6e23c1a5b6e?w=1600&q=80&auto=format&fit=crop",
+  "foz-do-iguacu": "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=1600&q=80&auto=format&fit=crop",
+  "iguacu": "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=1600&q=80&auto=format&fit=crop",
+  "brasilia": "https://images.unsplash.com/photo-1591211432343-23ee16ee03d2?w=1600&q=80&auto=format&fit=crop",
   "sao-paulo": "https://images.unsplash.com/photo-1543059080-f9b1272213d5?w=1600&q=80&auto=format&fit=crop",
 
   // Oriente Médio · África
