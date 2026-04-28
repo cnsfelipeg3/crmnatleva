@@ -278,8 +278,19 @@ export default function GoogleFlightsSearchPage() {
 
   const swap = () => {
     const f = from;
-    setFrom(to);
+    const t = to;
+    setFrom(t);
     setTo(f);
+    // Se já existe uma busca ativa, refaz com origem/destino invertidos pra
+    // refletir a mudança imediatamente em vez de exigir clique extra.
+    if (snapshot && f && t) {
+      setSnapshot({
+        ...snapshot,
+        from: t,
+        to: f,
+      });
+      toast.success(`Buscando ${t.id} → ${f.id}`, { duration: 1500 });
+    }
   };
 
   const handleCalendarSelect = (dateStr: string) => {
