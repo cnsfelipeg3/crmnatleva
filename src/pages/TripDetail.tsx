@@ -14,9 +14,11 @@ const TripRouteMap = lazy(() => import("@/components/TripRouteMap"));
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, MapPin, Calendar,
   ExternalLink, Clock, ShoppingBag, Shield, Car, Ticket, Train,
-  CheckCircle2, AlertTriangle, FileText, Paperclip, Copy,
+  CheckCircle2, AlertTriangle, FileText, Paperclip, Copy, Wand2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { validateTripLengthFromSegments } from "@/lib/tripLengthValidation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getProductMeta } from "@/lib/productTypes";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
