@@ -686,6 +686,7 @@ function ResultSection({
               returnDate={data.period?.returnDate}
               paxAdults={data.extracted?.paxAdults || 1}
               originIata={data.extracted?.origin || "GRU"}
+              cacheStats={data.cache_stats ?? null}
               onSelectDestination={(dest) => onSelectDestination(dest, data)}
             />
           </div>
