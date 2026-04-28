@@ -6,6 +6,11 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0d2620" media="(prefers-color-scheme: dark)" />
     <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+
+    <!-- Security headers (defense-in-depth; primary protection lives at the CDN/server) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="geolocation=(self), microphone=(self), camera=()" />
     <!-- TODO: Set the document title to the name of your application -->
     <title>NatLeva CRM</title>
     <meta name="description" content="NatLeva — Viagens são a vida em movimento" />
