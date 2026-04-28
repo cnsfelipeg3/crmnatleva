@@ -370,6 +370,23 @@ export default function GoogleFlightsSearchPage() {
                 adults: ctx.extracted.paxAdults || 1,
                 travel_class: "ECONOMY",
               });
+              // Salva hint para fallback sintético caso DataCrawler retorne vazio
+              setDiscoverHint({
+                iata: dest.iata,
+                city: dest.city,
+                country: dest.country,
+                minPrice: dest.minPrice,
+                sampleFlight: dest.sampleFlight,
+                flightDeparture: dest.flightDeparture,
+                flightArrival: dest.flightArrival,
+                flightDuration: dest.flightDuration,
+                flightStops: dest.flightStops,
+                flightAirline: dest.flightAirline,
+                flightAirlineLogo: dest.flightAirlineLogo,
+                outbound_date: ctx.period.day1,
+                return_date: ctx.period.returnDate,
+                origin: originId,
+              });
               // Mudar pra aba de busca específica + scroll suave
               setOuterTab("search");
               setTimeout(() => {
