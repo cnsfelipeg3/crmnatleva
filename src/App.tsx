@@ -179,7 +179,8 @@ function ScreenLoader() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  if (isLoading) return <ScreenLoader />;
+  // Skeleton consistente com a rota destino · evita flash branco / spinner sem contexto
+  if (isLoading) return <RouteAwareSkeleton pathname={location.pathname} />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
