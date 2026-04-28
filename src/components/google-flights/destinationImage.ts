@@ -769,7 +769,7 @@ function countryToRegion(countryKey: string): string | null {
   const americaSul = new Set([
     "brasil","argentina","chile","peru","colombia","uruguai","paraguai","bolivia","equador",
   ]);
-  const caribe = new Set(["cuba","republica-dominicana","bahamas","jamaica","aruba","curacao"]);
+  const caribe = new Set(["cuba","republica-dominicana","bahamas","jamaica","aruba","curacao","antigua","barbados","saint-lucia"]);
   const asia = new Set([
     "japao","china","coreia-do-sul","tailandia","indonesia","vietna","india",
     "singapura","filipinas","maldivas",
