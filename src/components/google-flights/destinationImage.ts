@@ -583,19 +583,78 @@ function resolveCityKey(rawCity?: string): string | null {
   return null;
 }
 
+/**
+ * Resolve a melhor capa para um destino, com cadeia de fallback:
+ *   1. override (hero_image_url do backend)
+ *   2. cidade exata (CITY_PHOTOS + aliases)
+ *   3. país explícito (COUNTRY_FALLBACK + ISO aliases)
+ *   4. país inferido a partir da cidade (CITY_TO_COUNTRY)
+ *   5. região / continente (REGION_FALLBACK)
+ *   6. paisagem genérica de viagem
+ */
 export function getDestinationCoverUrl(
   city: string,
   country?: string,
   override?: string | null,
+  region?: string,
 ): string {
   if (override && override.trim().length > 0) return override;
 
+  // 1. cidade
   const cityKey = resolveCityKey(city);
   if (cityKey && CITY_PHOTOS[cityKey]) return CITY_PHOTOS[cityKey];
 
-  const countryKey = normalize(country);
-  if (COUNTRY_FALLBACK[countryKey]) return COUNTRY_FALLBACK[countryKey];
+  // 2. país informado
+  const countryKey = resolveCountryKey(country);
+  if (countryKey && COUNTRY_FALLBACK[countryKey]) return COUNTRY_FALLBACK[countryKey];
+
+  // 3. país inferido pela cidade (mesmo sem `country` no payload)
+  let inferredCountry: string | null = null;
+  if (cityKey && CITY_TO_COUNTRY[cityKey]) {
+    inferredCountry = CITY_TO_COUNTRY[cityKey];
+    if (COUNTRY_FALLBACK[inferredCountry]) return COUNTRY_FALLBACK[inferredCountry];
+  }
+
+  // 4. região / continente (explícita ou derivada do país conhecido)
+  const baseCountry = countryKey || inferredCountry;
+  const regionKey =
+    resolveRegionKey(region) ||
+    (baseCountry ? resolveRegionKey(countryToRegion(baseCountry) ?? undefined) : null);
+  if (regionKey && REGION_FALLBACK[regionKey]) return REGION_FALLBACK[regionKey];
 
   return GENERIC_TRAVEL;
 }
+
+// Mapeamento país → região para alimentar o fallback regional.
+function countryToRegion(countryKey: string): string | null {
+  const europa = new Set([
+    "italia","franca","espanha","portugal","grecia","alemanha","reino-unido",
+    "irlanda","escocia","holanda","belgica","suica","austria","republica-tcheca",
+    "hungria","polonia","suecia","noruega","dinamarca","finlandia","islandia",
+    "turquia","croacia","russia",
+  ]);
+  const americaNorte = new Set(["usa","canada","mexico"]);
+  const americaSul = new Set([
+    "brasil","argentina","chile","peru","colombia","uruguai","paraguai","bolivia","equador",
+  ]);
+  const caribe = new Set(["cuba","republica-dominicana","bahamas","jamaica","aruba","curacao"]);
+  const asia = new Set([
+    "japao","china","coreia-do-sul","tailandia","indonesia","vietna","india",
+    "singapura","filipinas","maldivas",
+  ]);
+  const orienteMedio = new Set(["emirados-arabes-unidos","catar","israel"]);
+  const africa = new Set(["marrocos","egito","africa-do-sul"]);
+  const oceania = new Set(["australia","nova-zelandia"]);
+
+  if (europa.has(countryKey)) return "europa";
+  if (americaNorte.has(countryKey)) return "america-do-norte";
+  if (americaSul.has(countryKey)) return "america-do-sul";
+  if (caribe.has(countryKey)) return "caribe";
+  if (asia.has(countryKey)) return "asia";
+  if (orienteMedio.has(countryKey)) return "oriente-medio";
+  if (africa.has(countryKey)) return "africa";
+  if (oceania.has(countryKey)) return "oceania";
+  return null;
+}
+
 
