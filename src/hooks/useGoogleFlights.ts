@@ -343,3 +343,55 @@ export function priceGraphToCalendar(points: GPriceGraphPoint[]): GCalendarDay[]
   });
 }
 
+// --------------------------------------------------------------------
+// 6) Booking details · providers/OTAs que oferecem o voo + preços
+// --------------------------------------------------------------------
+export interface BookingDetailsInput extends SearchGFlightsInput {
+  booking_token: string;
+}
+
+export function useFlightBookingDetails(
+  input: SearchGFlightsInput | null,
+  bookingToken: string | null,
+  enabled = true,
+) {
+  return useQuery({
+    queryKey: ["gflights", "getBookingDetails", input, bookingToken],
+    queryFn: async (): Promise<GBookingProvider[]> => {
+      if (!input || !bookingToken) return [];
+      try {
+        const data = await invokeGFlights<any>("getBookingDetails", {
+          ...input,
+          booking_token: bookingToken,
+        });
+        // A API pode retornar data: [...] ou data: { providers: [...] } ou data: { booking_options: [...] }
+        const raw = data?.data;
+        const arr: any[] =
+          (Array.isArray(raw) && raw) ||
+          (Array.isArray(raw?.providers) && raw.providers) ||
+          (Array.isArray(raw?.booking_options) && raw.booking_options) ||
+          (Array.isArray(raw?.together) && raw.together) ||
+          [];
+        return arr
+          .map((it: any) => ({
+            id: String(it?.id ?? it?.code ?? it?.title ?? ""),
+            title: String(it?.title ?? it?.name ?? "Desconhecido"),
+            website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
+            price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
+            is_airline: !!it?.is_airline,
+            individualBooking: !!it?.individualBooking,
+            token: it?.token ? String(it.token) : undefined,
+            logo: it?.logo ? String(it.logo) : undefined,
+          }))
+          .filter((p) => p.id || p.title);
+      } catch (e) {
+        console.warn("[gflights] getBookingDetails failed:", e);
+        return [];
+      }
+    },
+    enabled: enabled && !!input && !!bookingToken,
+    staleTime: 30 * 60 * 1000,
+    retry: false,
+  });
+}
+
