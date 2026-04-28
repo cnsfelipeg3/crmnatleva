@@ -519,7 +519,8 @@ function normalize(s?: string): string {
   // Remove qualquer coisa entre parenteses ou após vírgula/traço (país, UF)
   out = out.replace(/\(.*?\)/g, "");
   out = out.replace(/[,/·|].*$/g, "");
-  out = out.replace(/\s-\s.*$/g, "");
+  // Trata ' - ', ' — ' (em-dash) e ' – ' (en-dash) como separador de sufixo
+  out = out.replace(/\s[-–—]\s.*$/g, "");
 
   // Expande abreviações comuns ANTES de remover pontos
   // "st." / "st " / "saint " -> "sao " (alinhando com chaves canônicas pt-br)
@@ -796,6 +797,7 @@ export const __testing = {
   REGION_FALLBACK,
   CITY_TO_COUNTRY,
   GENERIC_TRAVEL,
+  normalize,
 };
 
 
