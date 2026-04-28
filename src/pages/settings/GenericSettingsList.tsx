@@ -24,6 +24,7 @@ export default function GenericSettingsList({
   backPath = "/settings",
 }: GenericSettingsListProps) {
   const [items, setItems] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [search, setSearch] = useState("");
   const [newItem, setNewItem] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -41,6 +42,7 @@ export default function GenericSettingsList({
       setItems(defaultItems);
       localStorage.setItem(`settings_${title}`, JSON.stringify(defaultItems));
     }
+    setHydrated(true);
   }, [title]);
 
   const save = (newItems: string[]) => {
