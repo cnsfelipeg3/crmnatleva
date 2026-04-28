@@ -19,7 +19,7 @@ import type {
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
-async function invokeGFlights<T = unknown>(
+export async function invokeGFlights<T = unknown>(
   action: string,
   params: Record<string, unknown> = {},
 ): Promise<T> {
