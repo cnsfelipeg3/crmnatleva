@@ -17,6 +17,10 @@ import {
   formatBRL,
   formatMinutes,
   detectBags,
+  classifyLayover,
+  getArrHour,
+  getConnectingAirportIds,
+  hasExtension,
   type GFlightFilters,
   type GFlightItinerary,
 } from "./gflightsTypes";
