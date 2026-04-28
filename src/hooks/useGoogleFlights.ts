@@ -14,6 +14,8 @@ import type {
   GFlightCabin,
   GPriceGraphPoint,
   GPriceHistory,
+  GPriceInsight,
+  GPriceLevel,
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
 
