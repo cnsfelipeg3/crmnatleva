@@ -142,6 +142,13 @@ export default function NewSale() {
     return state?.preSelectedPassengers || [];
   });
 
+  // Validação automática · trip_length manual vs. derivado dos segmentos
+  // Alerta inconsistências que distorcem gráficos/relatórios.
+  const tripLengthCheck = useMemo(
+    () => validateTripLengthFromSegments(form.departure_date, form.return_date, segments),
+    [form.departure_date, form.return_date, segments],
+  );
+
   // Queries
   const { data: suppliers = [] } = useQuery({
     queryKey: ["suppliers"],
