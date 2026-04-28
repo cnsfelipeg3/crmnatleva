@@ -161,10 +161,47 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
     toast.success("Dados copiados para proposta");
   };
 
-  // Melhor oferta = primeira ordenada por preço com website
-  const bestOffer = providersSorted.find((p) => !!p.website) ?? providersSorted[0] ?? null;
+  // Melhor oferta = primeira ordenada por preço com token (preferencial) ou website (fallback)
+  const bestOffer = providersSorted.find((p) => !!p.token) ?? providersSorted.find((p) => !!p.website) ?? providersSorted[0] ?? null;
   const buildHref = (url?: string) =>
     url ? (url.startsWith("http") ? url : `https://${url}`) : "";
+
+  // Resolve provider deeplink via getBookingURL e abre em nova aba.
+  // Fallback: se não tiver token ou der erro, usa provider.website cru.
+  async function handleReserveProvider(p: GBookingProvider) {
+    const reserveId = `${p.id}-${p.title}`;
+    if (!p.token) {
+      // Fallback direto para o site
+      if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+      else toast.error("Link de reserva indisponível neste canal");
+      return;
+    }
+    setReservingId(reserveId);
+    try {
+      const data = await invokeGFlights<any>("getBookingURL", { token: p.token });
+      if (data && data.status === false) {
+        toast.error("Não foi possível obter o link direto. Abrindo site do canal.");
+        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        return;
+      }
+      const link = typeof data?.data === "string" ? data.data : null;
+      if (!link) {
+        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        else toast.error("Link de reserva indisponível");
+        return;
+      }
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error("Erro ao obter link · " + (e?.message ?? "tente novamente"));
+      if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+    } finally {
+      setReservingId(null);
+    }
+  }
+
+  function scrollToProviders() {
+    document.getElementById("providers-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -191,19 +228,22 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
             </div>
           </div>
 
-          {/* CTA topo · vai direto pra melhor oferta */}
-          {bestOffer?.website && (
+          {/* CTA topo · resolve deeplink real do melhor canal via getBookingURL */}
+          {bestOffer && (
             <Button
-              asChild
               variant="premium"
               size="lg"
               className="w-full gap-2"
+              onClick={() => handleReserveProvider(bestOffer)}
+              disabled={reservingId === `${bestOffer.id}-${bestOffer.title}`}
             >
-              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
+              {reservingId === `${bestOffer.id}-${bestOffer.title}` ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <Sparkles className="h-4 w-4" />
-                Reservar agora em {bestOffer.title} · {formatBRL(bestOffer.price || itinerary.price)}
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              )}
+              Reservar em {bestOffer.title} · {formatBRL(bestOffer.price || itinerary.price)}
+              <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           )}
         </SheetHeader>
