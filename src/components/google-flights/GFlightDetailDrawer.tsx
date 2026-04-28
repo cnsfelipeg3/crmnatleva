@@ -82,6 +82,7 @@ interface Props {
 export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) {
   const [copiedToken, setCopiedToken] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [reservingId, setReservingId] = useState<string | null>(null);
 
   const open = !!itinerary;
   const bookingToken = itinerary?.booking_token ?? null;
@@ -91,6 +92,9 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   const bagInfo = bookingDetails?.bag_info ?? null;
 
   const providersSorted = [...providers].sort((a, b) => a.price - b.price);
+  const minPrice = providersSorted[0]?.price ?? 0;
+  const maxPrice = providersSorted[providersSorted.length - 1]?.price ?? 0;
+  const savings = maxPrice - minPrice;
 
   if (!itinerary) {
     return (
