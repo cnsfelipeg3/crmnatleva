@@ -532,6 +532,8 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
           data={data}
           onSelectDestination={onSelectDestination}
           onReset={() => { discover.reset(); setStory(""); setExtract(null); }}
+          cacheHistory={cacheHistory}
+          onClearCacheHistory={clearCacheHistory}
         />
       )}
     </div>
