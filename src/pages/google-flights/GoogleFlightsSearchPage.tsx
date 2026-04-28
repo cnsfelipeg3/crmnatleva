@@ -22,6 +22,7 @@ import { GFlightCalendarHeatmap } from "@/components/google-flights/GFlightCalen
 import { GFlightPriceTrendChart } from "@/components/google-flights/GFlightPriceTrendChart";
 import { GFlightPriceInsightBanner } from "@/components/google-flights/GFlightPriceInsightBanner";
 import { GFlightPriceHistoryChart } from "@/components/google-flights/GFlightPriceHistoryChart";
+import { GFlightDiscoverPanel } from "@/components/google-flights/GFlightDiscoverPanel";
 import {
   useSearchGFlights,
   useCalendarPicker,
