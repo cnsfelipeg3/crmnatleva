@@ -99,6 +99,9 @@ export default function GoogleFlightsSearchPage() {
   const [adults, setAdults] = useState<number>(initial.adults);
   const [travelClass, setTravelClass] = useState<GFlightCabin>(initial.travel_class);
   const [tab, setTab] = useState<string>(initial.tab);
+  const [outerTab, setOuterTab] = useState<"search" | "discover">(
+    () => (urlParams.get("outerTab") as "search" | "discover") || "search",
+  );
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
   const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
