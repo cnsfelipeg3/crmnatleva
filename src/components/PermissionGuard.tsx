@@ -3,6 +3,7 @@ import { useLocation, Navigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
 import { MENU_BY_PATH } from "@/lib/systemMenus";
 import { ShieldAlert } from "lucide-react";
+import { RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
 
 interface Props {
   children: ReactNode;
