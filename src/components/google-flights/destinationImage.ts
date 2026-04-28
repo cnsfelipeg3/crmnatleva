@@ -165,14 +165,199 @@ const COUNTRY_FALLBACK: Record<string, string> = {
 // Fallback final · paisagem genérica de viagem (Unsplash CDN direto)
 const GENERIC_TRAVEL = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600&q=80&auto=format&fit=crop";
 
+/**
+ * Normalizador robusto de chave de destino.
+ *
+ * Trata:
+ *  · acentos (NFD)
+ *  · caixa (lowercase)
+ *  · espaços múltiplos / inicio / fim
+ *  · separadores variados ("_", ".", ",", "/", "·")
+ *  · ausência de espaço ("RiodeJaneiro" -> "rio-de-janeiro" via aliases)
+ *  · sufixos comuns "(Brasil)", " - BR", ", Brasil"
+ *  · prefixos "São", "Sao", "St."
+ */
 function normalize(s?: string): string {
   if (!s) return "";
-  return s
+  let out = s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-");
+    .trim();
+
+  // Remove qualquer coisa entre parenteses ou após vírgula/traço (país, UF)
+  out = out.replace(/\(.*?\)/g, "");
+  out = out.replace(/[,/·|].*$/g, "");
+  out = out.replace(/\s-\s.*$/g, "");
+
+  // Troca separadores por hífen
+  out = out.replace(/[_./\\]+/g, "-");
+
+  // Remove caracteres não [a-z0-9-\s]
+  out = out.replace(/[^a-z0-9\s-]/g, "");
+
+  // Colapsa espaços e troca por hífen
+  out = out.replace(/\s+/g, "-");
+
+  // Colapsa hífens múltiplos e tira das pontas
+  out = out.replace(/-+/g, "-").replace(/^-|-$/g, "");
+
+  return out;
+}
+
+/**
+ * Aliases · variações conhecidas que mapeiam para a chave canônica do CITY_PHOTOS.
+ * Inclui IATA, abreviações, formas sem espaço (CamelCase já normalizado vira tudo junto).
+ */
+const CITY_ALIASES: Record<string, string> = {
+  // Rio
+  "rio": "rio-de-janeiro",
+  "riodejaneiro": "rio-de-janeiro",
+  "rio-janeiro": "rio-de-janeiro",
+  "gig": "rio-de-janeiro",
+  "sdu": "rio-de-janeiro",
+  // SP
+  "sp": "sao-paulo",
+  "saopaulo": "sao-paulo",
+  "gru": "sao-paulo",
+  "cgh": "sao-paulo",
+  // Foz
+  "foz": "foz-do-iguacu",
+  "fozdoiguacu": "foz-do-iguacu",
+  "iguazu": "foz-do-iguacu",
+  "igu": "foz-do-iguacu",
+  // Maceió
+  "mcz": "maceio",
+  // Salvador
+  "ssa": "salvador",
+  // Recife
+  "rec": "recife",
+  // Fortaleza
+  "for": "fortaleza",
+  // Natal
+  "nat": "natal",
+  // Floripa
+  "fln": "florianopolis",
+  "floripa": "florianopolis",
+  // Brasília
+  "bsb": "brasilia",
+  // Buenos Aires
+  "buenosaires": "buenos-aires",
+  "bue": "buenos-aires",
+  "eze": "buenos-aires",
+  "aep": "buenos-aires",
+  // Santiago
+  "santiagochile": "santiago",
+  "santiago-chile": "santiago",
+  "scl": "santiago",
+  // Outros LatAm
+  "lim": "lima",
+  "cuz": "cusco",
+  // EUA
+  "ny": "nova-york",
+  "nyc": "nova-york",
+  "newyork": "new-york",
+  "novayork": "nova-york",
+  "jfk": "nova-york",
+  "lga": "nova-york",
+  "ewr": "nova-york",
+  "lax": "los-angeles",
+  "losangeles": "los-angeles",
+  "las": "las-vegas",
+  "lasvegas": "las-vegas",
+  "mia": "miami",
+  "mco": "orlando",
+  "sfo": "san-francisco",
+  "sanfrancisco": "san-francisco",
+  // Europa
+  "cdg": "paris",
+  "ory": "paris",
+  "lhr": "londres",
+  "lgw": "londres",
+  "fco": "roma",
+  "vce": "veneza",
+  "mxp": "milao",
+  "lin": "milao",
+  "bcn": "barcelona",
+  "mad": "madrid",
+  "lis": "lisboa",
+  "opo": "porto",
+  "ams": "amsterda",
+  "ber": "berlim",
+  "txl": "berlim",
+  "prg": "praga",
+  "vie": "viena",
+  "ath": "atenas",
+  "jtr": "santorini",
+  "jmk": "mykonos",
+  "dub": "dublin",
+  "edi": "edimburgo",
+  "zrh": "zurique",
+  "gva": "genebra",
+  "arn": "estocolmo",
+  "cph": "copenhague",
+  "osl": "oslo",
+  "kef": "reykjavik",
+  // Caribe
+  "cun": "cancun",
+  "pun": "punta-cana",
+  "aua": "aruba",
+  "cur": "curacao",
+  "nas": "nassau",
+  "hav": "havana",
+  "sju": "san-juan",
+  // Médio Oriente / África
+  "dxb": "dubai",
+  "auh": "abu-dhabi",
+  "doh": "doha",
+  "rak": "marrakech",
+  "cai": "cairo",
+  "cpt": "cape-town",
+  "cidadedocabo": "cape-town",
+  // Ásia
+  "hnd": "toquio",
+  "nrt": "toquio",
+  "tokyo": "toquio",
+  "kix": "kyoto",
+  "icn": "seul",
+  "bkk": "bangkok",
+  "hkt": "phuket",
+  "dps": "bali",
+  "denpasar": "bali",
+  "sin": "singapura",
+  "hkg": "hong-kong",
+  "hongkong": "hong-kong",
+  "male": "maldivas",
+  // Oceania
+  "syd": "sydney",
+  "mel": "melbourne",
+};
+
+function resolveCityKey(rawCity?: string): string | null {
+  const k = normalize(rawCity);
+  if (!k) return null;
+
+  // 1. match direto
+  if (CITY_PHOTOS[k]) return k;
+
+  // 2. alias
+  if (CITY_ALIASES[k]) return CITY_ALIASES[k];
+
+  // 3. variação sem hífen ("riodejaneiro" -> sem hífen na chave)
+  const noHyphen = k.replace(/-/g, "");
+  if (CITY_ALIASES[noHyphen]) return CITY_ALIASES[noHyphen];
+  for (const key of Object.keys(CITY_PHOTOS)) {
+    if (key.replace(/-/g, "") === noHyphen) return key;
+  }
+
+  // 4. primeira palavra (ex: "Rio Tropical" -> "rio")
+  const first = k.split("-")[0];
+  if (first && first !== k) {
+    if (CITY_PHOTOS[first]) return first;
+    if (CITY_ALIASES[first]) return CITY_ALIASES[first];
+  }
+
+  return null;
 }
 
 export function getDestinationCoverUrl(
@@ -182,11 +367,12 @@ export function getDestinationCoverUrl(
 ): string {
   if (override && override.trim().length > 0) return override;
 
-  const cityKey = normalize(city);
-  if (CITY_PHOTOS[cityKey]) return CITY_PHOTOS[cityKey];
+  const cityKey = resolveCityKey(city);
+  if (cityKey && CITY_PHOTOS[cityKey]) return CITY_PHOTOS[cityKey];
 
   const countryKey = normalize(country);
   if (COUNTRY_FALLBACK[countryKey]) return COUNTRY_FALLBACK[countryKey];
 
   return GENERIC_TRAVEL;
 }
+
