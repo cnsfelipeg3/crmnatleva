@@ -226,22 +226,8 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  const [, forceTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  const updatedAgoLabel = useMemo(() => {
-    if (!results?.fetched_at) return null;
-    const t = new Date(results.fetched_at).getTime();
-    if (!Number.isFinite(t)) return null;
-    const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
-    if (diffSec < 60) return `atualizado agora`;
-    const min = Math.round(diffSec / 60);
-    if (min < 60) return `atualizado há ${min} min`;
-    const h = Math.round(min / 60);
-    return `atualizado há ${h}h`;
-  }, [results?.fetched_at]);
+  // Label "atualizado há X min" foi extraída pra <UpdatedAgoLabel/> abaixo,
+  // pra evitar re-render da página inteira a cada 30s (custoso com applyFilters).
 
   const canSearch = useMemo(() => {
     if (tripMode === "multi") {
