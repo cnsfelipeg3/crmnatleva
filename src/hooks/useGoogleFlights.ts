@@ -119,6 +119,15 @@ export interface SearchGFlightsInput {
   currency?: string;
   start_date?: string;
   end_date?: string;
+  // Round-trip stage 2 + multi-city
+  departure_token?: string;
+  multi_city_json?: string;
+  trip_type?: "1" | "2" | "3";   // 1=round-trip, 2=one-way, 3=multi
+  legs?: Array<{
+    departure_id: string;
+    arrival_id: string;
+    date: string;     // YYYY-MM-DD
+  }>;
 }
 
 export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = true) {
@@ -176,7 +185,8 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
           Array.isArray(it?.layovers) ? it.layovers.length : 0,
           Array.isArray(it?.flights) ? Math.max(0, it.flights.length - 1) : 0,
         );
-        return {
+        const isRoundTrip = !!it?.is_round_trip;
+        const result: any = {
           flights,
           layovers: Array.isArray(it?.layovers) ? it.layovers.map(mapLayover) : [],
           total_duration: typeof it?.duration === "object" ? it.duration?.raw : it?.duration,
@@ -205,6 +215,23 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
             higher: it.carbon_emissions?.higher,
           } : undefined,
         };
+        if (isRoundTrip) {
+          result.is_round_trip = true;
+          result.outbound_flights = Array.isArray(it?.outbound_flights) ? it.outbound_flights.map(mapLeg) : [];
+          result.outbound_layovers = Array.isArray(it?.outbound_layovers) ? it.outbound_layovers.map(mapLayover) : [];
+          result.outbound_duration = typeof it?.outbound_duration === "object" ? it.outbound_duration?.raw : it?.outbound_duration;
+          result.outbound_duration_text = typeof it?.outbound_duration === "object" ? it.outbound_duration?.text : undefined;
+          result.outbound_departure_time = it?.outbound_departure_time;
+          result.outbound_arrival_time = it?.outbound_arrival_time;
+          result.outbound_carbon_emissions = it?.outbound_carbon_emissions;
+          result.return_flights = Array.isArray(it?.return_flights) ? it.return_flights.map(mapLeg) : [];
+          result.return_layovers = Array.isArray(it?.return_layovers) ? it.return_layovers.map(mapLayover) : [];
+          result.return_duration = typeof it?.return_duration === "object" ? it.return_duration?.raw : it?.return_duration;
+          result.return_duration_text = typeof it?.return_duration === "object" ? it.return_duration?.text : undefined;
+          result.return_departure_time = it?.return_departure_time;
+          result.return_arrival_time = it?.return_arrival_time;
+        }
+        return result;
       }
 
       // Insights agregados a partir dos resultados (a DataCrawler não devolve price_insights)
