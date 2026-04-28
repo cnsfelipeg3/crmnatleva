@@ -7,9 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   GAirport,
   GBookingProvider,
+  GBookingDetailsResponse,
+  GBagInfo,
+  GBookingSubOffer,
   GCalendarDay,
   GFlightCabin,
   GPriceGraphPoint,
+  GPriceHistory,
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
 
@@ -45,7 +49,7 @@ export function useAirportSearch(query: string, enabled = true) {
       const flat: GAirport[] = [];
       const seen = new Set<string>();
 
-      function pushAirport(it: any, nearLabel?: string) {
+      function pushAirport(it: any, nearLabel?: string, group?: { city: string; count: number }) {
         const id = it?.id;
         if (!id || typeof id !== "string") return;
         if (id.startsWith("/m/") || id.startsWith("/g/")) return;
@@ -61,6 +65,8 @@ export function useAirportSearch(query: string, enabled = true) {
           type: "AIRPORT",
           nearLabel,
           distance: typeof it?.distance === "string" ? it.distance : undefined,
+          groupCity: group?.city,
+          groupCount: group?.count,
         } as GAirport);
       }
 
@@ -69,7 +75,14 @@ export function useAirportSearch(query: string, enabled = true) {
           pushAirport(it);
         } else if (it?.type === "other" && Array.isArray(it.list)) {
           const nearLabel = it.title || it.city || "";
-          for (const sub of it.list) pushAirport(sub, nearLabel);
+          // Marca apenas o PRIMEIRO sub-aeroporto do grupo com o cabeçalho
+          // (a UI usa isso para renderizar o divisor "Paris · 4 aeroportos")
+          let first = true;
+          for (const sub of it.list) {
+            const groupMeta = first ? { city: nearLabel, count: it.list.length } : undefined;
+            pushAirport(sub, nearLabel, groupMeta);
+            first = false;
+          }
         }
       }
 
@@ -164,7 +177,10 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
           arrival_time_text: it?.arrival_time,
           stops,
           self_transfer: !!it?.self_transfer,
-          delay: it?.delay ? { values: !!it.delay.values, text: it.delay.text } : undefined,
+          delay: it?.delay ? {
+            values: !!it.delay.values,
+            text: typeof it.delay.text === "number" ? it.delay.text : (it.delay.text ? String(it.delay.text) : undefined),
+          } : undefined,
           bags: it?.bags ? {
             carry_on: it.bags.carry_on ?? null,
             checked: it.bags.checked ?? null,
@@ -209,11 +225,55 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
         };
       }
 
+      // -------- priceHistory (vem dentro do searchFlights, antes ignorado) --------
+      const ph = root?.priceHistory;
+      let priceHistory: GPriceHistory | undefined;
+      if (ph && (Array.isArray(ph.history) || ph.summary)) {
+        const historyArr: { date: string; price: number }[] = Array.isArray(ph.history)
+          ? ph.history
+              .map((h: any) => {
+                const t = h?.time ?? h?.date;
+                const v = typeof h?.value === "number" ? h.value : Number(h?.value);
+                if (!t || !Number.isFinite(v)) return null;
+                // time pode vir como timestamp (ms) ou string ISO
+                let date: string;
+                if (typeof t === "number") {
+                  date = new Date(t).toISOString().slice(0, 10);
+                } else {
+                  const d = new Date(String(t));
+                  date = isNaN(d.getTime()) ? String(t) : d.toISOString().slice(0, 10);
+                }
+                return { date, price: v };
+              })
+              .filter((x: any): x is { date: string; price: number } => !!x)
+          : [];
+        function bands(arr: any): any[] | undefined {
+          if (!Array.isArray(arr)) return undefined;
+          return arr
+            .map((b: any) => ({
+              value: typeof b?.value === "number" ? b.value : Number(b?.value),
+              operation: String(b?.operation ?? ""),
+            }))
+            .filter((b: any) => Number.isFinite(b.value));
+        }
+        priceHistory = {
+          history: historyArr,
+          current: typeof ph?.summary?.current === "number" ? ph.summary.current : undefined,
+          low: bands(ph?.summary?.low),
+          typical: bands(ph?.summary?.typical),
+          high: bands(ph?.summary?.high),
+        };
+      }
+
       return {
         best_flights: topRaw.map(mapItinerary),
         other_flights: otherRaw.map(mapItinerary),
         price_insights: priceInsights,
+        price_history: priceHistory,
         search_metadata: { source: "DataCrawler", action: "searchFlights", count: allItins.length },
+        fetched_at: typeof data?.timestamp === "number"
+          ? new Date(data.timestamp).toISOString()
+          : new Date().toISOString(),
         __cache: !!data?.__cache,
       } as GSearchFlightsResult & { __cache?: boolean };
     },
@@ -300,10 +360,12 @@ export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true)
           const date = it?.departure ?? it?.date ?? it?.day;
           if (!date) return null;
           const priceNum = typeof it?.price === "number" ? it.price : Number(it?.price);
+          const ret = it?.return ?? it?.return_date ?? null;
           return {
             date: String(date),
             price: Number.isFinite(priceNum) ? priceNum : null,
             is_outbound: true,
+            return_date: ret ? String(ret) : null,
           } as GPriceGraphPoint;
         })
         .filter((x): x is GPriceGraphPoint => !!x);
@@ -357,8 +419,9 @@ export function useFlightBookingDetails(
 ) {
   return useQuery({
     queryKey: ["gflights", "getBookingDetails", input, bookingToken],
-    queryFn: async (): Promise<GBookingProvider[]> => {
-      if (!input || !bookingToken) return [];
+    queryFn: async (): Promise<GBookingDetailsResponse> => {
+      const empty: GBookingDetailsResponse = { providers: [], bag_info: null };
+      if (!input || !bookingToken) return empty;
       try {
         const data = await invokeGFlights<any>("getBookingDetails", {
           ...input,
@@ -372,21 +435,56 @@ export function useFlightBookingDetails(
           (Array.isArray(raw?.booking_options) && raw.booking_options) ||
           (Array.isArray(raw?.together) && raw.together) ||
           [];
-        return arr
-          .map((it: any) => ({
-            id: String(it?.id ?? it?.code ?? it?.title ?? ""),
-            title: String(it?.title ?? it?.name ?? "Desconhecido"),
-            website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
-            price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
-            is_airline: !!it?.is_airline,
-            individualBooking: !!it?.individualBooking,
-            token: it?.token ? String(it.token) : undefined,
-            logo: it?.logo ? String(it.logo) : undefined,
-          }))
+
+        const providers: GBookingProvider[] = arr
+          .map((it: any) => {
+            const subBookings: GBookingSubOffer[] = Array.isArray(it?.bookings)
+              ? it.bookings.map((b: any) => ({
+                  price: typeof b?.price === "number" ? b.price : Number(b?.price) || undefined,
+                  title: b?.title ? String(b.title) : undefined,
+                  website: b?.website ? String(b.website) : (b?.url ? String(b.url) : undefined),
+                  meta: b?.meta ?? undefined,
+                  ...b,
+                }))
+              : [];
+            return {
+              id: String(it?.id ?? it?.code ?? it?.title ?? ""),
+              title: String(it?.title ?? it?.name ?? "Desconhecido"),
+              website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
+              price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
+              is_airline: !!it?.is_airline,
+              individualBooking: !!it?.individualBooking,
+              token: it?.token ? String(it.token) : undefined,
+              logo: it?.logo ? String(it.logo) : undefined,
+              bookings: subBookings,
+              meta: it?.meta ?? undefined,
+            };
+          })
           .filter((p) => p.id || p.title);
+
+        // bag_info pode vir no nível raiz da resposta ou dentro de data
+        const rawBag = data?.bag_info ?? raw?.bag_info ?? null;
+        let bag_info: GBagInfo | null = null;
+        if (rawBag && typeof rawBag === "object") {
+          const norm = (b: any) => {
+            if (!b || typeof b !== "object") return undefined;
+            return {
+              included: !!(b.included ?? b.is_included),
+              price: typeof b.price === "number" ? b.price : (b.price ? Number(b.price) : undefined),
+              description: b.description ?? b.text ?? b.label ?? undefined,
+            };
+          };
+          bag_info = {
+            carry_on: norm(rawBag.carry_on ?? rawBag.cabin) ?? null,
+            checked: norm(rawBag.checked ?? rawBag.hold) ?? null,
+            raw: rawBag,
+          };
+        }
+
+        return { providers, bag_info };
       } catch (e) {
         console.warn("[gflights] getBookingDetails failed:", e);
-        return [];
+        return empty;
       }
     },
     enabled: enabled && !!input && !!bookingToken,

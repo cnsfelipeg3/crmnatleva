@@ -83,8 +83,10 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
   const open = !!itinerary;
   const bookingToken = itinerary?.booking_token ?? null;
-  const { data: providers = [], isLoading: provLoading } =
+  const { data: bookingDetails, isLoading: provLoading } =
     useFlightBookingDetails(searchInput, bookingToken, open);
+  const providers = bookingDetails?.providers ?? [];
+  const bagInfo = bookingDetails?.bag_info ?? null;
 
   const providersSorted = [...providers].sort((a, b) => a.price - b.price);
 
@@ -329,7 +331,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
             {co2?.this_flight !== undefined && (
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Emissões CO₂</h3>
-                <div className="bg-muted/30 rounded-md p-3 text-xs space-y-1">
+                <div className="bg-muted/30 rounded-md p-3 text-xs space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <Leaf className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -341,16 +343,99 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                       </span>
                     )}
                   </div>
+                  {/* Barra comparativa visual · usa typical_for_this_route + higher */}
+                  {co2.typical_for_this_route !== undefined && co2.this_flight !== undefined && (() => {
+                    const max = Math.max(co2.this_flight!, co2.typical_for_this_route!);
+                    const thisPct = (co2.this_flight! / max) * 100;
+                    const typicalPct = (co2.typical_for_this_route! / max) * 100;
+                    const isHigher = !!co2.higher;
+                    return (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-16 shrink-0">Esse voo</span>
+                          <div className="flex-1 h-2 bg-muted/40 rounded-full overflow-hidden">
+                            <div className={cn("h-full rounded-full transition-all", isHigher ? "bg-rose-500" : "bg-emerald-500")} style={{ width: `${thisPct}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono w-14 text-right">{formatCO2(co2.this_flight)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-16 shrink-0">Média rota</span>
+                          <div className="flex-1 h-2 bg-muted/40 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full bg-muted-foreground/40" style={{ width: `${typicalPct}%` }} />
+                          </div>
+                          <span className="text-[10px] font-mono w-14 text-right">{formatCO2(co2.typical_for_this_route)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {co2.difference_percent !== undefined && (
                     <div className={cn(
-                      "text-[11px]",
+                      "text-[11px] pt-1 border-t border-border/40",
                       co2.difference_percent < 0 && "text-emerald-700 dark:text-emerald-300",
                       co2.difference_percent > 0 && "text-rose-700 dark:text-rose-300",
                     )}>
-                      {co2.difference_percent > 0 ? "⚠️ " : "✓ "}
-                      {co2.difference_percent > 0 ? "+" : ""}{co2.difference_percent}% vs média da rota
+                      {co2.higher ? "⚠️ Emite mais que a média · " : "✓ Emite menos que a média · "}
+                      {co2.difference_percent > 0 ? "+" : ""}{co2.difference_percent}%
                     </div>
                   )}
+                </div>
+              </section>
+            )}
+
+            {/* Bagagem do provider (bag_info) · só aparece quando a API retorna */}
+            {bagInfo && (bagInfo.carry_on || bagInfo.checked) && (
+              <section className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Bagagem detalhada do canal de venda
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {bagInfo.carry_on && (
+                    <div className="bg-muted/30 rounded-md p-3 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <Briefcase className="h-3.5 w-3.5" /> Mão
+                        </span>
+                        {bagInfo.carry_on.included ? (
+                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300">Incluída</Badge>
+                        ) : (
+                          <span className="text-[11px] font-bold">{bagInfo.carry_on.price ? formatBRL(bagInfo.carry_on.price) : "—"}</span>
+                        )}
+                      </div>
+                      {bagInfo.carry_on.description && (
+                        <div className="text-[10px] text-muted-foreground">{bagInfo.carry_on.description}</div>
+                      )}
+                    </div>
+                  )}
+                  {bagInfo.checked && (
+                    <div className="bg-muted/30 rounded-md p-3 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 font-medium">
+                          <Luggage className="h-3.5 w-3.5" /> Despachada
+                        </span>
+                        {bagInfo.checked.included ? (
+                          <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300">Incluída</Badge>
+                        ) : (
+                          <span className="text-[11px] font-bold">{bagInfo.checked.price ? formatBRL(bagInfo.checked.price) : "—"}</span>
+                        )}
+                      </div>
+                      {bagInfo.checked.description && (
+                        <div className="text-[10px] text-muted-foreground">{bagInfo.checked.description}</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
+
+            {/* Aviso de atraso histórico (delay.text) */}
+            {itinerary.delay?.values && itinerary.delay.text && (
+              <section className="bg-amber-500/5 border border-amber-500/20 rounded-md p-3 text-xs flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-medium text-amber-800 dark:text-amber-200">Histórico de atrasos</div>
+                  <div className="text-amber-700 dark:text-amber-300 mt-0.5">
+                    Esse voo costuma atrasar {itinerary.delay.text}{typeof itinerary.delay.text === "number" ? " minutos" : ""} em relação ao horário previsto.
+                  </div>
                 </div>
               </section>
             )}

@@ -19,6 +19,8 @@ export interface GAirport {
   type?: "AIRPORT" | "CITY" | string;
   nearLabel?: string;
   distance?: string;
+  groupCity?: string;            // header de agrupamento "Paris · 4 aeroportos"
+  groupCount?: number;
 }
 
 export interface GFlightLeg {
@@ -79,6 +81,22 @@ export interface GFlightItinerary {
   [k: string]: unknown;
 }
 
+// Sub-oferta de um provider (combos ida/volta · campo bookings[] da DataCrawler)
+export interface GBookingSubOffer {
+  price?: number;
+  title?: string;
+  website?: string;
+  meta?: unknown;
+  [k: string]: unknown;
+}
+
+// Detalhes de bagagem por provider (campo bag_info da DataCrawler)
+export interface GBagInfo {
+  carry_on?: { included?: boolean; price?: number; description?: string } | null;
+  checked?: { included?: boolean; price?: number; description?: string } | null;
+  raw?: unknown;
+}
+
 // Provider/agent que oferece o voo (retornado por getBookingDetails)
 export interface GBookingProvider {
   id: string;
@@ -89,6 +107,27 @@ export interface GBookingProvider {
   individualBooking?: boolean;
   token?: string;
   logo?: string;
+  bookings?: GBookingSubOffer[];     // sub-ofertas/combos
+  meta?: unknown;                    // metadata adicional
+}
+
+export interface GBookingDetailsResponse {
+  providers: GBookingProvider[];
+  bag_info: GBagInfo | null;
+}
+
+// Histórico de preço da rota (vem dentro do searchFlights · não consumia até agora)
+export interface GPriceBand {
+  value: number;
+  operation: string;     // "<", ">", "between"
+}
+export interface GPriceHistory {
+  history: { date: string; price: number }[];
+  current?: number;
+  low?: GPriceBand[];
+  typical?: GPriceBand[];
+  high?: GPriceBand[];
+  classification?: "low" | "typical" | "high" | null;
 }
 
 // Filtros laterais
@@ -133,7 +172,9 @@ export interface GSearchFlightsResult {
   best_flights?: GFlightItinerary[];
   other_flights?: GFlightItinerary[];
   price_insights?: GPriceInsights;
+  price_history?: GPriceHistory;            // novo · vem do searchFlights.priceHistory
   search_metadata?: Record<string, unknown>;
+  fetched_at?: string;                      // ISO timestamp da resposta
   [k: string]: unknown;
 }
 
@@ -148,6 +189,7 @@ export interface GPriceGraphPoint {
   date: string;
   price?: number | null;
   is_outbound?: boolean;
+  return_date?: string | null;              // par ida/volta para round-trip
 }
 
 // ----------------------------------------------------------------------
@@ -312,4 +354,42 @@ export function formatCO2(grams?: number): string {
   const kg = grams / 1000;
   if (kg < 10) return `${kg.toFixed(1)} kg CO₂`;
   return `${Math.round(kg)} kg CO₂`;
+}
+
+/**
+ * Classifica um preço dentro das faixas históricas (low/typical/high) usando as
+ * regras de operação que vêm da API (>, <, between).
+ */
+export function classifyPriceAgainstHistory(
+  price: number | null | undefined,
+  history?: GPriceHistory,
+): "low" | "typical" | "high" | null {
+  if (!history || price == null || !Number.isFinite(price)) return null;
+  if (history.classification) return history.classification;
+
+  function matchBand(bands?: GPriceBand[]): boolean {
+    if (!bands?.length) return false;
+    // operações esperadas: "<", "<=", ">", ">=", "between"
+    if (bands.length === 1) {
+      const b = bands[0];
+      if (b.operation === "<" || b.operation === "<=") return price <= b.value;
+      if (b.operation === ">" || b.operation === ">=") return price >= b.value;
+    }
+    if (bands.length >= 2) {
+      const vals = bands.map(b => b.value).sort((a, z) => a - z);
+      return price >= vals[0] && price <= vals[vals.length - 1];
+    }
+    return false;
+  }
+
+  if (matchBand(history.low)) return "low";
+  if (matchBand(history.high)) return "high";
+  if (matchBand(history.typical)) return "typical";
+  // Fallback: comparar com summary.current
+  if (history.current) {
+    if (price < history.current * 0.85) return "low";
+    if (price > history.current * 1.15) return "high";
+    return "typical";
+  }
+  return null;
 }
