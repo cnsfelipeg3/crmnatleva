@@ -663,7 +663,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-3xl max-h-[92vh] p-0 gap-0 overflow-hidden" aria-labelledby="ai-proposal-briefing-title">
         {/* Header */}
         <div className="px-6 py-4 border-b border-border/50 bg-gradient-to-r from-primary/5 to-transparent">
           <div className="flex items-center gap-3">
@@ -671,7 +671,7 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
               <Sparkles className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
+              <h2 id="ai-proposal-briefing-title" className="text-base font-semibold text-foreground">Criar Proposta com IA</h2>
               <p className="text-xs text-muted-foreground">
                 {step === "loading" ? "Analisando jornada completa do cliente..." :
                  step === "suggestions" ? "Escolha o pacote ideal para esta proposta" :

@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -1298,6 +1298,7 @@ export default function PlacesSearchCard({
         {/* ── Lightbox ── */}
         <Dialog open={lightboxIdx !== null} onOpenChange={() => setLightboxIdx(null)}>
           <DialogContent className="max-w-3xl p-0 overflow-hidden bg-black/95 border-none">
+            <DialogTitle className="sr-only">Visualizar foto do local</DialogTitle>
             {lightboxIdx !== null && curatedPhotos[lightboxIdx] && (
               <div className="relative">
                 <SmartImage

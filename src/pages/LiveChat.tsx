@@ -2886,6 +2886,7 @@ export default function LiveChat() {
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-3xl p-2">
+            <DialogTitle className="sr-only">Visualizar imagem em tamanho ampliado</DialogTitle>
             <img loading="lazy" decoding="async" src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>

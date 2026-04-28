@@ -1152,6 +1152,7 @@ export function HotelscomDetailDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-3xl lg:max-w-4xl xl:max-w-5xl p-0 overflow-hidden flex flex-col">
+        <SheetTitle className="sr-only">Detalhes do hotel</SheetTitle>
         {innerContent}
       </SheetContent>
       {lightbox}

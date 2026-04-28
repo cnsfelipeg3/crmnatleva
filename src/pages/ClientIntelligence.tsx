@@ -1212,6 +1212,7 @@ export default function ClientIntelligence() {
       {/* ===== CLIENT 360° PROFILE DIALOG ===== */}
       <Dialog open={!!selectedClient} onOpenChange={() => setSelectedClient(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogTitle className="sr-only">Perfil 360° do cliente</DialogTitle>
           {selectedClient && <ClientProfile360 client={selectedClient} onNavigate={(id) => { setSelectedClient(null); navigate(`/sales/${id}`); }} />}
         </DialogContent>
       </Dialog>
