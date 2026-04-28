@@ -638,3 +638,49 @@ export async function fetchBookingURL(providerToken: string): Promise<string | n
     return null;
   }
 }
+
+// --------------------------------------------------------------------
+// 8) buildSyntheticProvider · fallback quando API não retorna ofertas
+// --------------------------------------------------------------------
+import { resolveAirlineWebsite, AIRLINE_REGISTRY } from "@/components/google-flights/airlineRegistry";
+
+export function buildSyntheticProvider(itinerary: {
+  flights?: Array<{ airline?: string; airline_code?: string; airline_logo?: string; travel_class?: string }>;
+  price?: number;
+  airline_logo?: string;
+} | null | undefined): GBookingProvider | null {
+  if (!itinerary) return null;
+  const firstFlight = itinerary.flights?.[0];
+  const airlineName = firstFlight?.airline;
+  const airlineCode = firstFlight?.airline_code;
+  if (!airlineName && !airlineCode) return null;
+
+  const website = resolveAirlineWebsite(airlineCode || airlineName) || undefined;
+  const cabin = firstFlight?.travel_class || "ECONOMY";
+  const displayName =
+    cabin === "ECONOMY" ? "Econômica" :
+    cabin === "PREMIUM_ECONOMY" ? "Econômica Premium" :
+    cabin === "BUSINESS" ? "Executiva" :
+    cabin === "FIRST" ? "Primeira Classe" : "Padrão";
+
+  return {
+    id: `synthetic-${airlineCode || airlineName}`,
+    title: airlineName || AIRLINE_REGISTRY[(airlineCode || "").toUpperCase()]?.name || "Companhia",
+    website,
+    price: typeof itinerary.price === "number" ? itinerary.price : 0,
+    is_airline: true,
+    individualBooking: false,
+    token: undefined,
+    logo: itinerary.airline_logo || firstFlight?.airline_logo,
+    bookings: [],
+    meta: { synthetic: true, fare_type: cabin },
+    cabin,
+    fareType: cabin,
+    fareTier: "standard",
+    fareDisplayName: displayName,
+    benefits: ["Tarifa direta da companhia"],
+    restrictions: ["Confira condições no site da cia"],
+    baggage: undefined,
+    features: undefined,
+  } as any as GBookingProvider;
+}
