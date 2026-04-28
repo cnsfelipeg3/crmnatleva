@@ -560,22 +560,84 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                 )}
               </div>
 
-              {/* Banner: total de canais + economia */}
+              {/* Banner: total de tarifas + canais + economia */}
               {!provLoading && providersSorted.length > 0 && (
                 <div className="bg-primary/5 border border-primary/20 rounded-md p-3 space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold flex items-center gap-1.5">
                       <ShoppingCart className="h-3.5 w-3.5 text-primary" />
-                      {providersSorted.length} {providersSorted.length === 1 ? "canal de venda" : "canais de venda"}
+                      {providersSorted.length} {providersSorted.length === 1 ? "tarifa disponível" : "tarifas disponíveis"}
+                      {uniqueAirlines > 0 && (
+                        <span className="text-muted-foreground font-normal">
+                          · {uniqueAirlines} {uniqueAirlines === 1 ? "companhia" : "companhias"}
+                        </span>
+                      )}
                     </span>
                     <span className="text-muted-foreground text-[10px]">do mais barato ao mais caro</span>
                   </div>
                   {providersSorted.length > 1 && savings > 0 && (
                     <div className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                       <Sparkles className="h-3 w-3" />
-                      Você economiza <strong>{formatBRL(savings)}</strong> comprando no canal mais barato
+                      Economia até <strong>{formatBRL(savings)}</strong> escolhendo a tarifa certa
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Filtros locais de tarifa */}
+              {!provLoading && providersSorted.length > 1 && (
+                <div className="space-y-2 bg-muted/20 border border-border rounded-md p-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Tipos de tarifa:
+                    </span>
+                    {ALL_TIERS.map((t) => {
+                      const active = tierFilter.includes(t);
+                      const tmeta = TIER_META[t];
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() =>
+                            setTierFilter((s) => (active ? s.filter((x) => x !== t) : [...s, t]))
+                          }
+                          className={cn(
+                            "text-[10px] px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1",
+                            active
+                              ? `${tmeta.bg} ${tmeta.color} ${tmeta.border}`
+                              : "bg-muted/30 text-muted-foreground border-border hover:border-primary/30",
+                          )}
+                          title={tmeta.description}
+                        >
+                          <span>{tmeta.emoji}</span>
+                          <span>{tmeta.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-border/40">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Exigir:
+                    </span>
+                    {[
+                      { v: needCheckedBag, set: setNeedCheckedBag, label: "Bagagem despachada" },
+                      { v: needRefundable, set: setNeedRefundable, label: "Reembolsável" },
+                      { v: needFreeChange, set: setNeedFreeChange, label: "Alteração grátis" },
+                      { v: needFreeSeat, set: setNeedFreeSeat, label: "Assento grátis" },
+                    ].map((f, i) => (
+                      <label key={i} className="flex items-center gap-1 text-[11px] cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={f.v}
+                          onChange={(e) => f.set(e.target.checked)}
+                          className="h-3 w-3 accent-primary"
+                        />
+                        <span className={f.v ? "text-foreground font-medium" : "text-muted-foreground"}>
+                          {f.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -589,12 +651,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                 <div className="text-xs text-muted-foreground py-6 text-center bg-muted/20 rounded-md border border-dashed border-border">
                   Nenhum canal de venda direto disponível para este voo.
                   <div className="mt-2">
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="sm"
-                      className="gap-2"
-                    >
+                    <Button asChild variant="outline" size="sm" className="gap-2">
                       <a
                         href={`https://www.google.com/travel/flights?q=${encodeURIComponent(
                           `${dep?.id} to ${arr?.id} ${itinerary.flights?.[0]?.airline ?? ""}`,
@@ -608,12 +665,21 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                     </Button>
                   </div>
                 </div>
+              ) : filteredProviders.length === 0 ? (
+                <div className="text-xs text-muted-foreground py-6 text-center bg-muted/20 rounded-md border border-dashed border-border space-y-2">
+                  <div>Nenhuma tarifa atende todos os filtros selecionados.</div>
+                  <Button variant="outline" size="sm" onClick={resetFareFilters}>
+                    Limpar filtros de tarifa
+                  </Button>
+                </div>
               ) : (
                 <div className="space-y-2">
-                  {providersSorted.map((p, i) => {
+                  {filteredProviders.map((p, i) => {
+                    const tierKey: GFareTier = p.fareTier ?? "standard";
+                    const tmeta = TIER_META[tierKey];
                     const trust = getTrust(p);
-                    const meta = TRUST_META[trust];
-                    const Icon = meta.icon;
+                    const trustMeta = TRUST_META[trust];
+                    const TrustIcon = trustMeta.icon;
                     const isCheapest = i === 0;
                     const reserveId = `${p.id}-${p.title}`;
                     const isReserving = reservingId === reserveId;
@@ -621,111 +687,107 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                       <div
                         key={`${p.id}-${i}`}
                         className={cn(
-                          "border rounded-lg p-3 transition-colors",
-                          isCheapest && "border-emerald-500/50 bg-emerald-500/5",
-                          !isCheapest && trust === "trusted" && "border-border hover:border-primary/30",
-                          !isCheapest && trust === "neutral" && "border-amber-500/30 bg-amber-500/5",
-                          !isCheapest && trust === "avoid" && "border-rose-500/30 bg-rose-500/5",
+                          "border rounded-lg overflow-hidden transition-colors",
+                          tmeta.border,
+                          tmeta.bg,
                         )}
                       >
-                        <div className="flex items-start gap-3">
-                          <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", meta.bg)} />
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                              <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
-                                {p.title}
-                                {p.is_airline ? (
-                                  <Badge className="text-[9px] border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15 gap-1">
-                                    <Building2 className="h-2.5 w-2.5" /> Cia oficial
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-[9px] gap-1">OTA</Badge>
-                                )}
-                                {isCheapest && (
-                                  <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
-                                    <Sparkles className="h-2.5 w-2.5" /> Mais barato
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-base font-bold shrink-0">{formatBRL(p.price)}</div>
-                            </div>
-                            <div className={cn("text-[11px] mt-1 flex items-center gap-1", meta.color)}>
-                              <Icon className="h-3 w-3" />
-                              <span>{meta.label}</span>
-                              {meta.note && <span className="text-muted-foreground">· {meta.note}</span>}
-                            </div>
+                        {/* Header colorido por tier */}
+                        <div className={cn("flex items-center justify-between px-3 py-1.5 border-b", tmeta.border)}>
+                          <div className={cn("flex items-center gap-1.5 text-[11px] font-semibold", tmeta.color)}>
+                            <span>{tmeta.emoji}</span>
+                            <span>{p.fareDisplayName || tmeta.label}</span>
                           </div>
+                          {isCheapest && (
+                            <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
+                              <Sparkles className="h-2.5 w-2.5" /> Mais barato
+                            </Badge>
+                          )}
                         </div>
 
-                        {/* Sub-ofertas (bookings[] · combos ida/volta ou tarifas alternativas) */}
-                        {Array.isArray(p.bookings) && p.bookings.length > 0 && (
-                          <div className="mt-2 ml-5 pl-3 border-l border-border/40 space-y-1.5">
-                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                              {p.bookings.length} {p.bookings.length === 1 ? "tarifa disponível" : "tarifas disponíveis"}
+                        {/* Conteúdo */}
+                        <div className="p-3 space-y-2 bg-card">
+                          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                            <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
+                              <div className={cn("h-2.5 w-2.5 rounded-full", trustMeta.bg)} />
+                              {p.title}
+                              {p.is_airline ? (
+                                <Badge className="text-[9px] border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15 gap-1">
+                                  <Building2 className="h-2.5 w-2.5" /> Cia oficial
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-[9px] gap-1">OTA</Badge>
+                              )}
                             </div>
-                            {p.bookings.slice(0, 4).map((b, bi) => (
-                              <div
-                                key={bi}
-                                className="flex items-center justify-between gap-2 text-[11px] py-1"
+                            <div className="text-base font-bold shrink-0">{formatBRL(p.price)}</div>
+                          </div>
+
+                          {/* Benefícios */}
+                          {p.benefits && p.benefits.length > 0 && (
+                            <ul className="space-y-0.5">
+                              {p.benefits.map((b, k) => (
+                                <li key={k} className="flex items-start gap-1.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+                                  <Check className="h-3 w-3 shrink-0 mt-0.5" />
+                                  <span>{b}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {/* Restrições */}
+                          {p.restrictions && p.restrictions.length > 0 && (
+                            <ul className="space-y-0.5">
+                              {p.restrictions.map((r, k) => (
+                                <li key={k} className="flex items-start gap-1.5 text-[11px] text-rose-700 dark:text-rose-300">
+                                  <XIcon className="h-3 w-3 shrink-0 mt-0.5" />
+                                  <span>{r}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+
+                          {/* Trust note (só se não-confiável) */}
+                          {trust !== "trusted" && (
+                            <div className={cn("text-[10px] flex items-center gap-1", trustMeta.color)}>
+                              <TrustIcon className="h-3 w-3" />
+                              <span>{trustMeta.label}</span>
+                              {trustMeta.note && <span className="text-muted-foreground">· {trustMeta.note}</span>}
+                            </div>
+                          )}
+
+                          {/* Botão reservar */}
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              variant={isCheapest ? "default" : "outline"}
+                              size="sm"
+                              className={cn(
+                                "flex-1 gap-2",
+                                isCheapest && "bg-emerald-600 hover:bg-emerald-700 text-white",
+                              )}
+                              onClick={() => handleReserveProvider(p)}
+                              disabled={isReserving || (!p.token && !p.website)}
+                            >
+                              {isReserving ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <ShoppingCart className="h-3.5 w-3.5" />
+                              )}
+                              {trust === "avoid" ? "Reservar mesmo assim" : `Reservar em ${p.title}`}
+                              <ExternalLink className="h-3 w-3" />
+                            </Button>
+                            {p.website && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-[10px] text-muted-foreground"
+                                asChild
                               >
-                                <div className="flex-1 min-w-0 truncate text-foreground">
-                                  {b.title || `Opção ${bi + 1}`}
-                                </div>
-                                <div className="font-semibold shrink-0">
-                                  {b.price !== undefined ? formatBRL(b.price) : "—"}
-                                </div>
-                                {b.website && (
-                                  <a
-                                    href={buildHref(b.website)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[10px] text-primary hover:underline shrink-0"
-                                  >
-                                    abrir
-                                  </a>
-                                )}
-                              </div>
-                            ))}
-                            {p.bookings.length > 4 && (
-                              <div className="text-[10px] text-muted-foreground italic">
-                                +{p.bookings.length - 4} outras tarifas
-                              </div>
+                                <a href={buildHref(p.website)} target="_blank" rel="noopener noreferrer" title="Abrir site do canal">
+                                  site
+                                </a>
+                              </Button>
                             )}
                           </div>
-                        )}
-
-                        {/* Botão reservar · resolve deeplink real via getBookingURL(token) */}
-                        <div className="flex gap-2 mt-3">
-                          <Button
-                            variant={isCheapest ? "default" : trust === "avoid" ? "outline" : "outline"}
-                            size="sm"
-                            className={cn(
-                              "flex-1 gap-2",
-                              isCheapest && "bg-emerald-600 hover:bg-emerald-700 text-white",
-                            )}
-                            onClick={() => handleReserveProvider(p)}
-                            disabled={isReserving || (!p.token && !p.website)}
-                          >
-                            {isReserving ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <ShoppingCart className="h-3.5 w-3.5" />
-                            )}
-                            {trust === "avoid" ? "Reservar mesmo assim" : `Reservar em ${p.title}`}
-                            <ExternalLink className="h-3 w-3" />
-                          </Button>
-                          {p.website && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-[10px] text-muted-foreground"
-                              asChild
-                            >
-                              <a href={buildHref(p.website)} target="_blank" rel="noopener noreferrer" title="Abrir site do canal">
-                                site
-                              </a>
-                            </Button>
-                          )}
                         </div>
                       </div>
                     );
