@@ -4527,7 +4527,11 @@ export type Database = {
           country_code: string | null
           created_at: string
           description: string | null
+          hero_fetched_at: string | null
           hero_image_url: string | null
+          hero_photographer: string | null
+          hero_photographer_url: string | null
+          hero_unsplash_id: string | null
           iata: string
           id: string
           is_active: boolean
@@ -4545,7 +4549,11 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           description?: string | null
+          hero_fetched_at?: string | null
           hero_image_url?: string | null
+          hero_photographer?: string | null
+          hero_photographer_url?: string | null
+          hero_unsplash_id?: string | null
           iata: string
           id?: string
           is_active?: boolean
@@ -4563,7 +4571,11 @@ export type Database = {
           country_code?: string | null
           created_at?: string
           description?: string | null
+          hero_fetched_at?: string | null
           hero_image_url?: string | null
+          hero_photographer?: string | null
+          hero_photographer_url?: string | null
+          hero_unsplash_id?: string | null
           iata?: string
           id?: string
           is_active?: boolean
