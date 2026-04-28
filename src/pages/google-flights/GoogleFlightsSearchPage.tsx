@@ -596,6 +596,8 @@ export default function GoogleFlightsSearchPage() {
           </TabsContent>
         </Tabs>
       )}
+        </TabsContent>
+      </Tabs>
 
       <GFlightDetailDrawer
         itinerary={selectedItinerary}
