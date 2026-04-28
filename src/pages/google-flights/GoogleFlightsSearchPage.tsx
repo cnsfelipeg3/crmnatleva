@@ -374,6 +374,17 @@ export default function GoogleFlightsSearchPage() {
               {updatedAgoLabel && (
                 <span className="text-[10px] text-muted-foreground/80 italic">· {updatedAgoLabel}</span>
               )}
+              {results && (() => {
+                const meta = results.search_metadata as any;
+                const total = (meta?.total_top ?? 0) + (meta?.total_other ?? 0);
+                const pages = meta?.pages_fetched ?? 1;
+                if (!total) return null;
+                return (
+                  <Badge variant="outline" className="text-[10px] gap-1">
+                    {total} voos {pages > 1 && `· ${pages} páginas`}
+                  </Badge>
+                );
+              })()}
             </div>
             <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
               <Search className="h-4 w-4" />
