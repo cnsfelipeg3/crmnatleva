@@ -96,6 +96,10 @@ export default defineConfig(({ mode }) => ({
       "lucide-react",
       "date-fns",
       "sonner",
+      // Leaflet é CommonJS (UMD) · precisa ser pre-bundled pelo Vite
+      // pra expor `export default L`. Sem isso, `import * as L from "leaflet"`
+      // falha em dev com "does not provide an export named 'default'".
+      "leaflet",
     ],
     exclude: [
       // Pesadas · só carregam sob demanda
@@ -103,8 +107,6 @@ export default defineConfig(({ mode }) => ({
       "three",
       "@react-three/fiber",
       "@react-three/drei",
-      "leaflet",
-      "react-leaflet",
       "recharts",
       "framer-motion",
       "monaco-editor",
