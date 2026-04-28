@@ -433,6 +433,72 @@ export function applyFilters(
     out = out.filter(f => detectBags(f).checked);
   }
 
+  // Self-transfer · exclui voos vendidos como 2 trechos separados
+  if (filters.excludeSelfTransfer) {
+    out = out.filter(f => !f.self_transfer);
+  }
+
+  // Layovers problemáticas · exclui se qualquer conexão for tight (< 60min)
+  // ou long (> 240min) ou pernoite forçado
+  if (filters.excludeProblematicLayovers) {
+    out = out.filter(f => {
+      const layovers = f.layovers ?? [];
+      if (!layovers.length) return true; // sem conexão = sem problema
+      return !layovers.some(l => {
+        const c = classifyLayover(l);
+        return c.severity !== "ok";
+      });
+    });
+  }
+
+  // Janela de chegada
+  if (filters.arrHourFrom > 0 || filters.arrHourTo < 24) {
+    out = out.filter(f => {
+      const h = getArrHour(f);
+      if (h === null) return true;
+      return h >= filters.arrHourFrom && h <= filters.arrHourTo;
+    });
+  }
+
+  // Aeroportos de conexão excluídos
+  if (filters.excludeConnectingAirports.length > 0) {
+    const blocked = new Set(filters.excludeConnectingAirports);
+    out = out.filter(f => {
+      const ids = getConnectingAirportIds(f);
+      return !ids.some(id => blocked.has(id));
+    });
+  }
+
+  // Quick filter · atalho exclusivo (direct/morning/afternoon/evening/eco)
+  if (filters.quickFilter) {
+    out = out.filter(f => {
+      switch (filters.quickFilter) {
+        case "direct":
+          return (f.stops ?? f.flights.length - 1) === 0;
+        case "morning": {
+          const h = getDepHour(f);
+          return h !== null && h >= 5 && h < 12;
+        }
+        case "afternoon": {
+          const h = getDepHour(f);
+          return h !== null && h >= 12 && h < 18;
+        }
+        case "evening": {
+          const h = getDepHour(f);
+          return h !== null && (h >= 18 || h < 5);
+        }
+        case "eco":
+          // Voos com menor pegada vs típica da rota OU com tag CO2 reduzida
+          if (f.carbon_emissions?.difference_percent != null) {
+            return f.carbon_emissions.difference_percent < 0;
+          }
+          return hasExtension(f, /(less\s+co2|emissões\s+menor|lower\s+emissions)/i);
+        default:
+          return true;
+      }
+    });
+  }
+
   // Sort
   out.sort((a, b) => {
     switch (filters.sortBy) {
