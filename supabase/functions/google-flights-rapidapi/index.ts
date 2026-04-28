@@ -448,6 +448,7 @@ serve(async (req) => {
             },
             __pagination: { pages_fetched: stage1.pages, total_top: stage1.topFlights.length, total_other: stage1.otherFlights.length },
             __trip_type: "multi_city",
+            __rapidapi_calls: stage1.pages,
           },
         };
       } else if (!isRoundTrip) {
@@ -463,6 +464,7 @@ serve(async (req) => {
             },
             __pagination: { pages_fetched: stage1.pages, total_top: stage1.topFlights.length, total_other: stage1.otherFlights.length },
             __trip_type: "one_way",
+            __rapidapi_calls: stage1.pages,
           },
         };
       } else {
