@@ -194,8 +194,8 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       assertParams(input, ["query"]);
       return {
         query: String(input.query),
-        language_code: String(input.language_code ?? defaults.language_code),
-        country_code: String(input.country_code ?? defaults.country_code),
+        language_code: defaults.language_code,
+        country_code: defaults.country_code,
       };
     }
     case "searchFlights": {
