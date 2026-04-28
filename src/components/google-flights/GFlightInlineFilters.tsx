@@ -65,6 +65,31 @@ function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 }
 
+/**
+ * Navegação por setas dentro de um radiogroup horizontal.
+ * Move o foco e aciona o radio (padrão WAI-ARIA).
+ */
+function handleRadioGroupKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  const key = e.key;
+  if (key !== "ArrowRight" && key !== "ArrowLeft" && key !== "Home" && key !== "End") return;
+  const group = e.currentTarget;
+  const radios = Array.from(
+    group.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+  ).filter(el => !el.hasAttribute("disabled"));
+  if (radios.length === 0) return;
+  const currentIndex = radios.findIndex(el => el === document.activeElement);
+  let nextIndex = currentIndex;
+  if (key === "ArrowRight") nextIndex = (currentIndex + 1 + radios.length) % radios.length;
+  else if (key === "ArrowLeft") nextIndex = (currentIndex - 1 + radios.length) % radios.length;
+  else if (key === "Home") nextIndex = 0;
+  else if (key === "End") nextIndex = radios.length - 1;
+  if (nextIndex !== currentIndex && radios[nextIndex]) {
+    e.preventDefault();
+    radios[nextIndex].focus();
+    radios[nextIndex].click();
+  }
+}
+
 function GFlightInlineFiltersImpl({
   filters, onChange, onReset, flights = [],
   filteredCount, autoApply, onAutoApplyChange, onAutoSearch,
