@@ -1713,7 +1713,7 @@ function OperacaoInboxInner() {
                                   <div>
                                     {msg.media_url ? (
                                       <>
-                                        <img src={msg.media_url} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => setLightboxUrl(msg.media_url!)} />
+                                        <img loading="lazy" decoding="async" src={msg.media_url} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => setLightboxUrl(msg.media_url!)} />
                                         <div className="flex items-center gap-2 mt-1">
                                           <a href={msg.media_url} download={`imagem_${msg.id}.jpg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                                             <File className="h-2.5 w-2.5" /> Baixar
