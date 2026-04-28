@@ -62,10 +62,11 @@ describe("resolveCountryKey · ISO-2, ISO-3 e variações", () => {
 
   // --- Aliases textuais -------------------------------------------------
   describe("variações textuais", () => {
-    it("EUA / Estados Unidos / EE.UU. -> usa", () => {
-      expect(resolveCountryKey("EUA")).toBe("usa");
-      expect(resolveCountryKey("Estados Unidos")).toBe("usa");
-      expect(resolveCountryKey("estados-unidos")).toBe("usa");
+    it("EUA / Estados Unidos / EE.UU. resolvem para a mesma foto que USA", () => {
+      const usaUrl = COUNTRY_FALLBACK[resolveCountryKey("USA")!];
+      expect(COUNTRY_FALLBACK[resolveCountryKey("EUA")!]).toBe(usaUrl);
+      expect(COUNTRY_FALLBACK[resolveCountryKey("Estados Unidos")!]).toBe(usaUrl);
+      expect(COUNTRY_FALLBACK[resolveCountryKey("estados-unidos")!]).toBe(usaUrl);
     });
 
     it("Reino Unido (com e sem espaço) -> reino-unido", () => {
