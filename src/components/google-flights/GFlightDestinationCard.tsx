@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+// useEffect removido · o <img loading="eager" fetchPriority="high"> abaixo
+// já garante o download prioritário sem precisar de new Image() duplicado.
 import { Plane, AlertCircle, Sparkles, Calendar, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
