@@ -91,12 +91,11 @@ describe("resolveCountryKey · ISO-2, ISO-3 e variações", () => {
 
     it("toda chave de COUNTRY_ALIASES aponta para uma chave válida em COUNTRY_FALLBACK", () => {
       // Garante consistência interna · evita aliases órfãos
+      const orphans: string[] = [];
       for (const [alias, target] of Object.entries(COUNTRY_ALIASES)) {
-        expect(
-          COUNTRY_FALLBACK[target],
-          `Alias "${alias}" aponta para "${target}" que não existe em COUNTRY_FALLBACK`,
-        ).toBeTruthy();
+        if (!COUNTRY_FALLBACK[target]) orphans.push(`${alias} -> ${target}`);
       }
+      expect(orphans, `Aliases órfãos encontrados:\n${orphans.join("\n")}`).toEqual([]);
     });
   });
 
