@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Plane, AlertCircle, Sparkles, Calendar, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -65,6 +66,13 @@ export function GFlightDestinationCard({
     destination.hero_image_url,
   );
 
+  // Preload imediato · garante imagem em cache antes do scroll/hover
+  useEffect(() => {
+    if (!coverUrl) return;
+    const img = new Image();
+    img.src = coverUrl;
+  }, [coverUrl]);
+
   return (
     <Card
       className="overflow-hidden cursor-pointer hover:shadow-lg transition-all hover:-translate-y-0.5 border-border/60 group"
@@ -75,11 +83,11 @@ export function GFlightDestinationCard({
         <img
           src={coverUrl}
           alt={`${destination.city}, ${destination.country}`}
-          loading="lazy"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           onError={(e) => {
-            // Se o Unsplash não tiver foto pra essa keyword, esconde o <img>
-            // e o gradiente de fundo (bg) toma conta sozinho.
             (e.currentTarget as HTMLImageElement).style.display = "none";
           }}
         />

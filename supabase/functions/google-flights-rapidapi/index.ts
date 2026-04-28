@@ -260,6 +260,9 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
         country_code: defaults.country_code,
       };
       if (input.return_date) p.return_date = String(input.return_date);
+      if (input.start_date) p.start_date = String(input.start_date);
+      if (input.end_date) p.end_date = String(input.end_date);
+      if (input.trip_length !== undefined) p.trip_length = String(input.trip_length);
       return p;
     }
     case "getNextFlights":

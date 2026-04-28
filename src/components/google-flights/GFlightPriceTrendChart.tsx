@@ -21,6 +21,36 @@ interface Props {
   onSelectDate?: (date: string) => void;
 }
 
+function CustomTrendTooltip({ active, payload, hasReturn }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0]?.payload;
+  if (!p) return null;
+  const fmt = (s?: string | null) => {
+    if (!s) return "—";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  };
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <span className="text-muted-foreground">Ida</span>
+        <span className="font-semibold">{fmt(p.date)}</span>
+      </div>
+      {hasReturn && p.return_date && (
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <span className="text-muted-foreground">Volta</span>
+          <span className="font-semibold">{fmt(p.return_date)}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/40">
+        <span className="text-muted-foreground">{hasReturn ? "Pacote" : "Preço"}</span>
+        <span className="font-bold text-primary">{formatBRL(p.price)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSelectDate }: Props) {
   const data = useMemo(() => {
     return points
@@ -131,20 +161,7 @@ export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSele
               axisLine={false}
               tickFormatter={(v: number) => `R$ ${Math.round(v / 1000)}k`}
             />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-              formatter={(value: number) => [formatBRL(value), "Preço"]}
-              labelFormatter={(label: string, payload: any[]) => {
-                const ret = payload?.[0]?.payload?.return_label;
-                return ret ? `Ida ${label} · Volta ${ret}` : `Ida ${label}`;
-              }}
-            />
+            <Tooltip content={<CustomTrendTooltip hasReturn={hasReturn} />} />
             <Area
               type="monotone"
               dataKey="price"
