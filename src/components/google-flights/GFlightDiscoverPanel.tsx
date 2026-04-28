@@ -404,22 +404,58 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
             </div>
           )}
 
-          {/* CTA · sempre visível, desabilitado se texto curto */}
+          {/* CTA · SEMPRE visível. Quando bloqueado, mostra o motivo
+               · clique mesmo bloqueado deixa "agendado" pra auto-rerun */}
           <div className="flex flex-col items-center gap-2 pt-2">
             <Button
               size="lg"
-              onClick={handleSubmit}
-              disabled={!ready}
-              className="h-14 px-8 text-base bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-xl shadow-primary/25 gap-2 disabled:opacity-40 disabled:shadow-none"
+              onClick={handleSubmitClick}
+              aria-disabled={!ready}
+              data-ready={ready}
+              data-reason={disabledReason ?? "ok"}
+              title={disabledReason ?? "Pronto pra descobrir"}
+              className={cn(
+                "h-14 px-8 text-base shadow-xl gap-2 transition-all",
+                ready
+                  ? "bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-primary/25"
+                  : "bg-muted text-muted-foreground hover:bg-muted shadow-none cursor-not-allowed",
+              )}
             >
               <Sparkles className="h-5 w-5" />
-              {ready ? "Descobrir destinos perfeitos" : "Conta um pouco mais da sua viagem…"}
-              {ready && <ArrowRight className="h-5 w-5" />}
+              {discover.isPending
+                ? "Buscando…"
+                : ready
+                ? "Descobrir destinos perfeitos"
+                : (wantsAutoSubmitRef.current ? "Aguardando você completar…" : "Pesquisar")}
+              {ready && !discover.isPending && <ArrowRight className="h-5 w-5" />}
             </Button>
+
+            {/* Motivo do bloqueio · sempre visível quando há */}
+            {!ready && disabledReason && (
+              <div className="flex flex-col items-center gap-1">
+                <span className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  ⚠️ {disabledReason}
+                </span>
+                {wantsAutoSubmitRef.current && (
+                  <span className="text-[10px] text-muted-foreground italic">
+                    A busca dispara sozinha quando você completar
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Hints opcionais quando já está pronto */}
             {ready && hints.length > 0 && (
               <p className="text-[11px] text-muted-foreground italic">
                 Dica: você pode adicionar {hints.join(" · ")} pra refinar
               </p>
+            )}
+
+            {/* Telemetria mínima · só em dev */}
+            {import.meta.env.DEV && (
+              <code className="text-[9px] text-muted-foreground/60 font-mono">
+                debug · chars:{normalizedStory.length} · words:{wordCount} · latin:{String(looksLatin)} · pending:{String(discover.isPending)}
+              </code>
             )}
           </div>
 
