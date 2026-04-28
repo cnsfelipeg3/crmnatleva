@@ -713,6 +713,10 @@ function ResultSection({
         </div>
       </Card>
 
+      {cacheHistory.length > 1 && (
+        <DiscoverCacheTrendChart history={cacheHistory} onClear={onClearCacheHistory} />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.results.map((d, i) => (
           <div
