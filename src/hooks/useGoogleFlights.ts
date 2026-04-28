@@ -419,8 +419,9 @@ export function useFlightBookingDetails(
 ) {
   return useQuery({
     queryKey: ["gflights", "getBookingDetails", input, bookingToken],
-    queryFn: async (): Promise<GBookingProvider[]> => {
-      if (!input || !bookingToken) return [];
+    queryFn: async (): Promise<GBookingDetailsResponse> => {
+      const empty: GBookingDetailsResponse = { providers: [], bag_info: null };
+      if (!input || !bookingToken) return empty;
       try {
         const data = await invokeGFlights<any>("getBookingDetails", {
           ...input,
@@ -434,21 +435,56 @@ export function useFlightBookingDetails(
           (Array.isArray(raw?.booking_options) && raw.booking_options) ||
           (Array.isArray(raw?.together) && raw.together) ||
           [];
-        return arr
-          .map((it: any) => ({
-            id: String(it?.id ?? it?.code ?? it?.title ?? ""),
-            title: String(it?.title ?? it?.name ?? "Desconhecido"),
-            website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
-            price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
-            is_airline: !!it?.is_airline,
-            individualBooking: !!it?.individualBooking,
-            token: it?.token ? String(it.token) : undefined,
-            logo: it?.logo ? String(it.logo) : undefined,
-          }))
+
+        const providers: GBookingProvider[] = arr
+          .map((it: any) => {
+            const subBookings: GBookingSubOffer[] = Array.isArray(it?.bookings)
+              ? it.bookings.map((b: any) => ({
+                  price: typeof b?.price === "number" ? b.price : Number(b?.price) || undefined,
+                  title: b?.title ? String(b.title) : undefined,
+                  website: b?.website ? String(b.website) : (b?.url ? String(b.url) : undefined),
+                  meta: b?.meta ?? undefined,
+                  ...b,
+                }))
+              : [];
+            return {
+              id: String(it?.id ?? it?.code ?? it?.title ?? ""),
+              title: String(it?.title ?? it?.name ?? "Desconhecido"),
+              website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
+              price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
+              is_airline: !!it?.is_airline,
+              individualBooking: !!it?.individualBooking,
+              token: it?.token ? String(it.token) : undefined,
+              logo: it?.logo ? String(it.logo) : undefined,
+              bookings: subBookings,
+              meta: it?.meta ?? undefined,
+            };
+          })
           .filter((p) => p.id || p.title);
+
+        // bag_info pode vir no nível raiz da resposta ou dentro de data
+        const rawBag = data?.bag_info ?? raw?.bag_info ?? null;
+        let bag_info: GBagInfo | null = null;
+        if (rawBag && typeof rawBag === "object") {
+          const norm = (b: any) => {
+            if (!b || typeof b !== "object") return undefined;
+            return {
+              included: !!(b.included ?? b.is_included),
+              price: typeof b.price === "number" ? b.price : (b.price ? Number(b.price) : undefined),
+              description: b.description ?? b.text ?? b.label ?? undefined,
+            };
+          };
+          bag_info = {
+            carry_on: norm(rawBag.carry_on ?? rawBag.cabin) ?? null,
+            checked: norm(rawBag.checked ?? rawBag.hold) ?? null,
+            raw: rawBag,
+          };
+        }
+
+        return { providers, bag_info };
       } catch (e) {
         console.warn("[gflights] getBookingDetails failed:", e);
-        return [];
+        return empty;
       }
     },
     enabled: enabled && !!input && !!bookingToken,
