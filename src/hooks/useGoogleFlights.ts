@@ -177,7 +177,10 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
           arrival_time_text: it?.arrival_time,
           stops,
           self_transfer: !!it?.self_transfer,
-          delay: it?.delay ? { values: !!it.delay.values, text: it.delay.text } : undefined,
+          delay: it?.delay ? {
+            values: !!it.delay.values,
+            text: typeof it.delay.text === "number" ? it.delay.text : (it.delay.text ? String(it.delay.text) : undefined),
+          } : undefined,
           bags: it?.bags ? {
             carry_on: it.bags.carry_on ?? null,
             checked: it.bags.checked ?? null,
