@@ -59,6 +59,8 @@ const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
 // Booking RapidAPI (BETA) — módulo experimental isolado
 const BookingSearchPage = lazy(() => import("@/pages/booking-rapidapi/BookingSearchPage"));
 const FlightsSearchPage = lazy(() => import("@/pages/booking-rapidapi/FlightsSearchPage"));
+// Google Flights BETA (DataCrawler) — módulo experimental isolado
+const GoogleFlightsSearchPage = lazy(() => import("@/pages/google-flights/GoogleFlightsSearchPage"));
 
 // RH
 const RHIndex = lazy(() => import("@/pages/rh/RHIndex"));
@@ -329,6 +331,7 @@ function AppRoutes() {
           {/* Booking RapidAPI (BETA) — módulo experimental isolado */}
           <Route path="/booking-search" element={<BookingSearchPage />} />
           <Route path="/flights-search" element={<FlightsSearchPage />} />
+          <Route path="/google-flights-search" element={<GoogleFlightsSearchPage />} />
 
           {/* Apresentação */}
           <Route path="/apresentacao" element={<ApresentacaoGeral />} />

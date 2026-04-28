@@ -1,0 +1,393 @@
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { format, addDays, parseISO, isValid } from "date-fns";
+import {
+  Search, Info, Cloud, ArrowRightLeft, Plane, Calendar as CalIcon,
+  TrendingUp, List as ListIcon, Users as UsersIcon,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { BetaBadge } from "@/components/booking-rapidapi/BetaBadge";
+import { GFlightAirportAutocomplete } from "@/components/google-flights/GFlightAirportAutocomplete";
+import { GFlightResultsList } from "@/components/google-flights/GFlightResultsList";
+import { GFlightCalendarHeatmap } from "@/components/google-flights/GFlightCalendarHeatmap";
+import { GFlightPriceTrendChart } from "@/components/google-flights/GFlightPriceTrendChart";
+import {
+  useSearchGFlights,
+  useCalendarPicker,
+  usePriceGraph,
+  type SearchGFlightsInput,
+} from "@/hooks/useGoogleFlights";
+import type { GAirport, GFlightCabin } from "@/components/google-flights/gflightsTypes";
+import { cn } from "@/lib/utils";
+
+const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
+
+const CABIN_LABELS: Record<GFlightCabin, string> = {
+  ECONOMY: "Econômica",
+  PREMIUM_ECONOMY: "Econômica Premium",
+  BUSINESS: "Executiva",
+  FIRST: "Primeira Classe",
+};
+
+function buildAirport(prefix: "from" | "to", sp: URLSearchParams): GAirport | null {
+  const id = sp.get(`${prefix}Id`);
+  if (!id) return null;
+  return {
+    id: id.toUpperCase(),
+    name: sp.get(`${prefix}Name`) || undefined,
+    city: sp.get(`${prefix}City`) || undefined,
+    country: sp.get(`${prefix}Country`) || undefined,
+    type: (sp.get(`${prefix}Type`) as any) || "AIRPORT",
+  };
+}
+
+function parseDateParam(v: string | null): Date | undefined {
+  if (!v) return undefined;
+  const d = parseISO(v);
+  return isValid(d) ? d : undefined;
+}
+
+interface SearchSnapshot {
+  from: GAirport;
+  to: GAirport;
+  outbound_date: string;
+  return_date?: string;
+  adults: number;
+  travel_class: GFlightCabin;
+}
+
+export default function GoogleFlightsSearchPage() {
+  const [urlParams, setUrlParams] = useSearchParams();
+
+  const initial = useMemo(() => {
+    const from = buildAirport("from", urlParams);
+    const to = buildAirport("to", urlParams);
+    const dep = parseDateParam(urlParams.get("dep"));
+    const ret = parseDateParam(urlParams.get("ret"));
+    const adultsRaw = parseInt(urlParams.get("adults") || "1", 10);
+    const adults = Number.isFinite(adultsRaw) && adultsRaw > 0 ? adultsRaw : 1;
+    const cabinRaw = urlParams.get("cabin") as GFlightCabin | null;
+    const travel_class: GFlightCabin =
+      cabinRaw && VALID_CABINS.includes(cabinRaw) ? cabinRaw : "ECONOMY";
+    const tab = urlParams.get("tab") || "list";
+    return { from, to, dep, ret, adults, travel_class, tab };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [from, setFrom] = useState<GAirport | null>(initial.from);
+  const [to, setTo] = useState<GAirport | null>(initial.to);
+  const [outboundDate, setOutboundDate] = useState<Date | undefined>(
+    initial.dep ?? addDays(new Date(), 30),
+  );
+  const [returnDate, setReturnDate] = useState<Date | undefined>(initial.ret);
+  const [adults, setAdults] = useState<number>(initial.adults);
+  const [travelClass, setTravelClass] = useState<GFlightCabin>(initial.travel_class);
+  const [tab, setTab] = useState<string>(initial.tab);
+
+  const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
+    if (!initial.from || !initial.to || !initial.dep) return null;
+    return {
+      from: initial.from,
+      to: initial.to,
+      outbound_date: format(initial.dep, "yyyy-MM-dd"),
+      return_date: initial.ret ? format(initial.ret, "yyyy-MM-dd") : undefined,
+      adults: initial.adults,
+      travel_class: initial.travel_class,
+    };
+  });
+
+  // Sync ESTADO → URL
+  useEffect(() => {
+    const next = new URLSearchParams();
+    if (snapshot) {
+      next.set("fromId", snapshot.from.id);
+      if (snapshot.from.name) next.set("fromName", snapshot.from.name);
+      if (snapshot.from.city) next.set("fromCity", snapshot.from.city);
+      if (snapshot.from.country) next.set("fromCountry", snapshot.from.country);
+      if (snapshot.from.type) next.set("fromType", String(snapshot.from.type));
+      next.set("toId", snapshot.to.id);
+      if (snapshot.to.name) next.set("toName", snapshot.to.name);
+      if (snapshot.to.city) next.set("toCity", snapshot.to.city);
+      if (snapshot.to.country) next.set("toCountry", snapshot.to.country);
+      if (snapshot.to.type) next.set("toType", String(snapshot.to.type));
+      next.set("dep", snapshot.outbound_date);
+      if (snapshot.return_date) next.set("ret", snapshot.return_date);
+      next.set("adults", String(snapshot.adults));
+      next.set("cabin", snapshot.travel_class);
+      if (tab && tab !== "list") next.set("tab", tab);
+    }
+    setUrlParams(next, { replace: true });
+  }, [snapshot, tab, setUrlParams]);
+
+  const searchInput: SearchGFlightsInput | null = snapshot
+    ? {
+        departure_id: snapshot.from.id,
+        arrival_id: snapshot.to.id,
+        outbound_date: snapshot.outbound_date,
+        return_date: snapshot.return_date,
+        adults: snapshot.adults,
+        travel_class: snapshot.travel_class,
+        currency: "BRL",
+      }
+    : null;
+
+  const { data: results, isLoading, isError, error } = useSearchGFlights(searchInput);
+  const { data: calendar = [], isLoading: calLoading } = useCalendarPicker(searchInput, tab === "calendar");
+  const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, tab === "trend");
+
+  const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
+
+  const handleSearch = () => {
+    if (!from || !to || !outboundDate) return;
+    setSnapshot({
+      from,
+      to,
+      outbound_date: format(outboundDate, "yyyy-MM-dd"),
+      return_date: returnDate ? format(returnDate, "yyyy-MM-dd") : undefined,
+      adults,
+      travel_class: travelClass,
+    });
+  };
+
+  const swap = () => {
+    const f = from;
+    setFrom(to);
+    setTo(f);
+  };
+
+  const handleCalendarSelect = (dateStr: string) => {
+    const d = parseISO(dateStr);
+    if (!isValid(d)) return;
+    setOutboundDate(d);
+    if (snapshot) {
+      setSnapshot({ ...snapshot, outbound_date: dateStr });
+    }
+    setTab("list");
+  };
+
+  return (
+    <div className="container mx-auto max-w-7xl space-y-5 p-4 md:p-6">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <h1 className="flex items-center gap-2 text-2xl font-bold">
+            <Plane className="h-6 w-6 text-primary" />
+            Google Flights
+          </h1>
+          <BetaBadge />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Busca de passagens via Google Flights (DataCrawler · RapidAPI). Calendário de preços
+          + tendência mensal · módulo experimental isolado.
+        </p>
+      </div>
+
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription className="text-xs">
+          Scraper do Google Flights tem latência de até 5 segundos por consulta. Respostas
+          ficam em cache por até 6 horas (calendário/tendência) ou 30 minutos (resultados).
+        </AlertDescription>
+      </Alert>
+
+      {/* Formulário */}
+      <Card className="p-4 md:p-5">
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Origem</Label>
+              <GFlightAirportAutocomplete
+                value={from}
+                onChange={setFrom}
+                placeholder="GRU, São Paulo, JFK..."
+                icon="plane"
+              />
+            </div>
+            <div className="flex items-end justify-center pb-0.5 md:pb-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9"
+                onClick={swap}
+                disabled={!from && !to}
+                title="Inverter"
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Destino</Label>
+              <GFlightAirportAutocomplete
+                value={to}
+                onChange={setTo}
+                placeholder="CDG, Paris, MIA..."
+                icon="mapPin"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Ida</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start", !outboundDate && "text-muted-foreground")}>
+                    <CalIcon className="mr-2 h-4 w-4" />
+                    {outboundDate ? format(outboundDate, "dd/MM/yyyy") : "Selecionar"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={outboundDate} onSelect={setOutboundDate} initialFocus />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Volta (opcional)</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start", !returnDate && "text-muted-foreground")}>
+                    <CalIcon className="mr-2 h-4 w-4" />
+                    {returnDate ? format(returnDate, "dd/MM/yyyy") : "Só ida"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={returnDate}
+                    onSelect={setReturnDate}
+                    disabled={(d) => (outboundDate ? d < outboundDate : false)}
+                    initialFocus
+                  />
+                  {returnDate && (
+                    <div className="p-2 border-t border-border">
+                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setReturnDate(undefined)}>
+                        Limpar (só ida)
+                      </Button>
+                    </div>
+                  )}
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                <UsersIcon className="h-3 w-3" /> Adultos
+              </Label>
+              <Input
+                type="number"
+                min={1}
+                max={9}
+                value={adults}
+                onChange={(e) => setAdults(Math.max(1, Math.min(9, parseInt(e.target.value) || 1)))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Classe</Label>
+              <Select value={travelClass} onValueChange={(v) => setTravelClass(v as GFlightCabin)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {VALID_CABINS.map((c) => (
+                    <SelectItem key={c} value={c}>{CABIN_LABELS[c]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex flex-col items-stretch justify-between gap-3 border-t border-border pt-4 md:flex-row md:items-center">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <Info className="h-3.5 w-3.5" />
+              Preços em BRL · fonte: Google Flights via DataCrawler
+              {results?.__cache && (
+                <Badge variant="outline" className="gap-1 text-[10px]">
+                  <Cloud className="h-3 w-3" /> Cache
+                </Badge>
+              )}
+            </div>
+            <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
+              <Search className="h-4 w-4" />
+              {isLoading ? "Buscando voos..." : "Buscar voos"}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Tabs com 3 visões */}
+      {snapshot && (
+        <Tabs value={tab} onValueChange={setTab} className="space-y-4">
+          <TabsList className="grid w-full grid-cols-3 md:w-auto md:inline-grid">
+            <TabsTrigger value="list" className="gap-2">
+              <ListIcon className="h-4 w-4" /> Lista
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2">
+              <CalIcon className="h-4 w-4" /> Calendário
+            </TabsTrigger>
+            <TabsTrigger value="trend" className="gap-2">
+              <TrendingUp className="h-4 w-4" /> Tendência
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="list" className="space-y-3">
+            {results?.price_insights && (
+              <Card className="p-3 flex items-center gap-3 flex-wrap text-xs">
+                {results.price_insights.lowest_price !== undefined && (
+                  <span>
+                    Menor preço encontrado: <strong className="text-emerald-600 dark:text-emerald-400">
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(results.price_insights.lowest_price)}
+                    </strong>
+                  </span>
+                )}
+                {results.price_insights.price_level && (
+                  <Badge variant="outline" className={cn(
+                    "text-[10px]",
+                    results.price_insights.price_level === "low" && "border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
+                    results.price_insights.price_level === "high" && "border-rose-500/40 text-rose-700 dark:text-rose-300",
+                    results.price_insights.price_level === "typical" && "border-amber-500/40 text-amber-700 dark:text-amber-300",
+                  )}>
+                    Nível: {results.price_insights.price_level}
+                  </Badge>
+                )}
+              </Card>
+            )}
+            <GFlightResultsList
+              best={results?.best_flights}
+              others={results?.other_flights}
+              isLoading={isLoading}
+              isError={isError}
+              error={error as Error | null}
+              hasSearched={!!snapshot}
+            />
+          </TabsContent>
+
+          <TabsContent value="calendar">
+            <GFlightCalendarHeatmap
+              days={calendar}
+              isLoading={calLoading}
+              selectedDate={snapshot.outbound_date}
+              onSelectDate={handleCalendarSelect}
+            />
+          </TabsContent>
+
+          <TabsContent value="trend">
+            <GFlightPriceTrendChart
+              points={trend}
+              isLoading={trendLoading}
+              selectedDate={snapshot.outbound_date}
+              onSelectDate={handleCalendarSelect}
+            />
+          </TabsContent>
+        </Tabs>
+      )}
+    </div>
+  );
+}

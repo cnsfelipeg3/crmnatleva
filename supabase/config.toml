@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.bootstrap-presidents]
 verify_jwt = false
+
+[functions.google-flights-rapidapi]
+verify_jwt = true
