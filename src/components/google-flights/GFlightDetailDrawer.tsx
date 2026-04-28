@@ -248,6 +248,24 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         <ScrollArea className="flex-1">
           <div className="px-5 py-4 space-y-5">
+            {/* Self-transfer warning · destaque destrutivo */}
+            {itinerary.self_transfer && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Atenção · Voo com self-transfer</AlertTitle>
+                <AlertDescription className="space-y-1.5 text-xs">
+                  <p>
+                    Esse voo é vendido como 2 trechos separados. Em caso de atraso ou cancelamento
+                    do primeiro voo, a companhia <strong>não se responsabiliza</strong> por perda de conexão.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Recomenda-se margem mínima de 4 a 5 horas entre os voos e seguro-viagem com
+                    cobertura de conexão perdida.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Trajeto */}
             <section className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trajeto</h3>
