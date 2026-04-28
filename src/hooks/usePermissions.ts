@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import type { MenuAction } from "@/lib/systemMenus";
@@ -19,52 +19,87 @@ interface UsePermissionsReturn {
   reload: () => Promise<void>;
 }
 
+// === Cache de módulo ===
+// Permissões raramente mudam dentro de uma sessão. Cachear por userId evita
+// 2 queries (employees + employee_permissions) a cada PermissionGuard montado.
+// Invalidação via `window.dispatchEvent(new Event("permissions:invalidate"))`.
+const PERMISSIONS_CACHE_MS = 10 * 60_000;
+const cache = new Map<string, { perms: Record<string, PermissionRow>; fetchedAt: number }>();
+
+export function invalidatePermissionsCache(userId?: string) {
+  if (userId) cache.delete(userId);
+  else cache.clear();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("permissions:invalidate", () => cache.clear());
+}
+
 /**
  * Carrega as permissões do colaborador logado.
- * Admin sempre tem acesso a tudo (bypass).
+ * Admin sempre tem acesso a tudo (bypass · sem query).
  */
 export function usePermissions(): UsePermissionsReturn {
   const { user, role } = useAuth();
   const [permissions, setPermissions] = useState<Record<string, PermissionRow>>({});
   const [loading, setLoading] = useState(true);
   const isAdmin = role === "admin";
+  const inFlightRef = useRef<Promise<void> | null>(null);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
     if (!user) {
       setPermissions({});
       setLoading(false);
       return;
     }
     if (isAdmin) {
-      // Admin não precisa carregar — tudo true.
       setPermissions({});
+      setLoading(false);
+      return;
+    }
+
+    // Cache hit → resposta instantânea
+    const cached = cache.get(user.id);
+    if (!force && cached && Date.now() - cached.fetchedAt < PERMISSIONS_CACHE_MS) {
+      setPermissions(cached.perms);
+      setLoading(false);
+      return;
+    }
+
+    // Dedup: se já tem fetch em andamento, aguarda
+    if (inFlightRef.current && !force) {
+      await inFlightRef.current;
+      const after = cache.get(user.id);
+      if (after) setPermissions(after.perms);
       setLoading(false);
       return;
     }
 
     setLoading(true);
-    // 1. Pega o employee.id do user logado
-    const { data: emp } = await supabase
-      .from("employees")
-      .select("id")
-      .eq("user_id", user.id)
-      .maybeSingle();
 
-    if (!emp?.id) {
-      setPermissions({});
+    const fetchPromise = (async () => {
+      // 1 round-trip: join via PostgREST embed
+      const { data: emp } = await supabase
+        .from("employees")
+        .select("id, employee_permissions(menu_key,can_view,can_create,can_edit,can_delete)")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const map: Record<string, PermissionRow> = {};
+      const rows = (emp as any)?.employee_permissions ?? [];
+      rows.forEach((row: any) => { map[row.menu_key] = row; });
+
+      cache.set(user.id, { perms: map, fetchedAt: Date.now() });
+      setPermissions(map);
       setLoading(false);
-      return;
+    })();
+
+    inFlightRef.current = fetchPromise;
+    try {
+      await fetchPromise;
+    } finally {
+      inFlightRef.current = null;
     }
-
-    const { data } = await supabase
-      .from("employee_permissions")
-      .select("menu_key,can_view,can_create,can_edit,can_delete")
-      .eq("employee_id", emp.id);
-
-    const map: Record<string, PermissionRow> = {};
-    (data || []).forEach((row: any) => { map[row.menu_key] = row; });
-    setPermissions(map);
-    setLoading(false);
   }, [user, isAdmin]);
 
   useEffect(() => { load(); }, [load]);
@@ -80,5 +115,5 @@ export function usePermissions(): UsePermissionsReturn {
     return false;
   }, [isAdmin, permissions]);
 
-  return { loading, isAdmin, permissions, can, reload: load };
+  return { loading, isAdmin, permissions, can, reload: () => load(true) };
 }
