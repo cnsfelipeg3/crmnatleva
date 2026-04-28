@@ -1,17 +1,20 @@
 import { Suspense, useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useLocation } from "react-router-dom";
 import NatLevaLoader from "./NatLevaLoader";
-import { hasCompletedInitialLoad, markInitialLoadComplete, MinimalLoader } from "./AppLoaders";
+import { hasCompletedInitialLoad, markInitialLoadComplete } from "./AppLoaders";
+import { RouteAwareSkeleton } from "./skeletons/PageSkeletons";
 
 /**
  * SmartSuspense renders the actual content BEHIND the loader overlay.
  * The loader only appears on the FIRST page load of the session.
- * Subsequent navigations skip the loader entirely.
+ * Subsequent navigations show a route-aware skeleton (no spinner flash).
  *
  * Fail-safe: even if Suspense never resolves cleanly, we hard-show content after MAX_HOLD_MS.
  */
 const MAX_HOLD_MS = 1500;
 
 export default function SmartSuspense({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const firstLoad = useRef(!hasCompletedInitialLoad());
   const [phase, setPhase] = useState<"loading" | "fading" | "done">(
     firstLoad.current ? "loading" : "done"
@@ -39,7 +42,7 @@ export default function SmartSuspense({ children }: { children: ReactNode }) {
 
   if (!firstLoad.current) {
     return (
-      <Suspense fallback={<MinimalLoader />}>
+      <Suspense fallback={<RouteAwareSkeleton pathname={location.pathname} />}>
         {children}
       </Suspense>
     );
