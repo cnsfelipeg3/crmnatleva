@@ -260,7 +260,11 @@ export default function GoogleFlightsSearchPage() {
         </AlertDescription>
       </Alert>
 
-      <Tabs defaultValue="search" className="space-y-4">
+      <Tabs
+        value={outerTab}
+        onValueChange={(v) => setOuterTab(v as "search" | "discover")}
+        className="space-y-4"
+      >
         <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
           <TabsTrigger value="search" className="gap-2">
             <Search className="h-4 w-4" /> Busca específica
@@ -273,7 +277,8 @@ export default function GoogleFlightsSearchPage() {
         <TabsContent value="discover">
           <GFlightDiscoverPanel
             onSelectDestination={(dest, ctx) => {
-              setFrom({ id: ctx.extracted.origin || "GRU", name: ctx.extracted.origin || "GRU", type: "AIRPORT" });
+              const originId = ctx.extracted.origin || "GRU";
+              setFrom({ id: originId, name: originId, type: "AIRPORT" });
               setTo({ id: dest.iata, name: dest.city, city: dest.city, country: dest.country, type: "AIRPORT" });
               const dep = parseISO(ctx.period.day1);
               const ret = parseISO(ctx.period.returnDate);
@@ -282,13 +287,19 @@ export default function GoogleFlightsSearchPage() {
               setAdults(ctx.extracted.paxAdults || 1);
               setTravelClass("ECONOMY");
               setSnapshot({
-                from: { id: ctx.extracted.origin || "GRU", name: ctx.extracted.origin || "GRU", type: "AIRPORT" },
+                from: { id: originId, name: originId, type: "AIRPORT" },
                 to: { id: dest.iata, name: dest.city, city: dest.city, country: dest.country, type: "AIRPORT" },
                 outbound_date: ctx.period.day1,
                 return_date: ctx.period.returnDate,
                 adults: ctx.extracted.paxAdults || 1,
                 travel_class: "ECONOMY",
               });
+              // Mudar pra aba de busca específica + scroll suave
+              setOuterTab("search");
+              setTimeout(() => {
+                const el = document.getElementById("gflights-results-anchor");
+                if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+              }, 200);
             }}
           />
         </TabsContent>
@@ -296,7 +307,7 @@ export default function GoogleFlightsSearchPage() {
         <TabsContent value="search" className="space-y-5">
 
       {/* Formulário */}
-      <Card className="p-4 md:p-5">
+      <Card id="gflights-results-anchor" className="p-4 md:p-5">
         <div className="space-y-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
             <div className="space-y-1.5">
