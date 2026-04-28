@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBRL } from "./gflightsTypes";
+import { getDestinationCoverUrl } from "./destinationImage";
 import type { DiscoveredDestination } from "@/hooks/useDiscoverDestinations";
 
 interface Props {
@@ -58,6 +59,11 @@ export function GFlightDestinationCard({
   const bg = REGION_BG[destination.region] ?? "from-primary/20 to-primary/10";
   const stops = destination.flightStops ?? 0;
   const totalForPax = destination.minPrice * paxAdults;
+  const coverUrl = getDestinationCoverUrl(
+    destination.city,
+    destination.country,
+    destination.hero_image_url,
+  );
 
   return (
     <Card
@@ -66,17 +72,18 @@ export function GFlightDestinationCard({
     >
       {/* HERO */}
       <div className={cn("relative h-44 bg-gradient-to-br overflow-hidden", bg)}>
-        {destination.hero_image_url && (
-          <img
-            src={destination.hero_image_url}
-            alt={destination.city}
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        )}
-        {destination.hero_image_url && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        )}
+        <img
+          src={coverUrl}
+          alt={`${destination.city}, ${destination.country}`}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            // Se o Unsplash não tiver foto pra essa keyword, esconde o <img>
+            // e o gradiente de fundo (bg) toma conta sozinho.
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
         {isCheapest && (
           <Badge className="absolute top-2 left-2 gap-1 bg-emerald-500 hover:bg-emerald-500 text-white border-0 z-10">
@@ -102,16 +109,10 @@ export function GFlightDestinationCard({
 
         {/* Cidade/País sobreposto */}
         <div className="absolute bottom-2 left-3 right-3 z-10">
-          <h3 className={cn(
-            "text-xl font-bold leading-tight",
-            destination.hero_image_url ? "text-white drop-shadow-lg" : "text-foreground",
-          )}>
+          <h3 className="text-xl font-bold leading-tight text-white drop-shadow-lg">
             {destination.city}
           </h3>
-          <p className={cn(
-            "text-xs",
-            destination.hero_image_url ? "text-white/90 drop-shadow" : "text-muted-foreground",
-          )}>
+          <p className="text-xs text-white/90 drop-shadow">
             {destination.country} · {destination.region}
           </p>
         </div>
