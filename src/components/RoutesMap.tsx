@@ -107,7 +107,7 @@ function getCurvedPath(from: google.maps.LatLngLiteral, to: google.maps.LatLngLi
   return points;
 }
 
-export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick, onDestinationClick }: RoutesMapProps) {
+function RoutesMapInner({ routes, height = "400px", sales = [], onSaleClick, onDestinationClick }: RoutesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const googleMapRef = useRef<google.maps.Map | null>(null);
