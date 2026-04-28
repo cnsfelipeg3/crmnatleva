@@ -440,6 +440,25 @@ serve(async (req) => {
       };
     }
 
+    if (action === "getBookingDetails" && status >= 200 && status < 300) {
+      const root = (data as any)?.data;
+      const possibleArrays = [
+        Array.isArray(root) ? root.length : null,
+        Array.isArray(root?.providers) ? root.providers.length : null,
+        Array.isArray(root?.booking_options) ? root.booking_options.length : null,
+        Array.isArray(root?.together) ? root.together.length : null,
+        Array.isArray(root?.options) ? root.options.length : null,
+        Array.isArray(root?.together_offers) ? root.together_offers.length : null,
+        Array.isArray(root?.selected_flights?.[0]?.together)
+          ? root.selected_flights[0].together.length : null,
+      ];
+      const totalFound = possibleArrays.reduce((a: number, b) => a + (b ?? 0), 0);
+      console.log(`[getBookingDetails] keys=${Object.keys(root || {}).join(",")} arraysFound=${possibleArrays.join(",")} total=${totalFound}`);
+      if (totalFound === 0) {
+        console.warn(`[getBookingDetails] NO PROVIDERS · raw shape:`, JSON.stringify(root).slice(0, 500));
+      }
+    }
+
     if (status >= 200 && status < 300) {
       await writeCache(action, params, data);
     }
