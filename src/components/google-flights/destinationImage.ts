@@ -823,8 +823,10 @@ export const __testing = {
   COUNTRY_FALLBACK,
   REGION_FALLBACK,
   CITY_TO_COUNTRY,
+  COUNTRY_ALIASES,
   GENERIC_TRAVEL,
   normalize,
+  resolveCountryKey,
 };
 
 
