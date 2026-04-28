@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Copy, Check, X as XIcon, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
-  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2,
+  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
