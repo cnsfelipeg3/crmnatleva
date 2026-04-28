@@ -90,7 +90,17 @@ export default function AppLayout() {
           </SheetContent>
         </Sheet>
 
-        <main className={cn("flex-1 min-h-0", isImmersive ? "overflow-hidden" : "overflow-auto")}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:text-sm"
+        >
+          Pular para o conteúdo
+        </a>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className={cn("flex-1 min-h-0 outline-none", isImmersive ? "overflow-hidden" : "overflow-auto")}
+        >
           <Suspense fallback={<MinimalLoader inline />}>
             <div className="page-enter">
               <PermissionGuard>
