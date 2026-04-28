@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, X, Plane, User, MapPin, Hash, DollarSign } from "lucide-react";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { iataToCityName } from "@/lib/iataUtils";
 
@@ -109,6 +109,8 @@ export default function GlobalSearch() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="p-0 max-w-lg gap-0 overflow-hidden border-border/50 bg-card/95 backdrop-blur-xl">
+          <DialogTitle className="sr-only">Busca global</DialogTitle>
+          <DialogDescription className="sr-only">Busque por clientes, destinos, localizadores ou valores.</DialogDescription>
           {/* Search input */}
           <div className="flex items-center gap-2 px-4 border-b border-border/40">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />

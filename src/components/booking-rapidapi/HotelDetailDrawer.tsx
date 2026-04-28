@@ -822,6 +822,7 @@ export function HotelDetailDrawer({
         side="right"
         className="w-full overflow-hidden p-0 sm:max-w-3xl"
       >
+        <SheetTitle className="sr-only">Detalhes do hotel</SheetTitle>
         {inner}
       </SheetContent>
     </Sheet>

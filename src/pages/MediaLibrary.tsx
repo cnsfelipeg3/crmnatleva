@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -376,6 +376,7 @@ export default function MediaLibrary() {
         {/* Lightbox */}
         <Dialog open={lightboxIdx !== null} onOpenChange={() => setLightboxIdx(null)}>
           <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black/95 border-none">
+            <DialogTitle className="sr-only">Visualizar imagem em tamanho ampliado</DialogTitle>
             {lightboxIdx !== null && items[lightboxIdx] && (
               <div className="relative">
                 <SmartImg src={items[lightboxIdx].image_url} alt={items[lightboxIdx].label || ""} displayWidth={1600} loading="eager" className="w-full max-h-[80vh] object-contain" />

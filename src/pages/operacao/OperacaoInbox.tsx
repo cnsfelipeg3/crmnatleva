@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
@@ -2046,6 +2046,7 @@ function OperacaoInboxInner() {
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-3xl p-2">
+            <DialogTitle className="sr-only">Visualizar imagem em tamanho ampliado</DialogTitle>
             <img loading="lazy" decoding="async" src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>

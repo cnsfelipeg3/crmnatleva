@@ -3,7 +3,7 @@ import { X, Phone, MessageSquare, Tag, Car, CreditCard, Star, ExternalLink } fro
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
 
 interface ContactProfilePanelProps {
@@ -177,6 +177,7 @@ export function ContactProfilePanel({ contact, profilePic, onClose }: ContactPro
       {showFullPhoto && profilePic && (
         <Dialog open={showFullPhoto} onOpenChange={setShowFullPhoto}>
           <DialogContent className="max-w-lg p-2">
+            <DialogTitle className="sr-only">Foto de perfil de {contact.contact_name}</DialogTitle>
             <img src={profilePic} alt={contact.contact_name} className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
