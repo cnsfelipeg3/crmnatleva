@@ -30,7 +30,7 @@ import {
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
-import { formatBRL, DEFAULT_GFLIGHT_FILTERS, classifyPriceAgainstHistory } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
