@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+// useEffect removido · o <img loading="eager" fetchPriority="high"> abaixo
+// já garante o download prioritário sem precisar de new Image() duplicado.
 import { Plane, AlertCircle, Sparkles, Calendar, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,12 +75,9 @@ export function GFlightDestinationCard({
     destination.hero_image_url,
   );
 
-  // Preload imediato · garante imagem em cache antes do scroll/hover
-  useEffect(() => {
-    if (!coverUrl) return;
-    const img = new Image();
-    img.src = coverUrl;
-  }, [coverUrl]);
+  // Imagem é baixada via <img loading="eager" fetchPriority="high"> abaixo.
+  // Preload manual via new Image() foi removido (era redundante e gerava
+  // double-fetch em navegadores sem dedupe perfeito).
 
   return (
     <Card

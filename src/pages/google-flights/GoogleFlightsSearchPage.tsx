@@ -226,22 +226,15 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  const [, forceTick] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, []);
-  const updatedAgoLabel = useMemo(() => {
-    if (!results?.fetched_at) return null;
-    const t = new Date(results.fetched_at).getTime();
-    if (!Number.isFinite(t)) return null;
-    const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
-    if (diffSec < 60) return `atualizado agora`;
-    const min = Math.round(diffSec / 60);
-    if (min < 60) return `atualizado há ${min} min`;
-    const h = Math.round(min / 60);
-    return `atualizado há ${h}h`;
-  }, [results?.fetched_at]);
+  // Label "atualizado há X min" foi extraída pra <UpdatedAgoLabel/> abaixo,
+  // pra evitar re-render da página inteira a cada 30s (custoso com applyFilters).
+
+  // Handler estável · evita re-render dos cards de resultado a cada keystroke
+  // de filtro (props do GFlightResultsList ficam shallow-equal).
+  const handleSelectItinerary = useCallback(
+    (it: GFlightItinerary) => setSelectedItinerary(it),
+    [],
+  );
 
   const canSearch = useMemo(() => {
     if (tripMode === "multi") {
@@ -283,10 +276,35 @@ export default function GoogleFlightsSearchPage() {
     });
   };
 
+  // Atalho global · Cmd/Ctrl+Enter dispara busca quando aba "search" ativa.
+  useEffect(() => {
+    if (outerTab !== "search") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Enter" || (!e.metaKey && !e.ctrlKey)) return;
+      if (!canSearch || isLoading) return;
+      e.preventDefault();
+      handleSearch();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [outerTab, canSearch, isLoading, from, to, outboundDate, returnDate, adults, travelClass, tripMode, multiLegs]);
+
   const swap = () => {
     const f = from;
-    setFrom(to);
+    const t = to;
+    setFrom(t);
     setTo(f);
+    // Se já existe uma busca ativa, refaz com origem/destino invertidos pra
+    // refletir a mudança imediatamente em vez de exigir clique extra.
+    if (snapshot && f && t) {
+      setSnapshot({
+        ...snapshot,
+        from: t,
+        to: f,
+      });
+      toast.success(`Buscando ${t.id} → ${f.id}`, { duration: 1500 });
+    }
   };
 
   const handleCalendarSelect = (dateStr: string) => {
@@ -405,26 +423,37 @@ export default function GoogleFlightsSearchPage() {
       <Card id="gflights-results-anchor" className="p-4 md:p-5">
         <div className="space-y-4">
           {/* Toggle de modo */}
-          <div className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+          <div
+            className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1"
+            role="radiogroup"
+            aria-label="Tipo de viagem"
+          >
             {([
               { v: "round", label: "Ida e volta" },
               { v: "oneway", label: "Só ida" },
               { v: "multi", label: "Multi-trecho" },
-            ] as const).map((m) => (
-              <button
-                key={m.v}
-                type="button"
-                onClick={() => setTripMode(m.v)}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
-                  tripMode === m.v
-                    ? "bg-background shadow-sm text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m.label}
-              </button>
-            ))}
+            ] as const).map((m) => {
+              const checked = tripMode === m.v;
+              return (
+                <button
+                  key={m.v}
+                  type="button"
+                  role="radio"
+                  aria-checked={checked}
+                  tabIndex={checked ? 0 : -1}
+                  onClick={() => setTripMode(m.v)}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    checked
+                      ? "bg-background shadow-sm text-foreground"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {m.label}
+                </button>
+              );
+            })}
           </div>
 
           {tripMode === "multi" ? (
@@ -547,8 +576,8 @@ export default function GoogleFlightsSearchPage() {
                   <Cloud className="h-3 w-3" /> Cache
                 </Badge>
               )}
-              {updatedAgoLabel && (
-                <span className="text-[10px] text-muted-foreground/80 italic">· {updatedAgoLabel}</span>
+              {results?.fetched_at && (
+                <UpdatedAgoLabel fetchedAt={results.fetched_at} />
               )}
               {results && (() => {
                 const meta = results.search_metadata as any;
@@ -574,9 +603,17 @@ export default function GoogleFlightsSearchPage() {
                 </Badge>
               )}
             </div>
-            <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
+            <Button
+              onClick={handleSearch}
+              disabled={!canSearch || isLoading}
+              className="gap-2 md:min-w-[180px]"
+              title="Atalho: Cmd/Ctrl + Enter"
+            >
               <Search className="h-4 w-4" />
               {isLoading ? "Buscando voos..." : "Buscar voos"}
+              <kbd className="ml-1 hidden md:inline-flex items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 py-0 text-[10px] font-mono opacity-70">
+                ⌘↵
+              </kbd>
             </Button>
           </div>
 
@@ -785,7 +822,7 @@ export default function GoogleFlightsSearchPage() {
                       isError={isError}
                       error={error as Error | null}
                       hasSearched={!!snapshot}
-                      onSelect={(it) => setSelectedItinerary(it)}
+                      onSelect={handleSelectItinerary}
                     />
                   </div>
                 </div>
@@ -863,6 +900,32 @@ function InlineFiltersSection({
       onAutoApplyChange={setAutoApply}
       onAutoSearch={onAutoSearch}
     />
+  );
+}
+
+/**
+ * Label "atualizado há X min" · isolada para evitar re-render da página inteira
+ * a cada 30s. Esse re-render era custoso porque dispara applyFilters() em todos
+ * os voos da lista atual.
+ */
+function UpdatedAgoLabel({ fetchedAt }: { fetchedAt: string }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const t = new Date(fetchedAt).getTime();
+  if (!Number.isFinite(t)) return null;
+  const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
+  let label: string;
+  if (diffSec < 60) label = "atualizado agora";
+  else {
+    const min = Math.round(diffSec / 60);
+    if (min < 60) label = `atualizado há ${min} min`;
+    else label = `atualizado há ${Math.round(min / 60)}h`;
+  }
+  return (
+    <span className="text-[10px] text-muted-foreground/80 italic">· {label}</span>
   );
 }
 
