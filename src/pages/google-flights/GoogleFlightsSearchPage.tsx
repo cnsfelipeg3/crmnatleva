@@ -582,14 +582,13 @@ export default function GoogleFlightsSearchPage() {
 
           {/* Filtros inline · sempre visíveis no buscador */}
           <div className="border-t border-border pt-4">
-            <GFlightInlineFilters
+            <InlineFiltersSection
               filters={filters}
-              onChange={setFilters}
-              onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
-              flights={[
-                ...(results?.best_flights ?? []),
-                ...(results?.other_flights ?? []),
-              ]}
+              setFilters={setFilters}
+              results={results}
+              autoApply={autoApply}
+              setAutoApply={setAutoApply}
+              onAutoSearch={handleSearch}
             />
           </div>
         </div>
