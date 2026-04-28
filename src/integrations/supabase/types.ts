@@ -3417,6 +3417,45 @@ export type Database = {
         }
         Relationships: []
       }
+      gflights_discovery_cache: {
+        Row: {
+          adults: number
+          destination_iata: string
+          fetched_at: string
+          id: string
+          min_price: number | null
+          origin_iata: string
+          period_month: number
+          period_year: number
+          sample_flight: Json | null
+          travel_class: string
+        }
+        Insert: {
+          adults?: number
+          destination_iata: string
+          fetched_at?: string
+          id?: string
+          min_price?: number | null
+          origin_iata: string
+          period_month: number
+          period_year: number
+          sample_flight?: Json | null
+          travel_class?: string
+        }
+        Update: {
+          adults?: number
+          destination_iata?: string
+          fetched_at?: string
+          id?: string
+          min_price?: number | null
+          origin_iata?: string
+          period_month?: number
+          period_year?: number
+          sample_flight?: Json | null
+          travel_class?: string
+        }
+        Relationships: []
+      }
       gflights_rapidapi_cache: {
         Row: {
           action: string
@@ -4477,6 +4516,63 @@ export type Database = {
           total_errors?: number | null
           total_processed?: number | null
           total_updated?: number | null
+        }
+        Relationships: []
+      }
+      popular_destinations: {
+        Row: {
+          avg_trip_days: number | null
+          city: string
+          country: string
+          country_code: string | null
+          created_at: string
+          description: string | null
+          hero_image_url: string | null
+          iata: string
+          id: string
+          is_active: boolean
+          priority: number
+          region: string
+          tags: string[]
+          typical_origin: string
+          updated_at: string
+          visa_required: boolean | null
+        }
+        Insert: {
+          avg_trip_days?: number | null
+          city: string
+          country: string
+          country_code?: string | null
+          created_at?: string
+          description?: string | null
+          hero_image_url?: string | null
+          iata: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          region: string
+          tags?: string[]
+          typical_origin?: string
+          updated_at?: string
+          visa_required?: boolean | null
+        }
+        Update: {
+          avg_trip_days?: number | null
+          city?: string
+          country?: string
+          country_code?: string | null
+          created_at?: string
+          description?: string | null
+          hero_image_url?: string | null
+          iata?: string
+          id?: string
+          is_active?: boolean
+          priority?: number
+          region?: string
+          tags?: string[]
+          typical_origin?: string
+          updated_at?: string
+          visa_required?: boolean | null
         }
         Relationships: []
       }
