@@ -454,3 +454,15 @@ function TripRouteMapInner({ segments, services, hotelInfo, height = "450px" }: 
     </div>
   );
 }
+
+export default function TripRouteMap(props: TripRouteMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa da viagem indisponível"
+        className="rounded-lg border border-border"
+      />
+    );
+  }
+  return <TripRouteMapInner {...props} />;
+}
