@@ -346,3 +346,39 @@ function regexFallback(q: string) {
   }
   return { budget, origin: null, monthOffset: null, durationDays: null, paxAdults: null, mood: null, regions: [] };
 }
+
+async function fetchUnsplashHero(query: string): Promise<{
+  url: string; photographer: string; photographerUrl: string; id: string;
+} | null> {
+  const key = Deno.env.get("UNSPLASH_ACCESS_KEY");
+  if (!key) return null;
+  try {
+    const params = new URLSearchParams({
+      query: `${query} cityscape landmark travel`,
+      orientation: "landscape",
+      content_filter: "high",
+      per_page: "10",
+      order_by: "relevant",
+    });
+    const res = await fetch(`https://api.unsplash.com/search/photos?${params}`, {
+      headers: { "Authorization": `Client-ID ${key}`, "Accept-Version": "v1" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const photos = Array.isArray(data?.results) ? data.results : [];
+    if (photos.length === 0) return null;
+    const photo = photos[0];
+    const baseUrl = photo?.urls?.regular || photo?.urls?.small || "";
+    if (!baseUrl) return null;
+    const optimizedUrl = baseUrl.includes("?")
+      ? `${baseUrl}&w=800&h=400&fit=crop&q=85`
+      : `${baseUrl}?w=800&h=400&fit=crop&q=85`;
+    return {
+      url: optimizedUrl,
+      photographer: photo?.user?.name || "Unsplash",
+      photographerUrl: photo?.user?.links?.html || "https://unsplash.com",
+      id: photo?.id || "",
+    };
+  } catch { return null; }
+}
