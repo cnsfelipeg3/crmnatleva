@@ -779,4 +779,14 @@ function countryToRegion(countryKey: string): string | null {
   return null;
 }
 
+// Exposto APENAS para testes automatizados · não usar em runtime de produção.
+export const __testing = {
+  CITY_PHOTOS,
+  COUNTRY_FALLBACK,
+  REGION_FALLBACK,
+  CITY_TO_COUNTRY,
+  GENERIC_TRAVEL,
+};
+
+
 
