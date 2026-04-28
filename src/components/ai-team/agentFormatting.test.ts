@@ -43,4 +43,20 @@ describe("stripRepeatedGreeting", () => {
     );
     expect(r).toBe("Boa tarde! Como posso ajudar?");
   });
+
+  it("remove saudação repetida do lead mesmo sem pontuação após boa tarde", () => {
+    const r = stripRepeatedGreeting(
+      "Boa tarde que bom saber disso, então acho que prefiro algo mais fora do circuito.",
+      ["Boa tarde, queria viajar em janeiro."]
+    );
+    expect(r).toBe("Que bom saber disso, então acho que prefiro algo mais fora do circuito.");
+  });
+
+  it("remove só a saudação quando o lead repete com marcador informal", () => {
+    const r = stripRepeatedGreeting(
+      "Boa tarde hum legal, to pensando em uns 7 dias mais ou menos.",
+      ["Boa tarde, queria viajar em janeiro."]
+    );
+    expect(r).toBe("Hum legal, to pensando em uns 7 dias mais ou menos.");
+  });
 });

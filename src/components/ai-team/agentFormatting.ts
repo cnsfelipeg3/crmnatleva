@@ -247,17 +247,25 @@ export function stripRepeatedGreeting(
 
   if (!greetingDetect.test(text)) return text;
 
-  const stripPattern = new RegExp(
+  const sentenceStripPattern = new RegExp(
     "^\\s*(bom\\s+dia|boa\\s+tarde|boa\\s+noite|olá|ola|oi+|hello|hi)" +
-      "[^.!?\\n]*[.!?]+\\s*" +
+      "[!,.…\\s]+" +
       "(?:tudo\\s+(?:bem|ótimo|otimo|certo|tranquilo)" +
       "[^.!?\\n]*[.!?]+\\s*)?",
     "i"
   );
 
-  const stripped = text.replace(stripPattern, "").trim();
+  const prefixStripPattern = /^\s*(bom\s+dia|boa\s+tarde|boa\s+noite|olá|ola|oi+|hello|hi)\s*(?:[,!.…]+\s*)?/i;
+
+  let stripped = text.replace(sentenceStripPattern, "").trim();
+
+  // Caso humano comum do Camaleão: "Boa tarde que bom...", "Boa tarde hum...",
+  // sem pontuação logo depois da saudação. Remove só a saudação, não a frase inteira.
+  if (!stripped || stripped.length < 3 || stripped === text.trim()) {
+    stripped = text.replace(prefixStripPattern, "").trim();
+  }
 
   if (!stripped || stripped.length < 3) return text;
 
-  return stripped;
+  return stripped.replace(/^([a-zà-ú])/, (_, c) => c.toUpperCase());
 }
