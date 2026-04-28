@@ -83,8 +83,10 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
   const open = !!itinerary;
   const bookingToken = itinerary?.booking_token ?? null;
-  const { data: providers = [], isLoading: provLoading } =
+  const { data: bookingDetails, isLoading: provLoading } =
     useFlightBookingDetails(searchInput, bookingToken, open);
+  const providers = bookingDetails?.providers ?? [];
+  const bagInfo = bookingDetails?.bag_info ?? null;
 
   const providersSorted = [...providers].sort((a, b) => a.price - b.price);
 
