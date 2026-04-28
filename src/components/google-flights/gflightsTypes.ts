@@ -79,6 +79,22 @@ export interface GFlightItinerary {
   [k: string]: unknown;
 }
 
+// Sub-oferta de um provider (combos ida/volta · campo bookings[] da DataCrawler)
+export interface GBookingSubOffer {
+  price?: number;
+  title?: string;
+  website?: string;
+  meta?: unknown;
+  [k: string]: unknown;
+}
+
+// Detalhes de bagagem por provider (campo bag_info da DataCrawler)
+export interface GBagInfo {
+  carry_on?: { included?: boolean; price?: number; description?: string } | null;
+  checked?: { included?: boolean; price?: number; description?: string } | null;
+  raw?: unknown;
+}
+
 // Provider/agent que oferece o voo (retornado por getBookingDetails)
 export interface GBookingProvider {
   id: string;
@@ -89,6 +105,27 @@ export interface GBookingProvider {
   individualBooking?: boolean;
   token?: string;
   logo?: string;
+  bookings?: GBookingSubOffer[];     // sub-ofertas/combos
+  meta?: unknown;                    // metadata adicional
+}
+
+export interface GBookingDetailsResponse {
+  providers: GBookingProvider[];
+  bag_info: GBagInfo | null;
+}
+
+// Histórico de preço da rota (vem dentro do searchFlights · não consumia até agora)
+export interface GPriceBand {
+  value: number;
+  operation: string;     // "<", ">", "between"
+}
+export interface GPriceHistory {
+  history: { date: string; price: number }[];
+  current?: number;
+  low?: GPriceBand[];
+  typical?: GPriceBand[];
+  high?: GPriceBand[];
+  classification?: "low" | "typical" | "high" | null;
 }
 
 // Filtros laterais
