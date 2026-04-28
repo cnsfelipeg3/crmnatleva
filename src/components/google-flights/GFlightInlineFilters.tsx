@@ -65,6 +65,31 @@ function toggle<T>(arr: T[], v: T): T[] {
   return arr.includes(v) ? arr.filter(x => x !== v) : [...arr, v];
 }
 
+/**
+ * Navegação por setas dentro de um radiogroup horizontal.
+ * Move o foco e aciona o radio (padrão WAI-ARIA).
+ */
+function handleRadioGroupKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  const key = e.key;
+  if (key !== "ArrowRight" && key !== "ArrowLeft" && key !== "Home" && key !== "End") return;
+  const group = e.currentTarget;
+  const radios = Array.from(
+    group.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+  ).filter(el => !el.hasAttribute("disabled"));
+  if (radios.length === 0) return;
+  const currentIndex = radios.findIndex(el => el === document.activeElement);
+  let nextIndex = currentIndex;
+  if (key === "ArrowRight") nextIndex = (currentIndex + 1 + radios.length) % radios.length;
+  else if (key === "ArrowLeft") nextIndex = (currentIndex - 1 + radios.length) % radios.length;
+  else if (key === "Home") nextIndex = 0;
+  else if (key === "End") nextIndex = radios.length - 1;
+  if (nextIndex !== currentIndex && radios[nextIndex]) {
+    e.preventDefault();
+    radios[nextIndex].focus();
+    radios[nextIndex].click();
+  }
+}
+
 function GFlightInlineFiltersImpl({
   filters, onChange, onReset, flights = [],
   filteredCount, autoApply, onAutoApplyChange, onAutoSearch,
@@ -146,11 +171,9 @@ function GFlightInlineFiltersImpl({
   }, [filters, autoApply, onAutoSearch]);
 
   // Restaura foco no trigger ao fechar o popover (a11y)
+  // O retorno efetivo é feito em onCloseAutoFocus para evitar race com rAF.
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) {
-      requestAnimationFrame(() => triggerRef.current?.focus());
-    }
   };
 
   const countLabel = typeof filteredCount === "number"
@@ -164,12 +187,14 @@ function GFlightInlineFiltersImpl({
         <div
           role="radiogroup"
           aria-label="Filtrar por número de paradas"
+          onKeyDown={handleRadioGroupKeyDown}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 p-0.5"
         >
           <button
             type="button"
             role="radio"
             aria-checked={allStops}
+            tabIndex={allStops ? 0 : -1}
             onClick={() => onChange({ ...filters, stops: ["0", "1", "2+"] })}
             className={cn(
               "px-2.5 py-1 text-[11px] rounded-full transition-all",
@@ -188,6 +213,7 @@ function GFlightInlineFiltersImpl({
                 role="radio"
                 aria-checked={isSolo}
                 aria-label={opt.label}
+                tabIndex={isSolo ? 0 : -1}
                 onClick={() => onChange({ ...filters, stops: isSolo ? ["0", "1", "2+"] : [opt.v] })}
                 className={cn(
                   "px-2.5 py-1 text-[11px] rounded-full transition-all",
@@ -210,7 +236,7 @@ function GFlightInlineFiltersImpl({
               key={v}
               type="button"
               aria-pressed={active}
-              aria-label={`Filtro rápido: ${label}`}
+              aria-label={`Filtro rápido ${label}${active ? " · ativo" : ""}`}
               onClick={() => onChange({ ...filters, quickFilter: active ? null : v })}
               className={cn(
                 "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
@@ -230,7 +256,7 @@ function GFlightInlineFiltersImpl({
         <button
           type="button"
           aria-pressed={filters.bagCarryOn}
-          aria-label="Apenas voos com bagagem de mão inclusa"
+          aria-label={`Bagagem de mão inclusa${filters.bagCarryOn ? " · ativo" : ""}`}
           onClick={() => onChange({ ...filters, bagCarryOn: !filters.bagCarryOn })}
           className={cn(
             "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
@@ -246,7 +272,7 @@ function GFlightInlineFiltersImpl({
         <button
           type="button"
           aria-pressed={filters.bagChecked}
-          aria-label="Apenas voos com bagagem despachada inclusa"
+          aria-label={`Bagagem despachada inclusa${filters.bagChecked ? " · ativo" : ""}`}
           onClick={() => onChange({ ...filters, bagChecked: !filters.bagChecked })}
           className={cn(
             "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
@@ -303,23 +329,30 @@ function GFlightInlineFiltersImpl({
             className="w-[360px] p-0"
             align="end"
             role="dialog"
-            aria-label="Refinar busca de voos"
+            aria-modal="false"
+            aria-labelledby="gflights-filters-title"
             onOpenAutoFocus={(e) => {
               // Foca no primeiro elemento interativo dentro do popover
               const root = e.currentTarget as HTMLElement;
               const first = root.querySelector<HTMLElement>(
-                "button, [role='checkbox'], [role='slider'], input, [tabindex]:not([tabindex='-1'])"
+                "button:not([disabled]), [role='checkbox']:not([disabled]), [role='slider'], input:not([disabled]), [role='switch'], [tabindex]:not([tabindex='-1'])"
               );
               if (first) {
                 e.preventDefault();
                 first.focus();
               }
             }}
+            onCloseAutoFocus={(e) => {
+              // Garante retorno do foco ao trigger sem rolagem brusca
+              e.preventDefault();
+              triggerRef.current?.focus({ preventScroll: true });
+            }}
+            onEscapeKeyDown={() => setOpen(false)}
           >
             <ScrollArea className="max-h-[70vh]">
               <div className="space-y-5 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-semibold">Refinar busca</h4>
+                  <h4 id="gflights-filters-title" className="text-sm font-semibold">Refinar busca</h4>
                   <div className="flex items-center gap-2">
                     {countLabel && (
                       <Badge variant="outline" className="text-[10px] h-5 gap-1" aria-live="polite">
