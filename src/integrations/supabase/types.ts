@@ -3417,6 +3417,66 @@ export type Database = {
         }
         Relationships: []
       }
+      gflights_rapidapi_cache: {
+        Row: {
+          action: string
+          cache_key: string
+          created_at: string
+          expires_at: string
+          params: Json
+          response: Json
+        }
+        Insert: {
+          action: string
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          params?: Json
+          response: Json
+        }
+        Update: {
+          action?: string
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          params?: Json
+          response?: Json
+        }
+        Relationships: []
+      }
+      gflights_rapidapi_logs: {
+        Row: {
+          action: string
+          cache_hit: boolean
+          created_at: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          params: Json | null
+          status_code: number | null
+        }
+        Insert: {
+          action: string
+          cache_hit?: boolean
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          params?: Json | null
+          status_code?: number | null
+        }
+        Update: {
+          action?: string
+          cache_hit?: boolean
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          params?: Json | null
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       goals: {
         Row: {
           bonus_on_100: number | null
