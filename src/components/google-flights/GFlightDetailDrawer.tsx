@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Copy, Check, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
-  ChevronDown, Sun, Moon, ShoppingCart, Sparkles,
+  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFlightBookingDetails } from "@/hooks/useGoogleFlights";
+import { useFlightBookingDetails, invokeGFlights } from "@/hooks/useGoogleFlights";
 import {
   cabinLabel, classifyExtensions, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
@@ -53,21 +53,23 @@ const TRUST_META: Record<Trust, { color: string; label: string; icon: typeof Shi
   trusted: {
     color: "text-emerald-700 dark:text-emerald-300",
     bg: "bg-emerald-500",
-    label: "Confiável",
+    label: "Canal confiável",
     icon: ShieldCheck,
+    note: "Sem histórico de problemas",
   },
   neutral: {
     color: "text-amber-700 dark:text-amber-300",
     bg: "bg-amber-500",
-    label: "Neutra",
+    label: "Canal neutro",
     icon: Shield,
+    note: "Verifique reviews antes de comprar",
   },
   avoid: {
     color: "text-rose-700 dark:text-rose-300",
     bg: "bg-rose-500",
-    label: "Atenção",
+    label: "⚠️ Evitar",
     icon: ShieldAlert,
-    note: "OTA com histórico de cobranças extras ou atendimento ruim. Confirme política antes de fechar.",
+    note: "Histórico de cobranças extras e atendimento ruim",
   },
 };
 
@@ -80,6 +82,7 @@ interface Props {
 export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) {
   const [copiedToken, setCopiedToken] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [reservingId, setReservingId] = useState<string | null>(null);
 
   const open = !!itinerary;
   const bookingToken = itinerary?.booking_token ?? null;
@@ -89,6 +92,9 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   const bagInfo = bookingDetails?.bag_info ?? null;
 
   const providersSorted = [...providers].sort((a, b) => a.price - b.price);
+  const minPrice = providersSorted[0]?.price ?? 0;
+  const maxPrice = providersSorted[providersSorted.length - 1]?.price ?? 0;
+  const savings = maxPrice - minPrice;
 
   if (!itinerary) {
     return (
@@ -155,10 +161,47 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
     toast.success("Dados copiados para proposta");
   };
 
-  // Melhor oferta = primeira ordenada por preço com website
-  const bestOffer = providersSorted.find((p) => !!p.website) ?? providersSorted[0] ?? null;
+  // Melhor oferta = primeira ordenada por preço com token (preferencial) ou website (fallback)
+  const bestOffer = providersSorted.find((p) => !!p.token) ?? providersSorted.find((p) => !!p.website) ?? providersSorted[0] ?? null;
   const buildHref = (url?: string) =>
     url ? (url.startsWith("http") ? url : `https://${url}`) : "";
+
+  // Resolve provider deeplink via getBookingURL e abre em nova aba.
+  // Fallback: se não tiver token ou der erro, usa provider.website cru.
+  async function handleReserveProvider(p: GBookingProvider) {
+    const reserveId = `${p.id}-${p.title}`;
+    if (!p.token) {
+      // Fallback direto para o site
+      if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+      else toast.error("Link de reserva indisponível neste canal");
+      return;
+    }
+    setReservingId(reserveId);
+    try {
+      const data = await invokeGFlights<any>("getBookingURL", { token: p.token });
+      if (data && data.status === false) {
+        toast.error("Não foi possível obter o link direto. Abrindo site do canal.");
+        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        return;
+      }
+      const link = typeof data?.data === "string" ? data.data : null;
+      if (!link) {
+        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        else toast.error("Link de reserva indisponível");
+        return;
+      }
+      window.open(link, "_blank", "noopener,noreferrer");
+    } catch (e: any) {
+      toast.error("Erro ao obter link · " + (e?.message ?? "tente novamente"));
+      if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+    } finally {
+      setReservingId(null);
+    }
+  }
+
+  function scrollToProviders() {
+    document.getElementById("providers-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -185,19 +228,22 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
             </div>
           </div>
 
-          {/* CTA topo · vai direto pra melhor oferta */}
-          {bestOffer?.website && (
+          {/* CTA topo · resolve deeplink real do melhor canal via getBookingURL */}
+          {bestOffer && (
             <Button
-              asChild
               variant="premium"
               size="lg"
               className="w-full gap-2"
+              onClick={() => handleReserveProvider(bestOffer)}
+              disabled={reservingId === `${bestOffer.id}-${bestOffer.title}`}
             >
-              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
+              {reservingId === `${bestOffer.id}-${bestOffer.title}` ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
                 <Sparkles className="h-4 w-4" />
-                Reservar agora em {bestOffer.title} · {formatBRL(bestOffer.price || itinerary.price)}
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+              )}
+              Reservar em {bestOffer.title} · {formatBRL(bestOffer.price || itinerary.price)}
+              <ExternalLink className="h-3.5 w-3.5" />
             </Button>
           )}
         </SheetHeader>
@@ -441,21 +487,41 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
             )}
 
             {/* Providers */}
-            <section className="space-y-2">
+            <section id="providers-section" className="space-y-3 scroll-mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Onde reservar este voo
                 </h3>
                 {providersSorted.length > 0 && (
                   <span className="text-[10px] text-muted-foreground">
-                    {providersSorted.length} {providersSorted.length === 1 ? "opção" : "opções"} · ordenadas por preço
+                    ordenado por preço
                   </span>
                 )}
               </div>
+
+              {/* Banner: total de canais + economia */}
+              {!provLoading && providersSorted.length > 0 && (
+                <div className="bg-primary/5 border border-primary/20 rounded-md p-3 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold flex items-center gap-1.5">
+                      <ShoppingCart className="h-3.5 w-3.5 text-primary" />
+                      {providersSorted.length} {providersSorted.length === 1 ? "canal de venda" : "canais de venda"}
+                    </span>
+                    <span className="text-muted-foreground text-[10px]">do mais barato ao mais caro</span>
+                  </div>
+                  {providersSorted.length > 1 && savings > 0 && (
+                    <div className="text-[11px] text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Você economiza <strong>{formatBRL(savings)}</strong> comprando no canal mais barato
+                    </div>
+                  )}
+                </div>
+              )}
+
               {provLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-20 w-full" />
+                    <Skeleton key={i} className="h-24 w-full" />
                   ))}
                 </div>
               ) : providersSorted.length === 0 ? (
@@ -488,14 +554,17 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                     const meta = TRUST_META[trust];
                     const Icon = meta.icon;
                     const isCheapest = i === 0;
+                    const reserveId = `${p.id}-${p.title}`;
+                    const isReserving = reservingId === reserveId;
                     return (
                       <div
                         key={`${p.id}-${i}`}
                         className={cn(
                           "border rounded-lg p-3 transition-colors",
-                          isCheapest
-                            ? "border-primary/40 bg-primary/5"
-                            : "border-border hover:border-primary/30",
+                          isCheapest && "border-emerald-500/50 bg-emerald-500/5",
+                          !isCheapest && trust === "trusted" && "border-border hover:border-primary/30",
+                          !isCheapest && trust === "neutral" && "border-amber-500/30 bg-amber-500/5",
+                          !isCheapest && trust === "avoid" && "border-rose-500/30 bg-rose-500/5",
                         )}
                       >
                         <div className="flex items-start gap-3">
@@ -505,54 +574,59 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                               <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
                                 {p.title}
                                 {p.is_airline ? (
-                                  <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300 gap-1">
+                                  <Badge className="text-[9px] border-emerald-500/40 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15 gap-1">
                                     <Building2 className="h-2.5 w-2.5" /> Cia oficial
                                   </Badge>
                                 ) : (
                                   <Badge variant="outline" className="text-[9px] gap-1">OTA</Badge>
                                 )}
                                 {isCheapest && (
-                                  <Badge className="text-[9px] gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15">
-                                    <Sparkles className="h-2.5 w-2.5" /> Melhor preço
+                                  <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
+                                    <Sparkles className="h-2.5 w-2.5" /> Mais barato
                                   </Badge>
                                 )}
                               </div>
                               <div className="text-base font-bold shrink-0">{formatBRL(p.price)}</div>
                             </div>
-                            <div className={cn("text-[10px] mt-1 flex items-center gap-1", meta.color)}>
-                              <Icon className="h-3 w-3" /> {meta.label}
+                            <div className={cn("text-[11px] mt-1 flex items-center gap-1", meta.color)}>
+                              <Icon className="h-3 w-3" />
+                              <span>{meta.label}</span>
+                              {meta.note && <span className="text-muted-foreground">· {meta.note}</span>}
                             </div>
-                            {meta.note && (
-                              <div className="text-[10px] text-rose-700 dark:text-rose-300 mt-0.5">
-                                ⚠️ {meta.note}
-                              </div>
-                            )}
                           </div>
                         </div>
 
-                        {/* Botão reservar */}
-                        <div className="mt-3">
-                          {p.website ? (
+                        {/* Botão reservar · resolve deeplink real via getBookingURL(token) */}
+                        <div className="flex gap-2 mt-3">
+                          <Button
+                            variant={isCheapest ? "default" : trust === "avoid" ? "outline" : "outline"}
+                            size="sm"
+                            className={cn(
+                              "flex-1 gap-2",
+                              isCheapest && "bg-emerald-600 hover:bg-emerald-700 text-white",
+                            )}
+                            onClick={() => handleReserveProvider(p)}
+                            disabled={isReserving || (!p.token && !p.website)}
+                          >
+                            {isReserving ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <ShoppingCart className="h-3.5 w-3.5" />
+                            )}
+                            {trust === "avoid" ? "Reservar mesmo assim" : `Reservar em ${p.title}`}
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                          {p.website && (
                             <Button
-                              asChild
-                              variant={isCheapest ? "default" : "outline"}
+                              variant="ghost"
                               size="sm"
-                              className="w-full gap-2"
+                              className="text-[10px] text-muted-foreground"
+                              asChild
                             >
-                              <a
-                                href={buildHref(p.website)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ShoppingCart className="h-3.5 w-3.5" />
-                                Reservar em {p.title}
-                                <ExternalLink className="h-3 w-3" />
+                              <a href={buildHref(p.website)} target="_blank" rel="noopener noreferrer" title="Abrir site do canal">
+                                site
                               </a>
                             </Button>
-                          ) : (
-                            <div className="text-[10px] text-muted-foreground italic text-center py-1.5">
-                              Link de reserva indisponível neste canal
-                            </div>
                           )}
                         </div>
                       </div>
@@ -588,17 +662,20 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         {/* Action bar */}
         <div className="border-t border-border p-3 flex gap-2">
-          {bestOffer?.website ? (
-            <Button asChild className="flex-1 gap-2">
-              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
-                <ShoppingCart className="h-4 w-4" />
-                Reservar · {formatBRL(bestOffer.price || itinerary.price)}
-              </a>
+          {providersSorted.length > 0 ? (
+            <Button
+              variant="outline"
+              size="default"
+              className="flex-1 gap-2"
+              onClick={scrollToProviders}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Comparar {providersSorted.length} {providersSorted.length === 1 ? "oferta" : "ofertas"}
             </Button>
           ) : (
             <Button disabled className="flex-1 gap-2">
               <ShoppingCart className="h-4 w-4" />
-              Sem link de reserva
+              Sem ofertas disponíveis
             </Button>
           )}
           <Button onClick={copyForProposal} variant="outline" size="icon" title="Copiar dados para proposta">

@@ -19,7 +19,7 @@ import type {
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
-async function invokeGFlights<T = unknown>(
+export async function invokeGFlights<T = unknown>(
   action: string,
   params: Record<string, unknown> = {},
 ): Promise<T> {
@@ -167,7 +167,11 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
 
       function mapItinerary(it: any) {
         const flights = Array.isArray(it?.flights) ? it.flights.map(mapLeg) : [];
-        const stops = typeof it?.stops === "number" ? it.stops : Math.max(0, flights.length - 1);
+        // API DataCrawler retorna stops:0 mesmo com conexão. Sempre derivar de layovers/legs.
+        const stops = Math.max(
+          Array.isArray(it?.layovers) ? it.layovers.length : 0,
+          Array.isArray(it?.flights) ? Math.max(0, it.flights.length - 1) : 0,
+        );
         return {
           flights,
           layovers: Array.isArray(it?.layovers) ? it.layovers.map(mapLayover) : [],

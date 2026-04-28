@@ -1,6 +1,6 @@
 import {
   Plane, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
-  Wifi, Power, Tv, Award, Zap, DollarSign,
+  Wifi, Power, Tv, Award, Zap, DollarSign, ChevronRight, Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -109,7 +109,10 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
           <div className="text-[10px] text-muted-foreground truncate w-full text-center">
             {stops === 0
               ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Direto</span>
-              : <>{stops} {stops === 1 ? "parada" : "paradas"}{layovers.length > 0 && ` · ${layovers.map(l => l.id).filter(Boolean).join(" · ")}`}</>
+              : <span className="text-amber-700 dark:text-amber-400 font-medium">
+                  {stops} {stops === 1 ? "parada" : "paradas"}
+                  {layovers.length > 0 && ` · ${layovers.map(l => l.id).filter(Boolean).join(", ")}`}
+                </span>
             }
           </div>
         </div>
@@ -157,7 +160,14 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
         {hasUSB && <Badge variant="outline" className="text-[10px] gap-1 h-5"><Power className="h-2.5 w-2.5" /> USB</Badge>}
         {hasWifi && <Badge variant="outline" className="text-[10px] gap-1 h-5"><Wifi className="h-2.5 w-2.5" /> Wi-Fi</Badge>}
         {hasVideo && <Badge variant="outline" className="text-[10px] gap-1 h-5"><Tv className="h-2.5 w-2.5" /> Vídeo</Badge>}
-        <div className="ml-auto text-[10px] text-primary font-medium">Ver detalhes →</div>
+        {itinerary.booking_token ? (
+          <div className="ml-auto flex items-center gap-1 text-[10px] text-primary font-medium">
+            <Layers className="h-3 w-3" /> Comparar canais
+            <ChevronRight className="h-3 w-3" />
+          </div>
+        ) : (
+          <div className="ml-auto text-[10px] text-primary font-medium">Ver detalhes →</div>
+        )}
       </div>
     </button>
   );
