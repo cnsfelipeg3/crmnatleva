@@ -109,7 +109,10 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
           <div className="text-[10px] text-muted-foreground truncate w-full text-center">
             {stops === 0
               ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Direto</span>
-              : <>{stops} {stops === 1 ? "parada" : "paradas"}{layovers.length > 0 && ` · ${layovers.map(l => l.id).filter(Boolean).join(" · ")}`}</>
+              : <span className="text-amber-700 dark:text-amber-400 font-medium">
+                  {stops} {stops === 1 ? "parada" : "paradas"}
+                  {layovers.length > 0 && ` · ${layovers.map(l => l.id).filter(Boolean).join(", ")}`}
+                </span>
             }
           </div>
         </div>
