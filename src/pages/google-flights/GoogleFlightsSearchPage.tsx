@@ -823,3 +823,46 @@ export default function GoogleFlightsSearchPage() {
     </div>
   );
 }
+
+/**
+ * Wrapper memoizado · isola o cálculo de `flights` e `filteredCount` para que
+ * o GFlightInlineFilters (memo) só re-renderize quando algo realmente mudar.
+ */
+interface InlineFiltersSectionProps {
+  filters: GFlightFilters;
+  setFilters: (next: GFlightFilters) => void;
+  results: { best_flights?: GFlightItinerary[]; other_flights?: GFlightItinerary[] } | null | undefined;
+  autoApply: boolean;
+  setAutoApply: (v: boolean) => void;
+  onAutoSearch: () => void;
+}
+
+function InlineFiltersSection({
+  filters, setFilters, results, autoApply, setAutoApply, onAutoSearch,
+}: InlineFiltersSectionProps) {
+  const flights = useMemo<GFlightItinerary[]>(
+    () => [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])],
+    [results?.best_flights, results?.other_flights],
+  );
+
+  const filteredCount = useMemo(
+    () => (flights.length ? applyFilters(flights, filters).length : 0),
+    [flights, filters],
+  );
+
+  const handleReset = useCallback(() => setFilters(DEFAULT_GFLIGHT_FILTERS), [setFilters]);
+
+  return (
+    <GFlightInlineFilters
+      filters={filters}
+      onChange={setFilters}
+      onReset={handleReset}
+      flights={flights}
+      filteredCount={flights.length ? filteredCount : undefined}
+      autoApply={autoApply}
+      onAutoApplyChange={setAutoApply}
+      onAutoSearch={onAutoSearch}
+    />
+  );
+}
+
