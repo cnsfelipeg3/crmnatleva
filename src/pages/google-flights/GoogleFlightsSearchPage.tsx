@@ -96,6 +96,8 @@ export default function GoogleFlightsSearchPage() {
   const [adults, setAdults] = useState<number>(initial.adults);
   const [travelClass, setTravelClass] = useState<GFlightCabin>(initial.travel_class);
   const [tab, setTab] = useState<string>(initial.tab);
+  const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
+  const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
 
   const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
     if (!initial.from || !initial.to || !initial.dep) return null;
