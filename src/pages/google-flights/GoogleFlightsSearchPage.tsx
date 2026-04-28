@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { format, addDays, parseISO, isValid } from "date-fns";
 import {
@@ -34,6 +34,7 @@ import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItine
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightInlineFilters } from "@/components/google-flights/GFlightInlineFilters";
+import { useGFlightFiltersStorage } from "@/hooks/useGFlightFiltersStorage";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
 import { toast } from "sonner";
@@ -107,7 +108,7 @@ export default function GoogleFlightsSearchPage() {
     () => (urlParams.get("outerTab") as "search" | "discover") || "search",
   );
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
-  const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
+  const { filters, setFilters, autoApply, setAutoApply } = useGFlightFiltersStorage();
   const [showPriceHistory, setShowPriceHistory] = useState(false);
   // Hint da Discover IA · usado pra construir um voo sintético quando a DataCrawler
   // não devolve topFlights mas a Discover já tinha cotação válida.
@@ -581,14 +582,13 @@ export default function GoogleFlightsSearchPage() {
 
           {/* Filtros inline · sempre visíveis no buscador */}
           <div className="border-t border-border pt-4">
-            <GFlightInlineFilters
+            <InlineFiltersSection
               filters={filters}
-              onChange={setFilters}
-              onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
-              flights={[
-                ...(results?.best_flights ?? []),
-                ...(results?.other_flights ?? []),
-              ]}
+              setFilters={setFilters}
+              results={results}
+              autoApply={autoApply}
+              setAutoApply={setAutoApply}
+              onAutoSearch={handleSearch}
             />
           </div>
         </div>
@@ -823,3 +823,46 @@ export default function GoogleFlightsSearchPage() {
     </div>
   );
 }
+
+/**
+ * Wrapper memoizado · isola o cálculo de `flights` e `filteredCount` para que
+ * o GFlightInlineFilters (memo) só re-renderize quando algo realmente mudar.
+ */
+interface InlineFiltersSectionProps {
+  filters: GFlightFilters;
+  setFilters: (next: GFlightFilters) => void;
+  results: { best_flights?: GFlightItinerary[]; other_flights?: GFlightItinerary[] } | null | undefined;
+  autoApply: boolean;
+  setAutoApply: (v: boolean) => void;
+  onAutoSearch: () => void;
+}
+
+function InlineFiltersSection({
+  filters, setFilters, results, autoApply, setAutoApply, onAutoSearch,
+}: InlineFiltersSectionProps) {
+  const flights = useMemo<GFlightItinerary[]>(
+    () => [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])],
+    [results?.best_flights, results?.other_flights],
+  );
+
+  const filteredCount = useMemo(
+    () => (flights.length ? applyFilters(flights, filters).length : 0),
+    [flights, filters],
+  );
+
+  const handleReset = useCallback(() => setFilters(DEFAULT_GFLIGHT_FILTERS), [setFilters]);
+
+  return (
+    <GFlightInlineFilters
+      filters={filters}
+      onChange={setFilters}
+      onReset={handleReset}
+      flights={flights}
+      filteredCount={flights.length ? filteredCount : undefined}
+      autoApply={autoApply}
+      onAutoApplyChange={setAutoApply}
+      onAutoSearch={onAutoSearch}
+    />
+  );
+}
+
