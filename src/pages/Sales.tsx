@@ -15,6 +15,7 @@ import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
+import { ListPageSkeleton } from "@/components/skeletons/PageSkeletons";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -300,7 +301,7 @@ export default function Sales() {
         />
 
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <ListPageSkeleton rows={8} />
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             {activeFilterCount > 0 ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}

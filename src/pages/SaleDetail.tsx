@@ -31,6 +31,7 @@ import SaleAttachmentsSection from "@/components/SaleAttachmentsSection";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
+import { DetailPageSkeleton } from "@/components/skeletons/PageSkeletons";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -314,7 +315,7 @@ export default function SaleDetail() {
     };
   }, [sale, segments]);
 
-  if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
+  if (loading) return <DetailPageSkeleton />;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
       <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>
