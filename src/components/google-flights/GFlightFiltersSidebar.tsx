@@ -439,6 +439,18 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
           />
         </div>
       </div>
+
+      {/* Bloco informativo · tipos de tarifa */}
+      <div className="space-y-1.5 bg-primary/5 border border-primary/20 rounded-md p-3">
+        <Label className="text-[11px] uppercase tracking-wider text-primary flex items-center gap-1.5">
+          <Sparkles className="h-3 w-3" />
+          Tipos de tarifa
+        </Label>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          Cada voo pode ter de 2 a 6 tarifas (Restrita, Padrão, Flexível, Premium, Executiva, Primeira Classe).
+          Clique no card de um voo para comparar tarifas e benefícios de cada canal de venda.
+        </p>
+      </div>
     </Card>
   );
 }
