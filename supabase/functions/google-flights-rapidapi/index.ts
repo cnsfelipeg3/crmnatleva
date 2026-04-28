@@ -261,9 +261,13 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
     case "getNextFlights":
     case "getBookingDetails":
     case "getBookingURL": {
-      assertParams(input, ["next_token"]);
+      // DataCrawler aceita booking_token como alias para next_token
+      const token = input.next_token ?? input.booking_token;
+      if (!token) {
+        throw new Error("Parâmetros obrigatórios faltando: next_token (ou booking_token)");
+      }
       return {
-        next_token: String(input.next_token),
+        booking_token: String(token),
         currency: String(input.currency ?? defaults.currency),
         language_code: String(input.language_code ?? defaults.language_code),
         country_code: String(input.country_code ?? defaults.country_code),
