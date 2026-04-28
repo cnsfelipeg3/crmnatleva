@@ -204,6 +204,19 @@ function AppRoutes() {
     location.pathname.startsWith("/portal/") ||
     location.pathname === "/cadastro-fornecedor";
 
+  // Prefetch oportunista das rotas mais comuns assim que o usuário autentica.
+  // Roda em idle pra não competir com o paint inicial.
+  if (typeof window !== "undefined" && isAuthenticated && !(window as any).__natlevaPrefetched) {
+    (window as any).__natlevaPrefetched = true;
+    const ric = (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1200));
+    ric(() => {
+      import("@/pages/Dashboard");
+      import("@/pages/Sales");
+      import("@/pages/SaleDetail");
+      import("@/pages/LiveChat");
+    });
+  }
+
   return (
     <SmartSuspense>
       <PerfDebugOverlay />
