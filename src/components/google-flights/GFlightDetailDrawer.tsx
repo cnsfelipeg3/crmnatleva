@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Copy, Check, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
-  ChevronDown, Sun, Moon, ShoppingCart, Sparkles,
+  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFlightBookingDetails } from "@/hooks/useGoogleFlights";
+import { useFlightBookingDetails, invokeGFlights } from "@/hooks/useGoogleFlights";
 import {
   cabinLabel, classifyExtensions, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
