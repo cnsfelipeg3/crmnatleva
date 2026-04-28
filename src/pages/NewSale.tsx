@@ -33,6 +33,7 @@ import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsE
 import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
 import { getProductSlug, inferProductSlugsFromSale } from "@/lib/productTypes";
+import { validateTripLengthFromSegments } from "@/lib/tripLengthValidation";
 
 /* ─── Types ────────────────────────────────────────────── */
 
