@@ -348,121 +348,146 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
               </Alert>
             )}
 
-            {/* Trajeto */}
-            <section className="space-y-3">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trajeto</h3>
-              {flights.map((leg, i) => {
-                const legExt = classifyExtensions(leg.extensions);
-                const legOvernight = dayDiff(leg.departure_airport?.time, leg.arrival_airport?.time);
-                const lay = layovers[i];
-                return (
-                  <div key={i} className="space-y-2">
-                    <div className="flex items-start gap-3 bg-muted/30 rounded-md p-3">
-                      {leg.airline_logo ? (
-                        <img src={leg.airline_logo} alt="" className="h-9 w-9 object-contain rounded bg-white p-0.5 border border-border/40 shrink-0" />
-                      ) : (
-                        <div className="h-9 w-9 rounded bg-muted/60 grid place-items-center shrink-0">
-                          <Plane className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0 space-y-2">
-                        <div className="flex items-baseline justify-between gap-2">
-                          <div className="text-xs font-semibold truncate">
-                            {leg.airline} <span className="font-mono text-muted-foreground">· {leg.flight_number}</span>
-                          </div>
-                          <div className="text-[10px] text-muted-foreground shrink-0">
-                            {leg.duration_text || formatMinutes(leg.duration)}
-                          </div>
-                        </div>
-
-                        {/* timeline horizontal */}
-                        <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
-                          <div>
-                            <div className="text-sm font-bold flex items-center gap-1">
-                              {formatTime(leg.departure_airport?.time)}
-                              <Sun className="h-3 w-3 text-amber-500/70" />
+            {/* Trajeto · IDA + VOLTA separados quando round-trip */}
+            {(() => {
+              const renderLegs = (legs: typeof flights, lays: typeof layovers) => (
+                <>
+                  {legs.map((leg, i) => {
+                    const legExt = classifyExtensions(leg.extensions);
+                    const legOvernight = dayDiff(leg.departure_airport?.time, leg.arrival_airport?.time);
+                    const lay = lays[i];
+                    return (
+                      <div key={i} className="space-y-2">
+                        <div className="flex items-start gap-3 bg-muted/30 rounded-md p-3">
+                          {leg.airline_logo ? (
+                            <img src={leg.airline_logo} alt="" className="h-9 w-9 object-contain rounded bg-white p-0.5 border border-border/40 shrink-0" />
+                          ) : (
+                            <div className="h-9 w-9 rounded bg-muted/60 grid place-items-center shrink-0">
+                              <Plane className="h-4 w-4 text-muted-foreground" />
                             </div>
-                            <div className="text-[10px] font-mono text-muted-foreground">{leg.departure_airport?.id}</div>
-                            <div className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={leg.departure_airport?.name}>
-                              {leg.departure_airport?.name}
+                          )}
+                          <div className="flex-1 min-w-0 space-y-2">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <div className="text-xs font-semibold truncate">
+                                {leg.airline} <span className="font-mono text-muted-foreground">· {leg.flight_number}</span>
+                              </div>
+                              <div className="text-[10px] text-muted-foreground shrink-0">
+                                {leg.duration_text || formatMinutes(leg.duration)}
+                              </div>
                             </div>
-                          </div>
-                          <div className="h-px bg-border/60 relative">
-                            <Plane className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary rotate-90" />
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm font-bold flex items-center gap-1 justify-end">
-                              {formatTime(leg.arrival_airport?.time)}
-                              {legOvernight > 0 ? <Moon className="h-3 w-3 text-indigo-400" /> : <Sun className="h-3 w-3 text-amber-500/70" />}
-                              {legOvernight > 0 && <sup className="text-[9px] text-rose-500">+{legOvernight}</sup>}
+                            <div className="grid grid-cols-[auto_1fr_auto] gap-2 items-center">
+                              <div>
+                                <div className="text-sm font-bold flex items-center gap-1">
+                                  {formatTime(leg.departure_airport?.time)}
+                                  <Sun className="h-3 w-3 text-amber-500/70" />
+                                </div>
+                                <div className="text-[10px] font-mono text-muted-foreground">{leg.departure_airport?.id}</div>
+                                <div className="text-[10px] text-muted-foreground max-w-[150px] truncate" title={leg.departure_airport?.name}>
+                                  {leg.departure_airport?.name}
+                                </div>
+                              </div>
+                              <div className="h-px bg-border/60 relative">
+                                <Plane className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 text-primary rotate-90" />
+                              </div>
+                              <div className="text-right">
+                                <div className="text-sm font-bold flex items-center gap-1 justify-end">
+                                  {formatTime(leg.arrival_airport?.time)}
+                                  {legOvernight > 0 ? <Moon className="h-3 w-3 text-indigo-400" /> : <Sun className="h-3 w-3 text-amber-500/70" />}
+                                  {legOvernight > 0 && <sup className="text-[9px] text-rose-500">+{legOvernight}</sup>}
+                                </div>
+                                <div className="text-[10px] font-mono text-muted-foreground">{leg.arrival_airport?.id}</div>
+                                <div className="text-[10px] text-muted-foreground max-w-[150px] truncate ml-auto" title={leg.arrival_airport?.name}>
+                                  {leg.arrival_airport?.name}
+                                </div>
+                              </div>
                             </div>
-                            <div className="text-[10px] font-mono text-muted-foreground">{leg.arrival_airport?.id}</div>
-                            <div className="text-[10px] text-muted-foreground max-w-[150px] truncate ml-auto" title={leg.arrival_airport?.name}>
-                              {leg.arrival_airport?.name}
+                            <div className="text-[10px] text-muted-foreground space-y-0.5">
+                              {leg.aircraft && <div>Aeronave: <span className="text-foreground">{leg.aircraft}</span></div>}
+                              {leg.seat && <div>Assento: <span className="text-foreground">{leg.seat}</span>{leg.legroom && <> · {leg.legroom}</>}</div>}
+                              {leg.travel_class && <div>Classe: <span className="text-foreground">{cabinLabel(leg.travel_class)}</span></div>}
                             </div>
-                          </div>
-                        </div>
-
-                        {/* Specs */}
-                        <div className="text-[10px] text-muted-foreground space-y-0.5">
-                          {leg.aircraft && <div>Aeronave: <span className="text-foreground">{leg.aircraft}</span></div>}
-                          {leg.seat && <div>Assento: <span className="text-foreground">{leg.seat}</span>{leg.legroom && <> · {leg.legroom}</>}</div>}
-                          {leg.travel_class && <div>Classe: <span className="text-foreground">{cabinLabel(leg.travel_class)}</span></div>}
-                        </div>
-
-                        {/* Amenities */}
-                        {legExt.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {legExt.map((t, k) => (
-                              <span key={k} className={cn(
-                                "inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border",
-                                t.kind === "wifi" && "border-sky-500/30 text-sky-700 dark:text-sky-300",
-                                t.kind === "power" && "border-amber-500/30 text-amber-700 dark:text-amber-300",
-                                t.kind === "video" && "border-violet-500/30 text-violet-700 dark:text-violet-300",
-                                t.kind === "legroom" && "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
-                                t.kind === "co2" && "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
-                                t.kind === "meal" && "border-orange-500/30 text-orange-700 dark:text-orange-300",
-                                t.kind === "other" && "border-border text-muted-foreground",
-                              )}>
-                                {t.label}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Layover entre legs · cor contextualizada por severidade */}
-                    {lay && i < flights.length - 1 && (() => {
-                      const cls = classifyLayover(lay);
-                      return (
-                        <div className={cn(
-                          "ml-3 rounded-md px-3 py-2 border space-y-1",
-                          cls.bgClass,
-                          cls.borderClass,
-                        )}>
-                          <div className="flex items-center gap-2 text-[11px]">
-                            <Repeat className={cn("h-3.5 w-3.5 shrink-0", cls.textClass)} />
-                            <span className={cn("font-semibold", cls.textClass)}>
-                              {cls.label} · {lay.duration_text || formatMinutes(lay.duration)}
-                            </span>
-                            <span className="text-muted-foreground">
-                              em {lay.city || lay.name} ({lay.id})
-                            </span>
-                            {lay.overnight && cls.severity !== "overnight" && (
-                              <Badge variant="outline" className="ml-auto text-[9px] border-indigo-500/30 text-indigo-700 dark:text-indigo-300 gap-1">
-                                <Moon className="h-2.5 w-2.5" /> Pernoite
-                              </Badge>
+                            {legExt.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {legExt.map((t, k) => (
+                                  <span key={k} className={cn(
+                                    "inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border",
+                                    t.kind === "wifi" && "border-sky-500/30 text-sky-700 dark:text-sky-300",
+                                    t.kind === "power" && "border-amber-500/30 text-amber-700 dark:text-amber-300",
+                                    t.kind === "video" && "border-violet-500/30 text-violet-700 dark:text-violet-300",
+                                    t.kind === "legroom" && "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+                                    t.kind === "co2" && "border-emerald-500/30 text-emerald-700 dark:text-emerald-300",
+                                    t.kind === "meal" && "border-orange-500/30 text-orange-700 dark:text-orange-300",
+                                    t.kind === "other" && "border-border text-muted-foreground",
+                                  )}>
+                                    {t.label}
+                                  </span>
+                                ))}
+                              </div>
                             )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground pl-5">{cls.hint}</div>
                         </div>
-                      );
-                    })()}
-                  </div>
+                        {lay && i < legs.length - 1 && (() => {
+                          const cls = classifyLayover(lay);
+                          return (
+                            <div className={cn("ml-3 rounded-md px-3 py-2 border space-y-1", cls.bgClass, cls.borderClass)}>
+                              <div className="flex items-center gap-2 text-[11px]">
+                                <Repeat className={cn("h-3.5 w-3.5 shrink-0", cls.textClass)} />
+                                <span className={cn("font-semibold", cls.textClass)}>
+                                  {cls.label} · {lay.duration_text || formatMinutes(lay.duration)}
+                                </span>
+                                <span className="text-muted-foreground">
+                                  em {lay.city || lay.name} ({lay.id})
+                                </span>
+                                {lay.overnight && cls.severity !== "overnight" && (
+                                  <Badge variant="outline" className="ml-auto text-[9px] border-indigo-500/30 text-indigo-700 dark:text-indigo-300 gap-1">
+                                    <Moon className="h-2.5 w-2.5" /> Pernoite
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground pl-5">{cls.hint}</div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    );
+                  })}
+                </>
+              );
+
+              if (itinerary.is_round_trip && itinerary.outbound_flights?.length && itinerary.return_flights?.length) {
+                return (
+                  <>
+                    <section className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <Plane className="h-3.5 w-3.5 text-primary" /> Trajeto · Ida
+                        <span className="text-muted-foreground/70 normal-case font-normal">
+                          · {itinerary.outbound_duration_text || formatMinutes(itinerary.outbound_duration)}
+                        </span>
+                      </h3>
+                      {renderLegs(itinerary.outbound_flights, itinerary.outbound_layovers ?? [])}
+                    </section>
+                    <section className="space-y-3">
+                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <Repeat className="h-3.5 w-3.5 text-violet-600 dark:text-violet-400" /> Trajeto · Volta
+                        <span className="text-muted-foreground/70 normal-case font-normal">
+                          · {itinerary.return_duration_text || formatMinutes(itinerary.return_duration)}
+                        </span>
+                      </h3>
+                      {renderLegs(itinerary.return_flights, itinerary.return_layovers ?? [])}
+                    </section>
+                  </>
                 );
-              })}
-            </section>
+              }
+              return (
+                <section className="space-y-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Trajeto{flights.length >= 3 ? ` · ${flights.length} trechos` : ""}
+                  </h3>
+                  {renderLegs(flights, layovers)}
+                </section>
+              );
+            })()}
+
 
             {/* Bagagem */}
             {itinerary.bags && (

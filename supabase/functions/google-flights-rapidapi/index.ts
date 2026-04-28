@@ -224,6 +224,10 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       if (input.excluded_connecting_airports) p.excluded_connecting_airports = String(input.excluded_connecting_airports);
       if (input.sort_by) p.sort_by = String(input.sort_by);
       if (input.next_token) p.next_token = String(input.next_token);
+      // Suporte round-trip stage 2 e multi-city
+      if (input.departure_token) p.departure_token = String(input.departure_token);
+      if (input.multi_city_json) p.multi_city_json = String(input.multi_city_json);
+      if (input.trip_type) p.trip_type = String(input.trip_type);
       return p;
     }
     case "getCalendarPicker":
@@ -361,14 +365,10 @@ serve(async (req) => {
     let { data, status } = await callRapidApi(endpoint, params, action);
 
     if (action === "searchFlights" && status >= 200 && status < 300) {
-      const MAX_PAGES = 5; // 1 inicial + 4 próximas (~ até 100-150 voos)
-      const mergedTop: any[] = [];
-      const mergedOther: any[] = [];
-      let pageData: any = data;
-      let pagesFetched = 0;
+      const isMultiCity = !!(params.multi_city_json && params.trip_type === "3");
+      const isRoundTrip = !isMultiCity && !!params.return_date && !params.departure_token;
 
       function extractNextToken(d: any): string | null {
-        // DataCrawler já testou múltiplos formatos · cobrir todos
         return (
           d?.data?.next_token ??
           d?.data?.itineraries?.next_token ??
@@ -379,65 +379,156 @@ serve(async (req) => {
         );
       }
 
-      // Página 1 já está em "data"
-      const itin0 = pageData?.data?.itineraries ?? {};
-      if (Array.isArray(itin0.topFlights)) mergedTop.push(...itin0.topFlights);
-      if (Array.isArray(itin0.otherFlights)) mergedOther.push(...itin0.otherFlights);
-      pagesFetched = 1;
+      // Helper: pagina respostas via next_token até MAX_PAGES
+      async function paginate(initialData: any, baseParams: Record<string, string>, maxPages = 5) {
+        const mergedTop: any[] = [];
+        const mergedOther: any[] = [];
+        let pageData: any = initialData;
+        let pages = 0;
 
-      let nextToken = extractNextToken(pageData);
-      while (nextToken && pagesFetched < MAX_PAGES) {
-        try {
-          const nextParams = { ...params, next_token: nextToken };
-          const { data: nextData, status: nextStatus } = await callRapidApi(endpoint, nextParams, action + "_next");
-          if (nextStatus < 200 || nextStatus >= 300) break;
-          const itinN = (nextData as any)?.data?.itineraries ?? {};
-          const addedTop = Array.isArray(itinN.topFlights) ? itinN.topFlights.length : 0;
-          const addedOther = Array.isArray(itinN.otherFlights) ? itinN.otherFlights.length : 0;
-          if (Array.isArray(itinN.topFlights)) mergedTop.push(...itinN.topFlights);
-          if (Array.isArray(itinN.otherFlights)) mergedOther.push(...itinN.otherFlights);
-          pagesFetched += 1;
-          console.log(`[gflights] page ${pagesFetched} → +${addedTop} top, +${addedOther} other`);
-          if (addedTop + addedOther === 0) break; // página vazia · evita loop
-          nextToken = extractNextToken(nextData);
-        } catch (e) {
-          console.warn(`[gflights] pagination break: ${(e as Error)?.message}`);
-          break;
+        const itin0 = pageData?.data?.itineraries ?? {};
+        if (Array.isArray(itin0.topFlights)) mergedTop.push(...itin0.topFlights);
+        if (Array.isArray(itin0.otherFlights)) mergedOther.push(...itin0.otherFlights);
+        pages = 1;
+
+        let nextToken = extractNextToken(pageData);
+        while (nextToken && pages < maxPages) {
+          try {
+            const np = { ...baseParams, next_token: nextToken };
+            const { data: nd, status: ns } = await callRapidApi(endpoint, np, action + "_pg");
+            if (ns < 200 || ns >= 300) break;
+            const itinN = (nd as any)?.data?.itineraries ?? {};
+            const addedTop = Array.isArray(itinN.topFlights) ? itinN.topFlights.length : 0;
+            const addedOther = Array.isArray(itinN.otherFlights) ? itinN.otherFlights.length : 0;
+            if (Array.isArray(itinN.topFlights)) mergedTop.push(...itinN.topFlights);
+            if (Array.isArray(itinN.otherFlights)) mergedOther.push(...itinN.otherFlights);
+            pages += 1;
+            console.log(`[gflights] page ${pages} → +${addedTop} top, +${addedOther} other`);
+            if (addedTop + addedOther === 0) break;
+            nextToken = extractNextToken(nd);
+          } catch (e) {
+            console.warn(`[gflights] pagination break: ${(e as Error)?.message}`);
+            break;
+          }
         }
+
+        const dedupeKey = (it: any) =>
+          it?.booking_token ?? it?.departure_token ?? JSON.stringify({
+            p: it?.price,
+            d: it?.duration?.raw ?? it?.duration,
+            f: (it?.flights ?? []).map((l: any) => `${l?.flight_number}-${l?.departure_airport?.time}`).join("|"),
+          });
+        const seen = new Set<string>();
+        const dedupe = (arr: any[]) => arr.filter((it) => {
+          const k = dedupeKey(it);
+          if (seen.has(k)) return false;
+          seen.add(k);
+          return true;
+        });
+
+        return { topFlights: dedupe(mergedTop), otherFlights: dedupe(mergedOther), pages };
       }
 
-      // Reconstroi o payload com todas as páginas mescladas + dedupe leve por booking_token/key
-      const dedupeKey = (it: any) =>
-        it?.booking_token ?? it?.departure_token ?? JSON.stringify({
-          p: it?.price,
-          d: it?.duration?.raw ?? it?.duration,
-          f: (it?.flights ?? []).map((l: any) => `${l?.flight_number}-${l?.departure_airport?.time}`).join("|"),
-        });
-      const seen = new Set<string>();
-      const dedupe = (arr: any[]) => arr.filter((it) => {
-        const k = dedupeKey(it);
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
+      // Stage 1: pagina lista inicial
+      const stage1 = await paginate(data, params);
 
-      const finalTop = dedupe(mergedTop);
-      const finalOther = dedupe(mergedOther);
-
-      console.log(`[gflights] ✓ search complete · ${pagesFetched} page(s) · ${finalTop.length} top + ${finalOther.length} other`);
-
-      data = {
-        ...(pageData as object),
-        data: {
-          ...((pageData as any)?.data ?? {}),
-          itineraries: {
-            ...((pageData as any)?.data?.itineraries ?? {}),
-            topFlights: finalTop,
-            otherFlights: finalOther,
+      if (isMultiCity) {
+        console.log(`[gflights] ✓ multi-city · ${stage1.pages} pages · ${stage1.topFlights.length} top + ${stage1.otherFlights.length} other`);
+        data = {
+          ...(data as object),
+          data: {
+            ...((data as any)?.data ?? {}),
+            itineraries: {
+              ...((data as any)?.data?.itineraries ?? {}),
+              topFlights: stage1.topFlights,
+              otherFlights: stage1.otherFlights,
+            },
+            __pagination: { pages_fetched: stage1.pages, total_top: stage1.topFlights.length, total_other: stage1.otherFlights.length },
+            __trip_type: "multi_city",
           },
-          __pagination: { pages_fetched: pagesFetched, total_top: finalTop.length, total_other: finalOther.length },
-        },
-      };
+        };
+      } else if (!isRoundTrip) {
+        console.log(`[gflights] ✓ one-way · ${stage1.pages} pages · ${stage1.topFlights.length} top + ${stage1.otherFlights.length} other`);
+        data = {
+          ...(data as object),
+          data: {
+            ...((data as any)?.data ?? {}),
+            itineraries: {
+              ...((data as any)?.data?.itineraries ?? {}),
+              topFlights: stage1.topFlights,
+              otherFlights: stage1.otherFlights,
+            },
+            __pagination: { pages_fetched: stage1.pages, total_top: stage1.topFlights.length, total_other: stage1.otherFlights.length },
+            __trip_type: "one_way",
+          },
+        };
+      } else {
+        // ROUND-TRIP · combinar top 5 IDAs × melhor VOLTA = pacote completo com booking_token
+        const TOP_OUTBOUND = 5;
+        const candidates = stage1.topFlights.slice(0, TOP_OUTBOUND);
+        console.log(`[gflights] ✓ round-trip stage 1 · ${stage1.topFlights.length} outbound flights · combining top ${candidates.length}`);
+
+        const CONCURRENCY = 3;
+        const combinedPackages: any[] = [];
+
+        async function fetchReturn(outbound: any) {
+          const departureToken = outbound?.departure_token;
+          if (!departureToken) return null;
+          try {
+            const np = { ...params, departure_token: String(departureToken) };
+            const { data: nd, status: ns } = await callRapidApi(endpoint, np, action + "_return");
+            if (ns < 200 || ns >= 300) return null;
+            const itinR = (nd as any)?.data?.itineraries ?? {};
+            const returnFlights: any[] = Array.isArray(itinR.topFlights) ? itinR.topFlights : [];
+            if (returnFlights.length === 0) return null;
+            const best = returnFlights[0];
+            return {
+              ...best,
+              outbound_flights: outbound.flights ?? [],
+              outbound_layovers: outbound.layovers ?? [],
+              outbound_duration: outbound.duration,
+              outbound_departure_time: outbound.departure_time,
+              outbound_arrival_time: outbound.arrival_time,
+              outbound_carbon_emissions: outbound.carbon_emissions,
+              return_flights: best.flights ?? [],
+              return_layovers: best.layovers ?? [],
+              return_duration: best.duration,
+              return_departure_time: best.departure_time,
+              return_arrival_time: best.arrival_time,
+              booking_token: best.booking_token,
+              departure_token: outbound.departure_token,
+              price: typeof best.price === "number" ? best.price : (typeof outbound.price === "number" ? outbound.price : 0),
+              airline_logo: outbound.airline_logo || best.airline_logo,
+              is_round_trip: true,
+            };
+          } catch (e) {
+            console.warn(`[gflights] return combination failed: ${(e as Error)?.message}`);
+            return null;
+          }
+        }
+
+        for (let i = 0; i < candidates.length; i += CONCURRENCY) {
+          const batch = candidates.slice(i, i + CONCURRENCY);
+          const results = await Promise.all(batch.map(fetchReturn));
+          results.forEach((r) => { if (r) combinedPackages.push(r); });
+        }
+
+        console.log(`[gflights] ✓ round-trip stage 2 · ${combinedPackages.length} complete packages built`);
+
+        data = {
+          ...(data as object),
+          data: {
+            ...((data as any)?.data ?? {}),
+            itineraries: {
+              ...((data as any)?.data?.itineraries ?? {}),
+              topFlights: combinedPackages,
+              otherFlights: [],
+            },
+            __pagination: { pages_fetched: stage1.pages, total_top: combinedPackages.length, total_other: 0 },
+            __trip_type: "round_trip",
+          },
+        };
+      }
     }
 
     if (action === "getBookingDetails" && status >= 200 && status < 300) {

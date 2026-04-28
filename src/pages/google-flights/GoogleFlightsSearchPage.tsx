@@ -34,6 +34,8 @@ import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItine
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
+import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
@@ -70,6 +72,7 @@ interface SearchSnapshot {
   return_date?: string;
   adults: number;
   travel_class: GFlightCabin;
+  multi_legs?: Array<{ departure_id: string; arrival_id: string; date: string }>;
 }
 
 export default function GoogleFlightsSearchPage() {
@@ -105,6 +108,14 @@ export default function GoogleFlightsSearchPage() {
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
   const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
   const [showPriceHistory, setShowPriceHistory] = useState(false);
+
+  const [tripMode, setTripMode] = useState<"round" | "oneway" | "multi">(
+    () => (initial.ret ? "round" : "oneway"),
+  );
+  const [multiLegs, setMultiLegs] = useState<MultiLeg[]>([
+    { from: null, to: null, date: undefined },
+    { from: null, to: null, date: undefined },
+  ]);
 
   const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
     if (!initial.from || !initial.to || !initial.dep) return null;
@@ -142,33 +153,40 @@ export default function GoogleFlightsSearchPage() {
   }, [snapshot, tab, setUrlParams]);
 
   const searchInput: SearchGFlightsInput | null = snapshot
-    ? {
-        departure_id: snapshot.from.id,
-        arrival_id: snapshot.to.id,
-        outbound_date: snapshot.outbound_date,
-        return_date: snapshot.return_date,
-        adults: snapshot.adults,
-        travel_class: snapshot.travel_class,
-        currency: "BRL",
-      }
+    ? (snapshot.multi_legs && snapshot.multi_legs.length >= 2
+        ? {
+            departure_id: snapshot.multi_legs[0].departure_id,
+            arrival_id: snapshot.multi_legs[snapshot.multi_legs.length - 1].arrival_id,
+            outbound_date: snapshot.multi_legs[0].date,
+            adults: snapshot.adults,
+            travel_class: snapshot.travel_class,
+            currency: "BRL",
+            trip_type: "3",
+            multi_city_json: JSON.stringify(snapshot.multi_legs),
+            legs: snapshot.multi_legs,
+          }
+        : {
+            departure_id: snapshot.from.id,
+            arrival_id: snapshot.to.id,
+            outbound_date: snapshot.outbound_date,
+            return_date: snapshot.return_date,
+            adults: snapshot.adults,
+            travel_class: snapshot.travel_class,
+            currency: "BRL",
+            trip_type: snapshot.return_date ? "1" : "2",
+          })
     : null;
 
   const { data: results, isLoading, isError, error } = useSearchGFlights(searchInput);
-  // PriceGraph alimenta tanto a aba Tendência quanto a aba Calendário (fallback do getCalendarPicker quebrado).
-  // Carregamos sempre que houver snapshot pra ter insights agregados na lista também.
   const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, !!snapshot);
-  // getCalendarPicker desabilitado · plano RapidAPI atual não inclui esse endpoint (retorna 403).
-  // Usamos o priceGraphToCalendar como fonte única do calendário.
   const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, false);
 
-  // Calendário final: prioriza dados do getCalendarPicker; se vier vazio, deriva do priceGraph.
   const calendar: GCalendarDay[] = useMemo(() => {
     if (calendarApi.length > 0) return calendarApi;
     return priceGraphToCalendar(trend);
   }, [calendarApi, trend]);
   const calLoading = calApiLoading || (calendarApi.length === 0 && trendLoading);
 
-  // Insights agregados a partir do priceGraph (60+ dias de janela)
   const trendInsights = useMemo(() => {
     const prices = trend.map(p => p.price).filter((p): p is number => typeof p === "number" && Number.isFinite(p));
     if (!prices.length) return null;
@@ -188,9 +206,6 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  // Inteligência de preço agora vem direto de results.price_insight (derivado em useSearchGFlights)
-
-  // Indicador "atualizado há X min" baseado em fetched_at
   const [, forceTick] = useState(0);
   useEffect(() => {
     const id = setInterval(() => forceTick((n) => n + 1), 30_000);
@@ -208,15 +223,41 @@ export default function GoogleFlightsSearchPage() {
     return `atualizado há ${h}h`;
   }, [results?.fetched_at]);
 
-  const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
+  const canSearch = useMemo(() => {
+    if (tripMode === "multi") {
+      return multiLegs.length >= 2 && multiLegs.every(l => l.from && l.to && l.date);
+    }
+    return !!from && !!to && !!outboundDate;
+  }, [tripMode, multiLegs, from, to, outboundDate]);
 
   const handleSearch = () => {
+    if (tripMode === "multi") {
+      const valid = multiLegs.length >= 2 && multiLegs.every(l => l.from && l.to && l.date);
+      if (!valid) {
+        toast.error("Preencha origem, destino e data de cada trecho");
+        return;
+      }
+      setSnapshot({
+        from: multiLegs[0].from!,
+        to: multiLegs[multiLegs.length - 1].to!,
+        outbound_date: format(multiLegs[0].date!, "yyyy-MM-dd"),
+        return_date: undefined,
+        adults,
+        travel_class: travelClass,
+        multi_legs: multiLegs.map(l => ({
+          departure_id: l.from!.id,
+          arrival_id: l.to!.id,
+          date: format(l.date!, "yyyy-MM-dd"),
+        })),
+      });
+      return;
+    }
     if (!from || !to || !outboundDate) return;
     setSnapshot({
       from,
       to,
       outbound_date: format(outboundDate, "yyyy-MM-dd"),
-      return_date: returnDate ? format(returnDate, "yyyy-MM-dd") : undefined,
+      return_date: tripMode === "round" && returnDate ? format(returnDate, "yyyy-MM-dd") : undefined,
       adults,
       travel_class: travelClass,
     });
@@ -311,82 +352,111 @@ export default function GoogleFlightsSearchPage() {
       {/* Formulário */}
       <Card id="gflights-results-anchor" className="p-4 md:p-5">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Origem</Label>
-              <GFlightAirportAutocomplete
-                value={from}
-                onChange={setFrom}
-                placeholder="GRU, São Paulo, JFK..."
-                icon="plane"
-              />
-            </div>
-            <div className="flex items-end justify-center pb-0.5 md:pb-2">
-              <Button
+          {/* Toggle de modo */}
+          <div className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+            {([
+              { v: "round", label: "Ida e volta" },
+              { v: "oneway", label: "Só ida" },
+              { v: "multi", label: "Multi-trecho" },
+            ] as const).map((m) => (
+              <button
+                key={m.v}
                 type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                onClick={swap}
-                disabled={!from && !to}
-                title="Inverter"
+                onClick={() => setTripMode(m.v)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  tripMode === m.v
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
-                <ArrowRightLeft className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Destino</Label>
-              <GFlightAirportAutocomplete
-                value={to}
-                onChange={setTo}
-                placeholder="CDG, Paris, MIA..."
-                icon="mapPin"
-              />
-            </div>
+                {m.label}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Ida</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start", !outboundDate && "text-muted-foreground")}>
-                    <CalIcon className="mr-2 h-4 w-4" />
-                    {outboundDate ? format(outboundDate, "dd/MM/yyyy") : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={outboundDate} onSelect={setOutboundDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Volta (opcional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start", !returnDate && "text-muted-foreground")}>
-                    <CalIcon className="mr-2 h-4 w-4" />
-                    {returnDate ? format(returnDate, "dd/MM/yyyy") : "Só ida"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={returnDate}
-                    onSelect={setReturnDate}
-                    disabled={(d) => (outboundDate ? d < outboundDate : false)}
-                    initialFocus
+          {tripMode === "multi" ? (
+            <GFlightLegsBuilder legs={multiLegs} onChange={setMultiLegs} />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Origem</Label>
+                  <GFlightAirportAutocomplete
+                    value={from}
+                    onChange={setFrom}
+                    placeholder="GRU, São Paulo, JFK..."
+                    icon="plane"
                   />
-                  {returnDate && (
-                    <div className="p-2 border-t border-border">
-                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setReturnDate(undefined)}>
-                        Limpar (só ida)
+                </div>
+                <div className="flex items-end justify-center pb-0.5 md:pb-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={swap}
+                    disabled={!from && !to}
+                    title="Inverter"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Destino</Label>
+                  <GFlightAirportAutocomplete
+                    value={to}
+                    onChange={setTo}
+                    placeholder="CDG, Paris, MIA..."
+                    icon="mapPin"
+                  />
+                </div>
+              </div>
+
+              <div className={cn("grid grid-cols-1 gap-3", tripMode === "round" ? "md:grid-cols-4" : "md:grid-cols-3")}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Ida</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start", !outboundDate && "text-muted-foreground")}>
+                        <CalIcon className="mr-2 h-4 w-4" />
+                        {outboundDate ? format(outboundDate, "dd/MM/yyyy") : "Selecionar"}
                       </Button>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-            </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={outboundDate} onSelect={setOutboundDate} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {tripMode === "round" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Volta</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start", !returnDate && "text-muted-foreground")}>
+                          <CalIcon className="mr-2 h-4 w-4" />
+                          {returnDate ? format(returnDate, "dd/MM/yyyy") : "Selecionar"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={returnDate}
+                          onSelect={setReturnDate}
+                          disabled={(d) => (outboundDate ? d < outboundDate : false)}
+                          initialFocus
+                        />
+                        {returnDate && (
+                          <div className="p-2 border-t border-border">
+                            <Button variant="ghost" size="sm" className="w-full" onClick={() => setReturnDate(undefined)}>
+                              Limpar
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <UsersIcon className="h-3 w-3" /> Adultos

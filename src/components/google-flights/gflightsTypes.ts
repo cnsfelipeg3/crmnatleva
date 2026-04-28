@@ -78,6 +78,22 @@ export interface GFlightItinerary {
   airline_logo?: string;
   departure_token?: string;
   booking_token?: string;
+  // Round-trip · quando is_round_trip=true, flights/layovers refletem a VOLTA
+  // (compatibilidade), e os campos outbound_* trazem a IDA.
+  is_round_trip?: boolean;
+  outbound_flights?: GFlightLeg[];
+  outbound_layovers?: GLayover[];
+  outbound_duration?: number;
+  outbound_duration_text?: string;
+  outbound_departure_time?: string;
+  outbound_arrival_time?: string;
+  outbound_carbon_emissions?: GCarbonEmissions;
+  return_flights?: GFlightLeg[];
+  return_layovers?: GLayover[];
+  return_duration?: number;
+  return_duration_text?: string;
+  return_departure_time?: string;
+  return_arrival_time?: string;
   [k: string]: unknown;
 }
 
