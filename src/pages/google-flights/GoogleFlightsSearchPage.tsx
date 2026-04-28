@@ -157,7 +157,9 @@ export default function GoogleFlightsSearchPage() {
   // PriceGraph alimenta tanto a aba Tendência quanto a aba Calendário (fallback do getCalendarPicker quebrado).
   // Carregamos sempre que houver snapshot pra ter insights agregados na lista também.
   const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, !!snapshot);
-  const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, tab === "calendar");
+  // getCalendarPicker desabilitado · plano RapidAPI atual não inclui esse endpoint (retorna 403).
+  // Usamos o priceGraphToCalendar como fonte única do calendário.
+  const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, false);
 
   // Calendário final: prioriza dados do getCalendarPicker; se vier vazio, deriva do priceGraph.
   const calendar: GCalendarDay[] = useMemo(() => {
