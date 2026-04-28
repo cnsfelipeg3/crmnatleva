@@ -369,24 +369,86 @@ export default function GoogleFlightsSearchPage() {
           </TabsList>
 
           <TabsContent value="list" className="space-y-3">
-            {results?.price_insights && (
-              <Card className="p-3 flex items-center gap-3 flex-wrap text-xs">
-                {results.price_insights.lowest_price !== undefined && (
-                  <span>
-                    Menor preço encontrado: <strong className="text-emerald-600 dark:text-emerald-400">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(results.price_insights.lowest_price)}
-                    </strong>
-                  </span>
-                )}
-                {results.price_insights.price_level && (
-                  <Badge variant="outline" className={cn(
-                    "text-[10px]",
-                    results.price_insights.price_level === "low" && "border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
-                    results.price_insights.price_level === "high" && "border-rose-500/40 text-rose-700 dark:text-rose-300",
-                    results.price_insights.price_level === "typical" && "border-amber-500/40 text-amber-700 dark:text-amber-300",
-                  )}>
-                    Nível: {results.price_insights.price_level}
-                  </Badge>
+            {/* Banner de Insights — agrega resultados + janela de 60 dias */}
+            {(results?.price_insights || trendInsights) && (
+              <Card className="p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {results?.price_insights?.lowest_price !== undefined && (
+                    <div className="space-y-0.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mais barato hoje</div>
+                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatBRL(results.price_insights.lowest_price)}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {results.search_metadata && (results.search_metadata as any).count
+                          ? `${(results.search_metadata as any).count} opções`
+                          : ""}
+                      </div>
+                    </div>
+                  )}
+                  {trendInsights && (
+                    <>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Preço médio · 60 dias</div>
+                        <div className="text-lg font-bold">{formatBRL(trendInsights.avg)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          mediana {formatBRL(trendInsights.median)}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Menor preço · janela</div>
+                        <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatBRL(trendInsights.lowest)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          em {trendInsights.bestDay
+                            ? new Date(trendInsights.bestDay + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {trendInsights.savingsVsSelected ? "Economia possível" : "Pico · janela"}
+                        </div>
+                        <div className={cn(
+                          "text-lg font-bold",
+                          trendInsights.savingsVsSelected
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400",
+                        )}>
+                          {trendInsights.savingsVsSelected
+                            ? `−${formatBRL(trendInsights.savingsVsSelected)}`
+                            : formatBRL(trendInsights.highest)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {trendInsights.savingsVsSelected
+                            ? `escolhendo ${trendInsights.bestDay
+                                ? new Date(trendInsights.bestDay + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                                : "outra data"}`
+                            : "data mais cara"}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {trendInsights && (
+                  <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>
+                      Variação na janela: <strong>{formatBRL(trendInsights.highest - trendInsights.lowest)}</strong>
+                      {" · "}
+                      {Math.round(((trendInsights.highest - trendInsights.lowest) / trendInsights.lowest) * 100)}% spread
+                    </span>
+                    {trendInsights.bestDay && trendInsights.bestDay !== snapshot?.outbound_date && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[11px]"
+                        onClick={() => handleCalendarSelect(trendInsights.bestDay!)}
+                      >
+                        Buscar no melhor dia →
+                      </Button>
+                    )}
+                  </div>
                 )}
               </Card>
             )}
