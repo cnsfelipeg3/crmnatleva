@@ -20,6 +20,8 @@ import { GFlightAirportAutocomplete } from "@/components/google-flights/GFlightA
 import { GFlightResultsList } from "@/components/google-flights/GFlightResultsList";
 import { GFlightCalendarHeatmap } from "@/components/google-flights/GFlightCalendarHeatmap";
 import { GFlightPriceTrendChart } from "@/components/google-flights/GFlightPriceTrendChart";
+import { GFlightPriceInsightBanner } from "@/components/google-flights/GFlightPriceInsightBanner";
+import { GFlightPriceHistoryChart } from "@/components/google-flights/GFlightPriceHistoryChart";
 import {
   useSearchGFlights,
   useCalendarPicker,
@@ -28,7 +30,7 @@ import {
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
-import { formatBRL, DEFAULT_GFLIGHT_FILTERS, classifyPriceAgainstHistory } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
@@ -98,6 +100,7 @@ export default function GoogleFlightsSearchPage() {
   const [tab, setTab] = useState<string>(initial.tab);
   const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
   const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
+  const [showPriceHistory, setShowPriceHistory] = useState(false);
 
   const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
     if (!initial.from || !initial.to || !initial.dep) return null;
@@ -179,14 +182,7 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  // Inteligência de Preço · classifica preço atual contra histórico (low/typical/high)
-  const priceIntel = useMemo(() => {
-    const ph = results?.price_history;
-    const lowestNow = results?.price_insights?.lowest_price;
-    if (!ph || lowestNow == null) return null;
-    const classification = classifyPriceAgainstHistory(lowestNow, ph);
-    return { classification, history: ph, lowestNow };
-  }, [results]);
+  // Inteligência de preço agora vem direto de results.price_insight (derivado em useSearchGFlights)
 
   // Indicador "atualizado há X min" baseado em fetched_at
   const [, forceTick] = useState(0);
@@ -387,32 +383,19 @@ export default function GoogleFlightsSearchPage() {
         </div>
       </Card>
 
-      {/* Painel Inteligência de Preço · price_history */}
-      {snapshot && priceIntel?.classification && (() => {
-        const c = priceIntel.classification;
-        const cfg = c === "low"
-          ? { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-400", label: "Preço baixo", desc: "abaixo da média histórica desta rota · ótima hora pra comprar" }
-          : c === "high"
-            ? { bg: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-400", label: "Preço alto", desc: "acima da média histórica · vale a pena monitorar mais alguns dias" }
-            : { bg: "bg-amber-500/10 border-amber-500/30", text: "text-amber-700 dark:text-amber-400", label: "Preço típico", desc: "dentro da faixa esperada para esta rota" };
-        const histCount = priceIntel.history.history?.length ?? 0;
-        return (
-          <Card className={cn("p-3 border", cfg.bg)}>
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <TrendingUp className={cn("h-4 w-4", cfg.text)} />
-                <span className={cn("text-sm font-semibold", cfg.text)}>{cfg.label}</span>
-              </div>
-              <span className="text-xs text-muted-foreground flex-1 min-w-0">{cfg.desc}</span>
-              {histCount > 0 && (
-                <span className="text-[10px] text-muted-foreground italic">
-                  baseado em {histCount} pontos históricos
-                </span>
-              )}
-            </div>
-          </Card>
-        );
-      })()}
+      {/* Painel Inteligência de Preço · usa price_insight derivado de priceHistory */}
+      {snapshot && results?.price_insight && (
+        <div className="space-y-3">
+          <GFlightPriceInsightBanner
+            insight={results.price_insight}
+            onShowHistory={() => setShowPriceHistory(v => !v)}
+            showHistory={showPriceHistory}
+          />
+          {showPriceHistory && (
+            <GFlightPriceHistoryChart insight={results.price_insight} />
+          )}
+        </div>
+      )}
 
       {/* Tabs com 3 visões */}
       {snapshot && (

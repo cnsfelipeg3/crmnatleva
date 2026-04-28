@@ -1,17 +1,26 @@
 import { useMemo } from "react";
-import { Filter, X, Briefcase, Luggage } from "lucide-react";
+import {
+  Filter, X, Briefcase, Luggage, Plane, Sunrise, Sun, Moon, Leaf,
+  ShieldAlert, MapPin,
+} from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import {
   formatBRL,
   formatMinutes,
   detectBags,
+  classifyLayover,
+  getArrHour,
+  getConnectingAirportIds,
+  hasExtension,
   type GFlightFilters,
   type GFlightItinerary,
 } from "./gflightsTypes";
@@ -64,6 +73,31 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
   const effectivePMax = filters.priceMax || limits.pMax;
   const effectiveDMax = filters.durationMaxMin || limits.dMax;
 
+  // Aeroportos de conexão · count dinâmico
+  const connAirports = useMemo(() => {
+    const map = new Map<string, { count: number; city?: string }>();
+    for (const it of flights) {
+      for (const lv of it.layovers ?? []) {
+        if (!lv.id) continue;
+        const cur = map.get(lv.id) ?? { count: 0, city: lv.city };
+        cur.count += 1;
+        if (!cur.city) cur.city = lv.city;
+        map.set(lv.id, cur);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, info]) => ({ id, count: info.count, city: info.city }))
+      .sort((a, b) => b.count - a.count);
+  }, [flights]);
+
+  const QUICK = [
+    { v: "direct" as const, label: "Direto", icon: Plane },
+    { v: "morning" as const, label: "Manhã", icon: Sunrise },
+    { v: "afternoon" as const, label: "Tarde", icon: Sun },
+    { v: "evening" as const, label: "Noite", icon: Moon },
+    { v: "eco" as const, label: "Eco", icon: Leaf },
+  ];
+
   return (
     <Card className="p-4 space-y-5 sticky top-4">
       <div className="flex items-center gap-2">
@@ -77,6 +111,34 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
         >
           <X className="h-3 w-3" /> Limpar
         </Button>
+      </div>
+
+      {/* Quick filters · chips */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Atalhos</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK.map(({ v, label, icon: Icon }) => {
+            const active = filters.quickFilter === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() =>
+                  onChange({ ...filters, quickFilter: active ? null : v })
+                }
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border transition-all",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Ordenação */}
@@ -224,6 +286,91 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
           <Luggage className="h-3 w-3" /> Despachada
         </label>
       </div>
+
+      {/* Janela de chegada */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Horário de chegada</Label>
+          <span className="text-[10px] text-muted-foreground font-mono">
+            {String(filters.arrHourFrom).padStart(2, "0")}h · {String(filters.arrHourTo).padStart(2, "0")}h
+          </span>
+        </div>
+        <Slider
+          min={0}
+          max={24}
+          step={1}
+          value={[filters.arrHourFrom, filters.arrHourTo]}
+          onValueChange={(v) => onChange({ ...filters, arrHourFrom: v[0], arrHourTo: v[1] })}
+        />
+      </div>
+
+      {/* Aeroportos de conexão · count dinâmico */}
+      {connAirports.length > 0 && (
+        <div className="space-y-2">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+            Aeroportos de conexão
+          </Label>
+          <ScrollArea className="max-h-44 pr-2">
+            <div className="space-y-1.5">
+              {connAirports.map(({ id, count, city }) => {
+                const isExcluded = filters.excludeConnectingAirports.includes(id);
+                return (
+                  <div key={id} className="flex items-center justify-between gap-2 text-[11px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="font-mono font-semibold">{id}</span>
+                      {city && <span className="text-muted-foreground truncate">· {city}</span>}
+                      <span className="text-muted-foreground">({count})</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onChange({
+                        ...filters,
+                        excludeConnectingAirports: isExcluded
+                          ? filters.excludeConnectingAirports.filter(x => x !== id)
+                          : [...filters.excludeConnectingAirports, id],
+                      })}
+                      className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded border transition-colors shrink-0",
+                        isExcluded
+                          ? "bg-rose-500/10 border-rose-500/40 text-rose-700 dark:text-rose-300"
+                          : "border-border text-muted-foreground hover:border-rose-500/30",
+                      )}
+                    >
+                      {isExcluded ? "Excluído" : "Excluir"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </div>
+      )}
+
+      {/* Segurança · toggles */}
+      <div className="space-y-2">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Segurança</Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="ex-self-transfer" className="text-xs cursor-pointer flex items-center gap-1.5">
+            <ShieldAlert className="h-3 w-3" /> Sem self-transfer
+          </Label>
+          <Switch
+            id="ex-self-transfer"
+            checked={filters.excludeSelfTransfer}
+            onCheckedChange={(v) => onChange({ ...filters, excludeSelfTransfer: !!v })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-2">
+          <Label htmlFor="ex-prob-layover" className="text-xs cursor-pointer">
+            Sem conexão muito curta/longa
+          </Label>
+          <Switch
+            id="ex-prob-layover"
+            checked={filters.excludeProblematicLayovers}
+            onCheckedChange={(v) => onChange({ ...filters, excludeProblematicLayovers: !!v })}
+          />
+        </div>
+      </div>
     </Card>
   );
 }
@@ -284,6 +431,72 @@ export function applyFilters(
   }
   if (filters.bagChecked) {
     out = out.filter(f => detectBags(f).checked);
+  }
+
+  // Self-transfer · exclui voos vendidos como 2 trechos separados
+  if (filters.excludeSelfTransfer) {
+    out = out.filter(f => !f.self_transfer);
+  }
+
+  // Layovers problemáticas · exclui se qualquer conexão for tight (< 60min)
+  // ou long (> 240min) ou pernoite forçado
+  if (filters.excludeProblematicLayovers) {
+    out = out.filter(f => {
+      const layovers = f.layovers ?? [];
+      if (!layovers.length) return true; // sem conexão = sem problema
+      return !layovers.some(l => {
+        const c = classifyLayover(l);
+        return c.severity !== "ok";
+      });
+    });
+  }
+
+  // Janela de chegada
+  if (filters.arrHourFrom > 0 || filters.arrHourTo < 24) {
+    out = out.filter(f => {
+      const h = getArrHour(f);
+      if (h === null) return true;
+      return h >= filters.arrHourFrom && h <= filters.arrHourTo;
+    });
+  }
+
+  // Aeroportos de conexão excluídos
+  if (filters.excludeConnectingAirports.length > 0) {
+    const blocked = new Set(filters.excludeConnectingAirports);
+    out = out.filter(f => {
+      const ids = getConnectingAirportIds(f);
+      return !ids.some(id => blocked.has(id));
+    });
+  }
+
+  // Quick filter · atalho exclusivo (direct/morning/afternoon/evening/eco)
+  if (filters.quickFilter) {
+    out = out.filter(f => {
+      switch (filters.quickFilter) {
+        case "direct":
+          return (f.stops ?? f.flights.length - 1) === 0;
+        case "morning": {
+          const h = getDepHour(f);
+          return h !== null && h >= 5 && h < 12;
+        }
+        case "afternoon": {
+          const h = getDepHour(f);
+          return h !== null && h >= 12 && h < 18;
+        }
+        case "evening": {
+          const h = getDepHour(f);
+          return h !== null && (h >= 18 || h < 5);
+        }
+        case "eco":
+          // Voos com menor pegada vs típica da rota OU com tag CO2 reduzida
+          if (f.carbon_emissions?.difference_percent != null) {
+            return f.carbon_emissions.difference_percent < 0;
+          }
+          return hasExtension(f, /(less\s+co2|emissões\s+menor|lower\s+emissions)/i);
+        default:
+          return true;
+      }
+    });
   }
 
   // Sort

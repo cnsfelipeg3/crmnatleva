@@ -142,6 +142,14 @@ export interface GFlightFilters {
   bagCarryOn: boolean;
   bagChecked: boolean;
   sortBy: "price_asc" | "duration_asc" | "departure_asc" | "co2_asc";
+  // Filtros premium · novos
+  excludeSelfTransfer: boolean;
+  excludeProblematicLayovers: boolean;
+  arrHourFrom: number;
+  arrHourTo: number;
+  excludeConnectingAirports: string[];
+  onlyConnectingAirports: string[];
+  quickFilter: "direct" | "morning" | "afternoon" | "evening" | "eco" | null;
 }
 
 export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
@@ -155,6 +163,13 @@ export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
   bagCarryOn: false,
   bagChecked: false,
   sortBy: "price_asc",
+  excludeSelfTransfer: false,
+  excludeProblematicLayovers: false,
+  arrHourFrom: 0,
+  arrHourTo: 24,
+  excludeConnectingAirports: [],
+  onlyConnectingAirports: [],
+  quickFilter: null,
 };
 
 export interface GPriceInsights {
@@ -168,11 +183,26 @@ export interface GPriceInsights {
   typical_price_range?: [number, number];
 }
 
+// Inteligência de preço · derivada de priceHistory.summary + priceHistory.history
+export type GPriceLevel = "low" | "typical" | "high" | "unknown";
+
+export interface GPriceInsight {
+  current: number;
+  lowThreshold?: number;
+  highThreshold?: number;
+  level: GPriceLevel;
+  historyPoints: Array<{ date: string; price: number }>;
+  averageHistory: number;
+  minHistory: number;
+  maxHistory: number;
+}
+
 export interface GSearchFlightsResult {
   best_flights?: GFlightItinerary[];
   other_flights?: GFlightItinerary[];
   price_insights?: GPriceInsights;
   price_history?: GPriceHistory;            // novo · vem do searchFlights.priceHistory
+  price_insight?: GPriceInsight;            // derivado · banner inteligente
   search_metadata?: Record<string, unknown>;
   fetched_at?: string;                      // ISO timestamp da resposta
   [k: string]: unknown;
@@ -426,6 +456,93 @@ export function detectBags(it: GFlightItinerary): { carry_on: boolean; checked: 
  * Classifica um preço dentro das faixas históricas (low/typical/high) usando as
  * regras de operação que vêm da API (>, <, between).
  */
+// ----------------------------------------------------------------------
+// Layover classification · severity por duração
+// ----------------------------------------------------------------------
+
+export type LayoverSeverity = "tight" | "ok" | "long" | "overnight";
+
+export interface LayoverClassification {
+  severity: LayoverSeverity;
+  label: string;
+  hint: string;
+  // Tailwind tokens contextualizados
+  textClass: string;
+  bgClass: string;
+  borderClass: string;
+}
+
+/**
+ * Classifica uma conexão por duração + overnight.
+ * - tight: < 60min (risco real de perder o voo)
+ * - long: > 240min (4h+ arrastada)
+ * - overnight: pernoite forçado
+ * - ok: faixa saudável (1h-4h)
+ */
+export function classifyLayover(lay: GLayover): LayoverClassification {
+  const dur = typeof lay.duration === "number" ? lay.duration : 0;
+  if (lay.overnight) {
+    return {
+      severity: "overnight",
+      label: "Pernoite",
+      hint: "Conexão dorme no aeroporto · planeje hotel ou day-use",
+      textClass: "text-indigo-700 dark:text-indigo-300",
+      bgClass: "bg-indigo-500/10",
+      borderClass: "border-indigo-500/30",
+    };
+  }
+  if (dur > 0 && dur < 60) {
+    return {
+      severity: "tight",
+      label: "Conexão apertada",
+      hint: "Menos de 1h · risco de perder voo se primeiro atrasar",
+      textClass: "text-rose-700 dark:text-rose-300",
+      bgClass: "bg-rose-500/10",
+      borderClass: "border-rose-500/30",
+    };
+  }
+  if (dur > 240) {
+    return {
+      severity: "long",
+      label: "Conexão arrastada",
+      hint: "Mais de 4h de espera · considere bagunçar o roteiro",
+      textClass: "text-amber-700 dark:text-amber-300",
+      bgClass: "bg-amber-500/10",
+      borderClass: "border-amber-500/30",
+    };
+  }
+  return {
+    severity: "ok",
+    label: "Conexão tranquila",
+    hint: "Tempo confortável entre voos",
+    textClass: "text-emerald-700 dark:text-emerald-300",
+    bgClass: "bg-emerald-500/10",
+    borderClass: "border-emerald-500/30",
+  };
+}
+
+/** Pior layover do itinerário (para badge no card) */
+export function worstLayover(it: GFlightItinerary): LayoverClassification | null {
+  const layovers = it.layovers ?? [];
+  if (!layovers.length) return null;
+  const ranked = layovers.map(classifyLayover);
+  const order: Record<LayoverSeverity, number> = { overnight: 3, tight: 4, long: 2, ok: 0 };
+  return ranked.sort((a, b) => order[b.severity] - order[a.severity])[0] ?? null;
+}
+
+/** Extrai hora de chegada local do último leg */
+export function getArrHour(it: GFlightItinerary): number | null {
+  const legs = it.flights ?? [];
+  const t = legs[legs.length - 1]?.arrival_airport?.time;
+  const p = parseDcDateTime(t);
+  return p ? p.date.getHours() : null;
+}
+
+/** Extrai todos os IATA de aeroportos de conexão */
+export function getConnectingAirportIds(it: GFlightItinerary): string[] {
+  return (it.layovers ?? []).map(l => l.id).filter((x): x is string => !!x);
+}
+
 export function classifyPriceAgainstHistory(
   price: number | null | undefined,
   history?: GPriceHistory,
