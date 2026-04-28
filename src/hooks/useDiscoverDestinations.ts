@@ -16,9 +16,12 @@ export interface DiscoveredDestination {
   iata: string;
   city: string;
   country: string;
+  country_code?: string;
   region: string;
   tags: string[];
   hero_image_url?: string;
+  hero_photographer?: string;
+  hero_photographer_url?: string;
   description?: string;
   visa_required: boolean;
   avg_trip_days: number;
@@ -26,6 +29,18 @@ export interface DiscoveredDestination {
   sampleFlight: any;
   fromCache: boolean;
   fitsBudget: boolean;
+  flightDeparture?: string | null;
+  flightArrival?: string | null;
+  flightDuration?: string | null;
+  flightStops?: number;
+  flightAirline?: string | null;
+  flightAirlineLogo?: string | null;
+  flightLayovers?: Array<{
+    id: string;
+    city?: string;
+    duration?: number;
+    durationText?: string;
+  }>;
 }
 
 export interface DiscoverResponse {

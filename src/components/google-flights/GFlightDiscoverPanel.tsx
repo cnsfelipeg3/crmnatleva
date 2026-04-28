@@ -136,6 +136,10 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
                 key={d.iata}
                 destination={d}
                 isCheapest={i === 0}
+                departureDate={data.period?.day1}
+                returnDate={data.period?.returnDate}
+                paxAdults={data.extracted?.paxAdults || 1}
+                originIata={data.extracted?.origin || "GRU"}
                 onSelectDestination={(dest) => onSelectDestination(dest, data)}
               />
             ))}
