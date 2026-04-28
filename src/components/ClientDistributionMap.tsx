@@ -327,3 +327,15 @@ function ClientDistributionMapInner() {
     </div>
   );
 }
+
+export default function ClientDistributionMap() {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Distribuição geográfica indisponível"
+        className="h-80 rounded-lg"
+      />
+    );
+  }
+  return <ClientDistributionMapInner />;
+}
