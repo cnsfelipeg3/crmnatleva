@@ -18,6 +18,7 @@ import type {
   GPriceLevel,
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
+import { analyzeFare } from "@/components/google-flights/fareClassifier";
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
