@@ -20,6 +20,8 @@ import { GFlightAirportAutocomplete } from "@/components/google-flights/GFlightA
 import { GFlightResultsList } from "@/components/google-flights/GFlightResultsList";
 import { GFlightCalendarHeatmap } from "@/components/google-flights/GFlightCalendarHeatmap";
 import { GFlightPriceTrendChart } from "@/components/google-flights/GFlightPriceTrendChart";
+import { GFlightPriceInsightBanner } from "@/components/google-flights/GFlightPriceInsightBanner";
+import { GFlightPriceHistoryChart } from "@/components/google-flights/GFlightPriceHistoryChart";
 import {
   useSearchGFlights,
   useCalendarPicker,
