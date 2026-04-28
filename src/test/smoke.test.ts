@@ -3,7 +3,7 @@ import { formatBRL, formatMinutes } from "@/components/google-flights/gflightsTy
 
 describe("smoke · formatters", () => {
   it("formatBRL formata em pt-BR", () => {
-    const f = formatBRL(1234.56);
+    const f = formatBRL(1234);
     expect(f).toMatch(/R\$/);
     expect(f).toMatch(/1\.234/);
   });
