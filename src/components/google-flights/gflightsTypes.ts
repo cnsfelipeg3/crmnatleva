@@ -355,3 +355,41 @@ export function formatCO2(grams?: number): string {
   if (kg < 10) return `${kg.toFixed(1)} kg CO₂`;
   return `${Math.round(kg)} kg CO₂`;
 }
+
+/**
+ * Classifica um preço dentro das faixas históricas (low/typical/high) usando as
+ * regras de operação que vêm da API (>, <, between).
+ */
+export function classifyPriceAgainstHistory(
+  price: number | null | undefined,
+  history?: GPriceHistory,
+): "low" | "typical" | "high" | null {
+  if (!history || price == null || !Number.isFinite(price)) return null;
+  if (history.classification) return history.classification;
+
+  function matchBand(bands?: GPriceBand[]): boolean {
+    if (!bands?.length) return false;
+    // operações esperadas: "<", "<=", ">", ">=", "between"
+    if (bands.length === 1) {
+      const b = bands[0];
+      if (b.operation === "<" || b.operation === "<=") return price <= b.value;
+      if (b.operation === ">" || b.operation === ">=") return price >= b.value;
+    }
+    if (bands.length >= 2) {
+      const vals = bands.map(b => b.value).sort((a, z) => a - z);
+      return price >= vals[0] && price <= vals[vals.length - 1];
+    }
+    return false;
+  }
+
+  if (matchBand(history.low)) return "low";
+  if (matchBand(history.high)) return "high";
+  if (matchBand(history.typical)) return "typical";
+  // Fallback: comparar com summary.current
+  if (history.current) {
+    if (price < history.current * 0.85) return "low";
+    if (price > history.current * 1.15) return "high";
+    return "typical";
+  }
+  return null;
+}
