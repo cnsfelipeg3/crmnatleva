@@ -229,6 +229,13 @@ export default function GoogleFlightsSearchPage() {
   // Label "atualizado há X min" foi extraída pra <UpdatedAgoLabel/> abaixo,
   // pra evitar re-render da página inteira a cada 30s (custoso com applyFilters).
 
+  // Handler estável · evita re-render dos cards de resultado a cada keystroke
+  // de filtro (props do GFlightResultsList ficam shallow-equal).
+  const handleSelectItinerary = useCallback(
+    (it: GFlightItinerary) => setSelectedItinerary(it),
+    [],
+  );
+
   const canSearch = useMemo(() => {
     if (tripMode === "multi") {
       return multiLegs.length >= 2 && multiLegs.every(l => l.from && l.to && l.date);
