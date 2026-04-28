@@ -7,9 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import type {
   GAirport,
   GBookingProvider,
+  GBookingDetailsResponse,
+  GBagInfo,
+  GBookingSubOffer,
   GCalendarDay,
   GFlightCabin,
   GPriceGraphPoint,
+  GPriceHistory,
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
 
