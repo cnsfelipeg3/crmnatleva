@@ -142,6 +142,14 @@ export interface GFlightFilters {
   bagCarryOn: boolean;
   bagChecked: boolean;
   sortBy: "price_asc" | "duration_asc" | "departure_asc" | "co2_asc";
+  // Filtros premium · novos
+  excludeSelfTransfer: boolean;
+  excludeProblematicLayovers: boolean;
+  arrHourFrom: number;
+  arrHourTo: number;
+  excludeConnectingAirports: string[];
+  onlyConnectingAirports: string[];
+  quickFilter: "direct" | "morning" | "afternoon" | "evening" | "eco" | null;
 }
 
 export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
@@ -155,6 +163,13 @@ export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
   bagCarryOn: false,
   bagChecked: false,
   sortBy: "price_asc",
+  excludeSelfTransfer: false,
+  excludeProblematicLayovers: false,
+  arrHourFrom: 0,
+  arrHourTo: 24,
+  excludeConnectingAirports: [],
+  onlyConnectingAirports: [],
+  quickFilter: null,
 };
 
 export interface GPriceInsights {
@@ -168,11 +183,26 @@ export interface GPriceInsights {
   typical_price_range?: [number, number];
 }
 
+// Inteligência de preço · derivada de priceHistory.summary + priceHistory.history
+export type GPriceLevel = "low" | "typical" | "high" | "unknown";
+
+export interface GPriceInsight {
+  current: number;
+  lowThreshold?: number;
+  highThreshold?: number;
+  level: GPriceLevel;
+  historyPoints: Array<{ date: string; price: number }>;
+  averageHistory: number;
+  minHistory: number;
+  maxHistory: number;
+}
+
 export interface GSearchFlightsResult {
   best_flights?: GFlightItinerary[];
   other_flights?: GFlightItinerary[];
   price_insights?: GPriceInsights;
   price_history?: GPriceHistory;            // novo · vem do searchFlights.priceHistory
+  price_insight?: GPriceInsight;            // derivado · banner inteligente
   search_metadata?: Record<string, unknown>;
   fetched_at?: string;                      // ISO timestamp da resposta
   [k: string]: unknown;

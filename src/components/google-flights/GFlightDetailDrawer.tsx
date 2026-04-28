@@ -10,9 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFlightBookingDetails, invokeGFlights } from "@/hooks/useGoogleFlights";
+import { useFlightBookingDetails, fetchBookingURL } from "@/hooks/useGoogleFlights";
 import {
   cabinLabel, classifyExtensions, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
@@ -170,28 +171,21 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   // Fallback: se não tiver token ou der erro, usa provider.website cru.
   async function handleReserveProvider(p: GBookingProvider) {
     const reserveId = `${p.id}-${p.title}`;
-    console.log("[gflights:reserve] provider clicked", { id: p.id, title: p.title, hasToken: !!p.token, tokenPreview: p.token?.slice(0, 30), website: p.website });
     if (!p.token) {
-      console.warn("[gflights:reserve] no provider token · falling back to website", p.website);
       if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
       else toast.error("Link de reserva indisponível neste canal");
       return;
     }
     setReservingId(reserveId);
     try {
-      console.log("[gflights:reserve] calling getBookingURL with token preview", p.token.slice(0, 30));
-      const data = await invokeGFlights<any>("getBookingURL", { token: p.token });
-      console.log("[gflights:reserve] getBookingURL response", data);
-      if (data && data.status === false) {
-        toast.error("Não foi possível obter o link direto. Abrindo site do canal.");
-        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
-        return;
-      }
-      const link = typeof data?.data === "string" ? data.data : null;
+      const link = await fetchBookingURL(p.token);
       if (!link) {
-        console.warn("[gflights:reserve] no link in response · fallback");
-        if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
-        else toast.error("Link de reserva indisponível");
+        if (p.website) {
+          toast.message("Link direto indisponível · abrindo site do canal");
+          window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        } else {
+          toast.error("Não foi possível obter link de reserva");
+        }
         return;
       }
       window.open(link, "_blank", "noopener,noreferrer");
@@ -254,6 +248,24 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         <ScrollArea className="flex-1">
           <div className="px-5 py-4 space-y-5">
+            {/* Self-transfer warning · destaque destrutivo */}
+            {itinerary.self_transfer && (
+              <Alert variant="destructive">
+                <ShieldAlert className="h-4 w-4" />
+                <AlertTitle>Atenção · Voo com self-transfer</AlertTitle>
+                <AlertDescription className="space-y-1.5 text-xs">
+                  <p>
+                    Esse voo é vendido como 2 trechos separados. Em caso de atraso ou cancelamento
+                    do primeiro voo, a companhia <strong>não se responsabiliza</strong> por perda de conexão.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Recomenda-se margem mínima de 4 a 5 horas entre os voos e seguro-viagem com
+                    cobertura de conexão perdida.
+                  </p>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {/* Trajeto */}
             <section className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Trajeto</h3>

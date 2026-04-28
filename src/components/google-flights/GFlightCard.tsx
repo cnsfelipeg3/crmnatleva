@@ -1,12 +1,14 @@
+import { useMemo } from "react";
 import {
   Plane, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Wifi, Power, Tv, Award, Zap, DollarSign, ChevronRight, Layers,
+  Clock, Moon, ShieldAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   cabinLabel, dayDiff, detectBags, formatBRL, formatMinutes, formatTime, hasExtension,
-  type GFlightItinerary,
+  type GFlightItinerary, type GLayover,
 } from "./gflightsTypes";
 
 interface Props {
@@ -16,6 +18,8 @@ interface Props {
   isFastest?: boolean;
   onSelect?: (it: GFlightItinerary) => void;
 }
+
+type LayoverKind = "tight" | "long" | "overnight" | "ok";
 
 export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect }: Props) {
   const flights = itinerary.flights ?? [];
@@ -36,6 +40,23 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
   const hasUSB = hasExtension(itinerary, /USB|power/i);
   const hasWifi = hasExtension(itinerary, /wi-?fi/i);
   const hasVideo = hasExtension(itinerary, /video|on-demand|entertainment/i);
+
+  // Detecta o pior layover · prioridade tight > overnight > long
+  const worstLayover = useMemo<(GLayover & { kind: LayoverKind }) | null>(() => {
+    if (!layovers.length) return null;
+    let worst: (GLayover & { kind: LayoverKind }) | null = null;
+    for (const lv of layovers) {
+      const dur = lv.duration ?? 0;
+      let kind: LayoverKind = "ok";
+      if (dur > 0 && dur < 45) kind = "tight";
+      else if (dur > 720) kind = "overnight";
+      else if (dur > 300) kind = "long";
+      if (kind === "tight") return { ...lv, kind };
+      if (kind === "overnight" && (!worst || worst.kind === "ok" || worst.kind === "long")) worst = { ...lv, kind };
+      if (kind === "long" && (!worst || worst.kind === "ok")) worst = { ...lv, kind };
+    }
+    return worst;
+  }, [layovers]);
 
   return (
     <button
@@ -156,8 +177,30 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
           </Badge>
         )}
         {itinerary.self_transfer && (
-          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-500/30 text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="h-2.5 w-2.5" /> Self-transfer
+          <Badge
+            variant="outline"
+            className="text-[10px] gap-1 h-5 border-rose-500/50 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+            title="Sem proteção em conexão perdida"
+          >
+            <ShieldAlert className="h-2.5 w-2.5" /> Self-transfer · sem proteção
+          </Badge>
+        )}
+        {worstLayover?.kind === "tight" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300">
+            <AlertTriangle className="h-2.5 w-2.5" />
+            Conexão apertada · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
+          </Badge>
+        )}
+        {worstLayover?.kind === "long" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+            <Clock className="h-2.5 w-2.5" />
+            Conexão arrastada · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
+          </Badge>
+        )}
+        {worstLayover?.kind === "overnight" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+            <Moon className="h-2.5 w-2.5" />
+            Pernoite forçado · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
           </Badge>
         )}
         {itinerary.delay?.values && (
