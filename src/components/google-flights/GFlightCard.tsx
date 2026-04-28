@@ -92,7 +92,7 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
       </div>
 
       {/* Tags de destaque */}
-      {(isBest || isCheapest || isFastest) && (
+      {(isBest || isCheapest || isFastest || itinerary.is_round_trip || (flights.length >= 3 && !itinerary.is_round_trip)) && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {isBest && (
             <Badge variant="default" className="gap-1 text-[10px]"><Award className="h-2.5 w-2.5" /> Recomendado</Badge>
@@ -107,45 +107,103 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
               <Zap className="h-2.5 w-2.5" /> Mais rápido
             </Badge>
           )}
+          {itinerary.is_round_trip && (
+            <Badge variant="outline" className="gap-1 text-[10px] border-violet-500/40 text-violet-700 dark:text-violet-300">
+              <Repeat className="h-2.5 w-2.5" /> Ida e volta
+            </Badge>
+          )}
+          {flights.length >= 3 && !itinerary.is_round_trip && (
+            <Badge variant="outline" className="gap-1 text-[10px] border-indigo-500/40 text-indigo-700 dark:text-indigo-300">
+              🗺️ {flights.length} trechos
+            </Badge>
+          )}
         </div>
       )}
 
-      {/* Rota */}
-      <div className="flex items-center gap-3 mb-3">
-        <div className="text-right">
-          <div className="text-base font-bold font-mono leading-none">{formatTime(dep?.time)}</div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">{dep?.id}</div>
-        </div>
-        <div className="flex-1 flex flex-col items-center min-w-0">
-          <div className="text-[10px] text-muted-foreground">
-            {itinerary.total_duration_text || formatMinutes(itinerary.total_duration)}
+      {/* Mini-render de uma rota (leg início → leg fim · serve pra IDA, VOLTA ou única) */}
+      {(() => {
+        const renderRoute = (legs: typeof flights, lays: typeof layovers, label?: string, totalText?: string) => {
+          const f = legs[0];
+          const l = legs[legs.length - 1];
+          const d = f?.departure_airport;
+          const a = l?.arrival_airport;
+          const ovn = dayDiff(d?.time, a?.time);
+          const stp = Math.max(lays.length, Math.max(0, legs.length - 1));
+          return (
+            <div className="space-y-1">
+              {label && (
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  {label}
+                  {totalText && <span className="text-muted-foreground/70 normal-case font-normal">· {totalText}</span>}
+                </div>
+              )}
+              <div className="flex items-center gap-3">
+                <div className="text-right">
+                  <div className="text-base font-bold font-mono leading-none">{formatTime(d?.time)}</div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{d?.id}</div>
+                </div>
+                <div className="flex-1 flex flex-col items-center min-w-0">
+                  <div className="text-[10px] text-muted-foreground">{totalText || ""}</div>
+                  <div className="w-full h-px bg-border my-1 relative">
+                    {lays.map((_, i) => (
+                      <div key={i}
+                        className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500"
+                        style={{ left: `${((i + 1) / (lays.length + 1)) * 100}%` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate w-full text-center">
+                    {stp === 0
+                      ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Direto</span>
+                      : <span className="text-amber-700 dark:text-amber-400 font-medium">
+                          {stp} {stp === 1 ? "parada" : "paradas"}
+                          {lays.length > 0 && ` · ${lays.map((x) => x.id).filter(Boolean).join(", ")}`}
+                        </span>
+                    }
+                  </div>
+                </div>
+                <div className="text-left">
+                  <div className="text-base font-bold font-mono leading-none">
+                    {formatTime(a?.time)}
+                    {ovn > 0 && <sup className="text-[10px] text-rose-500 ml-0.5">+{ovn}</sup>}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground mt-0.5">{a?.id}</div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+
+        if (itinerary.is_round_trip && itinerary.outbound_flights?.length && itinerary.return_flights?.length) {
+          return (
+            <div className="space-y-3 mb-3">
+              {renderRoute(
+                itinerary.outbound_flights,
+                itinerary.outbound_layovers ?? [],
+                "✈️ Ida",
+                itinerary.outbound_duration_text || formatMinutes(itinerary.outbound_duration),
+              )}
+              <div className="border-t border-dashed border-border/60" />
+              {renderRoute(
+                itinerary.return_flights,
+                itinerary.return_layovers ?? [],
+                "🔄 Volta",
+                itinerary.return_duration_text || formatMinutes(itinerary.return_duration),
+              )}
+            </div>
+          );
+        }
+        return (
+          <div className="mb-3">
+            {renderRoute(
+              flights,
+              layovers,
+              undefined,
+              itinerary.total_duration_text || formatMinutes(itinerary.total_duration),
+            )}
           </div>
-          <div className="w-full h-px bg-border my-1 relative">
-            {layovers.map((_, i) => (
-              <div key={i}
-                className="absolute top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-amber-500"
-                style={{ left: `${((i + 1) / (layovers.length + 1)) * 100}%` }}
-              />
-            ))}
-          </div>
-          <div className="text-[10px] text-muted-foreground truncate w-full text-center">
-            {stops === 0
-              ? <span className="text-emerald-600 dark:text-emerald-400 font-medium">Direto</span>
-              : <span className="text-amber-700 dark:text-amber-400 font-medium">
-                  {stops} {stops === 1 ? "parada" : "paradas"}
-                  {layovers.length > 0 && ` · ${layovers.map(l => l.id).filter(Boolean).join(", ")}`}
-                </span>
-            }
-          </div>
-        </div>
-        <div className="text-left">
-          <div className="text-base font-bold font-mono leading-none">
-            {formatTime(arr?.time)}
-            {overnight > 0 && <sup className="text-[10px] text-rose-500 ml-0.5">+{overnight}</sup>}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">{arr?.id}</div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Bottom: badges */}
       <div className="flex items-center gap-1.5 flex-wrap pt-3 border-t border-border/40">
