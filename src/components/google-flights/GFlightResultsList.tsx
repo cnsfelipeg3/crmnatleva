@@ -108,4 +108,4 @@ export const GFlightResultsList = forwardRef<HTMLDivElement, Props>(function GFl
       )}
     </div>
   );
-}
+});
