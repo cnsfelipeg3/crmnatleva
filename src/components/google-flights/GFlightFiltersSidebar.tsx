@@ -69,6 +69,31 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
   const effectivePMax = filters.priceMax || limits.pMax;
   const effectiveDMax = filters.durationMaxMin || limits.dMax;
 
+  // Aeroportos de conexão · count dinâmico
+  const connAirports = useMemo(() => {
+    const map = new Map<string, { count: number; city?: string }>();
+    for (const it of flights) {
+      for (const lv of it.layovers ?? []) {
+        if (!lv.id) continue;
+        const cur = map.get(lv.id) ?? { count: 0, city: lv.city };
+        cur.count += 1;
+        if (!cur.city) cur.city = lv.city;
+        map.set(lv.id, cur);
+      }
+    }
+    return Array.from(map.entries())
+      .map(([id, info]) => ({ id, count: info.count, city: info.city }))
+      .sort((a, b) => b.count - a.count);
+  }, [flights]);
+
+  const QUICK = [
+    { v: "direct" as const, label: "Direto", icon: Plane },
+    { v: "morning" as const, label: "Manhã", icon: Sunrise },
+    { v: "afternoon" as const, label: "Tarde", icon: Sun },
+    { v: "evening" as const, label: "Noite", icon: Moon },
+    { v: "eco" as const, label: "Eco", icon: Leaf },
+  ];
+
   return (
     <Card className="p-4 space-y-5 sticky top-4">
       <div className="flex items-center gap-2">
