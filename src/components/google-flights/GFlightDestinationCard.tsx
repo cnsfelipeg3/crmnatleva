@@ -59,6 +59,11 @@ export function GFlightDestinationCard({
   const bg = REGION_BG[destination.region] ?? "from-primary/20 to-primary/10";
   const stops = destination.flightStops ?? 0;
   const totalForPax = destination.minPrice * paxAdults;
+  const coverUrl = getDestinationCoverUrl(
+    destination.city,
+    destination.country,
+    destination.hero_image_url,
+  );
 
   return (
     <Card
