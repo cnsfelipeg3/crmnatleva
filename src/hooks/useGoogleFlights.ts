@@ -120,7 +120,10 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
           airline_code: leg?.airline_code,
           airline_logo: leg?.airline_logo,
           flight_number: leg?.flight_number,
-          airplane: leg?.aircraft,
+          aircraft: leg?.aircraft,
+          seat: leg?.seat,
+          legroom: leg?.legroom,
+          travel_class: leg?.travel_class,
           departure_airport: leg?.departure_airport ? {
             id: leg.departure_airport.airport_code,
             name: leg.departure_airport.airport_name,
@@ -132,8 +135,7 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
             time: leg.arrival_airport.time,
           } : undefined,
           duration: typeof leg?.duration === "object" ? leg.duration?.raw : leg?.duration,
-          travel_class: leg?.travel_class,
-          legroom: leg?.legroom,
+          duration_text: typeof leg?.duration === "object" ? leg.duration?.text : undefined,
           extensions: Array.isArray(leg?.extensions) ? leg.extensions : undefined,
         };
       }
@@ -141,17 +143,31 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
       function mapLayover(lv: any) {
         return {
           duration: lv?.duration,
+          duration_text: lv?.duration_label,
           name: lv?.airport_name,
           id: lv?.airport_code,
+          city: lv?.city,
           overnight: lv?.overnight ?? false,
         };
       }
 
       function mapItinerary(it: any) {
+        const flights = Array.isArray(it?.flights) ? it.flights.map(mapLeg) : [];
+        const stops = typeof it?.stops === "number" ? it.stops : Math.max(0, flights.length - 1);
         return {
-          flights: Array.isArray(it?.flights) ? it.flights.map(mapLeg) : [],
+          flights,
           layovers: Array.isArray(it?.layovers) ? it.layovers.map(mapLayover) : [],
           total_duration: typeof it?.duration === "object" ? it.duration?.raw : it?.duration,
+          total_duration_text: typeof it?.duration === "object" ? it.duration?.text : undefined,
+          departure_time_text: it?.departure_time,
+          arrival_time_text: it?.arrival_time,
+          stops,
+          self_transfer: !!it?.self_transfer,
+          delay: it?.delay ? { values: !!it.delay.values, text: it.delay.text } : undefined,
+          bags: it?.bags ? {
+            carry_on: it.bags.carry_on ?? null,
+            checked: it.bags.checked ?? null,
+          } : undefined,
           price: typeof it?.price === "number" ? it.price : (typeof it?.price === "string" ? Number(it.price) : undefined),
           airline_logo: it?.airline_logo,
           booking_token: it?.booking_token,
@@ -161,15 +177,42 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
             this_flight: it.carbon_emissions?.CO2e,
             typical_for_this_route: it.carbon_emissions?.typical_for_this_route,
             difference_percent: it.carbon_emissions?.difference_percent,
+            higher: it.carbon_emissions?.higher,
           } : undefined,
+        };
+      }
+
+      // Insights agregados a partir dos resultados (a DataCrawler não devolve price_insights)
+      const allItins = [...topRaw, ...otherRaw].map(mapItinerary);
+      const prices = allItins.map(i => i.price).filter((p): p is number => typeof p === "number" && Number.isFinite(p));
+      let priceInsights: any = undefined;
+      if (prices.length) {
+        const sorted = [...prices].sort((a, b) => a - b);
+        const lowest = sorted[0];
+        const highest = sorted[sorted.length - 1];
+        const avg = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
+        const median = sorted[Math.floor(sorted.length / 2)];
+        let level: "low" | "typical" | "high" = "typical";
+        if (highest > lowest) {
+          const ratio = (lowest - lowest) / (highest - lowest); // sempre 0
+          // melhor heurística: comparar avg vs lowest
+          const span = highest - lowest;
+          if (lowest < avg - span * 0.15) level = "low";
+        }
+        priceInsights = {
+          lowest_price: lowest,
+          highest_price: highest,
+          average_price: avg,
+          median_price: median,
+          price_level: level,
         };
       }
 
       return {
         best_flights: topRaw.map(mapItinerary),
         other_flights: otherRaw.map(mapItinerary),
-        price_insights: undefined,
-        search_metadata: { source: "DataCrawler", action: "searchFlights" },
+        price_insights: priceInsights,
+        search_metadata: { source: "DataCrawler", action: "searchFlights", count: allItins.length },
         __cache: !!data?.__cache,
       } as GSearchFlightsResult & { __cache?: boolean };
     },
