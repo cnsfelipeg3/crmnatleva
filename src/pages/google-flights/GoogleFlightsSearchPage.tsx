@@ -778,7 +778,7 @@ export default function GoogleFlightsSearchPage() {
                       isError={isError}
                       error={error as Error | null}
                       hasSearched={!!snapshot}
-                      onSelect={(it) => setSelectedItinerary(it)}
+                      onSelect={handleSelectItinerary}
                     />
                   </div>
                 </div>
