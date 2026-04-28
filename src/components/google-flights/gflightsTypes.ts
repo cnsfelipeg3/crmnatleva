@@ -172,7 +172,9 @@ export interface GSearchFlightsResult {
   best_flights?: GFlightItinerary[];
   other_flights?: GFlightItinerary[];
   price_insights?: GPriceInsights;
+  price_history?: GPriceHistory;            // novo · vem do searchFlights.priceHistory
   search_metadata?: Record<string, unknown>;
+  fetched_at?: string;                      // ISO timestamp da resposta
   [k: string]: unknown;
 }
 
@@ -187,6 +189,7 @@ export interface GPriceGraphPoint {
   date: string;
   price?: number | null;
   is_outbound?: boolean;
+  return_date?: string | null;              // par ida/volta para round-trip
 }
 
 // ----------------------------------------------------------------------
