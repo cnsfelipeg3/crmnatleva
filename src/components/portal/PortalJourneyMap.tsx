@@ -210,7 +210,7 @@ interface PortalJourneyMapProps {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-export default function PortalJourneyMap({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
+function PortalJourneyMapInner({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
