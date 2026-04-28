@@ -72,17 +72,18 @@ export function GFlightDestinationCard({
     >
       {/* HERO */}
       <div className={cn("relative h-44 bg-gradient-to-br overflow-hidden", bg)}>
-        {destination.hero_image_url && (
-          <img
-            src={destination.hero_image_url}
-            alt={destination.city}
-            loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
-        )}
-        {destination.hero_image_url && (
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-        )}
+        <img
+          src={coverUrl}
+          alt={`${destination.city}, ${destination.country}`}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          onError={(e) => {
+            // Se o Unsplash não tiver foto pra essa keyword, esconde o <img>
+            // e o gradiente de fundo (bg) toma conta sozinho.
+            (e.currentTarget as HTMLImageElement).style.display = "none";
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
         {isCheapest && (
           <Badge className="absolute top-2 left-2 gap-1 bg-emerald-500 hover:bg-emerald-500 text-white border-0 z-10">
