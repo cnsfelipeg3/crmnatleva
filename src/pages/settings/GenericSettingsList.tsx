@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Trash2, Search, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SimpleListSkeleton } from "@/components/skeletons/PageSkeletons";
 
 interface GenericSettingsListProps {
   title: string;
