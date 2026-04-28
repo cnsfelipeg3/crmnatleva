@@ -91,7 +91,7 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
     queryKey: ["gflights", "searchFlights", input],
     queryFn: async (): Promise<GSearchFlightsResult & { __cache?: boolean }> => {
       if (!input) throw new Error("input inválido");
-      const data = await invokeGFlights<any>("searchFlights", input);
+      const data = await invokeGFlights<any>("searchFlights", input as unknown as Record<string, unknown>);
       // O scraper costuma envelopar em data.data
       const payload = data?.data ?? data;
       return {
@@ -116,7 +116,7 @@ export function useCalendarPicker(input: SearchGFlightsInput | null, enabled = t
     queryKey: ["gflights", "getCalendarPicker", input],
     queryFn: async (): Promise<GCalendarDay[]> => {
       if (!input) throw new Error("input inválido");
-      const data = await invokeGFlights<any>("getCalendarPicker", input);
+      const data = await invokeGFlights<any>("getCalendarPicker", input as unknown as Record<string, unknown>);
       const raw = data?.data ?? data;
       const arr: any[] =
         (Array.isArray(raw?.calendar) && raw.calendar) ||
@@ -159,7 +159,7 @@ export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true)
     queryKey: ["gflights", "getPriceGraph", input],
     queryFn: async (): Promise<GPriceGraphPoint[]> => {
       if (!input) throw new Error("input inválido");
-      const data = await invokeGFlights<any>("getPriceGraph", input);
+      const data = await invokeGFlights<any>("getPriceGraph", input as unknown as Record<string, unknown>);
       const raw = data?.data ?? data;
       const arr: any[] =
         (Array.isArray(raw?.price_graph) && raw.price_graph) ||
