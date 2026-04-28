@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Plane, AlertCircle, Sparkles, Calendar, Clock, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
