@@ -27,13 +27,20 @@ export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSele
       .filter((p) => typeof p.price === "number")
       .map((p) => {
         const d = new Date(p.date);
+        const ret = p.return_date ? new Date(p.return_date) : null;
         return {
           date: p.date,
           label: d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
           price: p.price as number,
+          return_date: p.return_date ?? null,
+          return_label: ret
+            ? ret.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })
+            : null,
         };
       });
   }, [points]);
+
+  const hasReturn = useMemo(() => data.some((d) => !!d.return_date), [data]);
 
   const stats = useMemo(() => {
     if (data.length === 0) return null;
@@ -133,6 +140,10 @@ export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSele
               }}
               labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
               formatter={(value: number) => [formatBRL(value), "Preço"]}
+              labelFormatter={(label: string, payload: any[]) => {
+                const ret = payload?.[0]?.payload?.return_label;
+                return ret ? `Ida ${label} · Volta ${ret}` : `Ida ${label}`;
+              }}
             />
             <Area
               type="monotone"
@@ -169,7 +180,9 @@ export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSele
         </ResponsiveContainer>
       </div>
       <p className="text-[10px] text-muted-foreground text-center">
-        Clique em uma data do gráfico para buscar voos naquele dia.
+        {hasReturn
+          ? "Preço por par ida·volta. Clique em uma data pra buscar voos no melhor dia."
+          : "Clique em uma data do gráfico para buscar voos naquele dia."}
       </p>
     </Card>
   );
