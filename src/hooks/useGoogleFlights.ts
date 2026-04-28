@@ -271,7 +271,58 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
         };
       }
 
+      // -------- price_insight (banner inteligente · derivado de priceHistory) --------
+      let price_insight: GPriceInsight | undefined;
+      if (ph) {
+        const current = typeof ph?.summary?.current === "number" ? ph.summary.current : null;
+        const lowOp = (ph?.summary?.low ?? []).find((x: any) => x?.operation === "<" || x?.operation === "<=");
+        const typicalOps: any[] = Array.isArray(ph?.summary?.typical) ? ph.summary.typical : [];
+        const lowThreshold = typeof lowOp?.value === "number" ? lowOp.value : undefined;
+        const highOp = typicalOps.find((x: any) => x?.operation === "<=" || x?.operation === "<");
+        const highThreshold = typeof highOp?.value === "number" ? highOp.value : undefined;
+
+        let level: GPriceLevel = "unknown";
+        if (typeof current === "number" && typeof lowThreshold === "number" && typeof highThreshold === "number") {
+          if (current < lowThreshold) level = "low";
+          else if (current > highThreshold) level = "high";
+          else level = "typical";
+        }
+
+        const historyArr: any[] = Array.isArray(ph?.history) ? ph.history : [];
+        const historyPoints = historyArr
+          .map((p: any) => {
+            const t = p?.time ?? p?.date;
+            if (t == null) return null;
+            const v = typeof p?.value === "number" ? p.value : Number(p?.value ?? p?.price);
+            if (!Number.isFinite(v)) return null;
+            const d = typeof t === "number" ? new Date(t) : new Date(String(t));
+            if (isNaN(d.getTime())) return null;
+            return { date: d.toISOString().slice(0, 10), price: v };
+          })
+          .filter((x: any): x is { date: string; price: number } => !!x)
+          .sort((a, b) => a.date.localeCompare(b.date));
+
+        const prices = historyPoints.map(p => p.price);
+        const averageHistory = prices.length ? Math.round(prices.reduce((a, b) => a + b, 0) / prices.length) : 0;
+        const minHistory = prices.length ? Math.min(...prices) : 0;
+        const maxHistory = prices.length ? Math.max(...prices) : 0;
+
+        if (typeof current === "number") {
+          price_insight = {
+            current,
+            lowThreshold,
+            highThreshold,
+            level,
+            historyPoints,
+            averageHistory,
+            minHistory,
+            maxHistory,
+          };
+        }
+      }
+
       return {
+        price_insight,
         best_flights: topRaw.map(mapItinerary),
         other_flights: otherRaw.map(mapItinerary),
         price_insights: priceInsights,
