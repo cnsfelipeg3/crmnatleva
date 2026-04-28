@@ -135,8 +135,9 @@ const CITY_PHOTOS: Record<string, string> = {
   "melbourne": "https://images.unsplash.com/photo-1545044846-351ba102b6d5?w=1600&q=80&auto=format&fit=crop",
 };
 
-// Fallbacks por país · genéricos bonitos
+// Fallbacks por país · genéricos bonitos. Chaves normalizadas (lowercase, sem acentos).
 const COUNTRY_FALLBACK: Record<string, string> = {
+  // Europa
   "italia": "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=1600&q=80&auto=format&fit=crop",
   "italy": "https://images.unsplash.com/photo-1531572753322-ad063cecc140?w=1600&q=80&auto=format&fit=crop",
   "franca": "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1600&q=80&auto=format&fit=crop",
@@ -146,24 +147,246 @@ const COUNTRY_FALLBACK: Record<string, string> = {
   "portugal": "https://images.unsplash.com/photo-1555881400-74d7acaacd8b?w=1600&q=80&auto=format&fit=crop",
   "grecia": "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=1600&q=80&auto=format&fit=crop",
   "greece": "https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=1600&q=80&auto=format&fit=crop",
+  "alemanha": "https://images.unsplash.com/photo-1587330979470-3016b6702d89?w=1600&q=80&auto=format&fit=crop",
+  "germany": "https://images.unsplash.com/photo-1587330979470-3016b6702d89?w=1600&q=80&auto=format&fit=crop",
+  "reino-unido": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1600&q=80&auto=format&fit=crop",
+  "united-kingdom": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1600&q=80&auto=format&fit=crop",
+  "inglaterra": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1600&q=80&auto=format&fit=crop",
+  "england": "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=1600&q=80&auto=format&fit=crop",
+  "irlanda": "https://images.unsplash.com/photo-1549918864-48ac978761a4?w=1600&q=80&auto=format&fit=crop",
+  "ireland": "https://images.unsplash.com/photo-1549918864-48ac978761a4?w=1600&q=80&auto=format&fit=crop",
+  "escocia": "https://images.unsplash.com/photo-1566740933430-b5e70b06d2d5?w=1600&q=80&auto=format&fit=crop",
+  "scotland": "https://images.unsplash.com/photo-1566740933430-b5e70b06d2d5?w=1600&q=80&auto=format&fit=crop",
+  "holanda": "https://images.unsplash.com/photo-1534351590666-13e3e96c5017?w=1600&q=80&auto=format&fit=crop",
+  "paises-baixos": "https://images.unsplash.com/photo-1534351590666-13e3e96c5017?w=1600&q=80&auto=format&fit=crop",
+  "netherlands": "https://images.unsplash.com/photo-1534351590666-13e3e96c5017?w=1600&q=80&auto=format&fit=crop",
+  "belgica": "https://images.unsplash.com/photo-1559113202-c916b8e44373?w=1600&q=80&auto=format&fit=crop",
+  "belgium": "https://images.unsplash.com/photo-1559113202-c916b8e44373?w=1600&q=80&auto=format&fit=crop",
+  "suica": "https://images.unsplash.com/photo-1530841344095-94d34d92e92f?w=1600&q=80&auto=format&fit=crop",
+  "switzerland": "https://images.unsplash.com/photo-1530841344095-94d34d92e92f?w=1600&q=80&auto=format&fit=crop",
+  "austria": "https://images.unsplash.com/photo-1516550893923-42d28e5677af?w=1600&q=80&auto=format&fit=crop",
+  "republica-tcheca": "https://images.unsplash.com/photo-1541849546-216549ae216d?w=1600&q=80&auto=format&fit=crop",
+  "czech-republic": "https://images.unsplash.com/photo-1541849546-216549ae216d?w=1600&q=80&auto=format&fit=crop",
+  "tchequia": "https://images.unsplash.com/photo-1541849546-216549ae216d?w=1600&q=80&auto=format&fit=crop",
+  "hungria": "https://images.unsplash.com/photo-1541343672885-9be56236302a?w=1600&q=80&auto=format&fit=crop",
+  "hungary": "https://images.unsplash.com/photo-1541343672885-9be56236302a?w=1600&q=80&auto=format&fit=crop",
+  "polonia": "https://images.unsplash.com/photo-1573599852326-2d4da0bbe613?w=1600&q=80&auto=format&fit=crop",
+  "poland": "https://images.unsplash.com/photo-1573599852326-2d4da0bbe613?w=1600&q=80&auto=format&fit=crop",
+  "suecia": "https://images.unsplash.com/photo-1509356843151-3e7d96241e11?w=1600&q=80&auto=format&fit=crop",
+  "sweden": "https://images.unsplash.com/photo-1509356843151-3e7d96241e11?w=1600&q=80&auto=format&fit=crop",
+  "noruega": "https://images.unsplash.com/photo-1601942217571-cb05c1c5b6e4?w=1600&q=80&auto=format&fit=crop",
+  "norway": "https://images.unsplash.com/photo-1601942217571-cb05c1c5b6e4?w=1600&q=80&auto=format&fit=crop",
+  "dinamarca": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=1600&q=80&auto=format&fit=crop",
+  "denmark": "https://images.unsplash.com/photo-1513622470522-26c3c8a854bc?w=1600&q=80&auto=format&fit=crop",
+  "finlandia": "https://images.unsplash.com/photo-1543160809-7b5b6c7f4f48?w=1600&q=80&auto=format&fit=crop",
+  "finland": "https://images.unsplash.com/photo-1543160809-7b5b6c7f4f48?w=1600&q=80&auto=format&fit=crop",
+  "islandia": "https://images.unsplash.com/photo-1504284992200-32555eb1ba00?w=1600&q=80&auto=format&fit=crop",
+  "iceland": "https://images.unsplash.com/photo-1504284992200-32555eb1ba00?w=1600&q=80&auto=format&fit=crop",
+  "turquia": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=1600&q=80&auto=format&fit=crop",
+  "turkey": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=1600&q=80&auto=format&fit=crop",
+  "croacia": "https://images.unsplash.com/photo-1555990538-32226a4d61c3?w=1600&q=80&auto=format&fit=crop",
+  "croatia": "https://images.unsplash.com/photo-1555990538-32226a4d61c3?w=1600&q=80&auto=format&fit=crop",
+
+  // Américas
   "mexico": "https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=1600&q=80&auto=format&fit=crop",
   "estados-unidos": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
   "eua": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
   "usa": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
-  "brasil": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&q=80&auto=format&fit=crop",
-  "argentina": "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=1600&q=80&auto=format&fit=crop",
+  "united-states": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
+  "canada": "https://images.unsplash.com/photo-1517090504586-fde19ea6066f?w=1600&q=80&auto=format&fit=crop",
+  "brasil": "https://images.unsplash.com/photo-1516306580123-e6e52b1b7b5f?w=1600&q=80&auto=format&fit=crop",
+  "brazil": "https://images.unsplash.com/photo-1516306580123-e6e52b1b7b5f?w=1600&q=80&auto=format&fit=crop",
+  "argentina": "https://images.unsplash.com/photo-1612294037637-ec328d0e075e?w=1600&q=80&auto=format&fit=crop",
+  "chile": "https://images.unsplash.com/photo-1606298855672-3efb63017be8?w=1600&q=80&auto=format&fit=crop",
+  "peru": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&q=80&auto=format&fit=crop",
+  "colombia": "https://images.unsplash.com/photo-1568632234157-ce7aecd03d0d?w=1600&q=80&auto=format&fit=crop",
+  "uruguai": "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=1600&q=80&auto=format&fit=crop",
+  "uruguay": "https://images.unsplash.com/photo-1589909202802-8f4aadce1849?w=1600&q=80&auto=format&fit=crop",
+  "paraguai": "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=1600&q=80&auto=format&fit=crop",
+  "paraguay": "https://images.unsplash.com/photo-1547471080-7cc2caa01a7e?w=1600&q=80&auto=format&fit=crop",
+  "bolivia": "https://images.unsplash.com/photo-1531968455001-5c5272a41129?w=1600&q=80&auto=format&fit=crop",
+  "equador": "https://images.unsplash.com/photo-1531968455001-5c5272a41129?w=1600&q=80&auto=format&fit=crop",
+  "ecuador": "https://images.unsplash.com/photo-1531968455001-5c5272a41129?w=1600&q=80&auto=format&fit=crop",
+  "cuba": "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&q=80&auto=format&fit=crop",
+  "republica-dominicana": "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=1600&q=80&auto=format&fit=crop",
+  "dominican-republic": "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=1600&q=80&auto=format&fit=crop",
+  "bahamas": "https://images.unsplash.com/photo-1548574505-5e239809ee19?w=1600&q=80&auto=format&fit=crop",
+  "jamaica": "https://images.unsplash.com/photo-1559814047-7f788ce93ec5?w=1600&q=80&auto=format&fit=crop",
+  "aruba": "https://images.unsplash.com/photo-1559814047-7f788ce93ec5?w=1600&q=80&auto=format&fit=crop",
+  "curacao": "https://images.unsplash.com/photo-1559656914-a30970c1affd?w=1600&q=80&auto=format&fit=crop",
+
+  // Ásia
   "japao": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1600&q=80&auto=format&fit=crop",
   "japan": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1600&q=80&auto=format&fit=crop",
   "tailandia": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1600&q=80&auto=format&fit=crop",
   "thailand": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1600&q=80&auto=format&fit=crop",
   "indonesia": "https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=1600&q=80&auto=format&fit=crop",
+  "china": "https://images.unsplash.com/photo-1536599018102-9f803c140fc1?w=1600&q=80&auto=format&fit=crop",
+  "coreia-do-sul": "https://images.unsplash.com/photo-1538485399081-7c8978d8b7b6?w=1600&q=80&auto=format&fit=crop",
+  "south-korea": "https://images.unsplash.com/photo-1538485399081-7c8978d8b7b6?w=1600&q=80&auto=format&fit=crop",
+  "korea": "https://images.unsplash.com/photo-1538485399081-7c8978d8b7b6?w=1600&q=80&auto=format&fit=crop",
+  "vietna": "https://images.unsplash.com/photo-1528127269322-539801943592?w=1600&q=80&auto=format&fit=crop",
+  "vietnam": "https://images.unsplash.com/photo-1528127269322-539801943592?w=1600&q=80&auto=format&fit=crop",
+  "india": "https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=1600&q=80&auto=format&fit=crop",
+  "singapura": "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&q=80&auto=format&fit=crop",
+  "singapore": "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?w=1600&q=80&auto=format&fit=crop",
+  "filipinas": "https://images.unsplash.com/photo-1518509562904-e7ef99cddc85?w=1600&q=80&auto=format&fit=crop",
+  "philippines": "https://images.unsplash.com/photo-1518509562904-e7ef99cddc85?w=1600&q=80&auto=format&fit=crop",
+  "maldivas": "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1600&q=80&auto=format&fit=crop",
+  "maldives": "https://images.unsplash.com/photo-1514282401047-d79a71a590e8?w=1600&q=80&auto=format&fit=crop",
+
+  // Oriente Médio · África
   "emirados-arabes-unidos": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80&auto=format&fit=crop",
+  "united-arab-emirates": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80&auto=format&fit=crop",
+  "uae": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80&auto=format&fit=crop",
+  "catar": "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=1600&q=80&auto=format&fit=crop",
+  "qatar": "https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=1600&q=80&auto=format&fit=crop",
   "marrocos": "https://images.unsplash.com/photo-1597212720153-f6e0f5e23a3a?w=1600&q=80&auto=format&fit=crop",
   "morocco": "https://images.unsplash.com/photo-1597212720153-f6e0f5e23a3a?w=1600&q=80&auto=format&fit=crop",
+  "egito": "https://images.unsplash.com/photo-1539650116574-75c0c6d73d0e?w=1600&q=80&auto=format&fit=crop",
+  "egypt": "https://images.unsplash.com/photo-1539650116574-75c0c6d73d0e?w=1600&q=80&auto=format&fit=crop",
+  "africa-do-sul": "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=1600&q=80&auto=format&fit=crop",
+  "south-africa": "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=1600&q=80&auto=format&fit=crop",
+  "israel": "https://images.unsplash.com/photo-1544967082-d9d25d867d66?w=1600&q=80&auto=format&fit=crop",
+
+  // Oceania
+  "australia": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=1600&q=80&auto=format&fit=crop",
+  "nova-zelandia": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=80&auto=format&fit=crop",
+  "new-zealand": "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1600&q=80&auto=format&fit=crop",
+};
+
+// Aliases ISO 2/3 e variações sem hífen → chave canônica em COUNTRY_FALLBACK
+const COUNTRY_ALIASES: Record<string, string> = {
+  // ISO-2
+  "br": "brasil", "us": "usa", "ca": "canada", "mx": "mexico",
+  "ar": "argentina", "cl": "chile", "pe": "peru", "co": "colombia",
+  "uy": "uruguai", "py": "paraguai", "bo": "bolivia", "ec": "equador",
+  "fr": "franca", "it": "italia", "es": "espanha", "pt": "portugal",
+  "de": "alemanha", "gb": "reino-unido", "uk": "reino-unido",
+  "ie": "irlanda", "nl": "holanda", "be": "belgica", "ch": "suica",
+  "at": "austria", "cz": "republica-tcheca", "hu": "hungria",
+  "pl": "polonia", "se": "suecia", "no": "noruega", "dk": "dinamarca",
+  "fi": "finlandia", "is": "islandia", "gr": "grecia", "tr": "turquia",
+  "hr": "croacia", "ru": "russia",
+  "jp": "japao", "cn": "china", "kr": "coreia-do-sul", "th": "tailandia",
+  "id": "indonesia", "vn": "vietna", "in": "india", "sg": "singapura",
+  "ph": "filipinas", "mv": "maldivas", "hk": "china",
+  "ae": "emirados-arabes-unidos", "qa": "catar", "ma": "marrocos",
+  "eg": "egito", "za": "africa-do-sul", "il": "israel",
+  "au": "australia", "nz": "nova-zelandia",
+  "cu": "cuba", "do": "republica-dominicana", "bs": "bahamas",
+  "jm": "jamaica", "aw": "aruba",
+  // PT/EN comuns
+  "ee-uu": "usa", "estadosunidos": "usa",
+  "reinounido": "reino-unido",
+  "republicatcheca": "republica-tcheca",
+  "africadosul": "africa-do-sul",
+  "novazelandia": "nova-zelandia",
+  "coreiadosul": "coreia-do-sul",
+  "republicadominicana": "republica-dominicana",
+};
+
+// Fallback por região / continente · imagens evocativas e neutras
+const REGION_FALLBACK: Record<string, string> = {
+  "europa": "https://images.unsplash.com/photo-1471623432079-b009d30b6729?w=1600&q=80&auto=format&fit=crop",
+  "europe": "https://images.unsplash.com/photo-1471623432079-b009d30b6729?w=1600&q=80&auto=format&fit=crop",
+  "america-do-sul": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&q=80&auto=format&fit=crop",
+  "south-america": "https://images.unsplash.com/photo-1526392060635-9d6019884377?w=1600&q=80&auto=format&fit=crop",
+  "america-do-norte": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
+  "north-america": "https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=1600&q=80&auto=format&fit=crop",
+  "america-central": "https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=1600&q=80&auto=format&fit=crop",
+  "central-america": "https://images.unsplash.com/photo-1552074284-5e88ef1aef18?w=1600&q=80&auto=format&fit=crop",
+  "caribe": "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=1600&q=80&auto=format&fit=crop",
+  "caribbean": "https://images.unsplash.com/photo-1535498730771-e735b998cd64?w=1600&q=80&auto=format&fit=crop",
+  "asia": "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=1600&q=80&auto=format&fit=crop",
+  "sudeste-asiatico": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1600&q=80&auto=format&fit=crop",
+  "southeast-asia": "https://images.unsplash.com/photo-1508009603885-50cf7c579365?w=1600&q=80&auto=format&fit=crop",
+  "oriente-medio": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80&auto=format&fit=crop",
+  "middle-east": "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=80&auto=format&fit=crop",
+  "africa": "https://images.unsplash.com/photo-1580060839134-75a5edca2e99?w=1600&q=80&auto=format&fit=crop",
+  "oceania": "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?w=1600&q=80&auto=format&fit=crop",
+};
+
+// Mapa cidade → país (chaves normalizadas) · usado quando country não é informado.
+// Cobre as cidades de CITY_PHOTOS para inferir o país via destino.
+const CITY_TO_COUNTRY: Record<string, string> = {
+  // Europa
+  "paris": "franca", "londres": "reino-unido", "london": "reino-unido",
+  "roma": "italia", "rome": "italia", "veneza": "italia", "venice": "italia",
+  "florenca": "italia", "florence": "italia", "milao": "italia", "milan": "italia",
+  "napoles": "italia", "naples": "italia",
+  "barcelona": "espanha", "madrid": "espanha",
+  "lisboa": "portugal", "lisbon": "portugal", "porto": "portugal",
+  "amsterda": "holanda", "amsterdam": "holanda",
+  "berlim": "alemanha", "berlin": "alemanha",
+  "praga": "republica-tcheca", "prague": "republica-tcheca",
+  "viena": "austria", "vienna": "austria",
+  "atenas": "grecia", "athens": "grecia", "santorini": "grecia", "mykonos": "grecia",
+  "dublin": "irlanda",
+  "edimburgo": "escocia", "edinburgh": "escocia",
+  "zurique": "suica", "zurich": "suica", "genebra": "suica", "geneva": "suica", "interlaken": "suica",
+  "estocolmo": "suecia", "stockholm": "suecia",
+  "copenhague": "dinamarca", "copenhagen": "dinamarca",
+  "oslo": "noruega", "reykjavik": "islandia",
+  // Caribe / Américas
+  "cancun": "mexico", "playa-del-carmen": "mexico", "tulum": "mexico", "cidade-do-mexico": "mexico",
+  "punta-cana": "republica-dominicana",
+  "aruba": "aruba", "curacao": "curacao", "nassau": "bahamas", "havana": "cuba",
+  "san-juan": "usa",
+  "miami": "usa", "orlando": "usa", "nova-york": "usa", "new-york": "usa",
+  "los-angeles": "usa", "las-vegas": "usa", "san-francisco": "usa", "chicago": "usa",
+  "toronto": "canada",
+  "buenos-aires": "argentina", "bariloche": "argentina", "mendoza": "argentina",
+  "santiago": "chile", "santiago-do-chile": "chile",
+  "lima": "peru", "cusco": "peru",
+  // Brasil
+  "rio-de-janeiro": "brasil", "rio": "brasil", "fernando-de-noronha": "brasil",
+  "salvador": "brasil", "florianopolis": "brasil", "porto-de-galinhas": "brasil",
+  "jericoacoara": "brasil", "fortaleza": "brasil", "maceio": "brasil",
+  "natal": "brasil", "recife": "brasil", "gramado": "brasil",
+  "foz-do-iguacu": "brasil", "iguacu": "brasil", "brasilia": "brasil", "sao-paulo": "brasil",
+  // OM / África
+  "dubai": "emirados-arabes-unidos", "abu-dhabi": "emirados-arabes-unidos",
+  "doha": "catar", "marrakech": "marrocos", "cairo": "egito",
+  "cape-town": "africa-do-sul", "cidade-do-cabo": "africa-do-sul",
+  // Ásia
+  "toquio": "japao", "tokyo": "japao", "kyoto": "japao", "quioto": "japao",
+  "seul": "coreia-do-sul", "seoul": "coreia-do-sul",
+  "bangkok": "tailandia", "phuket": "tailandia",
+  "bali": "indonesia",
+  "singapura": "singapura", "singapore": "singapura",
+  "hong-kong": "china",
+  "maldivas": "maldivas", "maldives": "maldivas",
+  // Oceania
+  "sydney": "australia", "melbourne": "australia",
 };
 
 // Fallback final · paisagem genérica de viagem (Unsplash CDN direto)
 const GENERIC_TRAVEL = "https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1600&q=80&auto=format&fit=crop";
+
+function resolveCountryKey(rawCountry?: string): string | null {
+  const k = normalize(rawCountry);
+  if (!k) return null;
+  if (COUNTRY_FALLBACK[k]) return k;
+  if (COUNTRY_ALIASES[k]) return COUNTRY_ALIASES[k];
+  const noHyphen = k.replace(/-/g, "");
+  if (COUNTRY_ALIASES[noHyphen]) return COUNTRY_ALIASES[noHyphen];
+  for (const key of Object.keys(COUNTRY_FALLBACK)) {
+    if (key.replace(/-/g, "") === noHyphen) return key;
+  }
+  return null;
+}
+
+function resolveRegionKey(rawRegion?: string): string | null {
+  const k = normalize(rawRegion);
+  if (!k) return null;
+  if (REGION_FALLBACK[k]) return k;
+  const noHyphen = k.replace(/-/g, "");
+  for (const key of Object.keys(REGION_FALLBACK)) {
+    if (key.replace(/-/g, "") === noHyphen) return key;
+  }
+  return null;
+}
 
 /**
  * Normalizador robusto de chave de destino.
