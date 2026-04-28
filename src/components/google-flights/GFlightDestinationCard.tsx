@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { format, parseISO, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBRL } from "./gflightsTypes";
+import { getDestinationCoverUrl } from "./destinationImage";
 import type { DiscoveredDestination } from "@/hooks/useDiscoverDestinations";
 
 interface Props {
