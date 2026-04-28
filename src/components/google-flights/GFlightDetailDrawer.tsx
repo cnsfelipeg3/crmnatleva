@@ -350,21 +350,33 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                       </div>
                     </div>
 
-                    {/* Layover entre legs */}
-                    {lay && i < flights.length - 1 && (
-                      <div className="flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 rounded-md px-3 py-2 ml-3">
-                        <Repeat className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
-                        <div className="text-[11px]">
-                          <span className="font-medium">Conexão {lay.duration_text || formatMinutes(lay.duration)}</span>
-                          <span className="text-muted-foreground"> em {lay.city || lay.name} ({lay.id})</span>
-                          {lay.overnight && (
-                            <Badge variant="outline" className="ml-2 text-[9px] border-indigo-500/30 text-indigo-700 dark:text-indigo-300 gap-1">
-                              <Moon className="h-2.5 w-2.5" /> Pernoite
-                            </Badge>
-                          )}
+                    {/* Layover entre legs · cor contextualizada por severidade */}
+                    {lay && i < flights.length - 1 && (() => {
+                      const cls = classifyLayover(lay);
+                      return (
+                        <div className={cn(
+                          "ml-3 rounded-md px-3 py-2 border space-y-1",
+                          cls.bgClass,
+                          cls.borderClass,
+                        )}>
+                          <div className="flex items-center gap-2 text-[11px]">
+                            <Repeat className={cn("h-3.5 w-3.5 shrink-0", cls.textClass)} />
+                            <span className={cn("font-semibold", cls.textClass)}>
+                              {cls.label} · {lay.duration_text || formatMinutes(lay.duration)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              em {lay.city || lay.name} ({lay.id})
+                            </span>
+                            {lay.overnight && cls.severity !== "overnight" && (
+                              <Badge variant="outline" className="ml-auto text-[9px] border-indigo-500/30 text-indigo-700 dark:text-indigo-300 gap-1">
+                                <Moon className="h-2.5 w-2.5" /> Pernoite
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground pl-5">{cls.hint}</div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 );
               })}
