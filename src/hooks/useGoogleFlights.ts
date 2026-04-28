@@ -35,7 +35,7 @@ async function invokeGFlights<T = unknown>(
 export function useAirportSearch(query: string, enabled = true) {
   const trimmed = query.trim();
   return useQuery({
-    queryKey: ["gflights", "searchAirport", trimmed],
+    queryKey: ["gflights", "searchAirport", "iata-only-v2", trimmed],
     queryFn: async (): Promise<GAirport[]> => {
       const data = await invokeGFlights<any>("searchAirport", { query: trimmed });
       // DataCrawler retorna estruturas variáveis. Tentamos os caminhos mais comuns.
