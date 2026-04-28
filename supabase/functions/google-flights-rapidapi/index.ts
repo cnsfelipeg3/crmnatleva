@@ -531,6 +531,7 @@ serve(async (req) => {
             },
             __pagination: { pages_fetched: stage1.pages, total_top: combinedPackages.length, total_other: 0 },
             __trip_type: "round_trip",
+            __rapidapi_calls: stage1.pages + candidates.length,
           },
         };
       }
