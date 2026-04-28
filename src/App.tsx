@@ -10,6 +10,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+// AppLayout é eager: usado por TODAS as rotas autenticadas, então atrasar
+// ele em lazy só adiciona um round-trip extra entre auth-resolved e first paint.
+import AppLayout from "@/components/AppLayout";
 
 // Portal do Cliente
 import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
@@ -20,7 +23,6 @@ const lazyRetry = (fn: () => Promise<any>) =>
     return new Promise(() => {}); // never resolves, page will reload
   }));
 
-const AppLayout = lazyRetry(() => import("@/components/AppLayout"));
 const Login = lazy(() => import("@/pages/Login"));
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
 const EmployeeDashboard = lazy(() => import("@/pages/EmployeeDashboard"));
