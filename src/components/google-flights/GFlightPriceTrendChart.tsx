@@ -21,6 +21,36 @@ interface Props {
   onSelectDate?: (date: string) => void;
 }
 
+function CustomTrendTooltip({ active, payload, hasReturn }: any) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0]?.payload;
+  if (!p) return null;
+  const fmt = (s?: string | null) => {
+    if (!s) return "—";
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return s;
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+  };
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
+      <div className="flex items-center justify-between gap-3 mb-1">
+        <span className="text-muted-foreground">Ida</span>
+        <span className="font-semibold">{fmt(p.date)}</span>
+      </div>
+      {hasReturn && p.return_date && (
+        <div className="flex items-center justify-between gap-3 mb-1">
+          <span className="text-muted-foreground">Volta</span>
+          <span className="font-semibold">{fmt(p.return_date)}</span>
+        </div>
+      )}
+      <div className="flex items-center justify-between gap-3 pt-1 border-t border-border/40">
+        <span className="text-muted-foreground">{hasReturn ? "Pacote" : "Preço"}</span>
+        <span className="font-bold text-primary">{formatBRL(p.price)}</span>
+      </div>
+    </div>
+  );
+}
+
 export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSelectDate }: Props) {
   const data = useMemo(() => {
     return points
