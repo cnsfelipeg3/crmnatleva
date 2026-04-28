@@ -687,9 +687,56 @@ export default function GoogleFlightsSearchPage() {
               </Card>
             )}
             {(() => {
-              const all = [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])];
+              let all = [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])];
+
+              // Fallback: se a busca não devolveu voos mas a Discover IA já tinha
+              // cotação válida pra essa rota+data, usa o sampleFlight como sintético
+              // pra que o usuário NUNCA veja "Nenhum voo encontrado" indevidamente.
+              if (
+                all.length === 0 &&
+                !isLoading &&
+                !isError &&
+                snapshot &&
+                discoverHint &&
+                discoverHint.iata === snapshot.to.id &&
+                discoverHint.origin === snapshot.from.id &&
+                discoverHint.outbound_date === snapshot.outbound_date
+              ) {
+                const synthetic: GFlightItinerary = (discoverHint.sampleFlight && typeof discoverHint.sampleFlight === "object")
+                  ? {
+                      ...(discoverHint.sampleFlight as GFlightItinerary),
+                      price: (discoverHint.sampleFlight as any)?.price ?? discoverHint.minPrice,
+                      type: "synthetic-discover",
+                    }
+                  : {
+                      flights: [
+                        {
+                          airline: discoverHint.flightAirline ?? undefined,
+                          airline_logo: discoverHint.flightAirlineLogo ?? undefined,
+                          departure_airport: {
+                            id: discoverHint.origin,
+                            time: discoverHint.flightDeparture ?? `${snapshot.outbound_date} 08:00`,
+                          },
+                          arrival_airport: {
+                            id: discoverHint.iata,
+                            time: discoverHint.flightArrival ?? `${snapshot.outbound_date} 10:00`,
+                            city: discoverHint.city,
+                          },
+                          duration_text: discoverHint.flightDuration ?? undefined,
+                          travel_class: "ECONOMY",
+                        },
+                      ],
+                      stops: discoverHint.flightStops ?? 0,
+                      total_duration_text: discoverHint.flightDuration ?? undefined,
+                      price: discoverHint.minPrice,
+                      airline_logo: discoverHint.flightAirlineLogo ?? undefined,
+                      type: "synthetic-discover",
+                    };
+                all = [synthetic];
+              }
+
               const filtered = applyFilters(all, filters);
-              const bestCount = results?.best_flights?.length ?? 0;
+              const bestCount = Math.min(results?.best_flights?.length ?? all.length, filtered.length);
               const filteredBest = filtered.slice(0, Math.min(bestCount, filtered.length));
               const filteredOthers = filtered.slice(filteredBest.length);
               return (
