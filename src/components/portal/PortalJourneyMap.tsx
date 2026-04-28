@@ -932,3 +932,15 @@ function PortalJourneyMapInner({ segments, hotels, lodging, services, sale }: Po
     </div>
   );
 }
+
+export default function PortalJourneyMap(props: PortalJourneyMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa da jornada indisponível"
+        className="h-[60vh] rounded-2xl"
+      />
+    );
+  }
+  return <PortalJourneyMapInner {...props} />;
+}
