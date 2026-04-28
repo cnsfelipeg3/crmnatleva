@@ -33,6 +33,13 @@ export default defineConfig(({ mode }) => ({
   define: {
     CESIUM_BASE_URL: JSON.stringify("/cesium/"),
   },
+  esbuild: {
+    // Em produção remove console.* (exceto warn/error) e debugger
+    // → bundle menor + zero ruído no console do cliente.
+    drop: mode === "production" ? ["debugger"] : [],
+    pure: mode === "production" ? ["console.log", "console.info", "console.debug", "console.trace"] : [],
+    legalComments: "none",
+  },
   build: {
     target: "esnext",
     reportCompressedSize: false,
