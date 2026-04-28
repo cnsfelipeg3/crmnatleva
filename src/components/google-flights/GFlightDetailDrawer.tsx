@@ -86,6 +86,14 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reservingId, setReservingId] = useState<string | null>(null);
 
+  // Filtros locais de tarifa (atuam só sobre os providers deste voo)
+  const ALL_TIERS: GFareTier[] = ["basic", "standard", "flexible", "premium", "business", "first"];
+  const [tierFilter, setTierFilter] = useState<GFareTier[]>(ALL_TIERS);
+  const [needCheckedBag, setNeedCheckedBag] = useState(false);
+  const [needRefundable, setNeedRefundable] = useState(false);
+  const [needFreeChange, setNeedFreeChange] = useState(false);
+  const [needFreeSeat, setNeedFreeSeat] = useState(false);
+
   const open = !!itinerary;
   const bookingToken = itinerary?.booking_token ?? null;
   const { data: bookingDetails, isLoading: provLoading } =
@@ -97,6 +105,30 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   const minPrice = providersSorted[0]?.price ?? 0;
   const maxPrice = providersSorted[providersSorted.length - 1]?.price ?? 0;
   const savings = maxPrice - minPrice;
+
+  // Counts úteis pra header
+  const uniqueAirlines = new Set(providersSorted.map(p => p.title)).size;
+
+  const filteredProviders = useMemo(() => {
+    if (!providersSorted) return [];
+    return providersSorted.filter((p) => {
+      if (p.fareTier && !tierFilter.includes(p.fareTier)) return false;
+      const benefits = (p.benefits ?? []).join(" ").toLowerCase();
+      if (needCheckedBag && !/despachada/.test(benefits)) return false;
+      if (needRefundable && !/reembols/.test(benefits)) return false;
+      if (needFreeChange && !/altera[cç][aã]o\s*gratuit/.test(benefits)) return false;
+      if (needFreeSeat && !/sele[cç][aã]o.*gr[áa]tis|sele[cç][aã]o.*gratuit/.test(benefits)) return false;
+      return true;
+    });
+  }, [providersSorted, tierFilter, needCheckedBag, needRefundable, needFreeChange, needFreeSeat]);
+
+  function resetFareFilters() {
+    setTierFilter(ALL_TIERS);
+    setNeedCheckedBag(false);
+    setNeedRefundable(false);
+    setNeedFreeChange(false);
+    setNeedFreeSeat(false);
+  }
 
   if (!itinerary) {
     return (
