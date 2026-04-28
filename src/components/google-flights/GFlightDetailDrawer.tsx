@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useFlightBookingDetails, fetchBookingURL } from "@/hooks/useGoogleFlights";
 import {
-  cabinLabel, classifyExtensions, dayDiff, formatBRL, formatCO2, formatDateLong,
+  cabinLabel, classifyExtensions, classifyLayover, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
   type GBookingProvider, type GFlightItinerary,
 } from "./gflightsTypes";
