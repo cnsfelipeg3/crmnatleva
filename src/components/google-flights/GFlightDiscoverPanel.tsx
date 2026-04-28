@@ -235,11 +235,18 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     setRecording(true);
   }
 
-  const ready = useMemo(() => {
-    if (!extract) return false;
-    const okBudget = !!extract.budget && extract.budget >= 500;
-    const okGeo = !!extract.target || /europa|am(é|e)ricas|ásia|asia|caribe|oriente|áfrica|africa/i.test(story);
-    return okBudget && okGeo;
+  // Pronto: só precisa de texto razoável (>= 20 chars). Geo/orçamento são bônus.
+  const ready = useMemo(() => story.trim().length >= 20, [story]);
+
+  // Hints visuais do que ajudaria a melhorar o resultado
+  const hints = useMemo(() => {
+    if (!extract) return [] as string[];
+    const h: string[] = [];
+    if (!extract.budget) h.push("orçamento");
+    if (!extract.target && !/europa|am(é|e)ricas|ásia|asia|caribe|oriente|áfrica|africa|nordeste|sul|sudeste/i.test(story))
+      h.push("região ou país");
+    if (!extract.monthLabel) h.push("quando");
+    return h;
   }, [extract, story]);
 
   function handleSubmit() {
@@ -313,26 +320,27 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
               {extract.duration && <Chip>⏱️ {extract.duration}</Chip>}
               {extract.pax && <Chip>👥 {extract.pax.label}</Chip>}
               {extract.mood && <Chip>🎯 {extract.mood}</Chip>}
-              {!extract.target && !extract.budget && (
-                <span className="text-xs text-muted-foreground italic">Continue digitando…</span>
-              )}
             </div>
           )}
 
-          {/* CTA */}
-          {ready && (
-            <div className="flex justify-center pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <Button
-                size="lg"
-                onClick={handleSubmit}
-                className="h-14 px-8 text-base bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-xl shadow-primary/25 gap-2"
-              >
-                <Sparkles className="h-5 w-5" />
-                Descobrir destinos perfeitos
-                <ArrowRight className="h-5 w-5" />
-              </Button>
-            </div>
-          )}
+          {/* CTA · sempre visível, desabilitado se texto curto */}
+          <div className="flex flex-col items-center gap-2 pt-2">
+            <Button
+              size="lg"
+              onClick={handleSubmit}
+              disabled={!ready}
+              className="h-14 px-8 text-base bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-xl shadow-primary/25 gap-2 disabled:opacity-40 disabled:shadow-none"
+            >
+              <Sparkles className="h-5 w-5" />
+              {ready ? "Descobrir destinos perfeitos" : "Conta um pouco mais da sua viagem…"}
+              {ready && <ArrowRight className="h-5 w-5" />}
+            </Button>
+            {ready && hints.length > 0 && (
+              <p className="text-[11px] text-muted-foreground italic">
+                Dica: você pode adicionar {hints.join(" · ")} pra refinar
+              </p>
+            )}
+          </div>
 
           {/* Stories sugeridas */}
           <div className="pt-6 border-t border-border/40">
