@@ -649,22 +649,36 @@ function ResultSection({
               <span>{data.totalWithFlights} retornaram preços</span>
               <span>·</span>
               <span>{data.totalFitsBudget} no orçamento</span>
-              {data.cache_stats && (
-                <>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                    · ⚡ {data.cache_stats.cache_hits} do cache
-                  </span>
-                  <span className="text-blue-600 dark:text-blue-400">
-                    · 🌐 {data.cache_stats.api_calls} novas
-                  </span>
-                  {data.cache_stats.hit_rate_percent >= 50 && (
-                    <span className="text-emerald-600 dark:text-emerald-400 italic">
-                      · {data.cache_stats.hit_rate_percent}% economizado
-                    </span>
-                  )}
-                </>
-              )}
             </div>
+            {data.cache_stats && (
+              <div
+                className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px]"
+                role="status"
+                aria-label={`Hit-rate de cache: ${data.cache_stats.hit_rate_percent}%`}
+                title={`Cache hits: ${data.cache_stats.cache_hits} de ${data.cache_stats.total_checked} destinos · API fresh: ${data.cache_stats.api_calls}`}
+              >
+                <span className="font-semibold text-foreground">
+                  Hit-rate {data.cache_stats.hit_rate_percent}%
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  ⚡ {data.cache_stats.cache_hits} cache
+                </span>
+                <span className="text-blue-600 dark:text-blue-400">
+                  🌐 {data.cache_stats.api_calls} fresh
+                </span>
+                {/* Mini barra visual */}
+                <div className="ml-auto flex h-1.5 w-24 overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className="bg-emerald-500"
+                    style={{ width: `${data.cache_stats.hit_rate_percent}%` }}
+                  />
+                  <div
+                    className="bg-blue-500"
+                    style={{ width: `${100 - data.cache_stats.hit_rate_percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={onReset} className="shrink-0">
             <X className="h-4 w-4 mr-1" /> Nova busca
