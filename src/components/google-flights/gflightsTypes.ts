@@ -19,6 +19,8 @@ export interface GAirport {
   type?: "AIRPORT" | "CITY" | string;
   nearLabel?: string;
   distance?: string;
+  groupCity?: string;            // header de agrupamento "Paris · 4 aeroportos"
+  groupCount?: number;
 }
 
 export interface GFlightLeg {
