@@ -7,6 +7,7 @@ import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 import {
   Plane, Hotel, Car, Ticket, Shield, MapPin, Calendar, Clock,
   ChevronRight, ChevronDown, ExternalLink, Map as MapIcon, List, Filter,
