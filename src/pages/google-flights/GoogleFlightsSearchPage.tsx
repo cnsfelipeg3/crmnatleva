@@ -566,6 +566,19 @@ export default function GoogleFlightsSearchPage() {
               {isLoading ? "Buscando voos..." : "Buscar voos"}
             </Button>
           </div>
+
+          {/* Filtros inline · sempre visíveis no buscador */}
+          <div className="border-t border-border pt-4">
+            <GFlightInlineFilters
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
+              flights={[
+                ...(results?.best_flights ?? []),
+                ...(results?.other_flights ?? []),
+              ]}
+            />
+          </div>
         </div>
       </Card>
 
