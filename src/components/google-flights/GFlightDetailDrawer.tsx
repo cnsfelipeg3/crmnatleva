@@ -82,7 +82,30 @@ interface Props {
   onClose: () => void;
 }
 
+function buildGoogleFlightsDeepLink(
+  dep: string | undefined,
+  arr: string | undefined,
+  outboundDate: string | undefined,
+  returnDate: string | undefined,
+  adults: number = 1,
+): string {
+  const base = "https://www.google.com/travel/flights";
+  const params = new URLSearchParams();
+  params.set("hl", "pt-BR");
+  params.set("curr", "BRL");
+  params.set("gl", "br");
+  if (dep && arr && outboundDate) {
+    const ret = returnDate ? ` returning ${returnDate}` : "";
+    const paxText = adults > 1 ? ` ${adults} adults` : "";
+    params.set("q", `Flights from ${dep} to ${arr} on ${outboundDate}${ret}${paxText}`);
+  } else if (dep && arr) {
+    params.set("q", `Flights from ${dep} to ${arr}`);
+  }
+  return `${base}?${params.toString()}`;
+}
+
 export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) {
+  const queryClient = useQueryClient();
   const [copiedToken, setCopiedToken] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reservingId, setReservingId] = useState<string | null>(null);
