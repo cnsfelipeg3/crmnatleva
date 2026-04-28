@@ -296,6 +296,22 @@ export default function TripDetail() {
   const tripEnd = sale.return_date;
   const destinations = new Set([sale.destination_iata, ...segments.map(s => s.destination_iata)].filter(Boolean));
 
+  // Validação · trip_length manual (sale.return_date - sale.departure_date) vs. derivado dos segmentos
+  const tripLengthCheck = validateTripLengthFromSegments(
+    sale.departure_date,
+    sale.return_date,
+    segments,
+  );
+
+  function copySuggestedReturn() {
+    if (!tripLengthCheck.suggestedReturnDate) return;
+    navigator.clipboard.writeText(tripLengthCheck.suggestedReturnDate);
+    toast({
+      title: "Data sugerida copiada",
+      description: `Cole em "Retorno" ao editar a venda · ${formatDateBR(tripLengthCheck.suggestedReturnDate)}`,
+    });
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
       {/* Header */}
