@@ -331,23 +331,30 @@ function GFlightInlineFiltersImpl({
             className="w-[360px] p-0"
             align="end"
             role="dialog"
-            aria-label="Refinar busca de voos"
+            aria-modal="false"
+            aria-labelledby="gflights-filters-title"
             onOpenAutoFocus={(e) => {
               // Foca no primeiro elemento interativo dentro do popover
               const root = e.currentTarget as HTMLElement;
               const first = root.querySelector<HTMLElement>(
-                "button, [role='checkbox'], [role='slider'], input, [tabindex]:not([tabindex='-1'])"
+                "button:not([disabled]), [role='checkbox']:not([disabled]), [role='slider'], input:not([disabled]), [role='switch'], [tabindex]:not([tabindex='-1'])"
               );
               if (first) {
                 e.preventDefault();
                 first.focus();
               }
             }}
+            onCloseAutoFocus={(e) => {
+              // Garante retorno do foco ao trigger sem rolagem brusca
+              e.preventDefault();
+              triggerRef.current?.focus({ preventScroll: true });
+            }}
+            onEscapeKeyDown={() => setOpen(false)}
           >
             <ScrollArea className="max-h-[70vh]">
               <div className="space-y-5 p-4">
                 <div className="flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-semibold">Refinar busca</h4>
+                  <h4 id="gflights-filters-title" className="text-sm font-semibold">Refinar busca</h4>
                   <div className="flex items-center gap-2">
                     {countLabel && (
                       <Badge variant="outline" className="text-[10px] h-5 gap-1" aria-live="polite">
