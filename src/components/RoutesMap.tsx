@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { iataToLabel } from "@/lib/iataUtils";
 import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
 import { getCityImageUrl } from "@/lib/cityImages";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
@@ -107,7 +108,7 @@ function getCurvedPath(from: google.maps.LatLngLiteral, to: google.maps.LatLngLi
   return points;
 }
 
-export default function RoutesMap({ routes, height = "400px", sales = [], onSaleClick, onDestinationClick }: RoutesMapProps) {
+function RoutesMapInner({ routes, height = "400px", sales = [], onSaleClick, onDestinationClick }: RoutesMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -423,4 +424,16 @@ export default function RoutesMap({ routes, height = "400px", sales = [], onSale
       />
     </div>
   );
+}
+
+export default function RoutesMap(props: RoutesMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa de rotas indisponível"
+        className="rounded-lg border border-border"
+      />
+    );
+  }
+  return <RoutesMapInner {...props} />;
 }

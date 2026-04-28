@@ -7,6 +7,7 @@ import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 import {
   Plane, Hotel, Car, Ticket, Shield, MapPin, Calendar, Clock,
   ChevronRight, ChevronDown, ExternalLink, Map as MapIcon, List, Filter,
@@ -209,7 +210,7 @@ interface PortalJourneyMapProps {
 }
 
 /* ═══════════════════════════════════════════════════════════ */
-export default function PortalJourneyMap({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
+function PortalJourneyMapInner({ segments, hotels, lodging, services, sale }: PortalJourneyMapProps) {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -930,4 +931,16 @@ export default function PortalJourneyMap({ segments, hotels, lodging, services, 
       `}</style>
     </div>
   );
+}
+
+export default function PortalJourneyMap(props: PortalJourneyMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa da jornada indisponível"
+        className="h-[60vh] rounded-2xl"
+      />
+    );
+  }
+  return <PortalJourneyMapInner {...props} />;
 }

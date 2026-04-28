@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 import { iataToLabel } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { Badge } from "@/components/ui/badge";
@@ -113,7 +114,7 @@ interface TripRouteMapProps {
   height?: string;
 }
 
-export default function TripRouteMap({ segments, services, hotelInfo, height = "450px" }: TripRouteMapProps) {
+function TripRouteMapInner({ segments, services, hotelInfo, height = "450px" }: TripRouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
@@ -452,4 +453,16 @@ export default function TripRouteMap({ segments, services, hotelInfo, height = "
       </div>
     </div>
   );
+}
+
+export default function TripRouteMap(props: TripRouteMapProps) {
+  if (!isLeafletAvailable()) {
+    return (
+      <LeafletUnavailableNotice
+        title="Mapa da viagem indisponível"
+        className="rounded-lg border border-border"
+      />
+    );
+  }
+  return <TripRouteMapInner {...props} />;
 }
