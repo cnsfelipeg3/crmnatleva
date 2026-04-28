@@ -1,12 +1,14 @@
+import { useMemo } from "react";
 import {
   Plane, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Wifi, Power, Tv, Award, Zap, DollarSign, ChevronRight, Layers,
+  Clock, Moon, ShieldAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   cabinLabel, dayDiff, detectBags, formatBRL, formatMinutes, formatTime, hasExtension,
-  type GFlightItinerary,
+  type GFlightItinerary, type GLayover,
 } from "./gflightsTypes";
 
 interface Props {
@@ -16,6 +18,8 @@ interface Props {
   isFastest?: boolean;
   onSelect?: (it: GFlightItinerary) => void;
 }
+
+type LayoverKind = "tight" | "long" | "overnight" | "ok";
 
 export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect }: Props) {
   const flights = itinerary.flights ?? [];
@@ -36,6 +40,23 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
   const hasUSB = hasExtension(itinerary, /USB|power/i);
   const hasWifi = hasExtension(itinerary, /wi-?fi/i);
   const hasVideo = hasExtension(itinerary, /video|on-demand|entertainment/i);
+
+  // Detecta o pior layover · prioridade tight > overnight > long
+  const worstLayover = useMemo<(GLayover & { kind: LayoverKind }) | null>(() => {
+    if (!layovers.length) return null;
+    let worst: (GLayover & { kind: LayoverKind }) | null = null;
+    for (const lv of layovers) {
+      const dur = lv.duration ?? 0;
+      let kind: LayoverKind = "ok";
+      if (dur > 0 && dur < 45) kind = "tight";
+      else if (dur > 720) kind = "overnight";
+      else if (dur > 300) kind = "long";
+      if (kind === "tight") return { ...lv, kind };
+      if (kind === "overnight" && (!worst || worst.kind === "ok" || worst.kind === "long")) worst = { ...lv, kind };
+      if (kind === "long" && (!worst || worst.kind === "ok")) worst = { ...lv, kind };
+    }
+    return worst;
+  }, [layovers]);
 
   return (
     <button
