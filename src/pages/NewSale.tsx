@@ -1488,6 +1488,20 @@ export default function NewSale() {
                     <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                     <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
                   </div>
+                  {tripLengthCheck.hasMismatch && (
+                    <div className={cn(
+                      "flex items-start gap-2 rounded-lg border px-3 py-2 mb-3 text-xs",
+                      tripLengthCheck.severity === "error"
+                        ? "border-destructive/40 bg-destructive/5 text-destructive"
+                        : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+                    )}>
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <strong className="font-semibold">Datas inconsistentes · </strong>
+                        {tripLengthCheck.message}
+                      </div>
+                    </div>
+                  )}
                   {airCostBlocks.length > 0 && (
                     <div className="border-t pt-2 space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Blocos de custo</p>
