@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { iataToLabel, iataToCityName } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
-import L from "leaflet";
+import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import {
   Plane, Hotel, Car, Ticket, Shield, MapPin, Calendar, Clock,

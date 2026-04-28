@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import L from "leaflet";
+import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { iataToLabel } from "@/lib/iataUtils";
 import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
