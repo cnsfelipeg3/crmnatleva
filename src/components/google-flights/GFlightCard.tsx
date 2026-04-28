@@ -177,8 +177,30 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
           </Badge>
         )}
         {itinerary.self_transfer && (
-          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-500/30 text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="h-2.5 w-2.5" /> Self-transfer
+          <Badge
+            variant="outline"
+            className="text-[10px] gap-1 h-5 border-rose-500/50 bg-rose-500/10 text-rose-700 dark:text-rose-300"
+            title="Sem proteção em conexão perdida"
+          >
+            <ShieldAlert className="h-2.5 w-2.5" /> Self-transfer · sem proteção
+          </Badge>
+        )}
+        {worstLayover?.kind === "tight" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-300">
+            <AlertTriangle className="h-2.5 w-2.5" />
+            Conexão apertada · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
+          </Badge>
+        )}
+        {worstLayover?.kind === "long" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+            <Clock className="h-2.5 w-2.5" />
+            Conexão arrastada · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
+          </Badge>
+        )}
+        {worstLayover?.kind === "overnight" && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-indigo-500/40 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300">
+            <Moon className="h-2.5 w-2.5" />
+            Pernoite forçado · {formatMinutes(worstLayover.duration)} em {worstLayover.id}
           </Badge>
         )}
         {itinerary.delay?.values && (
