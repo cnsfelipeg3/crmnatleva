@@ -17,6 +17,13 @@ interface Props {
   returnDate?: string;
   paxAdults?: number;
   originIata?: string;
+  /** Estatísticas globais da busca · usadas no tooltip do badge cache/API. */
+  cacheStats?: {
+    cache_hits: number;
+    api_calls: number;
+    hit_rate_percent: number;
+    total_checked: number;
+  } | null;
   onSelectDestination: (dest: DiscoveredDestination) => void;
 }
 
