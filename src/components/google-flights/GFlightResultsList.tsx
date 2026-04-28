@@ -84,7 +84,7 @@ export function GFlightResultsList({ best = [], others = [], isLoading, isError,
               isBest={idx === 0}
               isCheapest={it === cheapest}
               isFastest={it === fastest}
-              onClick={onSelect}
+              onSelect={onSelect}
             />
           ))}
         </div>
@@ -100,7 +100,7 @@ export function GFlightResultsList({ best = [], others = [], isLoading, isError,
               itinerary={it}
               isCheapest={it === cheapest}
               isFastest={it === fastest}
-              onClick={onSelect}
+              onSelect={onSelect}
             />
           ))}
         </div>

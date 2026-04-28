@@ -27,8 +27,10 @@ import {
   priceGraphToCalendar,
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
-import type { GAirport, GCalendarDay, GFlightCabin } from "@/components/google-flights/gflightsTypes";
-import { formatBRL } from "@/components/google-flights/gflightsTypes";
+import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
+import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
+import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
@@ -94,6 +96,8 @@ export default function GoogleFlightsSearchPage() {
   const [adults, setAdults] = useState<number>(initial.adults);
   const [travelClass, setTravelClass] = useState<GFlightCabin>(initial.travel_class);
   const [tab, setTab] = useState<string>(initial.tab);
+  const [selectedItinerary, setSelectedItinerary] = useState<GFlightItinerary | null>(null);
+  const [filters, setFilters] = useState<GFlightFilters>(DEFAULT_GFLIGHT_FILTERS);
 
   const [snapshot, setSnapshot] = useState<SearchSnapshot | null>(() => {
     if (!initial.from || !initial.to || !initial.dep) return null;
@@ -452,14 +456,38 @@ export default function GoogleFlightsSearchPage() {
                 )}
               </Card>
             )}
-            <GFlightResultsList
-              best={results?.best_flights}
-              others={results?.other_flights}
-              isLoading={isLoading}
-              isError={isError}
-              error={error as Error | null}
-              hasSearched={!!snapshot}
-            />
+            {(() => {
+              const all = [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])];
+              const filtered = applyFilters(all, filters);
+              const bestCount = results?.best_flights?.length ?? 0;
+              const filteredBest = filtered.slice(0, Math.min(bestCount, filtered.length));
+              const filteredOthers = filtered.slice(filteredBest.length);
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
+                  <aside className="hidden lg:block">
+                    {all.length > 0 && (
+                      <GFlightFiltersSidebar
+                        flights={all}
+                        filters={filters}
+                        onChange={setFilters}
+                        onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
+                      />
+                    )}
+                  </aside>
+                  <div>
+                    <GFlightResultsList
+                      best={filteredBest}
+                      others={filteredOthers}
+                      isLoading={isLoading}
+                      isError={isError}
+                      error={error as Error | null}
+                      hasSearched={!!snapshot}
+                      onSelect={(it) => setSelectedItinerary(it)}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="calendar">
@@ -481,6 +509,12 @@ export default function GoogleFlightsSearchPage() {
           </TabsContent>
         </Tabs>
       )}
+
+      <GFlightDetailDrawer
+        itinerary={selectedItinerary}
+        searchInput={searchInput}
+        onClose={() => setSelectedItinerary(null)}
+      />
     </div>
   );
 }

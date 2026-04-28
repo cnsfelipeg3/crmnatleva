@@ -79,6 +79,45 @@ export interface GFlightItinerary {
   [k: string]: unknown;
 }
 
+// Provider/agent que oferece o voo (retornado por getBookingDetails)
+export interface GBookingProvider {
+  id: string;
+  title: string;
+  website?: string;
+  price: number;
+  is_airline: boolean;
+  individualBooking?: boolean;
+  token?: string;
+  logo?: string;
+}
+
+// Filtros laterais
+export interface GFlightFilters {
+  stops: ("0" | "1" | "2+")[];
+  airlines: string[];
+  priceMin: number;
+  priceMax: number;
+  durationMaxMin: number;
+  depHourFrom: number;
+  depHourTo: number;
+  bagCarryOn: boolean;
+  bagChecked: boolean;
+  sortBy: "price_asc" | "duration_asc" | "departure_asc" | "co2_asc";
+}
+
+export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
+  stops: ["0", "1", "2+"],
+  airlines: [],
+  priceMin: 0,
+  priceMax: 0,
+  durationMaxMin: 0,
+  depHourFrom: 0,
+  depHourTo: 24,
+  bagCarryOn: false,
+  bagChecked: false,
+  sortBy: "price_asc",
+};
+
 export interface GPriceInsights {
   lowest_price?: number;
   highest_price?: number;
@@ -141,7 +180,7 @@ export function formatMinutes(min?: number | null): string {
  * A DataCrawler entrega timestamps no formato "YYYY-M-D HH:MM" (sem zero-padding e sem TZ).
  * Trabalhamos como hora local SEM aplicar timezone do browser.
  */
-function parseDcDateTime(s: string): { date: Date; hh: string; mm: string } | null {
+export function parseDcDateTime(s?: string): { date: Date; hh: string; mm: string } | null {
   if (!s) return null;
   const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})/);
   if (!m) return null;
@@ -151,6 +190,16 @@ function parseDcDateTime(s: string): { date: Date; hh: string; mm: string } | nu
     hh: h.padStart(2, "0"),
     mm: mi.padStart(2, "0"),
   };
+}
+
+export function getDepHour(it: GFlightItinerary): number | null {
+  const t = it.flights?.[0]?.departure_airport?.time;
+  const p = parseDcDateTime(t);
+  return p ? p.date.getHours() : null;
+}
+
+export function hasExtension(it: GFlightItinerary, regex: RegExp): boolean {
+  return it.flights?.some(f => f.extensions?.some(e => regex.test(e))) ?? false;
 }
 
 export function formatTime(iso?: string): string {
