@@ -1,6 +1,6 @@
 import {
   Plane, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
-  Wifi, Power, Tv, Award, Zap, DollarSign,
+  Wifi, Power, Tv, Award, Zap, DollarSign, ChevronRight, Layers,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
