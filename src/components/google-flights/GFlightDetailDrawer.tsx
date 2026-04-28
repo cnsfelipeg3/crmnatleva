@@ -53,21 +53,23 @@ const TRUST_META: Record<Trust, { color: string; label: string; icon: typeof Shi
   trusted: {
     color: "text-emerald-700 dark:text-emerald-300",
     bg: "bg-emerald-500",
-    label: "Confiável",
+    label: "Canal confiável",
     icon: ShieldCheck,
+    note: "Sem histórico de problemas",
   },
   neutral: {
     color: "text-amber-700 dark:text-amber-300",
     bg: "bg-amber-500",
-    label: "Neutra",
+    label: "Canal neutro",
     icon: Shield,
+    note: "Verifique reviews antes de comprar",
   },
   avoid: {
     color: "text-rose-700 dark:text-rose-300",
     bg: "bg-rose-500",
-    label: "Atenção",
+    label: "⚠️ Evitar",
     icon: ShieldAlert,
-    note: "OTA com histórico de cobranças extras ou atendimento ruim. Confirme política antes de fechar.",
+    note: "Histórico de cobranças extras e atendimento ruim",
   },
 };
 
