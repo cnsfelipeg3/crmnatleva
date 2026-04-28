@@ -12,6 +12,8 @@ import {
   type DiscoverResponse,
 } from "@/hooks/useDiscoverDestinations";
 import { GFlightDestinationCard } from "./GFlightDestinationCard";
+import { useDiscoverCacheHistory } from "@/hooks/useDiscoverCacheHistory";
+import { DiscoverCacheTrendChart } from "./DiscoverCacheTrendChart";
 
 interface Props {
   onSelectDestination: (dest: DiscoveredDestination, ctx: DiscoverResponse) => void;
@@ -200,6 +202,27 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
   const recognitionRef = useRef<any>(null);
   const discover = useDiscoverDestinations();
   const data = discover.data;
+  const { history: cacheHistory, append: appendCachePoint, clear: clearCacheHistory } =
+    useDiscoverCacheHistory();
+
+  // Registra ponto no histórico sempre que vier um cache_stats novo
+  const lastRegisteredTsRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!data?.success || !data.cache_stats) return;
+    // dedupe · evita re-append se o componente re-renderizar com o mesmo data
+    const fingerprint =
+      data.cache_stats.cache_hits * 10_000 +
+      data.cache_stats.api_calls * 100 +
+      data.cache_stats.total_checked;
+    if (lastRegisteredTsRef.current === fingerprint) return;
+    lastRegisteredTsRef.current = fingerprint;
+    appendCachePoint({
+      cache_hits: data.cache_stats.cache_hits,
+      api_calls: data.cache_stats.api_calls,
+      total_checked: data.cache_stats.total_checked,
+      hit_rate_percent: data.cache_stats.hit_rate_percent,
+    });
+  }, [data, appendCachePoint]);
 
   // Live extract local (debounced 350ms)
   useEffect(() => {
@@ -509,6 +532,8 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
           data={data}
           onSelectDestination={onSelectDestination}
           onReset={() => { discover.reset(); setStory(""); setExtract(null); }}
+          cacheHistory={cacheHistory}
+          onClearCacheHistory={clearCacheHistory}
         />
       )}
     </div>
@@ -608,11 +633,13 @@ function CinematicLoading({ targetLabel }: { targetLabel?: string }) {
 // ────────────────────────────────────────────────────────────────
 
 function ResultSection({
-  data, onSelectDestination, onReset,
+  data, onSelectDestination, onReset, cacheHistory, onClearCacheHistory,
 }: {
   data: DiscoverResponse;
   onSelectDestination: (d: DiscoveredDestination, ctx: DiscoverResponse) => void;
   onReset: () => void;
+  cacheHistory: import("@/hooks/useDiscoverCacheHistory").DiscoverCachePoint[];
+  onClearCacheHistory: () => void;
 }) {
   const ext = data.extracted;
   const target =
@@ -649,28 +676,46 @@ function ResultSection({
               <span>{data.totalWithFlights} retornaram preços</span>
               <span>·</span>
               <span>{data.totalFitsBudget} no orçamento</span>
-              {data.cache_stats && (
-                <>
-                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                    · ⚡ {data.cache_stats.cache_hits} do cache
-                  </span>
-                  <span className="text-blue-600 dark:text-blue-400">
-                    · 🌐 {data.cache_stats.api_calls} novas
-                  </span>
-                  {data.cache_stats.hit_rate_percent >= 50 && (
-                    <span className="text-emerald-600 dark:text-emerald-400 italic">
-                      · {data.cache_stats.hit_rate_percent}% economizado
-                    </span>
-                  )}
-                </>
-              )}
             </div>
+            {data.cache_stats && (
+              <div
+                className="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1.5 text-[11px]"
+                role="status"
+                aria-label={`Hit-rate de cache: ${data.cache_stats.hit_rate_percent}%`}
+                title={`Cache hits: ${data.cache_stats.cache_hits} de ${data.cache_stats.total_checked} destinos · API fresh: ${data.cache_stats.api_calls}`}
+              >
+                <span className="font-semibold text-foreground">
+                  Hit-rate {data.cache_stats.hit_rate_percent}%
+                </span>
+                <span className="text-emerald-600 dark:text-emerald-400">
+                  ⚡ {data.cache_stats.cache_hits} cache
+                </span>
+                <span className="text-blue-600 dark:text-blue-400">
+                  🌐 {data.cache_stats.api_calls} fresh
+                </span>
+                {/* Mini barra visual */}
+                <div className="ml-auto flex h-1.5 w-24 overflow-hidden rounded-full bg-border/60">
+                  <div
+                    className="bg-emerald-500"
+                    style={{ width: `${data.cache_stats.hit_rate_percent}%` }}
+                  />
+                  <div
+                    className="bg-blue-500"
+                    style={{ width: `${100 - data.cache_stats.hit_rate_percent}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={onReset} className="shrink-0">
             <X className="h-4 w-4 mr-1" /> Nova busca
           </Button>
         </div>
       </Card>
+
+      {cacheHistory.length > 1 && (
+        <DiscoverCacheTrendChart history={cacheHistory} onClear={onClearCacheHistory} />
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.results.map((d, i) => (
@@ -686,6 +731,7 @@ function ResultSection({
               returnDate={data.period?.returnDate}
               paxAdults={data.extracted?.paxAdults || 1}
               originIata={data.extracted?.origin || "GRU"}
+              cacheStats={data.cache_stats ?? null}
               onSelectDestination={(dest) => onSelectDestination(dest, data)}
             />
           </div>

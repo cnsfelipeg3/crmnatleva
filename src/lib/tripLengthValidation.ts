@@ -37,6 +37,8 @@ export interface TripLengthValidation {
   message: string;
   /** Severidade pra estilização. */
   severity: "ok" | "warn" | "error";
+  /** Sugestão de return_date corrigido (YYYY-MM-DD) baseado nos segmentos. */
+  suggestedReturnDate: string | null;
 }
 
 function safeDays(from?: string | null, to?: string | null): number | null {
@@ -56,6 +58,7 @@ function safeDays(from?: string | null, to?: string | null): number | null {
 export function validateTripLength(input: TripDateInputs): TripLengthValidation {
   const segLen = safeDays(input.segDeparture, input.segReturn);
   const formLen = safeDays(input.formDeparture, input.formReturn);
+  const suggestedReturnDate = input.segReturn ?? null;
 
   // Sem dados suficientes pra comparar
   if (segLen == null || formLen == null) {
@@ -66,6 +69,7 @@ export function validateTripLength(input: TripDateInputs): TripLengthValidation 
       diffDays: null,
       message: "",
       severity: "ok",
+      suggestedReturnDate,
     };
   }
 
@@ -78,6 +82,7 @@ export function validateTripLength(input: TripDateInputs): TripLengthValidation 
       diffDays: 0,
       message: "",
       severity: "ok",
+      suggestedReturnDate,
     };
   }
 
@@ -96,6 +101,7 @@ export function validateTripLength(input: TripDateInputs): TripLengthValidation 
       `Inconsistência de duração da viagem · ${dirHint}. ` +
       `Manual: ${formLen}d · Voos: ${segLen}d (Δ ${diff > 0 ? "+" : ""}${diff}d).`,
     severity,
+    suggestedReturnDate,
   };
 }
 

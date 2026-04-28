@@ -14,9 +14,11 @@ const TripRouteMap = lazy(() => import("@/components/TripRouteMap"));
 import {
   ArrowLeft, Plane, Hotel, Users, DollarSign, MapPin, Calendar,
   ExternalLink, Clock, ShoppingBag, Shield, Car, Ticket, Train,
-  CheckCircle2, AlertTriangle, FileText, Paperclip, Copy,
+  CheckCircle2, AlertTriangle, FileText, Paperclip, Copy, Wand2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { validateTripLengthFromSegments } from "@/lib/tripLengthValidation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getProductMeta } from "@/lib/productTypes";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -294,6 +296,22 @@ export default function TripDetail() {
   const tripEnd = sale.return_date;
   const destinations = new Set([sale.destination_iata, ...segments.map(s => s.destination_iata)].filter(Boolean));
 
+  // Validação · trip_length manual (sale.return_date - sale.departure_date) vs. derivado dos segmentos
+  const tripLengthCheck = validateTripLengthFromSegments(
+    sale.departure_date,
+    sale.return_date,
+    segments,
+  );
+
+  function copySuggestedReturn() {
+    if (!tripLengthCheck.suggestedReturnDate) return;
+    navigator.clipboard.writeText(tripLengthCheck.suggestedReturnDate);
+    toast({
+      title: "Data sugerida copiada",
+      description: `Cole em "Retorno" ao editar a venda · ${formatDateBR(tripLengthCheck.suggestedReturnDate)}`,
+    });
+  }
+
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
       {/* Header */}
@@ -319,6 +337,53 @@ export default function TripDetail() {
           <ExternalLink className="w-4 h-4 mr-2" /> Abrir Venda
         </Button>
       </div>
+
+      {/* Aviso · divergência entre return_date manual e segmentos aéreos */}
+      {tripLengthCheck.hasMismatch && (
+        <Alert
+          variant={tripLengthCheck.severity === "error" ? "destructive" : "default"}
+          className={tripLengthCheck.severity === "error"
+            ? ""
+            : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300"}
+        >
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle className="flex items-center gap-2">
+            Duração da viagem inconsistente
+            <Badge variant="outline" className="text-[10px]">
+              Δ {tripLengthCheck.diffDays != null && tripLengthCheck.diffDays > 0 ? "+" : ""}
+              {tripLengthCheck.diffDays}d
+            </Badge>
+          </AlertTitle>
+          <AlertDescription className="space-y-2">
+            <p className="text-sm">{tripLengthCheck.message}</p>
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span>
+                Manual: <strong>{tripLengthCheck.formTripLength ?? "?"}d</strong>
+                {tripEnd && <> · retorno {formatDateBR(tripEnd)}</>}
+              </span>
+              <span>·</span>
+              <span>
+                Voos: <strong>{tripLengthCheck.segTripLength ?? "?"}d</strong>
+                {tripLengthCheck.suggestedReturnDate && (
+                  <> · sugerido {formatDateBR(tripLengthCheck.suggestedReturnDate)}</>
+                )}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {tripLengthCheck.suggestedReturnDate && (
+                <Button size="sm" variant="outline" onClick={copySuggestedReturn}>
+                  <Copy className="w-3.5 h-3.5 mr-1.5" />
+                  Copiar data sugerida
+                </Button>
+              )}
+              <Button size="sm" variant="outline" onClick={() => navigate(`/sales/${id}`)}>
+                <Wand2 className="w-3.5 h-3.5 mr-1.5" />
+                Corrigir na venda
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Info cards row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
