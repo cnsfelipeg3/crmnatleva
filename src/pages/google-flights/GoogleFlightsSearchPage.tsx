@@ -27,8 +27,10 @@ import {
   priceGraphToCalendar,
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
-import type { GAirport, GCalendarDay, GFlightCabin } from "@/components/google-flights/gflightsTypes";
-import { formatBRL } from "@/components/google-flights/gflightsTypes";
+import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
+import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
+import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
