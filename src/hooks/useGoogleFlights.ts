@@ -225,11 +225,55 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
         };
       }
 
+      // -------- priceHistory (vem dentro do searchFlights, antes ignorado) --------
+      const ph = root?.priceHistory;
+      let priceHistory: GPriceHistory | undefined;
+      if (ph && (Array.isArray(ph.history) || ph.summary)) {
+        const historyArr: { date: string; price: number }[] = Array.isArray(ph.history)
+          ? ph.history
+              .map((h: any) => {
+                const t = h?.time ?? h?.date;
+                const v = typeof h?.value === "number" ? h.value : Number(h?.value);
+                if (!t || !Number.isFinite(v)) return null;
+                // time pode vir como timestamp (ms) ou string ISO
+                let date: string;
+                if (typeof t === "number") {
+                  date = new Date(t).toISOString().slice(0, 10);
+                } else {
+                  const d = new Date(String(t));
+                  date = isNaN(d.getTime()) ? String(t) : d.toISOString().slice(0, 10);
+                }
+                return { date, price: v };
+              })
+              .filter((x: any): x is { date: string; price: number } => !!x)
+          : [];
+        function bands(arr: any): any[] | undefined {
+          if (!Array.isArray(arr)) return undefined;
+          return arr
+            .map((b: any) => ({
+              value: typeof b?.value === "number" ? b.value : Number(b?.value),
+              operation: String(b?.operation ?? ""),
+            }))
+            .filter((b: any) => Number.isFinite(b.value));
+        }
+        priceHistory = {
+          history: historyArr,
+          current: typeof ph?.summary?.current === "number" ? ph.summary.current : undefined,
+          low: bands(ph?.summary?.low),
+          typical: bands(ph?.summary?.typical),
+          high: bands(ph?.summary?.high),
+        };
+      }
+
       return {
         best_flights: topRaw.map(mapItinerary),
         other_flights: otherRaw.map(mapItinerary),
         price_insights: priceInsights,
+        price_history: priceHistory,
         search_metadata: { source: "DataCrawler", action: "searchFlights", count: allItins.length },
+        fetched_at: typeof data?.timestamp === "number"
+          ? new Date(data.timestamp).toISOString()
+          : new Date().toISOString(),
         __cache: !!data?.__cache,
       } as GSearchFlightsResult & { __cache?: boolean };
     },
