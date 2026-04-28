@@ -153,20 +153,28 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Briefcase className="h-2.5 w-2.5" /> Mão {bags.carry_on}
           </Badge>
-        ) : detected.carry_on && (
+        ) : detected.carry_on === "yes" ? (
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Briefcase className="h-2.5 w-2.5" /> Mão inclusa
           </Badge>
-        )}
+        ) : detected.carry_on === "no" ? (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-rose-500/30 text-rose-700 dark:text-rose-300">
+            <Briefcase className="h-2.5 w-2.5" /> Sem mão
+          </Badge>
+        ) : null}
         {(bags?.checked != null && bags.checked > 0) ? (
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Luggage className="h-2.5 w-2.5" /> Despachada {bags.checked}
           </Badge>
-        ) : detected.checked && (
+        ) : detected.checked === "yes" ? (
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Luggage className="h-2.5 w-2.5" /> Despachada inclusa
           </Badge>
-        )}
+        ) : detected.checked === "no" ? (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5 border-rose-500/30 text-rose-700 dark:text-rose-300">
+            <Luggage className="h-2.5 w-2.5" /> Sem despachada
+          </Badge>
+        ) : null}
         {co2?.difference_percent != null && (
           <Badge variant="outline"
             className={cn("text-[10px] gap-1 h-5",

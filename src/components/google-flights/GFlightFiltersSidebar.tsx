@@ -337,23 +337,65 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
       </div>
 
       {/* Bagagem */}
-      <div className="space-y-2">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Bagagem inclusa</Label>
-        <label className="flex items-center gap-2 text-xs cursor-pointer">
-          <Checkbox
-            checked={filters.bagCarryOn}
-            onCheckedChange={(c) => onChange({ ...filters, bagCarryOn: !!c })}
-          />
-          <Briefcase className="h-3 w-3" /> De mão
-        </label>
-        <label className="flex items-center gap-2 text-xs cursor-pointer">
-          <Checkbox
-            checked={filters.bagChecked}
-            onCheckedChange={(c) => onChange({ ...filters, bagChecked: !!c })}
-          />
-          <Luggage className="h-3 w-3" /> Despachada
-        </label>
-      </div>
+      {(() => {
+        // Conta quantos voos têm bagagem confirmada (yes) vs explicitamente sem (no)
+        let carryYes = 0, carryNo = 0, checkedYes = 0, checkedNo = 0;
+        for (const f of flights) {
+          const d = detectBags(f);
+          if (d.carry_on === "yes") carryYes++;
+          else if (d.carry_on === "no") carryNo++;
+          if (d.checked === "yes") checkedYes++;
+          else if (d.checked === "no") checkedNo++;
+        }
+        return (
+          <div className="space-y-2">
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Bagagem
+            </Label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={filters.bagCarryOn}
+                onCheckedChange={(c) => onChange({ ...filters, bagCarryOn: !!c })}
+              />
+              <Briefcase className="h-3 w-3" />
+              <span className="flex-1">De mão</span>
+              {carryYes > 0 && (
+                <Badge variant="outline" className="text-[9px] h-4 px-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  {carryYes}
+                </Badge>
+              )}
+              {carryNo > 0 && (
+                <Badge variant="outline" className="text-[9px] h-4 px-1 border-rose-500/30 text-rose-700 dark:text-rose-300" title="Voos com negação explícita">
+                  −{carryNo}
+                </Badge>
+              )}
+            </label>
+            <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <Checkbox
+                checked={filters.bagChecked}
+                onCheckedChange={(c) => onChange({ ...filters, bagChecked: !!c })}
+              />
+              <Luggage className="h-3 w-3" />
+              <span className="flex-1">Despachada</span>
+              {checkedYes > 0 && (
+                <Badge variant="outline" className="text-[9px] h-4 px-1 border-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                  {checkedYes}
+                </Badge>
+              )}
+              {checkedNo > 0 && (
+                <Badge variant="outline" className="text-[9px] h-4 px-1 border-rose-500/30 text-rose-700 dark:text-rose-300" title="Voos com negação explícita">
+                  −{checkedNo}
+                </Badge>
+              )}
+            </label>
+            {(filters.bagCarryOn || filters.bagChecked) && (
+              <p className="text-[10px] text-muted-foreground leading-relaxed">
+                Esconde voos com negação explícita de bagagem. Voos sem info detalhada continuam visíveis · confira a tarifa no detalhe.
+              </p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Janela de chegada */}
       <div className="space-y-2">
@@ -505,12 +547,15 @@ export function applyFilters(
     });
   }
 
-  // Bagagem · usa heurística resiliente (numérico + extensions[])
+  // Bagagem · usa heurística tristate (yes/no/unknown).
+  // Filtro "exigir bagagem" exclui apenas voos com NEGAÇÃO EXPLÍCITA ("no").
+  // Voos "unknown" são mantidos · API DataCrawler frequentemente omite info de bagagem
+  // e penalizar silêncio zera resultados (UX ruim · usuário pediu correção).
   if (filters.bagCarryOn) {
-    out = out.filter(f => detectBags(f).carry_on);
+    out = out.filter(f => detectBags(f).carry_on !== "no");
   }
   if (filters.bagChecked) {
-    out = out.filter(f => detectBags(f).checked);
+    out = out.filter(f => detectBags(f).checked !== "no");
   }
 
   // Self-transfer · exclui voos vendidos como 2 trechos separados

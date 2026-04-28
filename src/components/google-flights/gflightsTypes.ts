@@ -411,70 +411,90 @@ export function formatCO2(grams?: number): string {
 }
 
 /**
- * Detecta bagagem inclusa de forma resiliente. A DataCrawler nem sempre
- * preenche it.bags · em muitos voos a info só existe em extensions[] dos legs
- * ("Carry-on bag included", "1 checked bag included", "Bagagem despachada inclusa").
- *
- * Retorna o "melhor" valor entre bags numéricos e detecção textual.
- * Considera-se INCLUSA quando há menção positiva sem palavras de exclusão
- * ("not included", "extra fee", "for a fee", "não inclui").
+ * Resultado da detecção de bagagem · tristate.
+ *  - "yes"     · há evidência POSITIVA explícita (numérico > 0 OU extensão "incluída")
+ *  - "no"      · há evidência NEGATIVA explícita (numérico = 0 OU extensão "não inclusa / paga")
+ *  - "unknown" · API não trouxe info confiável (não significa que não há bagagem)
  */
-export function detectBags(it: GFlightItinerary): { carry_on: boolean; checked: boolean } {
-  // 1) Numérico explícito · prioritário
+export type BagState = "yes" | "no" | "unknown";
+
+export interface BagDetection {
+  carry_on: BagState;
+  checked: BagState;
+}
+
+// Palavras-chave de bagagem (cabin/checked) · ancoradas com word boundaries
+const CARRY_KEYWORDS = [
+  /\bcarry[\s-]?on\b/i,
+  /\bcabin\s+bag(gage)?\b/i,
+  /\bhand\s+bag(gage)?\b/i,
+  /\bbagagem\s+de\s+m[ãa]o\b/i,
+  /\bm[ãa]o\s+inclu/i,                 // "mão inclusa"
+];
+
+const CHECKED_KEYWORDS = [
+  /\bchecked\s+bag(gage)?\b/i,
+  /\bhold\s+bag(gage)?\b/i,
+  /\bbagagem\s+despachada\b/i,
+  /\bdespachad[ao]\b/i,
+  /\b\d+\s*kg\s+(bag|baggage|despach)/i,
+  /\b\d+\s*x?\s*\d*\s*kg\b.*(check|despach|hold)/i,
+];
+
+// Marcadores POSITIVOS · co-ocorrem com a keyword na mesma extensão
+const POSITIVE_MARKERS = /\b(included|inclus[ao]|inclu[íi]da|gr[áa]tis|free|allowed|permitida)\b/i;
+
+// Marcadores NEGATIVOS · co-ocorrem com a keyword na mesma extensão
+const NEGATIVE_MARKERS = /\b(not\s+included|n[ãa]o\s+inclu|for\s+a\s+fee|extra\s+fee|paid|cobrad[ao]|charge[d]?|sem\s+bagagem|no\s+(carry|checked|hold|bag)|fee\s+applies)\b/i;
+
+/**
+ * Detecta bagagem inclusa de forma resiliente. A DataCrawler entrega:
+ *  - it.bags.{carry_on, checked}: número (0 = explicitamente sem, > 0 = incluso, null/undef = desconhecido)
+ *  - leg.extensions[]: strings tipo "1 carry-on bag included", "Checked bag for a fee"
+ *
+ * Estratégia:
+ *  1. Numérico explícito ganha sempre (yes/no firmes).
+ *  2. Senão, varre extensões e exige co-ocorrência keyword + marker POS/NEG na MESMA string.
+ *  3. Se não encontrar nada, retorna "unknown" · NUNCA assume "no" por silêncio.
+ */
+export function detectBags(it: GFlightItinerary): BagDetection {
+  // 1) Numérico explícito
   const numCarry = typeof it.bags?.carry_on === "number" ? it.bags.carry_on : null;
   const numChecked = typeof it.bags?.checked === "number" ? it.bags.checked : null;
-  let carry_on = numCarry !== null ? numCarry > 0 : false;
-  let checked = numChecked !== null ? numChecked > 0 : false;
 
-  // 2) Heurística sobre extensions[] · só sobrescreve quando o numérico não foi resolvido
-  const allExt: string[] = [];
-  for (const leg of it.flights ?? []) {
-    if (Array.isArray(leg.extensions)) allExt.push(...leg.extensions);
-  }
-  const lc = allExt.map(e => e.toLowerCase());
+  let carry_on: BagState = numCarry === null ? "unknown" : numCarry > 0 ? "yes" : "no";
+  let checked: BagState = numChecked === null ? "unknown" : numChecked > 0 ? "yes" : "no";
 
-  const NEGATIVE = /(not\s+included|n[ãa]o\s+incluí?d[ao]|for\s+a\s+fee|extra\s+fee|paid|cobrad[ao]|charge[d]?|sem\s+bagagem|no\s+(carry|checked|bag))/i;
-
-  function detect(patterns: RegExp[]): boolean | null {
-    let positive = false;
-    let negative = false;
-    for (const ext of allExt) {
-      const matched = patterns.some(p => p.test(ext));
-      if (!matched) continue;
-      if (NEGATIVE.test(ext)) negative = true;
-      else positive = true;
+  // 2) Se ainda unknown, varre extensões
+  if (carry_on === "unknown" || checked === "unknown") {
+    const allExt: string[] = [];
+    for (const leg of it.flights ?? []) {
+      if (Array.isArray(leg.extensions)) allExt.push(...leg.extensions);
     }
-    if (positive && !negative) return true;
-    if (negative && !positive) return false;
-    return null; // ambíguo · não sobrescreve
-  }
 
-  if (numCarry === null) {
-    const carryPatterns = [
-      /carry[\s-]?on/i,
-      /cabin\s+bag/i,
-      /hand\s+bag/i,
-      /m[ãa]o/i,
-      /bagagem\s+de\s+m[ãa]o/i,
-    ];
-    const r = detect(carryPatterns);
-    if (r !== null) carry_on = r;
-  }
+    function scan(keywords: RegExp[]): BagState {
+      let pos = 0, neg = 0;
+      for (const ext of allExt) {
+        if (!keywords.some(k => k.test(ext))) continue;
+        const isNeg = NEGATIVE_MARKERS.test(ext);
+        const isPos = POSITIVE_MARKERS.test(ext);
+        if (isNeg && !isPos) neg++;
+        else if (isPos && !isNeg) pos++;
+        // ambíguo (ambos ou nenhum) · ignora
+      }
+      if (pos > 0 && neg === 0) return "yes";
+      if (neg > 0 && pos === 0) return "no";
+      if (pos > 0 && neg > 0) return pos >= neg ? "yes" : "no"; // empate · prefere positivo
+      return "unknown";
+    }
 
-  if (numChecked === null) {
-    const checkedPatterns = [
-      /checked\s+bag/i,
-      /hold\s+bag/i,
-      /despachad[ao]/i,
-      /bagagem\s+despachada/i,
-      /\d+\s*kg\s+(bag|baggage)/i,
-    ];
-    const r = detect(checkedPatterns);
-    if (r !== null) checked = r;
+    if (carry_on === "unknown") carry_on = scan(CARRY_KEYWORDS);
+    if (checked === "unknown") checked = scan(CHECKED_KEYWORDS);
   }
 
   return { carry_on, checked };
 }
+
 
 /**
  * Classifica um preço dentro das faixas históricas (low/typical/high) usando as
