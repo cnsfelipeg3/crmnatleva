@@ -110,73 +110,99 @@ serve(async (req) => {
       return json({ error: "config", message: "RAPIDAPI_GFLIGHTS_KEY não configurado" }, 500);
     }
 
-    const results = await Promise.allSettled(
-      filteredDests.map(async (dest: any) => {
-        const { data: cached } = await supabase
-          .from("gflights_discovery_cache")
-          .select("*")
-          .eq("origin_iata", extracted.origin)
-          .eq("destination_iata", dest.iata)
-          .eq("period_month", periodMonth)
-          .eq("period_year", periodYear)
-          .eq("adults", extracted.paxAdults)
-          .gte("fetched_at", new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString())
-          .maybeSingle();
+    // Concorrência limitada (5 em paralelo) pra evitar 429 do RapidAPI
+    const CONCURRENCY = 5;
+    const fetchOne = async (dest: any) => {
+      const { data: cached } = await supabase
+        .from("gflights_discovery_cache")
+        .select("*")
+        .eq("origin_iata", extracted.origin)
+        .eq("destination_iata", dest.iata)
+        .eq("period_month", periodMonth)
+        .eq("period_year", periodYear)
+        .eq("adults", extracted.paxAdults)
+        .gte("fetched_at", new Date(Date.now() - CACHE_TTL_HOURS * 60 * 60 * 1000).toISOString())
+        .maybeSingle();
 
-        if (cached?.min_price) {
-          return { dest, minPrice: Number(cached.min_price), sample: cached.sample_flight, fromCache: true };
-        }
+      if (cached?.min_price) {
+        return { dest, minPrice: Number(cached.min_price), sample: cached.sample_flight, fromCache: true };
+      }
 
-        const params = new URLSearchParams({
-          departure_id: extracted.origin,
-          arrival_id: dest.iata,
-          outbound_date: day1,
-          return_date: returnDate,
-          travel_class: "ECONOMY",
-          adults: String(extracted.paxAdults),
-          currency: "BRL",
-          country_code: "BR",
-          language_code: "pt-BR",
-        });
+      const params = new URLSearchParams({
+        departure_id: extracted.origin,
+        arrival_id: dest.iata,
+        outbound_date: day1,
+        return_date: returnDate,
+        travel_class: "ECONOMY",
+        adults: String(extracted.paxAdults),
+        currency: "BRL",
+        country_code: "BR",
+        language_code: "pt-BR",
+      });
 
-        const url = `${RAPIDAPI_BASE}/api/v1/searchFlights?${params}`;
-        const resp = await fetch(url, {
+      const url = `${RAPIDAPI_BASE}/api/v1/searchFlights?${params}`;
+      let resp: Response;
+      try {
+        resp = await fetch(url, {
           headers: { "x-rapidapi-host": RAPIDAPI_HOST, "x-rapidapi-key": RAPIDAPI_KEY },
           signal: AbortSignal.timeout(15000),
         });
+      } catch (e: any) {
+        return { dest, error: `fetch_${e?.name || "fail"}` };
+      }
 
-        if (!resp.ok) return { dest, error: `status_${resp.status}` };
-        const data = await resp.json();
-        if (data?.status === false) return { dest, error: "api_false" };
+      // 429 · backoff curto e 1 retry
+      if (resp.status === 429) {
+        await new Promise((r) => setTimeout(r, 1500 + Math.random() * 1000));
+        try {
+          resp = await fetch(url, {
+            headers: { "x-rapidapi-host": RAPIDAPI_HOST, "x-rapidapi-key": RAPIDAPI_KEY },
+            signal: AbortSignal.timeout(15000),
+          });
+        } catch (e: any) {
+          return { dest, error: `retry_${e?.name || "fail"}` };
+        }
+      }
 
-        const top = data?.data?.itineraries?.topFlights || [];
-        const other = data?.data?.itineraries?.otherFlights || [];
-        const all = [...top, ...other];
-        if (all.length === 0) return { dest, error: "no_flights" };
+      if (!resp.ok) return { dest, error: `status_${resp.status}` };
+      const data = await resp.json();
+      if (data?.status === false) return { dest, error: "api_false" };
 
-        const cheapest = all.reduce((min: any, it: any) => {
-          if (typeof it.price !== "number") return min;
-          if (!min || it.price < min.price) return it;
-          return min;
-        }, null);
+      const top = data?.data?.itineraries?.topFlights || [];
+      const other = data?.data?.itineraries?.otherFlights || [];
+      const all = [...top, ...other];
+      if (all.length === 0) return { dest, error: "no_flights" };
 
-        if (!cheapest) return { dest, error: "no_price" };
+      const cheapest = all.reduce((min: any, it: any) => {
+        if (typeof it.price !== "number") return min;
+        if (!min || it.price < min.price) return it;
+        return min;
+      }, null);
 
-        await supabase.from("gflights_discovery_cache").upsert({
-          origin_iata: extracted.origin,
-          destination_iata: dest.iata,
-          period_month: periodMonth,
-          period_year: periodYear,
-          adults: extracted.paxAdults,
-          travel_class: "ECONOMY",
-          min_price: cheapest.price,
-          sample_flight: cheapest,
-          fetched_at: new Date().toISOString(),
-        }, { onConflict: "origin_iata,destination_iata,period_month,period_year,adults,travel_class" });
+      if (!cheapest) return { dest, error: "no_price" };
 
-        return { dest, minPrice: cheapest.price, sample: cheapest, fromCache: false };
-      }),
-    );
+      await supabase.from("gflights_discovery_cache").upsert({
+        origin_iata: extracted.origin,
+        destination_iata: dest.iata,
+        period_month: periodMonth,
+        period_year: periodYear,
+        adults: extracted.paxAdults,
+        travel_class: "ECONOMY",
+        min_price: cheapest.price,
+        sample_flight: cheapest,
+        fetched_at: new Date().toISOString(),
+      }, { onConflict: "origin_iata,destination_iata,period_month,period_year,adults,travel_class" });
+
+      return { dest, minPrice: cheapest.price, sample: cheapest, fromCache: false };
+    };
+
+    // Executa em batches de CONCURRENCY
+    const results: PromiseSettledResult<any>[] = [];
+    for (let i = 0; i < filteredDests.length; i += CONCURRENCY) {
+      const batch = filteredDests.slice(i, i + CONCURRENCY);
+      const batchResults = await Promise.allSettled(batch.map((d: any) => fetchOne(d)));
+      results.push(...batchResults);
+    }
 
     const successful = results
       .filter((r): r is PromiseFulfilledResult<any> =>
