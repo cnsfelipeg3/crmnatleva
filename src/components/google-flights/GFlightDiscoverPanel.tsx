@@ -643,8 +643,27 @@ function ResultSection({
               {ext.paxAdults && <Chip>👥 {ext.paxAdults} adulto{ext.paxAdults > 1 ? "s" : ""}</Chip>}
               {ext.mood && <Chip>🎯 {ext.mood}</Chip>}
             </div>
-            <div className="text-[10px] text-muted-foreground pt-1">
-              Buscamos em {data.totalCandidates} destinos · {data.totalWithFlights} retornaram preços · {data.totalFitsBudget} cabem no orçamento
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px] text-muted-foreground pt-1">
+              <span>Buscamos em {data.totalCandidates} destinos</span>
+              <span>·</span>
+              <span>{data.totalWithFlights} retornaram preços</span>
+              <span>·</span>
+              <span>{data.totalFitsBudget} no orçamento</span>
+              {data.cache_stats && (
+                <>
+                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    · ⚡ {data.cache_stats.cache_hits} do cache
+                  </span>
+                  <span className="text-blue-600 dark:text-blue-400">
+                    · 🌐 {data.cache_stats.api_calls} novas
+                  </span>
+                  {data.cache_stats.hit_rate_percent >= 50 && (
+                    <span className="text-emerald-600 dark:text-emerald-400 italic">
+                      · {data.cache_stats.hit_rate_percent}% economizado
+                    </span>
+                  )}
+                </>
+              )}
             </div>
           </div>
           <Button variant="ghost" size="sm" onClick={onReset} className="shrink-0">
