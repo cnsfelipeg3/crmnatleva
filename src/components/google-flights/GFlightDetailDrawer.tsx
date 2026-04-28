@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Copy, Check, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
-  ChevronDown, Sun, Moon,
+  ChevronDown, Sun, Moon, ShoppingCart, Sparkles,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -153,11 +153,16 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
     toast.success("Dados copiados para proposta");
   };
 
+  // Melhor oferta = primeira ordenada por preço com website
+  const bestOffer = providersSorted.find((p) => !!p.website) ?? providersSorted[0] ?? null;
+  const buildHref = (url?: string) =>
+    url ? (url.startsWith("http") ? url : `https://${url}`) : "";
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full sm:max-w-2xl p-0 flex flex-col">
         {/* Header */}
-        <SheetHeader className="px-5 py-4 border-b border-border space-y-2">
+        <SheetHeader className="px-5 py-4 border-b border-border space-y-3">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <SheetTitle className="text-base flex items-center gap-2">
@@ -177,6 +182,22 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
               <div className="text-[10px] text-muted-foreground">por adulto</div>
             </div>
           </div>
+
+          {/* CTA topo · vai direto pra melhor oferta */}
+          {bestOffer?.website && (
+            <Button
+              asChild
+              variant="premium"
+              size="lg"
+              className="w-full gap-2"
+            >
+              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
+                <Sparkles className="h-4 w-4" />
+                Reservar agora em {bestOffer.title} · {formatBRL(bestOffer.price || itinerary.price)}
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+          )}
         </SheetHeader>
 
         <ScrollArea className="flex-1">
@@ -336,18 +357,44 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
             {/* Providers */}
             <section className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Onde comprar este voo
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Onde reservar este voo
+                </h3>
+                {providersSorted.length > 0 && (
+                  <span className="text-[10px] text-muted-foreground">
+                    {providersSorted.length} {providersSorted.length === 1 ? "opção" : "opções"} · ordenadas por preço
+                  </span>
+                )}
+              </div>
               {provLoading ? (
                 <div className="space-y-2">
                   {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
+                    <Skeleton key={i} className="h-20 w-full" />
                   ))}
                 </div>
               ) : providersSorted.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-4 text-center bg-muted/20 rounded-md">
-                  Nenhum canal de venda disponível para este voo no momento.
+                <div className="text-xs text-muted-foreground py-6 text-center bg-muted/20 rounded-md border border-dashed border-border">
+                  Nenhum canal de venda direto disponível para este voo.
+                  <div className="mt-2">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="gap-2"
+                    >
+                      <a
+                        href={`https://www.google.com/travel/flights?q=${encodeURIComponent(
+                          `${dep?.id} to ${arr?.id} ${itinerary.flights?.[0]?.airline ?? ""}`,
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Buscar no Google Flights
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -355,43 +402,71 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                     const trust = getTrust(p);
                     const meta = TRUST_META[trust];
                     const Icon = meta.icon;
+                    const isCheapest = i === 0;
                     return (
                       <div
                         key={`${p.id}-${i}`}
-                        className="border border-border rounded-md p-3 flex items-start gap-3 hover:border-primary/40 transition-colors"
+                        className={cn(
+                          "border rounded-lg p-3 transition-colors",
+                          isCheapest
+                            ? "border-primary/40 bg-primary/5"
+                            : "border-border hover:border-primary/30",
+                        )}
                       >
-                        <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", meta.bg)} />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <div className="text-sm font-semibold truncate flex items-center gap-1.5">
-                              {p.title}
-                              {p.is_airline && (
-                                <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300 gap-1">
-                                  <Building2 className="h-2.5 w-2.5" /> Cia oficial
-                                </Badge>
-                              )}
-                              {!p.is_airline && (
-                                <Badge variant="outline" className="text-[9px] gap-1">OTA</Badge>
-                              )}
+                        <div className="flex items-start gap-3">
+                          <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", meta.bg)} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                              <div className="text-sm font-semibold flex items-center gap-1.5 flex-wrap">
+                                {p.title}
+                                {p.is_airline ? (
+                                  <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300 gap-1">
+                                    <Building2 className="h-2.5 w-2.5" /> Cia oficial
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-[9px] gap-1">OTA</Badge>
+                                )}
+                                {isCheapest && (
+                                  <Badge className="text-[9px] gap-1 bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15">
+                                    <Sparkles className="h-2.5 w-2.5" /> Melhor preço
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-base font-bold shrink-0">{formatBRL(p.price)}</div>
                             </div>
-                            <div className="text-base font-bold shrink-0">{formatBRL(p.price)}</div>
+                            <div className={cn("text-[10px] mt-1 flex items-center gap-1", meta.color)}>
+                              <Icon className="h-3 w-3" /> {meta.label}
+                            </div>
+                            {meta.note && (
+                              <div className="text-[10px] text-rose-700 dark:text-rose-300 mt-0.5">
+                                ⚠️ {meta.note}
+                              </div>
+                            )}
                           </div>
-                          {p.website && (
-                            <a
-                              href={p.website.startsWith("http") ? p.website : `https://${p.website}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[11px] text-primary hover:underline inline-flex items-center gap-1 mt-0.5"
+                        </div>
+
+                        {/* Botão reservar */}
+                        <div className="mt-3">
+                          {p.website ? (
+                            <Button
+                              asChild
+                              variant={isCheapest ? "default" : "outline"}
+                              size="sm"
+                              className="w-full gap-2"
                             >
-                              {p.website} <ExternalLink className="h-2.5 w-2.5" />
-                            </a>
-                          )}
-                          <div className={cn("text-[10px] mt-1 flex items-center gap-1", meta.color)}>
-                            <Icon className="h-3 w-3" /> {meta.label}
-                          </div>
-                          {meta.note && (
-                            <div className="text-[10px] text-rose-700 dark:text-rose-300 mt-0.5">
-                              ⚠️ {meta.note}
+                              <a
+                                href={buildHref(p.website)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ShoppingCart className="h-3.5 w-3.5" />
+                                Reservar em {p.title}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <div className="text-[10px] text-muted-foreground italic text-center py-1.5">
+                              Link de reserva indisponível neste canal
                             </div>
                           )}
                         </div>
@@ -427,10 +502,22 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
         </ScrollArea>
 
         {/* Action bar */}
-        <div className="border-t border-border p-3">
-          <Button onClick={copyForProposal} className="w-full gap-2">
+        <div className="border-t border-border p-3 flex gap-2">
+          {bestOffer?.website ? (
+            <Button asChild className="flex-1 gap-2">
+              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
+                <ShoppingCart className="h-4 w-4" />
+                Reservar · {formatBRL(bestOffer.price || itinerary.price)}
+              </a>
+            </Button>
+          ) : (
+            <Button disabled className="flex-1 gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Sem link de reserva
+            </Button>
+          )}
+          <Button onClick={copyForProposal} variant="outline" size="icon" title="Copiar dados para proposta">
             <Copy className="h-4 w-4" />
-            Copiar dados para proposta
           </Button>
         </div>
       </SheetContent>
