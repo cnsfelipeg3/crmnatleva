@@ -259,8 +259,7 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       return p;
     }
     case "getNextFlights":
-    case "getBookingDetails":
-    case "getBookingURL": {
+    case "getBookingDetails": {
       // DataCrawler aceita booking_token como alias para next_token
       const token = input.next_token ?? input.booking_token;
       if (!token) {
@@ -268,6 +267,19 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       }
       return {
         booking_token: String(token),
+        currency: String(input.currency ?? defaults.currency),
+        language_code: String(input.language_code ?? defaults.language_code),
+        country_code: String(input.country_code ?? defaults.country_code),
+      };
+    }
+    case "getBookingURL": {
+      // getBookingURL exige PROVIDER token (vem de getBookingDetails), não o booking_token do voo
+      const token = input.token ?? input.booking_token ?? input.next_token;
+      if (!token) {
+        throw new Error("Parâmetros obrigatórios faltando: token (provider token)");
+      }
+      return {
+        token: String(token),
         currency: String(input.currency ?? defaults.currency),
         language_code: String(input.language_code ?? defaults.language_code),
         country_code: String(input.country_code ?? defaults.country_code),
