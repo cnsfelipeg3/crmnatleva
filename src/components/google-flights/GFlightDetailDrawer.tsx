@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
-  Copy, Check, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
+  Copy, Check, X as XIcon, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
   ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -17,8 +17,9 @@ import { useFlightBookingDetails, fetchBookingURL } from "@/hooks/useGoogleFligh
 import {
   cabinLabel, classifyExtensions, classifyLayover, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
-  type GBookingProvider, type GFlightItinerary,
+  type GBookingProvider, type GFareTier, type GFlightItinerary,
 } from "./gflightsTypes";
+import { TIER_META } from "./fareClassifier";
 import type { SearchGFlightsInput } from "@/hooks/useGoogleFlights";
 
 // ----------------------------------------------------------------------
