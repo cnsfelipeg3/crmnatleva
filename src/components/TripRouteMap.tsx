@@ -1,6 +1,7 @@
 import { useEffect, useRef, useMemo } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 import { iataToLabel } from "@/lib/iataUtils";
 import { formatDateBR, formatTimeBR } from "@/lib/dateFormat";
 import { Badge } from "@/components/ui/badge";
