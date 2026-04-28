@@ -97,6 +97,9 @@ export interface GBagInfo {
   raw?: unknown;
 }
 
+// 6 tiers normalizados de tarifa (independente da cia)
+export type GFareTier = "basic" | "standard" | "flexible" | "premium" | "business" | "first";
+
 // Provider/agent que oferece o voo (retornado por getBookingDetails)
 export interface GBookingProvider {
   id: string;
@@ -109,6 +112,16 @@ export interface GBookingProvider {
   logo?: string;
   bookings?: GBookingSubOffer[];     // sub-ofertas/combos
   meta?: unknown;                    // metadata adicional
+  // Campos crus extraídos da resposta da DataCrawler:
+  cabin?: string;                    // ex: "BASIC ECONOMY", "PREMIUM ECONOMY"
+  fareType?: string;                 // meta.fare_type ("Economy Fully Refundable")
+  baggage?: string[];                // ["1 bagagem de mão incluída", ...]
+  features?: string[];               // ["Seleção de assentos gratuita", ...]
+  // Derivados pelo classifier (fareClassifier.ts):
+  fareTier?: GFareTier;
+  fareDisplayName?: string;
+  benefits?: string[];
+  restrictions?: string[];
 }
 
 export interface GBookingDetailsResponse {
@@ -150,6 +163,12 @@ export interface GFlightFilters {
   excludeConnectingAirports: string[];
   onlyConnectingAirports: string[];
   quickFilter: "direct" | "morning" | "afternoon" | "evening" | "eco" | null;
+  // Filtros de tarifa (atuam dentro do drawer · sobre os providers do voo selecionado):
+  fareTiers: GFareTier[];
+  requireCheckedBag: boolean;
+  requireRefundable: boolean;
+  requireFreeChange: boolean;
+  requireFreeSeat: boolean;
 }
 
 export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
@@ -170,6 +189,11 @@ export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
   excludeConnectingAirports: [],
   onlyConnectingAirports: [],
   quickFilter: null,
+  fareTiers: ["basic", "standard", "flexible", "premium", "business", "first"],
+  requireCheckedBag: false,
+  requireRefundable: false,
+  requireFreeChange: false,
+  requireFreeSeat: false,
 };
 
 export interface GPriceInsights {

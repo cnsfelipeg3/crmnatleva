@@ -18,6 +18,7 @@ import type {
   GPriceLevel,
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
+import { analyzeFare } from "@/components/google-flights/fareClassifier";
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
@@ -511,7 +512,7 @@ export function useFlightBookingDetails(
                   ...b,
                 }))
               : [];
-            return {
+            const baseProvider: GBookingProvider = {
               id: String(it?.id ?? it?.code ?? it?.title ?? ""),
               title: String(it?.title ?? it?.name ?? "Desconhecido"),
               website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
@@ -522,6 +523,18 @@ export function useFlightBookingDetails(
               logo: it?.logo ? String(it.logo) : undefined,
               bookings: subBookings,
               meta: it?.meta ?? undefined,
+              cabin: it?.cabin ? String(it.cabin) : undefined,
+              fareType: it?.meta?.fare_type ? String(it.meta.fare_type) : undefined,
+              baggage: Array.isArray(it?.meta?.baggage) ? it.meta.baggage.map(String) : undefined,
+              features: Array.isArray(it?.meta?.features) ? it.meta.features.map(String) : undefined,
+            };
+            const analysis = analyzeFare(baseProvider);
+            return {
+              ...baseProvider,
+              fareTier: analysis.tier,
+              fareDisplayName: analysis.displayName,
+              benefits: analysis.benefits,
+              restrictions: analysis.restrictions,
             };
           })
           .filter((p) => p.id || p.title);
