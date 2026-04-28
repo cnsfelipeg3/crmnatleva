@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   formatBRL,
   formatMinutes,
+  detectBags,
   type GFlightFilters,
   type GFlightItinerary,
 } from "./gflightsTypes";
@@ -277,12 +278,12 @@ export function applyFilters(
     });
   }
 
-  // Bagagem
+  // Bagagem · usa heurística resiliente (numérico + extensions[])
   if (filters.bagCarryOn) {
-    out = out.filter(f => (f.bags?.carry_on ?? 0) >= 1);
+    out = out.filter(f => detectBags(f).carry_on);
   }
   if (filters.bagChecked) {
-    out = out.filter(f => (f.bags?.checked ?? 0) >= 1);
+    out = out.filter(f => detectBags(f).checked);
   }
 
   // Sort
