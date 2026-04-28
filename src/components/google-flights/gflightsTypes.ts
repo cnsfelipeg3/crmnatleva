@@ -97,6 +97,9 @@ export interface GBagInfo {
   raw?: unknown;
 }
 
+// 6 tiers normalizados de tarifa (independente da cia)
+export type GFareTier = "basic" | "standard" | "flexible" | "premium" | "business" | "first";
+
 // Provider/agent que oferece o voo (retornado por getBookingDetails)
 export interface GBookingProvider {
   id: string;
@@ -109,6 +112,16 @@ export interface GBookingProvider {
   logo?: string;
   bookings?: GBookingSubOffer[];     // sub-ofertas/combos
   meta?: unknown;                    // metadata adicional
+  // Campos crus extraídos da resposta da DataCrawler:
+  cabin?: string;                    // ex: "BASIC ECONOMY", "PREMIUM ECONOMY"
+  fareType?: string;                 // meta.fare_type ("Economy Fully Refundable")
+  baggage?: string[];                // ["1 bagagem de mão incluída", ...]
+  features?: string[];               // ["Seleção de assentos gratuita", ...]
+  // Derivados pelo classifier (fareClassifier.ts):
+  fareTier?: GFareTier;
+  fareDisplayName?: string;
+  benefits?: string[];
+  restrictions?: string[];
 }
 
 export interface GBookingDetailsResponse {
