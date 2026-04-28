@@ -505,12 +505,15 @@ export function applyFilters(
     });
   }
 
-  // Bagagem · usa heurística resiliente (numérico + extensions[])
+  // Bagagem · usa heurística tristate (yes/no/unknown).
+  // Filtro "exigir bagagem" exclui apenas voos com NEGAÇÃO EXPLÍCITA ("no").
+  // Voos "unknown" são mantidos · API DataCrawler frequentemente omite info de bagagem
+  // e penalizar silêncio zera resultados (UX ruim · usuário pediu correção).
   if (filters.bagCarryOn) {
-    out = out.filter(f => detectBags(f).carry_on);
+    out = out.filter(f => detectBags(f).carry_on !== "no");
   }
   if (filters.bagChecked) {
-    out = out.filter(f => detectBags(f).checked);
+    out = out.filter(f => detectBags(f).checked !== "no");
   }
 
   // Self-transfer · exclui voos vendidos como 2 trechos separados
