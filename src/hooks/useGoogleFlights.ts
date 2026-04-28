@@ -382,13 +382,27 @@ export function useSearchGFlights(input: SearchGFlightsInput | null, enabled = t
 // --------------------------------------------------------------------
 // 3) Calendar picker · heatmap mensal de preços (resiliente)
 // --------------------------------------------------------------------
+// Helper · calcula trip_length (dias) quando há return_date
+function computeTripLength(input: SearchGFlightsInput): number | null {
+  if (!input.return_date || !input.outbound_date) return null;
+  const out = parseISO(input.outbound_date);
+  const ret = parseISO(input.return_date);
+  if (!isValid(out) || !isValid(ret)) return null;
+  const days = Math.round((ret.getTime() - out.getTime()) / (24 * 60 * 60 * 1000));
+  return days > 0 && days <= 60 ? days : null;
+}
+
 export function useCalendarPicker(input: SearchGFlightsInput | null, enabled = true) {
   return useQuery({
-    queryKey: ["gflights", "getCalendarPicker", input],
+    queryKey: ["gflights", "getCalendarPicker", "v2-triplength", input],
     queryFn: async (): Promise<GCalendarDay[]> => {
       if (!input) return [];
       try {
-        const data = await invokeGFlights<any>("getCalendarPicker", input as unknown as Record<string, unknown>);
+        const params: Record<string, unknown> = { ...(input as any) };
+        const tripLen = computeTripLength(input);
+        if (tripLen && !params.trip_length) params.trip_length = tripLen;
+
+        const data = await invokeGFlights<any>("getCalendarPicker", params);
         if (data && data.status === false) return [];
         const raw = data?.data ?? data;
         const arr: any[] =
@@ -434,10 +448,9 @@ export function useCalendarPicker(input: SearchGFlightsInput | null, enabled = t
 // --------------------------------------------------------------------
 export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true) {
   return useQuery({
-    queryKey: ["gflights", "getPriceGraph", input],
+    queryKey: ["gflights", "getPriceGraph", "v2-triplength", input],
     queryFn: async (): Promise<GPriceGraphPoint[]> => {
       if (!input) throw new Error("input inválido");
-      // DataCrawler exige start_date/end_date · injeta janela ±14d se ausente
       const params: Record<string, unknown> = { ...(input as any) };
       if (!params.start_date || !params.end_date) {
         const base = parseISO(input.outbound_date);
@@ -446,19 +459,31 @@ export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true)
           if (!params.end_date) params.end_date = format(addDays(base, 14), "yyyy-MM-dd");
         }
       }
+      // Round-trip: passa trip_length pra DataCrawler deslocar return_date
+      // junto com cada outbound, mantendo a duração da viagem constante.
+      const tripLen = computeTripLength(input);
+      if (tripLen && !params.trip_length) params.trip_length = tripLen;
+
       const data = await invokeGFlights<any>("getPriceGraph", params);
       const arr: any[] = Array.isArray(data?.data) ? data.data : [];
+      const tlen = typeof params.trip_length === "number" ? params.trip_length : null;
+
       return arr
         .map((it: any) => {
           const date = it?.departure ?? it?.date ?? it?.day;
           if (!date) return null;
           const priceNum = typeof it?.price === "number" ? it.price : Number(it?.price);
-          const ret = it?.return ?? it?.return_date ?? null;
+          // DataCrawler nem sempre devolve `return` por ponto · derivamos de tripLen
+          let ret: string | null = it?.return ?? it?.return_date ?? null;
+          if (!ret && tlen) {
+            const d = parseISO(String(date));
+            if (isValid(d)) ret = format(addDays(d, tlen), "yyyy-MM-dd");
+          }
           return {
             date: String(date),
             price: Number.isFinite(priceNum) ? priceNum : null,
             is_outbound: true,
-            return_date: ret ? String(ret) : null,
+            return_date: ret,
           } as GPriceGraphPoint;
         })
         .filter((x): x is GPriceGraphPoint => !!x);

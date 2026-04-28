@@ -131,20 +131,7 @@ export function GFlightPriceTrendChart({ points, isLoading, selectedDate, onSele
               axisLine={false}
               tickFormatter={(v: number) => `R$ ${Math.round(v / 1000)}k`}
             />
-            <Tooltip
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                fontSize: 12,
-              }}
-              labelStyle={{ color: "hsl(var(--foreground))", fontWeight: 600 }}
-              formatter={(value: number) => [formatBRL(value), "Preço"]}
-              labelFormatter={(label: string, payload: any[]) => {
-                const ret = payload?.[0]?.payload?.return_label;
-                return ret ? `Ida ${label} · Volta ${ret}` : `Ida ${label}`;
-              }}
-            />
+            <Tooltip content={<CustomTrendTooltip hasReturn={hasReturn} />} />
             <Area
               type="monotone"
               dataKey="price"

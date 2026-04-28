@@ -1,11 +1,13 @@
 import { TrendingDown, Minus, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 import { formatBRL, type GPriceInsight } from "./gflightsTypes";
 
 interface Props {
   insight?: GPriceInsight;
   onShowHistory?: () => void;
   showHistory?: boolean;
+  tripType?: "round" | "oneway" | "multi";
 }
 
 const META = {
@@ -39,7 +41,7 @@ const META = {
   },
 } as const;
 
-export function GFlightPriceInsightBanner({ insight, onShowHistory, showHistory }: Props) {
+export function GFlightPriceInsightBanner({ insight, onShowHistory, showHistory, tripType }: Props) {
   if (!insight) return null;
   const meta = META[insight.level];
   const Icon = meta.icon;
@@ -56,7 +58,15 @@ export function GFlightPriceInsightBanner({ insight, onShowHistory, showHistory 
     <div className={cn("border rounded-lg p-4 flex gap-3", meta.bg)}>
       <Icon className={cn("h-5 w-5 mt-0.5 shrink-0", meta.color)} />
       <div className="flex-1 min-w-0 space-y-1">
-        <div className={cn("text-sm font-semibold", meta.color)}>{meta.title}</div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className={cn("text-sm font-semibold", meta.color)}>{meta.title}</div>
+          {tripType === "round" && (
+            <Badge variant="outline" className="text-[10px] gap-1">🔄 Pacote ida e volta</Badge>
+          )}
+          {tripType === "multi" && (
+            <Badge variant="outline" className="text-[10px] gap-1">🗺️ Multi-trecho</Badge>
+          )}
+        </div>
         <div className="text-xs text-muted-foreground">{meta.sub}</div>
 
         {economy > 0 && (

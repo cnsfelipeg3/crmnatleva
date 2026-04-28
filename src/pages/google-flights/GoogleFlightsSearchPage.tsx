@@ -273,8 +273,23 @@ export default function GoogleFlightsSearchPage() {
     const d = parseISO(dateStr);
     if (!isValid(d)) return;
     setOutboundDate(d);
+
     if (snapshot) {
-      setSnapshot({ ...snapshot, outbound_date: dateStr });
+      let newReturn: string | undefined = snapshot.return_date;
+      // Round-trip: preserva trip_length deslocando return_date
+      if (snapshot.return_date && snapshot.outbound_date) {
+        const oldOut = parseISO(snapshot.outbound_date);
+        const oldRet = parseISO(snapshot.return_date);
+        if (isValid(oldOut) && isValid(oldRet)) {
+          const tripLen = Math.round((oldRet.getTime() - oldOut.getTime()) / (24 * 60 * 60 * 1000));
+          if (tripLen > 0 && tripLen <= 60) {
+            const newRet = addDays(d, tripLen);
+            newReturn = format(newRet, "yyyy-MM-dd");
+            setReturnDate(newRet);
+          }
+        }
+      }
+      setSnapshot({ ...snapshot, outbound_date: dateStr, return_date: newReturn });
     }
     setTab("list");
   };
