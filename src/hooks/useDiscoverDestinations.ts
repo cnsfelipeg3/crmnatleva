@@ -10,6 +10,9 @@ export interface DiscoverInput {
   paxAdults?: number;
   mood?: string;
   regions?: string[];
+  countries?: string[];
+  cities?: string[];
+  excludeCountries?: string[];
 }
 
 export interface DiscoveredDestination {
@@ -43,23 +46,29 @@ export interface DiscoveredDestination {
   }>;
 }
 
+export interface DiscoverExtracted {
+  budget: number | null;
+  origin: string;
+  monthOffset: number;
+  durationDays: number;
+  paxAdults: number;
+  mood: string | null;
+  regions: string[];
+  countries: string[];
+  cities: string[];
+  excludeCountries: string[];
+}
+
 export interface DiscoverResponse {
   success: boolean;
-  extracted: {
-    budget: number | null;
-    origin: string;
-    monthOffset: number;
-    durationDays: number;
-    paxAdults: number;
-    mood: string | null;
-    regions: string[];
-  };
+  extracted: DiscoverExtracted;
   period: { month: number; year: number; day1: string; returnDate: string };
   totalCandidates: number;
   totalWithFlights: number;
   totalFitsBudget: number;
   results: DiscoveredDestination[];
 }
+
 
 export function useDiscoverDestinations() {
   return useMutation({
