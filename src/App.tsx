@@ -209,7 +209,7 @@ function AppRoutes() {
       <Routes>
         <Route
           path="/login"
-          element={isLoading && !isPublicRoute ? <ScreenLoader /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
         />
         {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
