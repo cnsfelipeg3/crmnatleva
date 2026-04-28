@@ -357,6 +357,72 @@ export function formatCO2(grams?: number): string {
 }
 
 /**
+ * Detecta bagagem inclusa de forma resiliente. A DataCrawler nem sempre
+ * preenche it.bags · em muitos voos a info só existe em extensions[] dos legs
+ * ("Carry-on bag included", "1 checked bag included", "Bagagem despachada inclusa").
+ *
+ * Retorna o "melhor" valor entre bags numéricos e detecção textual.
+ * Considera-se INCLUSA quando há menção positiva sem palavras de exclusão
+ * ("not included", "extra fee", "for a fee", "não inclui").
+ */
+export function detectBags(it: GFlightItinerary): { carry_on: boolean; checked: boolean } {
+  // 1) Numérico explícito · prioritário
+  const numCarry = typeof it.bags?.carry_on === "number" ? it.bags.carry_on : null;
+  const numChecked = typeof it.bags?.checked === "number" ? it.bags.checked : null;
+  let carry_on = numCarry !== null ? numCarry > 0 : false;
+  let checked = numChecked !== null ? numChecked > 0 : false;
+
+  // 2) Heurística sobre extensions[] · só sobrescreve quando o numérico não foi resolvido
+  const allExt: string[] = [];
+  for (const leg of it.flights ?? []) {
+    if (Array.isArray(leg.extensions)) allExt.push(...leg.extensions);
+  }
+  const lc = allExt.map(e => e.toLowerCase());
+
+  const NEGATIVE = /(not\s+included|n[ãa]o\s+incluí?d[ao]|for\s+a\s+fee|extra\s+fee|paid|cobrad[ao]|charge[d]?|sem\s+bagagem|no\s+(carry|checked|bag))/i;
+
+  function detect(patterns: RegExp[]): boolean | null {
+    let positive = false;
+    let negative = false;
+    for (const ext of allExt) {
+      const matched = patterns.some(p => p.test(ext));
+      if (!matched) continue;
+      if (NEGATIVE.test(ext)) negative = true;
+      else positive = true;
+    }
+    if (positive && !negative) return true;
+    if (negative && !positive) return false;
+    return null; // ambíguo · não sobrescreve
+  }
+
+  if (numCarry === null) {
+    const carryPatterns = [
+      /carry[\s-]?on/i,
+      /cabin\s+bag/i,
+      /hand\s+bag/i,
+      /m[ãa]o/i,
+      /bagagem\s+de\s+m[ãa]o/i,
+    ];
+    const r = detect(carryPatterns);
+    if (r !== null) carry_on = r;
+  }
+
+  if (numChecked === null) {
+    const checkedPatterns = [
+      /checked\s+bag/i,
+      /hold\s+bag/i,
+      /despachad[ao]/i,
+      /bagagem\s+despachada/i,
+      /\d+\s*kg\s+(bag|baggage)/i,
+    ];
+    const r = detect(checkedPatterns);
+    if (r !== null) checked = r;
+  }
+
+  return { carry_on, checked };
+}
+
+/**
  * Classifica um preço dentro das faixas históricas (low/typical/high) usando as
  * regras de operação que vêm da API (>, <, between).
  */
