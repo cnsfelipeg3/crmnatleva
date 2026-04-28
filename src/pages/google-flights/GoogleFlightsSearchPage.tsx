@@ -533,8 +533,8 @@ export default function GoogleFlightsSearchPage() {
                   <Cloud className="h-3 w-3" /> Cache
                 </Badge>
               )}
-              {updatedAgoLabel && (
-                <span className="text-[10px] text-muted-foreground/80 italic">· {updatedAgoLabel}</span>
+              {results?.fetched_at && (
+                <UpdatedAgoLabel fetchedAt={results.fetched_at} />
               )}
               {results && (() => {
                 const meta = results.search_metadata as any;
