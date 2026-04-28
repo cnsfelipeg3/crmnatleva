@@ -28,7 +28,7 @@ import {
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
-import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS, classifyPriceAgainstHistory } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,33 @@ export default function GoogleFlightsSearchPage() {
     }
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
+
+  // Inteligência de Preço · classifica preço atual contra histórico (low/typical/high)
+  const priceIntel = useMemo(() => {
+    const ph = results?.price_history;
+    const lowestNow = results?.price_insights?.lowest_price;
+    if (!ph || lowestNow == null) return null;
+    const classification = classifyPriceAgainstHistory(lowestNow, ph);
+    return { classification, history: ph, lowestNow };
+  }, [results]);
+
+  // Indicador "atualizado há X min" baseado em fetched_at
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const updatedAgoLabel = useMemo(() => {
+    if (!results?.fetched_at) return null;
+    const t = new Date(results.fetched_at).getTime();
+    if (!Number.isFinite(t)) return null;
+    const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (diffSec < 60) return `atualizado agora`;
+    const min = Math.round(diffSec / 60);
+    if (min < 60) return `atualizado há ${min} min`;
+    const h = Math.round(min / 60);
+    return `atualizado há ${h}h`;
+  }, [results?.fetched_at]);
 
   const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
 
