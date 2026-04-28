@@ -314,7 +314,7 @@ export default function SaleDetail() {
     };
   }, [sale, segments]);
 
-  if (loading) return <div className="p-6 text-center text-muted-foreground animate-fade-in">Carregando...</div>;
+  if (loading) return <DetailPageSkeleton />;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
       <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>

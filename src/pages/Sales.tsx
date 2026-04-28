@@ -300,7 +300,7 @@ export default function Sales() {
         />
 
         {loading ? (
-          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+          <ListPageSkeleton rows={8} />
         ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             {activeFilterCount > 0 ? "Nenhuma venda encontrada com os filtros aplicados." : "Nenhuma venda ainda. Crie a primeira!"}
