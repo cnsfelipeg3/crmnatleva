@@ -662,17 +662,20 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         {/* Action bar */}
         <div className="border-t border-border p-3 flex gap-2">
-          {bestOffer?.website ? (
-            <Button asChild className="flex-1 gap-2">
-              <a href={buildHref(bestOffer.website)} target="_blank" rel="noopener noreferrer">
-                <ShoppingCart className="h-4 w-4" />
-                Reservar · {formatBRL(bestOffer.price || itinerary.price)}
-              </a>
+          {providersSorted.length > 0 ? (
+            <Button
+              variant="outline"
+              size="default"
+              className="flex-1 gap-2"
+              onClick={scrollToProviders}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Comparar {providersSorted.length} {providersSorted.length === 1 ? "oferta" : "ofertas"}
             </Button>
           ) : (
             <Button disabled className="flex-1 gap-2">
               <ShoppingCart className="h-4 w-4" />
-              Sem link de reserva
+              Sem ofertas disponíveis
             </Button>
           )}
           <Button onClick={copyForProposal} variant="outline" size="icon" title="Copiar dados para proposta">
