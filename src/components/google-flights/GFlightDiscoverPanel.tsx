@@ -1,112 +1,192 @@
-import { useState, useEffect } from "react";
-import {
-  Sparkles,
-  Wand2,
-  MapPin,
-  Calendar,
-  Users,
-  DollarSign,
-  Globe,
-  Heart,
-  Compass,
-  PartyPopper,
-  ArrowRight,
-} from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Sparkles, Mic, MicOff, ArrowRight, X, Globe2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Slider } from "@/components/ui/slider";
+import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { formatBRL } from "./gflightsTypes";
 import {
   useDiscoverDestinations,
   type DiscoveredDestination,
   type DiscoverResponse,
 } from "@/hooks/useDiscoverDestinations";
 import { GFlightDestinationCard } from "./GFlightDestinationCard";
-import { AudioRecorder } from "./AudioRecorder";
-import { formatBRL } from "./gflightsTypes";
 
 interface Props {
   onSelectDestination: (dest: DiscoveredDestination, ctx: DiscoverResponse) => void;
 }
 
 // ────────────────────────────────────────────────────────────────
-// OPÇÕES VISUAIS
+// EXTRAÇÃO LOCAL (instantânea, sem API)
 // ────────────────────────────────────────────────────────────────
 
-const ORIGEM_OPCOES = [
-  { value: "GRU", label: "São Paulo" },
-  { value: "GIG", label: "Rio" },
-  { value: "BSB", label: "Brasília" },
-  { value: "CNF", label: "BH" },
-  { value: "POA", label: "Porto Alegre" },
-  { value: "REC", label: "Recife" },
-  { value: "FOR", label: "Fortaleza" },
-  { value: "SSA", label: "Salvador" },
-  { value: "CWB", label: "Curitiba" },
+type LocalExtract = {
+  budget: number | null;
+  origin: { iata: string; label: string } | null;
+  target: { type: "city" | "country" | "region"; label: string; flag?: string } | null;
+  monthLabel: string | null;
+  duration: string | null;
+  pax: { count: number; label: string } | null;
+  mood: string | null;
+};
+
+const ORIGEM_MAP: Array<{ iata: string; label: string; pat: RegExp }> = [
+  { iata: "GRU", label: "São Paulo", pat: /\b(s(ão|ao)\s+paulo|sampa|\bsp\b|gru|guarulhos)\b/i },
+  { iata: "GIG", label: "Rio de Janeiro", pat: /\b(rio(\s+de\s+janeiro)?|\brj\b|gig|sdu)\b/i },
+  { iata: "BSB", label: "Brasília", pat: /\b(bras(í|i)lia|\bbsb\b|\bdf\b)\b/i },
+  { iata: "CWB", label: "Curitiba", pat: /\b(curitiba|cwb)\b/i },
+  { iata: "POA", label: "Porto Alegre", pat: /\b(porto\s+alegre|\bpoa\b)\b/i },
+  { iata: "REC", label: "Recife", pat: /\b(recife|\brec\b)\b/i },
+  { iata: "FOR", label: "Fortaleza", pat: /\b(fortaleza|for\b)\b/i },
+  { iata: "SSA", label: "Salvador", pat: /\b(salvador|\bssa\b)\b/i },
+  { iata: "CNF", label: "Belo Horizonte", pat: /\b(belo\s+horizonte|\bbh\b|cnf)\b/i },
+];
+
+const TARGET_COUNTRIES: Array<{ name: string; flag: string; pat: RegExp }> = [
+  { name: "Itália", flag: "🇮🇹", pat: /\bit(á|a)lia\b/i },
+  { name: "Portugal", flag: "🇵🇹", pat: /\bportugal\b/i },
+  { name: "Espanha", flag: "🇪🇸", pat: /\bespanha\b/i },
+  { name: "França", flag: "🇫🇷", pat: /\bfran(ç|c)a\b/i },
+  { name: "Alemanha", flag: "🇩🇪", pat: /\balemanha\b/i },
+  { name: "Inglaterra", flag: "🇬🇧", pat: /\b(inglaterra|reino\s+unido)\b/i },
+  { name: "Grécia", flag: "🇬🇷", pat: /\bgr(é|e)cia\b/i },
+  { name: "Suíça", flag: "🇨🇭", pat: /\bsu(í|i)(ç|c)a\b/i },
+  { name: "Holanda", flag: "🇳🇱", pat: /\bholanda\b/i },
+  { name: "Argentina", flag: "🇦🇷", pat: /\bargentina\b/i },
+  { name: "Chile", flag: "🇨🇱", pat: /\bchile\b/i },
+  { name: "Peru", flag: "🇵🇪", pat: /\bperu\b/i },
+  { name: "Uruguai", flag: "🇺🇾", pat: /\burugu(ai|ay)\b/i },
+  { name: "México", flag: "🇲🇽", pat: /\bm(é|e)xico\b/i },
+  { name: "EUA", flag: "🇺🇸", pat: /\b(eua|estados\s+unidos|usa)\b/i },
+  { name: "Japão", flag: "🇯🇵", pat: /\bjap(ã|a)o\b/i },
+  { name: "Tailândia", flag: "🇹🇭", pat: /\btail(â|a)ndia\b/i },
+  { name: "Indonésia", flag: "🇮🇩", pat: /\b(bali|indon(é|e)sia)\b/i },
+  { name: "Emirados", flag: "🇦🇪", pat: /\b(dubai|emirados)\b/i },
+  { name: "Marrocos", flag: "🇲🇦", pat: /\b(marrocos|marrakech)\b/i },
+  { name: "Brasil", flag: "🇧🇷", pat: /\b(brasil|nordeste|maceió|fortaleza|recife|natal|salvador|gramado|noronha)\b/i },
+];
+
+const TARGET_CITIES: Array<{ name: string; flag: string; pat: RegExp }> = [
+  { name: "Roma", flag: "🇮🇹", pat: /\broma\b/i },
+  { name: "Veneza", flag: "🇮🇹", pat: /\bveneza\b/i },
+  { name: "Milão", flag: "🇮🇹", pat: /\bmil(ã|a)o\b/i },
+  { name: "Florença", flag: "🇮🇹", pat: /\bflorença\b/i },
+  { name: "Lisboa", flag: "🇵🇹", pat: /\blisboa\b/i },
+  { name: "Porto", flag: "🇵🇹", pat: /\bporto\b/i },
+  { name: "Madri", flag: "🇪🇸", pat: /\bmadri(d)?\b/i },
+  { name: "Barcelona", flag: "🇪🇸", pat: /\bbarcelona\b/i },
+  { name: "Paris", flag: "🇫🇷", pat: /\bparis\b/i },
+  { name: "Londres", flag: "🇬🇧", pat: /\blondres\b/i },
+  { name: "Amsterdã", flag: "🇳🇱", pat: /\bamsterd(ã|a)m\b/i },
+  { name: "Atenas", flag: "🇬🇷", pat: /\b(atenas|santorini)\b/i },
+  { name: "Buenos Aires", flag: "🇦🇷", pat: /\bbuenos\s+aires\b/i },
+  { name: "Cancún", flag: "🇲🇽", pat: /\bcanc(ú|u)n\b/i },
+  { name: "Nova York", flag: "🇺🇸", pat: /\b(nova\s+york|new\s+york|ny)\b/i },
+  { name: "Miami", flag: "🇺🇸", pat: /\bmiami\b/i },
+  { name: "Tóquio", flag: "🇯🇵", pat: /\bt(ó|o)quio\b/i },
+  { name: "Bangkok", flag: "🇹🇭", pat: /\bbangkok\b/i },
 ];
 
 const MESES = [
-  { value: 0, label: "Este mês" },
-  { value: 1, label: "Mês que vem" },
-  { value: 2, label: "Em 2 meses" },
-  { value: 3, label: "Em 3 meses" },
-  { value: 4, label: "Em 4 meses" },
-  { value: 6, label: "Em 6 meses" },
-  { value: 9, label: "Em 9 meses" },
-  { value: 12, label: "Em 1 ano" },
+  "janeiro", "fevereiro", "março", "abril", "maio", "junho",
+  "julho", "agosto", "setembro", "outubro", "novembro", "dezembro",
 ];
 
-const DURACOES = [
-  { value: 3, label: "Fim de semana", icon: "🌅" },
-  { value: 5, label: "5 dias", icon: "📆" },
-  { value: 7, label: "1 semana", icon: "🗓️" },
-  { value: 10, label: "10 dias", icon: "✈️" },
-  { value: 15, label: "2 semanas", icon: "🌍" },
-  { value: 21, label: "3 semanas", icon: "🏝️" },
-  { value: 30, label: "1 mês", icon: "🌟" },
-];
+function localExtract(s: string): LocalExtract {
+  const lower = s.toLowerCase();
 
-const PAX_OPCOES = [
-  { value: 1, label: "Solo", icon: "🧍" },
-  { value: 2, label: "Casal", icon: "💑" },
-  { value: 3, label: "Trio", icon: "👨‍👩‍👧" },
-  { value: 4, label: "Família", icon: "👨‍👩‍👧‍👦" },
-  { value: 5, label: "Grupo", icon: "👥" },
-];
+  let budget: number | null = null;
+  const bm = lower.match(/(?:r\$\s*)?(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?)\s*(mil|k)?/);
+  if (bm) {
+    let n = Number(bm[1].replace(/\./g, "").replace(",", "."));
+    if (bm[2] && /mil|k/.test(bm[2])) n *= 1000;
+    if (n >= 500 && n <= 500000) budget = Math.round(n);
+  }
 
-const MOODS = [
-  { value: "praia", label: "Praia", icon: "🏖️", color: "from-cyan-500/20 to-blue-500/20 border-cyan-500/40" },
-  { value: "urbano", label: "Urbano", icon: "🌃", color: "from-violet-500/20 to-purple-500/20 border-violet-500/40" },
-  { value: "romantico", label: "Romântico", icon: "💑", color: "from-rose-500/20 to-pink-500/20 border-rose-500/40" },
-  { value: "familia", label: "Família", icon: "👨‍👩‍👧", color: "from-amber-500/20 to-orange-500/20 border-amber-500/40" },
-  { value: "aventura", label: "Aventura", icon: "⛰️", color: "from-emerald-500/20 to-teal-500/20 border-emerald-500/40" },
-  { value: "cultura", label: "Cultura", icon: "🏛️", color: "from-stone-500/20 to-amber-500/20 border-stone-500/40" },
-  { value: "gastronomia", label: "Gastronomia", icon: "🍷", color: "from-red-500/20 to-rose-500/20 border-red-500/40" },
-  { value: "luxo", label: "Luxo", icon: "💎", color: "from-fuchsia-500/20 to-purple-500/20 border-fuchsia-500/40" },
-  { value: "natureza", label: "Natureza", icon: "🌿", color: "from-green-500/20 to-emerald-500/20 border-green-500/40" },
-];
+  let origin: LocalExtract["origin"] = null;
+  for (const o of ORIGEM_MAP) {
+    if (o.pat.test(lower)) { origin = { iata: o.iata, label: o.label }; break; }
+  }
 
-const EXAMPLES = [
-  { icon: "💑", text: "Tenho R$ 5.000, sou de São Paulo, quero 10 dias em outubro com a esposa, lugar com praia" },
-  { icon: "👨‍👩‍👧‍👦", text: "R$ 8 mil, família de 4, quero levar as crianças em janeiro, destino familiar" },
-  { icon: "🌅", text: "R$ 3 mil pra fim de semana romântico em julho, saindo do Rio" },
-  { icon: "⛰️", text: "R$ 15 mil, aventura em setembro, 2 pessoas, gosto de natureza" },
-];
+  let target: LocalExtract["target"] = null;
+  for (const c of TARGET_CITIES) {
+    if (c.pat.test(lower)) { target = { type: "city", label: c.name, flag: c.flag }; break; }
+  }
+  if (!target) {
+    for (const c of TARGET_COUNTRIES) {
+      if (c.pat.test(lower)) { target = { type: "country", label: c.name, flag: c.flag }; break; }
+    }
+  }
 
-const LOADING_DESTINATIONS = [
-  "Buenos Aires", "Lisboa", "Cancún", "Paris", "Roma", "Dubai",
-  "Tóquio", "Maceió", "Nova York", "Bali", "Atenas", "Madrid",
-  "Santiago", "Cidade do Cabo", "Bangkok", "Marrakesh",
-];
+  let monthLabel: string | null = null;
+  for (const m of MESES) {
+    if (new RegExp(`\\b${m}\\b`, "i").test(lower)) { monthLabel = m; break; }
+  }
 
-const MESES_LABEL_PROMPT = [
-  "este mês", "no mês que vem", "daqui a 2 meses", "daqui a 3 meses",
-  "daqui a 4 meses", "daqui a 5 meses", "daqui a 6 meses", "daqui a 7 meses",
-  "daqui a 8 meses", "daqui a 9 meses", "daqui a 10 meses", "daqui a 11 meses",
-  "daqui a 1 ano",
+  let duration: string | null = null;
+  const dm = lower.match(/(\d+)\s*(dias?|semanas?|meses?)/);
+  if (dm) duration = `${dm[1]} ${dm[2]}`;
+  else if (/fim\s+de\s+semana/.test(lower)) duration = "fim de semana";
+  else if (/uma\s+semana/.test(lower)) duration = "1 semana";
+
+  let pax: LocalExtract["pax"] = null;
+  if (/\bsozinh[oa]\b/.test(lower)) pax = { count: 1, label: "sozinho" };
+  else if (/\b(esposa|marido|namorad[oa]|casal|companheir[oa])\b/.test(lower))
+    pax = { count: 2, label: "casal" };
+  else if (/fam(í|i)lia\s+de\s+(\d+)/.test(lower)) {
+    const fm = lower.match(/fam(?:í|i)lia\s+de\s+(\d+)/);
+    if (fm) pax = { count: Number(fm[1]), label: `família de ${fm[1]}` };
+  } else if (/\bfam(í|i)lia\b/.test(lower)) pax = { count: 4, label: "família" };
+  else if (/(\d+)\s+(pessoas?|adultos?)/.test(lower)) {
+    const pm = lower.match(/(\d+)\s+(pessoas?|adultos?)/);
+    if (pm) pax = { count: Number(pm[1]), label: `${pm[1]} adultos` };
+  }
+
+  const MOODS: Record<string, RegExp> = {
+    praia: /\b(praia|mar|litoral|beira-mar)\b/i,
+    romantico: /\b(rom(â|a)ntic[oa]|lua\s+de\s+mel|anivers(á|a)rio\s+de\s+casamento)\b/i,
+    familia: /\b(fam(í|i)lia|crianças?|filhos?)\b/i,
+    aventura: /\b(aventura|trilha|montanha|escalada)\b/i,
+    cultura: /\b(cultura|hist(ó|o)ri[ac]o?|museu)\b/i,
+    gastronomia: /\b(gastronomia|comida|vinho|restaurantes?)\b/i,
+    luxo: /\b(luxo|all-inclusive|resort|requintad[oa])\b/i,
+    natureza: /\b(natureza|floresta|trilhas?)\b/i,
+    urbano: /\b(urbano|cidade\s+grande|metr(ó|o)pole)\b/i,
+  };
+  let mood: string | null = null;
+  for (const [name, pat] of Object.entries(MOODS)) {
+    if (pat.test(lower)) { mood = name; break; }
+  }
+
+  return { budget, origin, target, monthLabel, duration, pax, mood };
+}
+
+// ────────────────────────────────────────────────────────────────
+// STORIES SUGERIDAS
+// ────────────────────────────────────────────────────────────────
+
+const SUGGESTED_STORIES = [
+  {
+    icon: "💑",
+    title: "Lua de mel romântica",
+    text: "Casei mês passado, tenho R$ 18 mil, queremos uma lua de mel inesquecível em outubro, 12 dias, lugar com praia e jantar à beira-mar. Saímos de São Paulo.",
+  },
+  {
+    icon: "🇮🇹",
+    title: "Itália em família",
+    text: "Tenho R$ 25 mil, sou de São Paulo, vai eu, minha esposa e dois filhos. Queremos passar 12 dias na Itália em julho, conhecer Roma, Veneza e Florença.",
+  },
+  {
+    icon: "🌴",
+    title: "Fim de semana romântico",
+    text: "R$ 4 mil pra um fim de semana romântico em julho, saindo do Rio, pode ser nordeste ou caribe próximo, 4 dias.",
+  },
+  {
+    icon: "⛰️",
+    title: "Aventura solo",
+    text: "R$ 12 mil, sozinho, quero aventura em setembro por 15 dias, montanhas, trilhas, gosto de natureza e adrenalina. Saio de Brasília.",
+  },
 ];
 
 // ────────────────────────────────────────────────────────────────
@@ -114,484 +194,357 @@ const MESES_LABEL_PROMPT = [
 // ────────────────────────────────────────────────────────────────
 
 export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
-  const [origin, setOrigin] = useState("GRU");
-  const [monthOffset, setMonthOffset] = useState(2);
-  const [durationDays, setDurationDays] = useState(7);
-  const [paxAdults, setPaxAdults] = useState(2);
-  const [budget, setBudget] = useState(5000);
-  const [moods, setMoods] = useState<string[]>([]);
-  const [extraContext, setExtraContext] = useState("");
-  const [loadingDestIdx, setLoadingDestIdx] = useState(0);
+  const [story, setStory] = useState("");
+  const [recording, setRecording] = useState(false);
+  const [extract, setExtract] = useState<LocalExtract | null>(null);
+  const recognitionRef = useRef<any>(null);
+  const discover = useDiscoverDestinations();
+  const data = discover.data;
 
-  const discoverMutation = useDiscoverDestinations();
-  const data = discoverMutation.data;
-
+  // Live extract local (debounced 350ms)
   useEffect(() => {
-    if (!discoverMutation.isPending) return;
-    const interval = setInterval(() => {
-      setLoadingDestIdx((i) => (i + 1) % LOADING_DESTINATIONS.length);
-    }, 800);
-    return () => clearInterval(interval);
-  }, [discoverMutation.isPending]);
+    if (story.trim().length < 8) { setExtract(null); return; }
+    const t = setTimeout(() => setExtract(localExtract(story)), 350);
+    return () => clearTimeout(t);
+  }, [story]);
 
-  function toggleMood(m: string) {
-    setMoods((s) => (s.includes(m) ? s.filter((x) => x !== m) : [...s, m]));
-  }
-
-  function buildNaturalQuery(extra?: string): string {
-    const periodLabel = MESES_LABEL_PROMPT[monthOffset] || `daqui a ${monthOffset} meses`;
-    const paxLabel =
-      paxAdults === 1 ? "sozinho"
-      : paxAdults === 2 ? "com meu companheiro(a)"
-      : paxAdults === 3 ? "com 3 pessoas"
-      : paxAdults === 4 ? "família de 4"
-      : `${paxAdults} pessoas`;
-    const moodLabel = moods.length > 0 ? `, gosto de ${moods.join(", ")}` : "";
-    const extraStr = (extra ?? extraContext).trim();
-    const extraTail = extraStr ? `. ${extraStr}` : "";
-    return `Tenho R$ ${budget.toLocaleString("pt-BR")}, saio de ${origin}, quero viajar ${durationDays} dias ${periodLabel}, ${paxLabel}${moodLabel}${extraTail}`;
-  }
-
-  function handleSubmit(overrideExtra?: string) {
-    discoverMutation.mutate({
-      naturalQuery: buildNaturalQuery(overrideExtra),
-      budget,
-      origin,
-      monthOffset,
-      durationDays,
-      paxAdults,
-      mood: moods[0] || undefined,
-    });
-  }
-
-  function handleAudioTranscribed(text: string) {
-    setExtraContext(text);
-    handleSubmit(text);
-  }
-
-  function applyExample(ex: string) {
-    setExtraContext(ex);
-    const m = ex.match(/R\$\s*([\d.,]+)/i);
-    if (m) {
-      const n = Number(m[1].replace(/\./g, "").replace(",", "."));
-      if (!Number.isNaN(n) && n >= 500) setBudget(Math.min(50000, n * (n < 100 ? 1000 : 1)));
+  function toggleRecording() {
+    if (recording) {
+      recognitionRef.current?.stop();
+      setRecording(false);
+      return;
     }
+    const SR = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+    if (!SR) {
+      alert("Seu navegador não suporta gravação de áudio. Use Chrome ou Edge.");
+      return;
+    }
+    const r = new SR();
+    r.lang = "pt-BR";
+    r.continuous = true;
+    r.interimResults = true;
+    r.onresult = (ev: any) => {
+      const transcript = Array.from(ev.results)
+        .map((res: any) => res[0].transcript).join(" ");
+      setStory(transcript);
+    };
+    r.onend = () => setRecording(false);
+    r.onerror = () => setRecording(false);
+    r.start();
+    recognitionRef.current = r;
+    setRecording(true);
   }
 
-  // ─────────────────────────────────────────────────────
-  // LOADING
-  // ─────────────────────────────────────────────────────
-  if (discoverMutation.isPending) {
-    return <DiscoveryLoadingState destination={LOADING_DESTINATIONS[loadingDestIdx]} />;
+  const ready = useMemo(() => {
+    if (!extract) return false;
+    const okBudget = !!extract.budget && extract.budget >= 500;
+    const okGeo = !!extract.target || /europa|am(é|e)ricas|ásia|asia|caribe|oriente|áfrica|africa/i.test(story);
+    return okBudget && okGeo;
+  }, [extract, story]);
+
+  function handleSubmit() {
+    if (story.trim().length < 10) return;
+    discover.mutate({ naturalQuery: story.trim() });
+  }
+
+  if (discover.isPending) {
+    return <CinematicLoading targetLabel={extract?.target?.label} />;
   }
 
   return (
-    <div className="space-y-4">
-      {/* HERO */}
-      <Card className="relative overflow-hidden p-5 md:p-6 border-primary/20 bg-gradient-to-br from-primary/8 via-purple-500/5 to-amber-500/5">
-        <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-purple-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative flex items-start gap-3">
-          <div className="h-11 w-11 shrink-0 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/20">
-            <Wand2 className="h-5 w-5 text-white" />
-          </div>
-          <div className="flex-1">
-            <h2 className="text-xl md:text-2xl font-bold tracking-tight">
-              Não sabe pra onde ir?
+    <div className="space-y-6">
+      {/* HERO + CONVERSA */}
+      {!data?.success && (
+        <div className="space-y-5">
+          <div className="text-center space-y-2 pt-2">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight"
+                style={{ fontFamily: "Georgia, 'Playfair Display', serif" }}>
+              Conta a sua história.
             </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              A gente descobre o destino perfeito pra você.
+            <p className="text-sm md:text-base text-muted-foreground">
+              A gente escuta · e descobre o destino perfeito.
             </p>
           </div>
-        </div>
 
-        <p className="relative text-xs text-muted-foreground mt-3 max-w-2xl">
-          Use os campos abaixo pra dizer o essencial. Em segundos a IA · busca de voos
-          encontram destinos que cabem no seu orçamento, período e estilo.
-        </p>
-      </Card>
-
-      {/* GRID 4 INPUTS PRINCIPAIS */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* ORIGEM */}
-        <Card className="p-3.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold mb-2 text-foreground/80">
-            <MapPin className="h-3.5 w-3.5 text-primary" />
-            Saio de
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {ORIGEM_OPCOES.map((o) => (
+          {/* Textarea + botão de áudio */}
+          <Card className="overflow-hidden border-border/60 shadow-sm">
+            <div className="flex items-stretch">
+              <textarea
+                value={story}
+                onChange={(e) => setStory(e.target.value)}
+                placeholder="Aniversário de 10 anos de casamento, queremos algo memorável e fora do óbvio..."
+                className="flex-1 min-h-[140px] md:min-h-[180px] p-4 md:p-5 text-base md:text-lg leading-relaxed bg-transparent resize-none focus:outline-none placeholder:text-muted-foreground/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && ready) handleSubmit();
+                }}
+              />
               <button
-                key={o.value}
-                onClick={() => setOrigin(o.value)}
+                type="button"
+                onClick={toggleRecording}
                 className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                  origin === o.value
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card border-border hover:border-primary/40",
+                  "shrink-0 w-14 md:w-16 m-2 rounded-2xl flex items-center justify-center transition-all",
+                  recording
+                    ? "bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse"
+                    : "bg-primary/10 text-primary hover:bg-primary/20",
                 )}
+                aria-label={recording ? "Parar gravação" : "Gravar áudio"}
               >
-                {o.label}
+                {recording ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
               </button>
-            ))}
-          </div>
-        </Card>
+            </div>
+            <div className="flex justify-between items-center px-4 pb-2 text-[10px] text-muted-foreground">
+              <span>{story.length} caracteres · ⌘+Enter pra enviar</span>
+              {recording && <span className="text-red-500 font-medium animate-pulse">● Gravando…</span>}
+            </div>
+          </Card>
 
-        {/* QUANDO */}
-        <Card className="p-3.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold mb-2 text-foreground/80">
-            <Calendar className="h-3.5 w-3.5 text-primary" />
-            Quando vou
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {MESES.map((m) => (
-              <button
-                key={m.value}
-                onClick={() => setMonthOffset(m.value)}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium border transition-all",
-                  monthOffset === m.value
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card border-border hover:border-primary/40",
-                )}
+          {/* Live extract chips */}
+          {extract && (
+            <div className="flex flex-wrap gap-2 items-center justify-center pt-1">
+              <span className="text-xs text-muted-foreground">Entendi:</span>
+              {extract.target && <Chip>{extract.target.flag} {extract.target.label}</Chip>}
+              {extract.origin && <Chip>✈️ saindo de {extract.origin.label}</Chip>}
+              {extract.budget && (
+                <Chip className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30">
+                  💰 {formatBRL(extract.budget)}
+                </Chip>
+              )}
+              {extract.monthLabel && <Chip>📅 {extract.monthLabel}</Chip>}
+              {extract.duration && <Chip>⏱️ {extract.duration}</Chip>}
+              {extract.pax && <Chip>👥 {extract.pax.label}</Chip>}
+              {extract.mood && <Chip>🎯 {extract.mood}</Chip>}
+              {!extract.target && !extract.budget && (
+                <span className="text-xs text-muted-foreground italic">Continue digitando…</span>
+              )}
+            </div>
+          )}
+
+          {/* CTA */}
+          {ready && (
+            <div className="flex justify-center pt-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <Button
+                size="lg"
+                onClick={handleSubmit}
+                className="h-14 px-8 text-base bg-gradient-to-r from-primary via-purple-600 to-amber-500 hover:opacity-95 shadow-xl shadow-primary/25 gap-2"
               >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </Card>
+                <Sparkles className="h-5 w-5" />
+                Descobrir destinos perfeitos
+                <ArrowRight className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
 
-        {/* DURAÇÃO */}
-        <Card className="p-3.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold mb-2 text-foreground/80">
-            <Compass className="h-3.5 w-3.5 text-primary" />
-            Por quanto tempo
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {DURACOES.map((d) => (
-              <button
-                key={d.value}
-                onClick={() => setDurationDays(d.value)}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium border transition-all flex items-center gap-1",
-                  durationDays === d.value
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card border-border hover:border-primary/40",
-                )}
-              >
-                <span>{d.icon}</span>
-                {d.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        {/* PAX */}
-        <Card className="p-3.5">
-          <div className="flex items-center gap-1.5 text-xs font-semibold mb-2 text-foreground/80">
-            <Users className="h-3.5 w-3.5 text-primary" />
-            Quem vai
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {PAX_OPCOES.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPaxAdults(p.value)}
-                className={cn(
-                  "px-2.5 py-1 rounded-md text-xs font-medium border transition-all flex items-center gap-1",
-                  paxAdults === p.value
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-card border-border hover:border-primary/40",
-                )}
-              >
-                <span>{p.icon}</span>
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* ORÇAMENTO — slider grande */}
-      <Card className="p-4 bg-gradient-to-br from-amber-500/5 via-background to-background border-amber-500/20">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
-            <DollarSign className="h-4 w-4 text-amber-600" />
-            Meu orçamento por adulto · ida e volta
-          </div>
-          <div className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent tabular-nums">
-            {formatBRL(budget)}
+          {/* Stories sugeridas */}
+          <div className="pt-6 border-t border-border/40">
+            <div className="text-center text-xs text-muted-foreground mb-3">
+              Sem ideia? Pega uma história pra começar:
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {SUGGESTED_STORIES.map((s, i) => (
+                <button
+                  key={i}
+                  onClick={() => setStory(s.text)}
+                  className="text-left p-4 rounded-xl border border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-all group"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="text-3xl shrink-0 group-hover:scale-110 transition-transform">{s.icon}</div>
+                    <div className="flex-1">
+                      <div className="font-semibold text-sm mb-1">{s.title}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-2">{s.text}</div>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        <Slider
-          min={500}
-          max={50000}
-          step={250}
-          value={[budget]}
-          onValueChange={(v) => setBudget(v[0])}
-          className="my-2"
-        />
-        <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-          <span>R$ 500</span>
-          <span>R$ 5k</span>
-          <span>R$ 15k</span>
-          <span>R$ 30k</span>
-          <span>R$ 50k</span>
-        </div>
-      </Card>
-
-      {/* MOOD — chips visuais com cor */}
-      <Card className="p-4">
-        <div className="flex items-center gap-1.5 text-xs font-semibold mb-3 text-foreground/80">
-          <Heart className="h-3.5 w-3.5 text-rose-500" />
-          Estilo de viagem · opcional · pode escolher mais de um
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {MOODS.map((m) => {
-            const active = moods.includes(m.value);
-            return (
-              <button
-                key={m.value}
-                onClick={() => toggleMood(m.value)}
-                className={cn(
-                  "px-3 py-2 rounded-lg text-xs font-medium border-2 transition-all flex items-center gap-1.5",
-                  active
-                    ? `bg-gradient-to-br ${m.color} shadow-md scale-[1.03]`
-                    : "bg-card border-border hover:border-primary/40",
-                )}
-              >
-                <span className="text-base leading-none">{m.icon}</span>
-                {m.label}
-              </button>
-            );
-          })}
-        </div>
-      </Card>
-
-      {/* TEXTO LIVRE OPCIONAL + ÁUDIO */}
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground/80">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            Quer dar mais contexto? · opcional
-          </div>
-          <AudioRecorder
-            onTranscribed={handleAudioTranscribed}
-            disabled={discoverMutation.isPending}
-          />
-        </div>
-        <Textarea
-          placeholder="Ex: aniversário de 10 anos de casamento, queremos algo memorável… ou grave um áudio 🎙️"
-          value={extraContext}
-          onChange={(e) => setExtraContext(e.target.value)}
-          className="min-h-[60px] text-sm bg-background"
-          maxLength={300}
-        />
-        <div className="text-right text-[10px] text-muted-foreground mt-1">
-          {extraContext.length}/300
-        </div>
-      </Card>
-
-      {/* CTA GIGANTE */}
-      <Button
-        onClick={() => handleSubmit()}
-        size="lg"
-        className="w-full gap-2 h-14 text-base bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg shadow-primary/25"
-      >
-        <Sparkles className="h-5 w-5" />
-        Descobrir destinos perfeitos pra mim
-        <ArrowRight className="h-5 w-5" />
-      </Button>
-
-      {/* EXAMPLES */}
-      <div>
-        <div className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-          <PartyPopper className="h-3 w-3" /> Inspire-se com exemplos:
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-          {EXAMPLES.map((ex, i) => (
-            <button
-              key={i}
-              onClick={() => applyExample(ex.text)}
-              className="text-left text-xs px-3 py-2 rounded-lg bg-muted/40 hover:bg-muted/70 border border-border/40 hover:border-primary/30 transition-colors flex gap-2"
-            >
-              <span className="text-base shrink-0">{ex.icon}</span>
-              <span className="text-muted-foreground line-clamp-2">{ex.text}</span>
-            </button>
-          ))}
-        </div>
-      </div>
+      )}
 
       {/* ERRO */}
-      {discoverMutation.isError && (
+      {discover.isError && (
         <Alert variant="destructive">
-          <AlertDescription>{(discoverMutation.error as Error).message}</AlertDescription>
+          <AlertDescription>{(discover.error as Error).message}</AlertDescription>
+        </Alert>
+      )}
+
+      {data && !data.success && (
+        <Alert>
+          <AlertDescription>
+            {(data as any).message || "Não consegui descobrir destinos. Tente reformular sua história."}
+            <Button size="sm" variant="link" className="ml-2 p-0 h-auto" onClick={() => discover.reset()}>
+              Tentar de novo
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 
       {/* RESULTADO */}
       {data?.success && data.results.length > 0 && (
-        <DiscoveryResultsSection data={data} onSelectDestination={onSelectDestination} />
-      )}
-
-      {data?.success && data.results.length === 0 && (
-        <Card className="p-5 border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-background">
-          <div className="flex items-start gap-3">
-            <div className="h-10 w-10 shrink-0 rounded-full bg-amber-500/15 flex items-center justify-center">
-              <Compass className="h-5 w-5 text-amber-600" />
-            </div>
-            <div className="flex-1 space-y-2">
-              <h3 className="text-sm font-semibold">Nenhum destino caiu no orçamento desta vez</h3>
-              <p className="text-xs text-muted-foreground">
-                A gente buscou em <strong>{data.totalCandidates}</strong> destinos
-                {data.totalWithFlights > 0
-                  ? ` · ${data.totalWithFlights} retornaram preços, mas nenhum coube no orçamento.`
-                  : " · nenhum voo voltou da API neste momento (pode ser limite temporário do provedor)."}
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button size="sm" variant="outline" onClick={() => handleSubmit()} className="h-7 text-xs gap-1">
-                  <Sparkles className="h-3 w-3" /> Tentar de novo
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setBudget((b) => Math.min(50000, b + 3000))}
-                  className="h-7 text-xs"
-                >
-                  + R$ 3.000 no orçamento
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setMonthOffset((m) => Math.min(12, m + 2))}
-                  className="h-7 text-xs"
-                >
-                  Adiar 2 meses
-                </Button>
-                {moods.length > 0 && (
-                  <Button size="sm" variant="outline" onClick={() => setMoods([])} className="h-7 text-xs">
-                    Limpar estilos
-                  </Button>
-                )}
-              </div>
-            </div>
-          </div>
-        </Card>
+        <ResultSection
+          data={data}
+          onSelectDestination={onSelectDestination}
+          onReset={() => { discover.reset(); setStory(""); setExtract(null); }}
+        />
       )}
     </div>
   );
 }
 
 // ────────────────────────────────────────────────────────────────
-// LOADING
+// SUB: CHIP
 // ────────────────────────────────────────────────────────────────
 
-function DiscoveryLoadingState({ destination }: { destination: string }) {
+function Chip({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className="space-y-4">
-      <Card className="relative overflow-hidden p-10 md:p-12 text-center bg-gradient-to-br from-primary/5 via-purple-500/5 to-amber-500/5 border-primary/20">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,hsl(var(--primary)/0.08),transparent_60%)]" />
-        <div className="relative inline-block mb-6">
-          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-xl shadow-primary/30">
-            <Globe className="h-10 w-10 text-white animate-spin" style={{ animationDuration: "3s" }} />
-          </div>
-          <Sparkles className="absolute -top-1 -right-1 h-5 w-5 text-amber-500 animate-pulse" />
-          <span className="absolute -bottom-1 -left-1 h-3 w-3 rounded-full bg-emerald-500 animate-ping" />
-        </div>
-        <h3 className="relative text-base font-bold mb-1">Buscando seu destino perfeito…</h3>
-        <p className="relative text-xs text-muted-foreground mb-1">
-          Verificando preços em{" "}
-          <span
-            key={destination}
-            className="font-semibold text-primary inline-block animate-fade-in"
-          >
-            {destination}
-          </span>
-          …
-        </p>
-        <p className="relative text-[10px] text-muted-foreground">
-          A IA está consultando até 20 destinos em paralelo · pode levar até 30 segundos.
-        </p>
-      </Card>
+    <span className={cn(
+      "inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border bg-card border-border/60",
+      className,
+    )}>
+      {children}
+    </span>
+  );
+}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+// ────────────────────────────────────────────────────────────────
+// SUB: LOADING CINEMATOGRÁFICO (typewriter)
+// ────────────────────────────────────────────────────────────────
+
+function CinematicLoading({ targetLabel }: { targetLabel?: string }) {
+  const cities = useMemo(() => {
+    if (targetLabel === "Itália") return ["Roma", "Milão", "Veneza", "Florença", "Nápoles"];
+    if (targetLabel === "Portugal") return ["Lisboa", "Porto", "Sintra", "Algarve"];
+    if (targetLabel === "Brasil") return ["Maceió", "Fortaleza", "Rio", "Foz do Iguaçu", "Gramado"];
+    return ["Bali", "Lisboa", "Roma", "Cancún", "Dubai", "Tóquio", "Buenos Aires", "Paris"];
+  }, [targetLabel]);
+
+  const [idx, setIdx] = useState(0);
+  const [typed, setTyped] = useState("");
+  const [phase, setPhase] = useState<"typing" | "holding" | "erasing">("typing");
+
+  useEffect(() => {
+    const current = cities[idx % cities.length];
+    let timer: any;
+    if (phase === "typing") {
+      if (typed.length < current.length) {
+        timer = setTimeout(() => setTyped(current.slice(0, typed.length + 1)), 60);
+      } else {
+        timer = setTimeout(() => setPhase("holding"), 600);
+      }
+    } else if (phase === "holding") {
+      timer = setTimeout(() => setPhase("erasing"), 800);
+    } else {
+      if (typed.length > 0) {
+        timer = setTimeout(() => setTyped(typed.slice(0, -1)), 30);
+      } else {
+        setIdx((i) => i + 1);
+        setPhase("typing");
+      }
+    }
+    return () => clearTimeout(timer);
+  }, [typed, phase, idx, cities]);
+
+  return (
+    <Card className="overflow-hidden bg-gradient-to-br from-background via-primary/5 to-purple-500/5 p-12 md:p-16 text-center min-h-[400px] flex flex-col items-center justify-center">
+      <div className="relative inline-block mb-8">
+        <div className="h-24 w-24 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center animate-pulse">
+          <Globe2 className="h-12 w-12 text-white animate-spin" style={{ animationDuration: "4s" }} />
+        </div>
+        <Sparkles className="absolute -top-2 -right-2 h-6 w-6 text-amber-500 animate-pulse" />
+      </div>
+
+      <h3 className="text-xl md:text-2xl font-bold mb-2"
+          style={{ fontFamily: "Georgia, 'Playfair Display', serif" }}>
+        Procurando seu destino…
+      </h3>
+
+      <div className="text-base md:text-lg text-muted-foreground mb-1">
+        Verificando voos pra{" "}
+        <span className="font-semibold text-primary inline-block min-w-[120px] text-left">
+          {typed}
+          <span className="inline-block w-[2px] h-4 bg-primary ml-0.5 animate-pulse align-middle" />
+        </span>
+      </div>
+
+      <p className="text-xs text-muted-foreground mt-3 max-w-md">
+        A IA está consultando até 20 destinos em paralelo. Pode levar até 30 segundos.
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-10 w-full max-w-3xl">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-64 w-full" />
+          <Skeleton key={i} className="h-56 w-full" />
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 
 // ────────────────────────────────────────────────────────────────
-// RESULTADOS
+// SUB: RESULTADO
 // ────────────────────────────────────────────────────────────────
 
-function DiscoveryResultsSection({
-  data,
-  onSelectDestination,
+function ResultSection({
+  data, onSelectDestination, onReset,
 }: {
   data: DiscoverResponse;
   onSelectDestination: (d: DiscoveredDestination, ctx: DiscoverResponse) => void;
+  onReset: () => void;
 }) {
+  const ext = data.extracted;
+  const target =
+    ext.cities?.length ? ext.cities.join(", ") :
+    ext.countries?.length ? ext.countries.join(", ") :
+    ext.regions?.length ? ext.regions.join(", ") :
+    "vários destinos";
+
   return (
-    <div className="space-y-4 pt-4 border-t border-border/40">
-      <Card className="p-4 bg-gradient-to-r from-emerald-500/5 to-primary/5 border-emerald-500/20">
-        <div className="flex items-center gap-2 mb-3">
-          <div className="h-7 w-7 rounded-full bg-emerald-500 flex items-center justify-center">
-            <Sparkles className="h-3.5 w-3.5 text-white" />
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-3 duration-500">
+      <Card className="p-5 bg-gradient-to-br from-emerald-500/5 via-background to-primary/5 border-emerald-500/20">
+        <div className="flex items-start gap-3">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-500 to-primary flex items-center justify-center shrink-0">
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
-          <h3 className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
-            Encontrei {data.results.length} destinos pra você
-          </h3>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
-          {data.extracted?.budget && (
-            <div className="bg-background rounded p-2 border border-border/40">
-              <div className="text-muted-foreground">💰 Orçamento</div>
-              <div className="font-bold">{formatBRL(data.extracted.budget)}</div>
+          <div className="flex-1 space-y-2">
+            <div className="text-base md:text-lg leading-relaxed"
+                 style={{ fontFamily: "Georgia, 'Playfair Display', serif" }}>
+              Encontrei <strong>{data.results.length} destinos</strong> que combinam com sua história em <strong>{target}</strong>.
             </div>
-          )}
-          {data.extracted?.origin && (
-            <div className="bg-background rounded p-2 border border-border/40">
-              <div className="text-muted-foreground">✈️ De</div>
-              <div className="font-bold">{data.extracted.origin}</div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              {ext.budget && <Chip>💰 {formatBRL(ext.budget)}</Chip>}
+              {ext.origin && <Chip>✈️ {ext.origin}</Chip>}
+              {data.period && (
+                <Chip>📅 {String(data.period.month).padStart(2, "0")}/{data.period.year}</Chip>
+              )}
+              {ext.durationDays && <Chip>⏱️ {ext.durationDays} dias</Chip>}
+              {ext.paxAdults && <Chip>👥 {ext.paxAdults} adulto{ext.paxAdults > 1 ? "s" : ""}</Chip>}
+              {ext.mood && <Chip>🎯 {ext.mood}</Chip>}
             </div>
-          )}
-          {data.period && (
-            <div className="bg-background rounded p-2 border border-border/40">
-              <div className="text-muted-foreground">📅 Período</div>
-              <div className="font-bold">
-                {String(data.period.month).padStart(2, "0")}/{data.period.year}
-              </div>
+            <div className="text-[10px] text-muted-foreground pt-1">
+              Buscamos em {data.totalCandidates} destinos · {data.totalWithFlights} retornaram preços · {data.totalFitsBudget} cabem no orçamento
             </div>
-          )}
-          {data.extracted?.durationDays && (
-            <div className="bg-background rounded p-2 border border-border/40">
-              <div className="text-muted-foreground">⏱️ Duração</div>
-              <div className="font-bold">{data.extracted.durationDays} dias</div>
-            </div>
-          )}
-        </div>
-        <div className="text-[10px] text-muted-foreground mt-2 pt-2 border-t border-border/30">
-          Buscamos em {data.totalCandidates} destinos · {data.totalWithFlights} com voos ·{" "}
-          {data.totalFitsBudget} no orçamento
+          </div>
+          <Button variant="ghost" size="sm" onClick={onReset} className="shrink-0">
+            <X className="h-4 w-4 mr-1" /> Nova busca
+          </Button>
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.results.map((d, i) => (
-          <GFlightDestinationCard
+          <div
             key={d.iata}
-            destination={d}
-            isCheapest={i === 0}
-            departureDate={data.period?.day1}
-            returnDate={data.period?.returnDate}
-            paxAdults={data.extracted?.paxAdults || 1}
-            originIata={data.extracted?.origin || "GRU"}
-            onSelectDestination={(dest) => onSelectDestination(dest, data)}
-          />
+            className="animate-in fade-in slide-in-from-bottom-2"
+            style={{ animationDelay: `${i * 80}ms`, animationFillMode: "backwards" }}
+          >
+            <GFlightDestinationCard
+              destination={d}
+              isCheapest={i === 0}
+              departureDate={data.period?.day1}
+              returnDate={data.period?.returnDate}
+              paxAdults={data.extracted?.paxAdults || 1}
+              originIata={data.extracted?.origin || "GRU"}
+              onSelectDestination={(dest) => onSelectDestination(dest, data)}
+            />
+          </div>
         ))}
       </div>
     </div>
