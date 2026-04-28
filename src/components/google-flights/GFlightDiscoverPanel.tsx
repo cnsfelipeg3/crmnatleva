@@ -12,6 +12,8 @@ import {
   type DiscoverResponse,
 } from "@/hooks/useDiscoverDestinations";
 import { GFlightDestinationCard } from "./GFlightDestinationCard";
+import { useDiscoverCacheHistory } from "@/hooks/useDiscoverCacheHistory";
+import { DiscoverCacheTrendChart } from "./DiscoverCacheTrendChart";
 
 interface Props {
   onSelectDestination: (dest: DiscoveredDestination, ctx: DiscoverResponse) => void;
