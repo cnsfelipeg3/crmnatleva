@@ -538,6 +538,11 @@ export default function GoogleFlightsSearchPage() {
         <div className="space-y-3">
           <GFlightPriceInsightBanner
             insight={results.price_insight}
+            tripType={
+              snapshot.multi_legs && snapshot.multi_legs.length >= 2
+                ? "multi"
+                : snapshot.return_date ? "round" : "oneway"
+            }
             onShowHistory={() => setShowPriceHistory(v => !v)}
             showHistory={showPriceHistory}
           />
