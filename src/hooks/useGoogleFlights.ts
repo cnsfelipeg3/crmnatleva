@@ -6,6 +6,7 @@ import { addDays, format, parseISO, isValid } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import type {
   GAirport,
+  GBookingProvider,
   GCalendarDay,
   GFlightCabin,
   GPriceGraphPoint,
