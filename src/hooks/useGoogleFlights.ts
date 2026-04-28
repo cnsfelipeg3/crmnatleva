@@ -477,85 +477,131 @@ export interface BookingDetailsInput extends SearchGFlightsInput {
   booking_token: string;
 }
 
+// Cobre 8 shapes da DataCrawler + scan recursivo de fallback
+function flatProviders(root: any): any[] {
+  if (!root) return [];
+  if (Array.isArray(root)) return root;
+  if (Array.isArray(root.providers)) return root.providers;
+  if (Array.isArray(root.booking_options)) return root.booking_options;
+  if (Array.isArray(root.together)) return root.together;
+  if (Array.isArray(root.options)) return root.options;
+  if (Array.isArray(root.together_offers)) return root.together_offers;
+  if (Array.isArray(root.selected_flights)) {
+    const merged: any[] = [];
+    for (const sf of root.selected_flights) {
+      if (Array.isArray(sf?.together)) merged.push(...sf.together);
+      if (Array.isArray(sf?.providers)) merged.push(...sf.providers);
+      if (Array.isArray(sf?.booking_options)) merged.push(...sf.booking_options);
+    }
+    if (merged.length) return merged;
+  }
+  // fallback recursivo: primeira chave que tem array de objetos com price/title/name
+  for (const key of Object.keys(root)) {
+    const v = (root as any)[key];
+    if (
+      Array.isArray(v) && v.length > 0 && typeof v[0] === "object" && v[0] !== null &&
+      ((v[0] as any).price !== undefined || (v[0] as any).title !== undefined || (v[0] as any).name !== undefined)
+    ) {
+      return v;
+    }
+  }
+  return [];
+}
+
+function mapProvider(it: any): GBookingProvider {
+  const subBookings: GBookingSubOffer[] = Array.isArray(it?.bookings)
+    ? it.bookings.map((b: any) => ({
+        price: typeof b?.price === "number" ? b.price : Number(b?.price) || undefined,
+        title: b?.title ? String(b.title) : undefined,
+        website: b?.website ? String(b.website) : (b?.url ? String(b.url) : undefined),
+        meta: b?.meta ?? undefined,
+        ...b,
+      }))
+    : [];
+  const baseProvider: GBookingProvider = {
+    id: String(it?.id ?? it?.code ?? it?.title ?? ""),
+    title: String(it?.title ?? it?.name ?? "Desconhecido"),
+    website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
+    price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
+    is_airline: !!it?.is_airline,
+    individualBooking: !!it?.individualBooking,
+    token: it?.token ? String(it.token) : undefined,
+    logo: it?.logo ? String(it.logo) : undefined,
+    bookings: subBookings,
+    meta: it?.meta ?? undefined,
+    cabin: it?.cabin ? String(it.cabin) : undefined,
+    fareType: it?.meta?.fare_type ? String(it.meta.fare_type) : undefined,
+    baggage: Array.isArray(it?.meta?.baggage) ? it.meta.baggage.map(String) : undefined,
+    features: Array.isArray(it?.meta?.features) ? it.meta.features.map(String) : undefined,
+  };
+  const analysis = analyzeFare(baseProvider);
+  return {
+    ...baseProvider,
+    fareTier: analysis.tier,
+    fareDisplayName: analysis.displayName,
+    benefits: analysis.benefits,
+    restrictions: analysis.restrictions,
+  };
+}
+
 export function useFlightBookingDetails(
   input: SearchGFlightsInput | null,
   bookingToken: string | null,
   enabled = true,
 ) {
   return useQuery({
-    queryKey: ["gflights", "getBookingDetails", "v2-token", input, bookingToken],
+    queryKey: ["gflights", "getBookingDetails", "v3-token", input, bookingToken],
     queryFn: async (): Promise<GBookingDetailsResponse> => {
       const empty: GBookingDetailsResponse = { providers: [], bag_info: null };
       if (!input || !bookingToken) return empty;
       try {
-        const data = await invokeGFlights<any>("getBookingDetails", {
-          ...input,
-          booking_token: bookingToken,
-        });
-        // A API pode retornar data: [...] ou data: { providers: [...] } ou data: { booking_options: [...] }
-        const raw = data?.data;
-        const arr: any[] =
-          (Array.isArray(raw) && raw) ||
-          (Array.isArray(raw?.providers) && raw.providers) ||
-          (Array.isArray(raw?.booking_options) && raw.booking_options) ||
-          (Array.isArray(raw?.together) && raw.together) ||
-          [];
-
-        const providers: GBookingProvider[] = arr
-          .map((it: any) => {
-            const subBookings: GBookingSubOffer[] = Array.isArray(it?.bookings)
-              ? it.bookings.map((b: any) => ({
-                  price: typeof b?.price === "number" ? b.price : Number(b?.price) || undefined,
-                  title: b?.title ? String(b.title) : undefined,
-                  website: b?.website ? String(b.website) : (b?.url ? String(b.url) : undefined),
-                  meta: b?.meta ?? undefined,
-                  ...b,
-                }))
-              : [];
-            const baseProvider: GBookingProvider = {
-              id: String(it?.id ?? it?.code ?? it?.title ?? ""),
-              title: String(it?.title ?? it?.name ?? "Desconhecido"),
-              website: it?.website ? String(it.website) : (it?.url ? String(it.url) : undefined),
-              price: typeof it?.price === "number" ? it.price : Number(it?.price) || 0,
-              is_airline: !!it?.is_airline,
-              individualBooking: !!it?.individualBooking,
-              token: it?.token ? String(it.token) : undefined,
-              logo: it?.logo ? String(it.logo) : undefined,
-              bookings: subBookings,
-              meta: it?.meta ?? undefined,
-              cabin: it?.cabin ? String(it.cabin) : undefined,
-              fareType: it?.meta?.fare_type ? String(it.meta.fare_type) : undefined,
-              baggage: Array.isArray(it?.meta?.baggage) ? it.meta.baggage.map(String) : undefined,
-              features: Array.isArray(it?.meta?.features) ? it.meta.features.map(String) : undefined,
-            };
-            const analysis = analyzeFare(baseProvider);
-            return {
-              ...baseProvider,
-              fareTier: analysis.tier,
-              fareDisplayName: analysis.displayName,
-              benefits: analysis.benefits,
-              restrictions: analysis.restrictions,
-            };
-          })
-          .filter((p) => p.id || p.title);
-
-        // bag_info pode vir no nível raiz da resposta ou dentro de data
-        const rawBag = data?.bag_info ?? raw?.bag_info ?? null;
+        let attempt = 0;
+        let providers: GBookingProvider[] = [];
         let bag_info: GBagInfo | null = null;
-        if (rawBag && typeof rawBag === "object") {
-          const norm = (b: any) => {
-            if (!b || typeof b !== "object") return undefined;
-            return {
-              included: !!(b.included ?? b.is_included),
-              price: typeof b.price === "number" ? b.price : (b.price ? Number(b.price) : undefined),
-              description: b.description ?? b.text ?? b.label ?? undefined,
+        let lastRaw: any = null;
+        let lastData: any = null;
+
+        while (attempt < 2) {
+          const data = await invokeGFlights<any>("getBookingDetails", {
+            ...input,
+            booking_token: bookingToken,
+          });
+          lastData = data;
+          lastRaw = data?.data;
+          const arr = flatProviders(lastRaw);
+          providers = arr.map(mapProvider).filter((p) => p.id || p.title);
+
+          // bag_info
+          const rawBag = data?.bag_info ?? lastRaw?.bag_info ?? null;
+          if (rawBag && typeof rawBag === "object") {
+            const norm = (b: any) => {
+              if (!b || typeof b !== "object") return undefined;
+              return {
+                included: !!(b.included ?? b.is_included),
+                price: typeof b.price === "number" ? b.price : (b.price ? Number(b.price) : undefined),
+                description: b.description ?? b.text ?? b.label ?? undefined,
+              };
             };
-          };
-          bag_info = {
-            carry_on: norm(rawBag.carry_on ?? rawBag.cabin) ?? null,
-            checked: norm(rawBag.checked ?? rawBag.hold) ?? null,
-            raw: rawBag,
-          };
+            bag_info = {
+              carry_on: norm(rawBag.carry_on ?? rawBag.cabin) ?? null,
+              checked: norm(rawBag.checked ?? rawBag.hold) ?? null,
+              raw: rawBag,
+            };
+          }
+
+          if (providers.length > 0) break;
+          attempt++;
+          if (attempt < 2) {
+            console.warn("[gflights] getBookingDetails empty · retry em 800ms");
+            await new Promise((r) => setTimeout(r, 800));
+          }
+        }
+
+        if (providers.length === 0) {
+          console.warn(
+            "[gflights] getBookingDetails · 0 providers após retry · keys:",
+            Object.keys(lastRaw || {}).join(","),
+          );
         }
 
         return { providers, bag_info };
