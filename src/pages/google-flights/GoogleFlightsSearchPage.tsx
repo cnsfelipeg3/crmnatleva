@@ -182,14 +182,7 @@ export default function GoogleFlightsSearchPage() {
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
 
-  // Inteligência de Preço · classifica preço atual contra histórico (low/typical/high)
-  const priceIntel = useMemo(() => {
-    const ph = results?.price_history;
-    const lowestNow = results?.price_insights?.lowest_price;
-    if (!ph || lowestNow == null) return null;
-    const classification = classifyPriceAgainstHistory(lowestNow, ph);
-    return { classification, history: ph, lowestNow };
-  }, [results]);
+  // Inteligência de preço agora vem direto de results.price_insight (derivado em useSearchGFlights)
 
   // Indicador "atualizado há X min" baseado em fetched_at
   const [, forceTick] = useState(0);
