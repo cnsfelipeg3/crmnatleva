@@ -33,6 +33,7 @@ import {
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
+import { GFlightInlineFilters } from "@/components/google-flights/GFlightInlineFilters";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
 import { toast } from "sonner";
