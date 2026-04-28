@@ -80,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (rolesRes && rolesRes.error) console.error("Role fetch error:", rolesRes.error);
 
       setProfile((profileRes.data as Profile | null) ?? null);
+      profileLoadedRef.current = true;
 
       let bestRole: UserRole;
       if (rolesCacheValid && cachedRoles) {
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       setRole(DEFAULT_ROLE);
     }
-  }, [profile]);
+  }, []); // sem deps · usa refs para skip-cache, evita recriar callback a cada render
 
   useEffect(() => {
     let isMounted = true;
