@@ -273,10 +273,11 @@ function buildParams(action: string, input: Record<string, any>): Record<string,
       };
     }
     case "getBookingURL": {
-      // getBookingURL exige PROVIDER token (vem de getBookingDetails), não o booking_token do voo
-      const token = input.token ?? input.booking_token ?? input.next_token;
+      // getBookingURL exige PROVIDER token (vem de getBookingDetails), NÃO o booking_token do voo.
+      // O nome do parâmetro aceito pela DataCrawler é exclusivamente "token".
+      const token = input.token ?? input.next_token ?? input.booking_token;
       if (!token) {
-        throw new Error("Parâmetros obrigatórios faltando: token (provider token)");
+        throw new Error("Token obrigatório (provider token)");
       }
       return {
         token: String(token),
