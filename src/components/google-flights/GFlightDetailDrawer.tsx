@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Plane, Clock, Briefcase, Luggage, Leaf, AlertTriangle, Repeat,
   Copy, Check, X as XIcon, ExternalLink, Building2, ShieldCheck, ShieldAlert, Shield,
-  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2,
+  ChevronDown, Sun, Moon, ShoppingCart, Sparkles, Loader2, RefreshCw, AlertCircle,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -81,7 +82,30 @@ interface Props {
   onClose: () => void;
 }
 
+function buildGoogleFlightsDeepLink(
+  dep: string | undefined,
+  arr: string | undefined,
+  outboundDate: string | undefined,
+  returnDate: string | undefined,
+  adults: number = 1,
+): string {
+  const base = "https://www.google.com/travel/flights";
+  const params = new URLSearchParams();
+  params.set("hl", "pt-BR");
+  params.set("curr", "BRL");
+  params.set("gl", "br");
+  if (dep && arr && outboundDate) {
+    const ret = returnDate ? ` returning ${returnDate}` : "";
+    const paxText = adults > 1 ? ` ${adults} adults` : "";
+    params.set("q", `Flights from ${dep} to ${arr} on ${outboundDate}${ret}${paxText}`);
+  } else if (dep && arr) {
+    params.set("q", `Flights from ${dep} to ${arr}`);
+  }
+  return `${base}?${params.toString()}`;
+}
+
 export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) {
+  const queryClient = useQueryClient();
   const [copiedToken, setCopiedToken] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [reservingId, setReservingId] = useState<string | null>(null);
@@ -648,20 +672,46 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                   ))}
                 </div>
               ) : providersSorted.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-6 text-center bg-muted/20 rounded-md border border-dashed border-border">
-                  Nenhum canal de venda direto disponível para este voo.
-                  <div className="mt-2">
+                <div className="py-6 px-4 bg-muted/20 rounded-md border border-dashed border-border flex flex-col items-center text-center space-y-3">
+                  <AlertCircle className="h-10 w-10 text-amber-500" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Sem ofertas diretas no momento
+                    </h3>
+                    <p className="text-xs text-muted-foreground max-w-md">
+                      Tokens de reserva têm validade curta. O voo é real, mas o link direto
+                      pode ter expirado ou ainda não foi indexado pelos canais de venda.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <Button asChild variant="outline" size="sm" className="gap-2">
                       <a
-                        href={`https://www.google.com/travel/flights?q=${encodeURIComponent(
-                          `${dep?.id} to ${arr?.id} ${itinerary.flights?.[0]?.airline ?? ""}`,
-                        )}`}
+                        href={buildGoogleFlightsDeepLink(
+                          dep?.id,
+                          arr?.id,
+                          searchInput?.outbound_date,
+                          searchInput?.return_date,
+                          searchInput?.adults ?? 1,
+                        )}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Buscar no Google Flights
+                        Abrir no Google Flights (BRL)
                       </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => {
+                        queryClient.invalidateQueries({
+                          queryKey: ["gflights", "getBookingDetails"],
+                        });
+                        toast.message("Buscando ofertas novamente...");
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Tentar de novo
                     </Button>
                   </div>
                 </div>
