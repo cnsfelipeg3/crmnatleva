@@ -103,7 +103,8 @@ function AttachmentRow({ att }: { att: Attachment }) {
   );
 }
 
-export default function SaleAttachmentsSection({ attachments }: { attachments: Attachment[] }) {
+export default function SaleAttachmentsSection({ attachments, loading = false }: { attachments: Attachment[]; loading?: boolean }) {
+  if (loading) return <AttachmentsSkeleton rows={4} />;
   const grouped = useMemo(() => {
     const map: Record<string, Attachment[]> = {};
     attachments.forEach(att => {
