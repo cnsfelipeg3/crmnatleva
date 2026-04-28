@@ -560,6 +560,18 @@ export default function GoogleFlightsSearchPage() {
                   </Badge>
                 );
               })()}
+              {results?.rapidapi_calls !== undefined && (
+                <Badge variant="outline" className="text-[10px] gap-1" title="Chamadas reais à RapidAPI nesta busca (cache não conta)">
+                  🌐 {results.rapidapi_calls} {results.rapidapi_calls === 1 ? "request" : "requests"}
+                </Badge>
+              )}
+              {results?.trip_type && (
+                <Badge variant="outline" className="text-[10px]">
+                  {results.trip_type === "round_trip" ? "🔄 Ida e volta"
+                    : results.trip_type === "multi_city" ? "🗺️ Multi-trecho"
+                    : "→ Só ida"}
+                </Badge>
+              )}
             </div>
             <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
               <Search className="h-4 w-4" />

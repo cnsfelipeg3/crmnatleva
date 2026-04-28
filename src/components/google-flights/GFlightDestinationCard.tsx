@@ -98,6 +98,18 @@ export function GFlightDestinationCard({
             <Sparkles className="h-3 w-3" /> Melhor preço
           </Badge>
         )}
+        {destination.fromCache && (
+          <Badge
+            variant="outline"
+            className={cn(
+              "absolute z-10 gap-1 text-[10px] bg-background/85 border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
+              isCheapest ? "top-9 left-2" : "top-2 left-2",
+            )}
+            title="Preço servido do cache · sem nova chamada à API"
+          >
+            ⚡ cache
+          </Badge>
+        )}
         {!destination.fitsBudget && (
           <Badge variant="outline" className="absolute top-2 right-2 gap-1 bg-amber-500/90 text-white border-0 z-10">
             <AlertCircle className="h-3 w-3" /> Acima do orçamento

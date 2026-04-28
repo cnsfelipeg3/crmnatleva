@@ -67,6 +67,12 @@ export interface DiscoverResponse {
   totalWithFlights: number;
   totalFitsBudget: number;
   results: DiscoveredDestination[];
+  cache_stats?: {
+    total_checked: number;
+    cache_hits: number;
+    api_calls: number;
+    hit_rate_percent: number;
+  };
 }
 
 

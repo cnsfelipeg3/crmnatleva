@@ -245,6 +245,8 @@ export interface GSearchFlightsResult {
   price_insight?: GPriceInsight;            // derivado · banner inteligente
   search_metadata?: Record<string, unknown>;
   fetched_at?: string;                      // ISO timestamp da resposta
+  rapidapi_calls?: number;                  // contador de chamadas RapidAPI desta busca
+  trip_type?: "one_way" | "round_trip" | "multi_city";
   [k: string]: unknown;
 }
 
