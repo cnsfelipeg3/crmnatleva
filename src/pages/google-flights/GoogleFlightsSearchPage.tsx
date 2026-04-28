@@ -34,6 +34,8 @@ import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItine
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
+import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
@@ -70,6 +72,7 @@ interface SearchSnapshot {
   return_date?: string;
   adults: number;
   travel_class: GFlightCabin;
+  multi_legs?: Array<{ departure_id: string; arrival_id: string; date: string }>;
 }
 
 export default function GoogleFlightsSearchPage() {
