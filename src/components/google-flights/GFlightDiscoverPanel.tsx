@@ -235,8 +235,40 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     setRecording(true);
   }
 
-  // Pronto: só precisa de texto razoável (>= 20 chars). Geo/orçamento são bônus.
-  const ready = useMemo(() => story.trim().length >= 20, [story]);
+  // ─── VALIDAÇÃO + NORMALIZAÇÃO DO STORY ──────────────────────────
+  // Normaliza: trim, colapsa whitespace múltiplo, remove caracteres
+  // de controle invisíveis. NÃO altera o que está no textarea (UX),
+  // só calcula uma versão limpa pra validação.
+  const normalizedStory = useMemo(() => {
+    return story
+      .replace(/[\u0000-\u001F\u007F]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+  }, [story]);
+
+  const wordCount = useMemo(
+    () => (normalizedStory ? normalizedStory.split(/\s+/).filter(Boolean).length : 0),
+    [normalizedStory],
+  );
+
+  // Detecção mínima de idioma latino · evita lixo (emojis puros, "asdf")
+  const looksLatin = useMemo(() => {
+    if (!normalizedStory) return false;
+    const letters = normalizedStory.replace(/[^a-zA-ZáàâãéèêíïóôõöúüçñÁÀÂÃÉÈÊÍÏÓÔÕÖÚÜÇÑ]/g, "");
+    return letters.length >= 12;
+  }, [normalizedStory]);
+
+  // Motivo determinístico pelo qual o botão pode estar desabilitado
+  const disabledReason = useMemo<string | null>(() => {
+    if (discover.isPending) return "Buscando destinos…";
+    if (normalizedStory.length === 0) return "Comece escrevendo sua história";
+    if (normalizedStory.length < 20) return `Faltam ${20 - normalizedStory.length} caracteres pra começar`;
+    if (wordCount < 4) return "Conta um pouco mais · pelo menos 4 palavras";
+    if (!looksLatin) return "Texto não reconhecido · escreva em português";
+    return null;
+  }, [normalizedStory, wordCount, looksLatin, discover.isPending]);
+
+  const ready = disabledReason === null;
 
   // Hints visuais do que ajudaria a melhorar o resultado
   const hints = useMemo(() => {
@@ -249,9 +281,58 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     return h;
   }, [extract, story]);
 
+  // ─── DEPURAÇÃO ──────────────────────────────────────────────────
+  const lastReadyRef = useRef<{ ready: boolean; reason: string | null } | null>(null);
+  useEffect(() => {
+    const prev = lastReadyRef.current;
+    if (!prev || prev.ready !== ready || prev.reason !== disabledReason) {
+      // eslint-disable-next-line no-console
+      console.debug("[Discover] ready=", ready, "reason=", disabledReason, {
+        chars: normalizedStory.length,
+        words: wordCount,
+        looksLatin,
+        isPending: discover.isPending,
+        extract,
+      });
+      lastReadyRef.current = { ready, reason: disabledReason };
+    }
+  }, [ready, disabledReason, normalizedStory.length, wordCount, looksLatin, discover.isPending, extract]);
+
   function handleSubmit() {
-    if (story.trim().length < 10) return;
-    discover.mutate({ naturalQuery: story.trim() });
+    if (!ready) {
+      // eslint-disable-next-line no-console
+      console.warn("[Discover] submit bloqueado:", disabledReason);
+      return;
+    }
+    discover.mutate({ naturalQuery: normalizedStory });
+  }
+
+  // ─── AUTO-RERUN ─────────────────────────────────────────────────
+  // Se o usuário tentou submeter quando ainda não estava pronto, refaz
+  // a busca automaticamente assim que o critério ficar válido.
+  const wantsAutoSubmitRef = useRef(false);
+  useEffect(() => {
+    if (
+      wantsAutoSubmitRef.current &&
+      ready &&
+      !discover.isPending &&
+      !data?.success
+    ) {
+      wantsAutoSubmitRef.current = false;
+      // eslint-disable-next-line no-console
+      console.debug("[Discover] auto-rerun: critério atingido após edição");
+      discover.mutate({ naturalQuery: normalizedStory });
+    }
+  }, [ready, discover.isPending, data?.success, normalizedStory, discover]);
+
+  function handleSubmitClick() {
+    if (!ready) {
+      wantsAutoSubmitRef.current = true;
+      // eslint-disable-next-line no-console
+      console.warn("[Discover] aguardando critério ficar válido:", disabledReason);
+      return;
+    }
+    handleSubmit();
   }
 
   if (discover.isPending) {
