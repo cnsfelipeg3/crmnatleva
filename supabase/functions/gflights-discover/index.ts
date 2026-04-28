@@ -31,7 +31,10 @@ serve(async (req) => {
     if (userErr || !userData?.user) return json({ error: "Unauthorized" }, 401);
 
     const body = await req.json().catch(() => ({}));
-    const { naturalQuery, budget, origin, monthOffset, durationDays, paxAdults, mood, regions } = body;
+    const {
+      naturalQuery, budget, origin, monthOffset, durationDays, paxAdults,
+      mood, regions, countries, cities, excludeCountries,
+    } = body;
 
     let extracted: {
       budget: number | null;
@@ -41,6 +44,9 @@ serve(async (req) => {
       paxAdults: number;
       mood: string | null;
       regions: string[];
+      countries: string[];
+      cities: string[];
+      excludeCountries: string[];
     } = {
       budget: typeof budget === "number" ? budget : null,
       origin: origin || "GRU",
@@ -49,6 +55,9 @@ serve(async (req) => {
       paxAdults: paxAdults || 1,
       mood: mood || null,
       regions: regions || [],
+      countries: countries || [],
+      cities: cities || [],
+      excludeCountries: excludeCountries || [],
     };
 
     if (naturalQuery && typeof naturalQuery === "string") {
@@ -61,6 +70,10 @@ serve(async (req) => {
         paxAdults: extracted.paxAdults ?? aiResult.paxAdults ?? 1,
         mood: extracted.mood ?? aiResult.mood,
         regions: extracted.regions?.length ? extracted.regions : (aiResult.regions || []),
+        countries: extracted.countries?.length ? extracted.countries : (aiResult.countries || []),
+        cities: extracted.cities?.length ? extracted.cities : (aiResult.cities || []),
+        excludeCountries: extracted.excludeCountries?.length
+          ? extracted.excludeCountries : (aiResult.excludeCountries || []),
       };
     }
 
@@ -76,14 +89,24 @@ serve(async (req) => {
       .select("*")
       .eq("is_active", true)
       .order("priority", { ascending: false })
-      .limit(40);
+      .limit(60);
 
     if (destErr) return json({ error: "db_error", message: destErr.message }, 500);
 
+    // Filtro hierárquico: cities > countries > regions
     let filteredDests = destinations || [];
-    if (extracted.regions?.length) {
+    if (extracted.cities?.length) {
+      filteredDests = filteredDests.filter((d: any) => extracted.cities.includes(d.iata));
+    } else if (extracted.countries?.length) {
+      filteredDests = filteredDests.filter((d: any) => extracted.countries.includes(d.country_code));
+    } else if (extracted.regions?.length) {
       filteredDests = filteredDests.filter((d: any) => extracted.regions.includes(d.region));
     }
+
+    if (extracted.excludeCountries?.length) {
+      filteredDests = filteredDests.filter((d: any) => !extracted.excludeCountries.includes(d.country_code));
+    }
+
     if (extracted.mood) {
       filteredDests.sort((a: any, b: any) => {
         const aMatch = a.tags?.includes(extracted.mood) ? 1 : 0;
@@ -92,7 +115,22 @@ serve(async (req) => {
       });
     }
 
+    if (filteredDests.length === 0) {
+      const requested =
+        extracted.cities?.[0] ||
+        extracted.countries?.[0] ||
+        extracted.regions?.[0] ||
+        "esses critérios";
+      return json({
+        success: false,
+        error: "no_matching_destinations",
+        message: `Não tenho destinos cadastrados para "${requested}". Tenta sem o nome do país/cidade · vou achar alternativas.`,
+        extracted,
+      }, 200);
+    }
+
     filteredDests = filteredDests.slice(0, 20);
+
 
     const target = new Date();
     target.setMonth(target.getMonth() + extracted.monthOffset);
