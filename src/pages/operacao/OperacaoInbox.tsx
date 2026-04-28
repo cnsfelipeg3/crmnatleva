@@ -1534,7 +1534,7 @@ function OperacaoInboxInner() {
                     )}
                     <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 flex-1" onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}>
                       {profilePicsRef.current.get(selected.id) ? (
-                        <img src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                        <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                       ) : null}
                       <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
                         {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
@@ -1713,7 +1713,7 @@ function OperacaoInboxInner() {
                                   <div>
                                     {msg.media_url ? (
                                       <>
-                                        <img src={msg.media_url} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => setLightboxUrl(msg.media_url!)} />
+                                        <img loading="lazy" decoding="async" src={msg.media_url} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => setLightboxUrl(msg.media_url!)} />
                                         <div className="flex items-center gap-2 mt-1">
                                           <a href={msg.media_url} download={`imagem_${msg.id}.jpg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                                             <File className="h-2.5 w-2.5" /> Baixar
@@ -1797,7 +1797,7 @@ function OperacaoInboxInner() {
                 {mediaPendingFile && (
                   <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2 shrink-0">
                     <div className="flex items-center gap-3">
-                      <img src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
+                      <img loading="lazy" decoding="async" src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
                       <div className="flex-1"><Input placeholder="Legenda (opcional)..." value={mediaCaption} onChange={e => setMediaCaption(e.target.value)} className="h-8 text-xs" /></div>
                       <Button size="sm" onClick={handleSendPendingMedia} disabled={isSending} className="text-xs gap-1">
                         {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />} Enviar
@@ -2046,7 +2046,7 @@ function OperacaoInboxInner() {
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-3xl p-2">
-            <img src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
+            <img loading="lazy" decoding="async" src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
       )}
