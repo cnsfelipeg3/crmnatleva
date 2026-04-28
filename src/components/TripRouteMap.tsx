@@ -114,7 +114,7 @@ interface TripRouteMapProps {
   height?: string;
 }
 
-export default function TripRouteMap({ segments, services, hotelInfo, height = "450px" }: TripRouteMapProps) {
+function TripRouteMapInner({ segments, services, hotelInfo, height = "450px" }: TripRouteMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
 
