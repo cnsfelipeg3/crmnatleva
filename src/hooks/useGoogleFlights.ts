@@ -550,3 +550,22 @@ export function useFlightBookingDetails(
   });
 }
 
+
+// --------------------------------------------------------------------
+// 7) fetchBookingURL · resolve deeplink real do provider via getBookingURL.
+// Função pura (não-hook) · pode ser chamada de qualquer handler.
+// Recebe o token do provider (vem de getBookingDetails), retorna URL ou null.
+// --------------------------------------------------------------------
+export async function fetchBookingURL(providerToken: string): Promise<string | null> {
+  if (!providerToken) return null;
+  try {
+    const data = await invokeGFlights<any>("getBookingURL", { token: providerToken });
+    if (data && data.status === false) return null;
+    if (typeof data?.data === "string") return data.data;
+    if (typeof data?.url === "string") return data.url;
+    return null;
+  } catch (e) {
+    console.warn("[gflights] getBookingURL failed:", e);
+    return null;
+  }
+}
