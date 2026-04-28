@@ -1,6 +1,5 @@
 // Tipos do módulo Google Flights BETA (DataCrawler).
-// A API retorna estruturas próprias — esses tipos cobrem o uso na UI;
-// campos extras passam por `[k: string]: unknown` pra não travar.
+// Mapeia 100% dos campos retornados pela API.
 
 export type GFlightCabin = "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
 export type GFlightSort =
@@ -13,43 +12,66 @@ export type GFlightSort =
   | "ARRIVAL_LATEST";
 
 export interface GAirport {
-  id: string;          // IATA airport ou city code (ex: "GRU", "SAO")
+  id: string;
   name?: string;
   city?: string;
   country?: string;
   type?: "AIRPORT" | "CITY" | string;
-  nearLabel?: string;  // ex: "próximo a Paris"
-  distance?: string;   // ex: "82 km to destination"
+  nearLabel?: string;
+  distance?: string;
 }
 
 export interface GFlightLeg {
-  airline?: string;        // nome
-  airline_code?: string;   // IATA carrier
+  airline?: string;
+  airline_code?: string;
   airline_logo?: string;
   flight_number?: string;
-  airplane?: string;
+  aircraft?: string;            // ex: "Airbus A330-900neo"
+  seat?: string;                // ex: "Average legroom"
+  legroom?: string;             // ex: "79 cm"
+  travel_class?: string;
   departure_airport?: { id?: string; name?: string; time?: string; city?: string };
   arrival_airport?: { id?: string; name?: string; time?: string; city?: string };
-  duration?: number;       // minutos
-  travel_class?: string;
-  legroom?: string;
-  extensions?: string[];
+  duration?: number;            // minutos
+  duration_text?: string;       // "9 hr 50 min"
+  extensions?: string[];        // amenities + CO2 estimate per leg
   [k: string]: unknown;
 }
 
 export interface GLayover {
-  duration?: number;        // minutos
-  name?: string;            // nome do aeroporto de conexão
-  id?: string;              // IATA
+  duration?: number;            // minutos
+  duration_text?: string;       // "2 hr 5 min"
+  name?: string;                // nome do aeroporto
+  id?: string;                  // IATA
+  city?: string;
   overnight?: boolean;
+}
+
+export interface GBags {
+  carry_on?: number | null;
+  checked?: number | null;
+}
+
+export interface GCarbonEmissions {
+  this_flight?: number;             // gramas (CO2e)
+  typical_for_this_route?: number;
+  difference_percent?: number;
+  higher?: number;
 }
 
 export interface GFlightItinerary {
   flights: GFlightLeg[];
   layovers?: GLayover[];
-  total_duration?: number;  // minutos
-  carbon_emissions?: { this_flight?: number; typical_for_this_route?: number; difference_percent?: number };
-  price?: number;           // preço total da opção (por adulto, geralmente)
+  total_duration?: number;          // minutos
+  total_duration_text?: string;
+  departure_time_text?: string;     // "28-05-2026 08:45 PM"
+  arrival_time_text?: string;
+  carbon_emissions?: GCarbonEmissions;
+  price?: number;
+  bags?: GBags;
+  stops?: number;
+  self_transfer?: boolean;
+  delay?: { values?: boolean; text?: number | string };
   type?: string;
   airline_logo?: string;
   departure_token?: string;
@@ -59,25 +81,23 @@ export interface GFlightItinerary {
 
 export interface GPriceInsights {
   lowest_price?: number;
+  highest_price?: number;
+  average_price?: number;
+  median_price?: number;
   price_level?: "low" | "typical" | "high" | string;
+  best_day?: string;                // YYYY-MM-DD
+  best_day_price?: number;
   typical_price_range?: [number, number];
-  price_history?: Array<[number, number]>; // [timestampSec, price]
 }
 
 export interface GSearchFlightsResult {
   best_flights?: GFlightItinerary[];
   other_flights?: GFlightItinerary[];
   price_insights?: GPriceInsights;
-  airports?: Array<{
-    departure?: Array<{ airport?: { id?: string; name?: string }; city?: string; country?: string; image?: string; thumbnail?: string }>;
-    arrival?: Array<{ airport?: { id?: string; name?: string }; city?: string; country?: string; image?: string; thumbnail?: string }>;
-  }>;
   search_metadata?: Record<string, unknown>;
-  search_parameters?: Record<string, unknown>;
   [k: string]: unknown;
 }
 
-// Calendar (getCalendarPicker) — formato típico: { date: "YYYY-MM-DD", price: number }
 export interface GCalendarDay {
   date: string;
   price?: number | null;
@@ -85,9 +105,8 @@ export interface GCalendarDay {
   group?: string;
 }
 
-// Price graph (getPriceGraph) — datas vs preço médio numa janela
 export interface GPriceGraphPoint {
-  date: string;            // "YYYY-MM-DD"
+  date: string;
   price?: number | null;
   is_outbound?: boolean;
 }
@@ -118,33 +137,67 @@ export function formatMinutes(min?: number | null): string {
   return `${h}h ${m}min`;
 }
 
+/**
+ * A DataCrawler entrega timestamps no formato "YYYY-M-D HH:MM" (sem zero-padding e sem TZ).
+ * Trabalhamos como hora local SEM aplicar timezone do browser.
+ */
+function parseDcDateTime(s: string): { date: Date; hh: string; mm: string } | null {
+  if (!s) return null;
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})/);
+  if (!m) return null;
+  const [, y, mo, d, h, mi] = m;
+  return {
+    date: new Date(+y, +mo - 1, +d, +h, +mi, 0, 0),
+    hh: h.padStart(2, "0"),
+    mm: mi.padStart(2, "0"),
+  };
+}
+
 export function formatTime(iso?: string): string {
   if (!iso) return "";
+  const p = parseDcDateTime(iso);
+  if (p) return `${p.hh}:${p.mm}`;
+  // Fallback ISO clássico
   try {
     const d = new Date(iso);
-    return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
-  } catch {
-    return iso;
-  }
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", hour12: false });
+    }
+  } catch { /* noop */ }
+  return iso;
 }
 
 export function formatDateShort(iso?: string): string {
   if (!iso) return "";
+  const p = parseDcDateTime(iso);
+  if (p) {
+    return p.date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  }
   try {
     const d = new Date(iso);
-    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-  } catch {
-    return iso;
-  }
+    if (!isNaN(d.getTime())) return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  } catch { /* noop */ }
+  return iso;
+}
+
+export function formatDateLong(iso?: string): string {
+  if (!iso) return "";
+  const p = parseDcDateTime(iso);
+  const d = p ? p.date : (() => { try { return new Date(iso); } catch { return null; } })();
+  if (!d || isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "short" });
 }
 
 export function dayDiff(a?: string, b?: string): number {
   if (!a || !b) return 0;
-  try {
-    const da = new Date(a); da.setHours(0, 0, 0, 0);
-    const db = new Date(b); db.setHours(0, 0, 0, 0);
-    return Math.round((db.getTime() - da.getTime()) / 86400000);
-  } catch { return 0; }
+  const pa = parseDcDateTime(a);
+  const pb = parseDcDateTime(b);
+  const da = pa ? pa.date : new Date(a);
+  const db = pb ? pb.date : new Date(b);
+  if (isNaN(da.getTime()) || isNaN(db.getTime())) return 0;
+  const dayA = new Date(da.getFullYear(), da.getMonth(), da.getDate()).getTime();
+  const dayB = new Date(db.getFullYear(), db.getMonth(), db.getDate()).getTime();
+  return Math.round((dayB - dayA) / 86400000);
 }
 
 export function cabinLabel(c?: string): string {
@@ -157,12 +210,10 @@ export function cabinLabel(c?: string): string {
   }
 }
 
-/** Heatmap level: low/typical/high → classes Tailwind */
 export function priceLevelClass(level?: string | null, price?: number | null, min?: number, max?: number): string {
   if (level === "low") return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
   if (level === "high") return "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30";
   if (level === "typical") return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
-  // Fallback baseado em quantis
   if (price !== null && price !== undefined && min !== undefined && max !== undefined && max > min) {
     const ratio = (price - min) / (max - min);
     if (ratio < 0.33) return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30";
@@ -170,4 +221,46 @@ export function priceLevelClass(level?: string | null, price?: number | null, mi
     return "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30";
   }
   return "bg-muted/40 text-muted-foreground border-border";
+}
+
+/**
+ * Classifica extensions[] por categoria pra renderização (Wi-Fi, USB, vídeo, etc).
+ * As extensions vêm em PT/EN aleatórias; usamos heurística por substring.
+ */
+export type ExtensionTag = {
+  label: string;
+  kind: "wifi" | "power" | "video" | "audio" | "legroom" | "co2" | "meal" | "other";
+};
+
+export function classifyExtensions(extensions?: string[]): ExtensionTag[] {
+  if (!extensions?.length) return [];
+  const tags: ExtensionTag[] = [];
+  for (const raw of extensions) {
+    const s = raw.toLowerCase();
+    if (s.includes("wi-fi") || s.includes("wifi")) {
+      tags.push({ label: raw, kind: "wifi" });
+    } else if (s.includes("power") || s.includes("usb") || s.includes("tomada") || s.includes("energia")) {
+      tags.push({ label: raw, kind: "power" });
+    } else if (s.includes("video") || s.includes("vídeo") || s.includes("on-demand") || s.includes("entertainment")) {
+      tags.push({ label: raw, kind: "video" });
+    } else if (s.includes("audio") || s.includes("áudio") || s.includes("music")) {
+      tags.push({ label: raw, kind: "audio" });
+    } else if (s.includes("legroom") || s.includes("espaço") || s.includes("cm)")) {
+      tags.push({ label: raw, kind: "legroom" });
+    } else if (s.includes("co2") || s.includes("emissions") || s.includes("emissões") || s.includes("emissão")) {
+      tags.push({ label: raw, kind: "co2" });
+    } else if (s.includes("meal") || s.includes("refeição") || s.includes("snack")) {
+      tags.push({ label: raw, kind: "meal" });
+    } else {
+      tags.push({ label: raw, kind: "other" });
+    }
+  }
+  return tags;
+}
+
+export function formatCO2(grams?: number): string {
+  if (!grams || !Number.isFinite(grams)) return "—";
+  const kg = grams / 1000;
+  if (kg < 10) return `${kg.toFixed(1)} kg CO₂`;
+  return `${Math.round(kg)} kg CO₂`;
 }
