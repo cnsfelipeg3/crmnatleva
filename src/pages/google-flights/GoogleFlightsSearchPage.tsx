@@ -603,9 +603,17 @@ export default function GoogleFlightsSearchPage() {
                 </Badge>
               )}
             </div>
-            <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
+            <Button
+              onClick={handleSearch}
+              disabled={!canSearch || isLoading}
+              className="gap-2 md:min-w-[180px]"
+              title="Atalho: Cmd/Ctrl + Enter"
+            >
               <Search className="h-4 w-4" />
               {isLoading ? "Buscando voos..." : "Buscar voos"}
+              <kbd className="ml-1 hidden md:inline-flex items-center gap-0.5 rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 py-0 text-[10px] font-mono opacity-70">
+                ⌘↵
+              </kbd>
             </Button>
           </div>
 
