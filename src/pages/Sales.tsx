@@ -167,6 +167,7 @@ export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
 
