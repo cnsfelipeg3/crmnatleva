@@ -171,11 +171,9 @@ function GFlightInlineFiltersImpl({
   }, [filters, autoApply, onAutoSearch]);
 
   // Restaura foco no trigger ao fechar o popover (a11y)
+  // O retorno efetivo é feito em onCloseAutoFocus para evitar race com rAF.
   const handleOpenChange = (next: boolean) => {
     setOpen(next);
-    if (!next) {
-      requestAnimationFrame(() => triggerRef.current?.focus());
-    }
   };
 
   const countLabel = typeof filteredCount === "number"
