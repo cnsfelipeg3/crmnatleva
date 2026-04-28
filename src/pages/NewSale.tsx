@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { WizardSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
@@ -922,8 +923,14 @@ export default function NewSale() {
   );
 
   // ─── Render ─────────────────────────────────────────
+  if (isEditMode && editLoading) {
+    // Lazy import já carregado no topo
+    return <WizardSkeleton />;
+  }
+
   return (
-    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto">
+    <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto relative">
+      {extracting && <ProgressOverlay label="Extraindo dados com IA..." />}
       <div>
         <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Nova Venda"}</h1>
         <p className="text-sm text-muted-foreground">{isEditMode ? "Edite os detalhes desta venda" : "Registre todos os detalhes da viagem de forma organizada"}</p>

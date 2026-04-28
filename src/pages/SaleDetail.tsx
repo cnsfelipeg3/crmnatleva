@@ -31,7 +31,7 @@ import SaleAttachmentsSection from "@/components/SaleAttachmentsSection";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
-import { DetailPageSkeleton } from "@/components/skeletons/PageSkeletons";
+import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -429,9 +429,19 @@ export default function SaleDetail() {
             </DialogTitle>
           </DialogHeader>
           {generatingSummary ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-6 h-6 animate-spin text-primary mr-2" />
-              <span className="text-muted-foreground">Gerando resumo com IA...</span>
+            <div className="space-y-3 py-2" aria-busy="true" aria-label="Gerando relatório">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Gerando relatório com IA...</span>
+              </div>
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                <div className="h-full w-1/3 bg-primary rounded-full animate-pulse" />
+              </div>
+              <div className="space-y-2 pt-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-3 rounded bg-muted animate-pulse" style={{ width: `${60 + ((i * 13) % 35)}%` }} />
+                ))}
+              </div>
             </div>
           ) : (
             <div className="space-y-3">

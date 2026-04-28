@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
+import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
 import PerfDebugOverlay from "@/components/PerfDebugOverlay";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
@@ -178,7 +179,8 @@ function ScreenLoader() {
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
-  if (isLoading) return <ScreenLoader />;
+  // Skeleton consistente com a rota destino · evita flash branco / spinner sem contexto
+  if (isLoading) return <RouteAwareSkeleton pathname={location.pathname} />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
@@ -207,7 +209,7 @@ function AppRoutes() {
       <Routes>
         <Route
           path="/login"
-          element={isLoading && !isPublicRoute ? <ScreenLoader /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
         />
         {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
         <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />

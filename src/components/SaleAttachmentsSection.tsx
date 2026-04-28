@@ -6,6 +6,7 @@ import { Paperclip, FileText, Image as ImageIcon, File, FileSpreadsheet, Downloa
 import { formatDateBR } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import { getProductLabel } from "@/lib/productTypes";
+import { AttachmentsSkeleton } from "@/components/skeletons/PageSkeletons";
 
 interface Attachment {
   id: string;
@@ -102,7 +103,8 @@ function AttachmentRow({ att }: { att: Attachment }) {
   );
 }
 
-export default function SaleAttachmentsSection({ attachments }: { attachments: Attachment[] }) {
+export default function SaleAttachmentsSection({ attachments, loading = false }: { attachments: Attachment[]; loading?: boolean }) {
+  if (loading) return <AttachmentsSkeleton rows={4} />;
   const grouped = useMemo(() => {
     const map: Record<string, Attachment[]> = {};
     attachments.forEach(att => {

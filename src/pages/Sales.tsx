@@ -15,7 +15,7 @@ import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
-import { ListPageSkeleton } from "@/components/skeletons/PageSkeletons";
+import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -167,6 +167,7 @@ export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
 
@@ -237,20 +238,34 @@ export default function Sales() {
   const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
   const handleDeleted = useCallback((id: string) => setSales((prev) => prev.filter((s) => s.id !== id)), []);
 
-  const handleExport = () => {
+  const handleExport = async () => {
+    setExportProgress(0);
+    // Pequenas etapas para a barra dar feedback mesmo em volumes pequenos
     const headers = ["ID", "Nome", "Status", "Origem", "Destino", "PAX", "Receita", "Custo", "Lucro", "Margem%", "Lead", "Data Ida", "Data Volta"];
-    const rows = filtered.map(s => [
-      s.display_id, s.name, s.status, s.origin_iata || "", s.destination_iata || "",
-      (s.adults || 0) + (s.children || 0), s.received_value || 0, s.total_cost || 0, s.profit || 0,
-      (s.margin || 0).toFixed(1), s.lead_type || "",
-      s.departure_date || "", s.return_date || "",
-    ]);
+    const total = filtered.length || 1;
+    const rows: string[][] = [];
+    for (let i = 0; i < filtered.length; i++) {
+      const s = filtered[i];
+      rows.push([
+        s.display_id, s.name, s.status, s.origin_iata || "", s.destination_iata || "",
+        String((s.adults || 0) + (s.children || 0)), String(s.received_value || 0), String(s.total_cost || 0), String(s.profit || 0),
+        (s.margin || 0).toFixed(1), s.lead_type || "",
+        s.departure_date || "", s.return_date || "",
+      ]);
+      if (i % 50 === 0) {
+        setExportProgress(Math.round((i / total) * 90));
+        await new Promise((r) => setTimeout(r, 0)); // libera o frame
+      }
+    }
+    setExportProgress(95);
     const csv = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `vendas-natleva-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click(); URL.revokeObjectURL(url);
+    setExportProgress(100);
+    setTimeout(() => setExportProgress(null), 400);
   };
 
   const renderDates = (sale: SaleRow) => {
@@ -279,7 +294,10 @@ export default function Sales() {
 
   return (
     <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in relative">
+        {exportProgress !== null && (
+          <ProgressOverlay label="Exportando vendas..." progress={exportProgress} fullscreen />
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-serif text-foreground">Vendas</h1>

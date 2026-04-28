@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowLeft, Plus, Trash2, Search, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { SimpleListSkeleton } from "@/components/skeletons/PageSkeletons";
 
 interface GenericSettingsListProps {
   title: string;
@@ -23,6 +24,7 @@ export default function GenericSettingsList({
   backPath = "/settings",
 }: GenericSettingsListProps) {
   const [items, setItems] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false);
   const [search, setSearch] = useState("");
   const [newItem, setNewItem] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,6 +42,7 @@ export default function GenericSettingsList({
       setItems(defaultItems);
       localStorage.setItem(`settings_${title}`, JSON.stringify(defaultItems));
     }
+    setHydrated(true);
   }, [title]);
 
   const save = (newItems: string[]) => {
@@ -136,7 +139,9 @@ export default function GenericSettingsList({
         <Input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
       </div>
 
-      {filtered.length === 0 ? (
+      {!hydrated ? (
+        <SimpleListSkeleton rows={6} />
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">Nenhum item encontrado.</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
