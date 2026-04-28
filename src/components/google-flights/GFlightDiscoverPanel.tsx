@@ -363,7 +363,7 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
                 placeholder="Aniversário de 10 anos de casamento, queremos algo memorável e fora do óbvio..."
                 className="flex-1 min-h-[140px] md:min-h-[180px] p-4 md:p-5 text-base md:text-lg leading-relaxed bg-transparent resize-none focus:outline-none placeholder:text-muted-foreground/50"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && ready) handleSubmit();
+                  if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) handleSubmitClick();
                 }}
               />
               <button
