@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import * as L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
