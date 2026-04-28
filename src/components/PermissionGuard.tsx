@@ -18,7 +18,8 @@ export default function PermissionGuard({ children }: Props) {
   const { loading, isAdmin, can } = usePermissions();
 
   if (isAdmin) return <>{children}</>;
-  if (loading) return null; // evita flash
+  // Em vez de null (flash branco), mostra o esqueleto da rota destino
+  if (loading) return <RouteAwareSkeleton pathname={location.pathname} />;
 
   // O /dashboard é sempre acessível para usuários autenticados.
   // A escolha entre dashboard completo e dashboard simples já é feita no roteador.
