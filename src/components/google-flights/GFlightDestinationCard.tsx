@@ -109,16 +109,10 @@ export function GFlightDestinationCard({
 
         {/* Cidade/País sobreposto */}
         <div className="absolute bottom-2 left-3 right-3 z-10">
-          <h3 className={cn(
-            "text-xl font-bold leading-tight",
-            destination.hero_image_url ? "text-white drop-shadow-lg" : "text-foreground",
-          )}>
+          <h3 className="text-xl font-bold leading-tight text-white drop-shadow-lg">
             {destination.city}
           </h3>
-          <p className={cn(
-            "text-xs",
-            destination.hero_image_url ? "text-white/90 drop-shadow" : "text-muted-foreground",
-          )}>
+          <p className="text-xs text-white/90 drop-shadow">
             {destination.country} · {destination.region}
           </p>
         </div>
