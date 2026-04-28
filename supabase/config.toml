@@ -1,146 +1,184 @@
 project_id = "mexlhkqcmiaktjxsyvod"
 
+# ============================================================================
+# Edge Function auth audit (Frente 1 — Segurança)
+# Decisões caso-a-caso. true = exige JWT (rota interna logada).
+# false = público com motivo: webhook externo, portal cliente (auth interna),
+# checkin/lodging via link com token, ou script admin manual.
+# Funções gflights-* NÃO são tocadas (HARD STOP — módulo protegido).
+# ============================================================================
+
+# ---- Internas: exigem login (JWT) ----
 [functions.extract-sale-data]
-verify_jwt = false
+verify_jwt = true  # Wizard /sale/edit (admin/vendedor logado)
 
 [functions.generate-summary]
-verify_jwt = false
+verify_jwt = true  # /admin
 
 [functions.amadeus-search]
-verify_jwt = false
+verify_jwt = true  # Wizard interno de busca aérea
 
 [functions.hotel-search]
-verify_jwt = false
-
-[functions.checkin-generate]
-verify_jwt = false
-
-[functions.lodging-generate]
-verify_jwt = false
-
-[functions.backfill-passengers]
-verify_jwt = false
-
-[functions.import-monday-data]
-verify_jwt = false
-
-[functions.data-cleanup]
-verify_jwt = false
-
-[functions.client-intelligence-ai]
-verify_jwt = false
-
-[functions.natleva-intelligence]
-verify_jwt = false
-
-[functions.natleva-image-gen]
-verify_jwt = false
-
-[functions.web-search]
-verify_jwt = false
-
-[functions.livechat-ai]
-verify_jwt = false
-
-[functions.import-chatguru]
-verify_jwt = false
-
-[functions.analyze-atendimento]
-verify_jwt = false
-
-[functions.generate-page-summary]
-verify_jwt = false
-
-[functions.zapi-proxy]
-verify_jwt = true
-
-[functions.zapi-webhook]
-verify_jwt = false
-
-[functions.whatsapp-official-webhook]
-verify_jwt = false
-
-[functions.connect-whatsapp]
-verify_jwt = false
-
-[functions.disconnect-whatsapp]
-verify_jwt = false
-
-[functions.sync-whatsapp-numbers]
-verify_jwt = false
-
-[functions.test-whatsapp-connection]
-verify_jwt = false
-
-[functions.send-whatsapp-official]
-verify_jwt = false
-
-[functions.correct-message]
-verify_jwt = false
-
-[functions.livechat-ai-suggest]
-verify_jwt = false
-
-[functions.execute-flow]
-verify_jwt = false
-
-[functions.portal-api]
-verify_jwt = false
-
-[functions.create-portal-access]
-verify_jwt = false
-
-[functions.portal-notifications-engine]
-verify_jwt = false
-
-[functions.portal-assistant]
-verify_jwt = false
-
-[functions.invite-trip-companion]
-verify_jwt = false
-
-[functions.places-search]
-verify_jwt = false
-
-[functions.scrape-hotel-photos]
-verify_jwt = false
-
-[functions.classify-hotel-photos]
-verify_jwt = false
-
-[functions.image-proxy]
-verify_jwt = false
+verify_jwt = true  # Wizard interno
 
 [functions.extract-quote-context]
-verify_jwt = false
-
-[functions.migrate-messages]
-verify_jwt = false
-
-[functions.ai-learn-patterns]
-verify_jwt = false
-
-[functions.natleva-brain]
-verify_jwt = false
-
-[functions.reconcile-messages]
-verify_jwt = false
-
-[functions.pipeline-reprocess]
-verify_jwt = false
+verify_jwt = true  # NewSale interno
 
 [functions.smart-upload-process]
-verify_jwt = false
+verify_jwt = true  # Upload admin
+
+[functions.pipeline-reprocess]
+verify_jwt = true  # Reprocessamento admin
+
+[functions.client-intelligence-ai]
+verify_jwt = true  # Dashboard interno
+
+[functions.natleva-intelligence]
+verify_jwt = true  # Dashboard admin
+
+[functions.natleva-brain]
+verify_jwt = true  # Dashboard admin
+
+[functions.analyze-atendimento]
+verify_jwt = true  # LiveChat operador
+
+[functions.livechat-ai]
+verify_jwt = true  # LiveChat operador
+
+[functions.livechat-ai-suggest]
+verify_jwt = true  # LiveChat operador
+
+[functions.correct-message]
+verify_jwt = true  # LiveChat operador
+
+[functions.generate-page-summary]
+verify_jwt = true  # Admin
 
 [functions.generate-hotel-description]
-verify_jwt = false
+verify_jwt = true  # Lodging admin
 
-[functions.extract-from-url]
-verify_jwt = false
+[functions.generate-proposal-briefing]
+verify_jwt = true  # Admin
+
+[functions.proposal-suggestions]
+verify_jwt = true  # Admin
+
+[functions.organize-knowledge]
+verify_jwt = true  # KB admin
+
+[functions.parse-agent-description]
+verify_jwt = true  # AI Team admin
+
+[functions.agent-chat]
+verify_jwt = true  # AI Team admin
+
+[functions.cover-image-search]
+verify_jwt = true  # Admin
+
+[functions.web-search]
+verify_jwt = true  # Admin
+
+[functions.natleva-image-gen]
+verify_jwt = true  # Admin
+
+[functions.send-whatsapp-official]
+verify_jwt = true  # LiveChat operador
+
+# ---- Webhooks externos: MANTIDOS public ----
+[functions.zapi-webhook]
+verify_jwt = false  # Webhook Z-API externo (validação por payload/secret interno)
+
+[functions.zapi-proxy]
+verify_jwt = true  # já estava true; chamada interna admin
+
+[functions.whatsapp-official-webhook]
+verify_jwt = false  # Webhook Meta externo
+
+# ---- Portal do cliente: MANTIDOS false ----
+# Validação acontece via portal_access + getUser() no próprio código da função
+[functions.portal-api]
+verify_jwt = false  # Portal cliente — auth via portal_access interno
+
+[functions.portal-assistant]
+verify_jwt = false  # Portal cliente — auth interna
+
+[functions.invite-trip-companion]
+verify_jwt = false  # Portal cliente — auth via portal_access
+
+[functions.create-portal-access]
+verify_jwt = false  # Auth via getUser() interno + verificação admin
+
+[functions.portal-notifications-engine]
+verify_jwt = false  # Engine de notificações (acionada por agenda/cron)
+
+# ---- Checkin/Lodging via link com token ----
+[functions.checkin-generate]
+verify_jwt = false  # Cliente acessa via link com token único
+
+[functions.lodging-generate]
+verify_jwt = false  # Cliente acessa via link com token único
+
+# ---- Setup/Admin scripts (acionados manualmente) ----
+[functions.admin-users]
+verify_jwt = false  # Auth via getUser() + verificação admin no código
 
 [functions.bootstrap-presidents]
-verify_jwt = false
+verify_jwt = false  # Script de setup inicial
 
+[functions.connect-whatsapp]
+verify_jwt = false  # Setup WhatsApp (validado por instância)
+
+[functions.disconnect-whatsapp]
+verify_jwt = false  # Setup WhatsApp
+
+[functions.sync-whatsapp-numbers]
+verify_jwt = false  # Sync admin
+
+[functions.test-whatsapp-connection]
+verify_jwt = false  # Teste admin
+
+# ---- Scripts de manutenção ----
+[functions.backfill-passengers]
+verify_jwt = false  # Script admin manual
+
+[functions.import-monday-data]
+verify_jwt = false  # Import admin manual
+
+[functions.data-cleanup]
+verify_jwt = false  # Limpeza admin manual
+
+[functions.import-chatguru]
+verify_jwt = false  # Import admin manual
+
+[functions.migrate-messages]
+verify_jwt = false  # Migration admin
+
+[functions.reconcile-messages]
+verify_jwt = false  # Reconciliação admin
+
+[functions.ai-learn-patterns]
+verify_jwt = false  # Job batch (sem sessão)
+
+# ---- Recursos públicos / proxies ----
+[functions.places-search]
+verify_jwt = false  # Proxy Google Places (público para mapas)
+
+[functions.scrape-hotel-photos]
+verify_jwt = false  # Scraper público
+
+[functions.classify-hotel-photos]
+verify_jwt = false  # Job batch
+
+[functions.image-proxy]
+verify_jwt = false  # Proxy de imagens públicas
+
+[functions.extract-from-url]
+verify_jwt = false  # Extrator chamado de portal e admin
+
+[functions.execute-flow]
+verify_jwt = false  # Flow runner cron-like
+
+# ---- Módulos PROTEGIDOS (HARD STOP — não tocar) ----
 [functions.google-flights-rapidapi]
 verify_jwt = true
 
