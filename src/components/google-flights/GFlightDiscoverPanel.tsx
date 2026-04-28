@@ -633,11 +633,13 @@ function CinematicLoading({ targetLabel }: { targetLabel?: string }) {
 // ────────────────────────────────────────────────────────────────
 
 function ResultSection({
-  data, onSelectDestination, onReset,
+  data, onSelectDestination, onReset, cacheHistory, onClearCacheHistory,
 }: {
   data: DiscoverResponse;
   onSelectDestination: (d: DiscoveredDestination, ctx: DiscoverResponse) => void;
   onReset: () => void;
+  cacheHistory: import("@/hooks/useDiscoverCacheHistory").DiscoverCachePoint[];
+  onClearCacheHistory: () => void;
 }) {
   const ext = data.extracted;
   const target =
