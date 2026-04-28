@@ -159,53 +159,121 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
         </Select>
       </div>
 
-      {/* Paradas */}
+      {/* Paradas · multi-select inteligente */}
       <div className="space-y-2">
-        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Paradas</Label>
+        <div className="flex items-center justify-between">
+          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Paradas</Label>
+          {filters.stops.length < 3 && (
+            <button
+              type="button"
+              onClick={() => onChange({ ...filters, stops: ["0", "1", "2+"] })}
+              className="text-[10px] text-primary hover:underline"
+            >
+              Todas
+            </button>
+          )}
+        </div>
         {([
           { v: "0" as const, label: "Direto" },
           { v: "1" as const, label: "1 parada" },
           { v: "2+" as const, label: "2+ paradas" },
-        ]).map(opt => (
-          <label key={opt.v} className="flex items-center gap-2 text-xs cursor-pointer">
-            <Checkbox
-              checked={filters.stops.includes(opt.v)}
-              onCheckedChange={() => onChange({ ...filters, stops: toggle(filters.stops, opt.v) })}
-            />
-            {opt.label}
-          </label>
-        ))}
+        ]).map(opt => {
+          const allOptions: Array<"0" | "1" | "2+"> = ["0", "1", "2+"];
+          const checked = filters.stops.includes(opt.v);
+          const isSolo = checked && filters.stops.length === 1;
+          return (
+            <div key={opt.v} className="group flex items-center gap-2 text-xs">
+              <Checkbox
+                id={`stops-${opt.v}`}
+                checked={checked}
+                onCheckedChange={() => {
+                  // Se está sozinho selecionado e clica · volta pra "todos"
+                  if (isSolo) {
+                    onChange({ ...filters, stops: allOptions });
+                    return;
+                  }
+                  const next = toggle(filters.stops, opt.v);
+                  // Se desmarcou tudo, volta pra todos (estado neutro)
+                  onChange({ ...filters, stops: next.length === 0 ? allOptions : next });
+                }}
+              />
+              <label htmlFor={`stops-${opt.v}`} className="flex-1 cursor-pointer">{opt.label}</label>
+              {!isSolo && (
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...filters, stops: [opt.v] })}
+                  className="text-[10px] text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Selecionar apenas este"
+                >
+                  só este
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Cias */}
+      {/* Cias · multi-select inteligente */}
       {airlinesCount.length > 0 && (
         <div className="space-y-2">
-          <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
-            Cias aéreas {filters.airlines.length > 0 && (
-              <Badge variant="outline" className="ml-1 text-[9px] h-4 px-1">{filters.airlines.length}</Badge>
+          <div className="flex items-center justify-between">
+            <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">
+              Cias aéreas {filters.airlines.length > 0 && (
+                <Badge variant="outline" className="ml-1 text-[9px] h-4 px-1">{filters.airlines.length}</Badge>
+              )}
+            </Label>
+            {filters.airlines.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onChange({ ...filters, airlines: [] })}
+                className="text-[10px] text-primary hover:underline"
+              >
+                Todas
+              </button>
             )}
-          </Label>
+          </div>
           <ScrollArea className="max-h-44 pr-2">
             <div className="space-y-1.5">
-              {airlinesCount.map(([name, count]) => (
-                <label key={name} className="flex items-center gap-2 text-xs cursor-pointer">
-                  <Checkbox
-                    checked={filters.airlines.length === 0 || filters.airlines.includes(name)}
-                    onCheckedChange={() => {
-                      // Lógica: se nada marcado = todos. Se marca um, vira filtro.
-                      if (filters.airlines.length === 0) {
-                        onChange({ ...filters, airlines: airlinesCount.filter(([n]) => n !== name).map(([n]) => n) });
-                      } else {
+              {airlinesCount.map(([name, count]) => {
+                const allSelected = filters.airlines.length === 0;
+                const checked = allSelected || filters.airlines.includes(name);
+                const isSolo = filters.airlines.length === 1 && filters.airlines[0] === name;
+                return (
+                  <div key={name} className="group flex items-center gap-2 text-xs">
+                    <Checkbox
+                      id={`air-${name}`}
+                      checked={checked}
+                      onCheckedChange={() => {
+                        // Caso 1 · "todas" ativas e clica num · isola só esse
+                        if (allSelected) {
+                          onChange({ ...filters, airlines: [name] });
+                          return;
+                        }
+                        // Caso 2 · só esse selecionado e clica · volta pra "todas"
+                        if (isSolo) {
+                          onChange({ ...filters, airlines: [] });
+                          return;
+                        }
+                        // Caso 3 · toggle normal
                         const next = toggle(filters.airlines, name);
-                        // Se desmarcou tudo, resetar pra "todos"
                         onChange({ ...filters, airlines: next.length === 0 ? [] : next });
-                      }
-                    }}
-                  />
-                  <span className="flex-1 truncate">{name}</span>
-                  <span className="text-[10px] text-muted-foreground">{count}</span>
-                </label>
-              ))}
+                      }}
+                    />
+                    <label htmlFor={`air-${name}`} className="flex-1 truncate cursor-pointer">{name}</label>
+                    <span className="text-[10px] text-muted-foreground">{count}</span>
+                    {!isSolo && (
+                      <button
+                        type="button"
+                        onClick={() => onChange({ ...filters, airlines: [name] })}
+                        className="text-[10px] text-muted-foreground hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                        title="Selecionar apenas esta"
+                      >
+                        só esta
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </ScrollArea>
         </div>
