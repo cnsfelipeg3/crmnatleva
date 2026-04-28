@@ -796,6 +796,7 @@ export const __testing = {
   REGION_FALLBACK,
   CITY_TO_COUNTRY,
   GENERIC_TRAVEL,
+  normalize,
 };
 
 
