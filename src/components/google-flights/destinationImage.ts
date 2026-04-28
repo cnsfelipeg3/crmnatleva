@@ -413,6 +413,20 @@ function normalize(s?: string): string {
   out = out.replace(/[,/·|].*$/g, "");
   out = out.replace(/\s-\s.*$/g, "");
 
+  // Expande abreviações comuns ANTES de remover pontos
+  // "st." / "st " / "saint " -> "sao " (alinhando com chaves canônicas pt-br)
+  // ex: "St. Paul" -> "sao paul" -> alias canônico
+  out = out.replace(/\bst\.?\s+/g, "sao ");
+  out = out.replace(/\bsaint\s+/g, "sao ");
+  out = out.replace(/\bsainte\s+/g, "sao ");
+  out = out.replace(/\bs\.\s+/g, "sao ");
+  // "Ft." / "Fort " mantemos como "fort"
+  out = out.replace(/\bft\.?\s+/g, "fort ");
+  // "Mt." -> "monte"
+  out = out.replace(/\bmt\.?\s+/g, "monte ");
+  // "N.Y." colapsa
+  out = out.replace(/\bn\.?\s*y\.?\b/g, "ny");
+
   // Troca separadores por hífen
   out = out.replace(/[_./\\]+/g, "-");
 
