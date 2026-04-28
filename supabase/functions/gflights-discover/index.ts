@@ -347,22 +347,37 @@ async function extractEntitiesFromQuery(query: string): Promise<{
   paxAdults: number | null;
   mood: string | null;
   regions: string[];
+  countries: string[];
+  cities: string[];
+  excludeCountries: string[];
 }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) return regexFallback(query);
 
-  const systemPrompt = `Você é um extrator de informação de viagem. Recebe uma frase em português brasileiro descrevendo uma intenção de viagem e devolve um JSON estrito com os campos abaixo. Se algum campo não puder ser inferido, devolva null.
+  const systemPrompt = `Você é um extrator preciso de informação de viagem em PT-BR. Devolve JSON estrito.
+
+ASSERTIVIDADE GEOGRÁFICA É CRÍTICA:
+- "quero Itália" → countries: ["IT"], regions vazio
+- "Roma e Veneza" → cities: ["FCO","VCE"], countries: ["IT"]
+- "Europa" sem país → regions: ["Europa"], countries vazio
+- "qualquer lugar exceto Europa" → excludeCountries com lista europeia
+
+REGRA: se cities tem itens, deduza countries automaticamente.
+Se countries tem itens, NÃO preencha regions (causa conflito).
 
 Campos:
-- budget: número em BRL (ex: "R$ 5.000" ou "5 mil" → 5000). Se não houver, null.
-- origin: código IATA do aeroporto de origem (ex: "São Paulo" → "GRU", "Rio de Janeiro" → "GIG", "Recife" → "REC"). Se não houver, null.
-- monthOffset: meses à frente da data atual (1=mês que vem, 2=daqui 2 meses). Se mencionado mês específico, calcule. Default null.
-- durationDays: duração em dias (ex: "10 dias" → 10, "uma semana" → 7, "fim de semana" → 3). Default null.
-- paxAdults: número de adultos (ex: "com a esposa" → 2, "sozinho" → 1, "família de 4" → 4). Default null.
-- mood: UMA das seguintes (string única) ou null: praia, urbano, montanha, gastronomia, romantico, familia, aventura, cultura, luxo, natureza.
-- regions: lista de regiões mencionadas (de: ["Brasil","Américas","Europa","Caribe","Oriente Médio","Ásia","África"]). Vazio se não mencionado.
+- budget: BRL ("R$ 5.000", "5 mil"→5000, "25k"→25000) | null
+- origin: IATA ("São Paulo"→GRU, "Rio"→GIG, "Recife"→REC, "Brasília"→BSB, "Fortaleza"→FOR, "Salvador"→SSA, "BH"→CNF, "Curitiba"→CWB, "Porto Alegre"→POA) | null
+- monthOffset: meses à frente (1=mês que vem). "Outubro" se hoje é abril → 6. | null
+- durationDays: ("10 dias"→10, "uma semana"→7, "fim de semana"→3) | null
+- paxAdults: ("com a esposa"→2, "sozinho"→1, "família de 4"→4) | null
+- mood: UMA de: praia, urbano, montanha, gastronomia, romantico, familia, aventura, cultura, luxo, natureza | null
+- regions: APENAS se mencionou continente sem país: ["Brasil","Américas","Europa","Caribe","Oriente Médio","Ásia","África"]
+- countries: ISO-2. Mapa: Itália=IT, Portugal=PT, Espanha=ES, França=FR, Alemanha=DE, Inglaterra=GB, Reino Unido=GB, Holanda=NL, Suíça=CH, Áustria=AT, Grécia=GR, Hungria=HU, República Tcheca=CZ, Irlanda=IE, Islândia=IS, Brasil=BR, Argentina=AR, Chile=CL, Peru=PE, Uruguai=UY, EUA=US, México=MX, Canadá=CA, Rep. Dominicana=DO, Cuba=CU, Bahamas=BS, Aruba=AW, Japão=JP, China=CN, Coreia=KR, Tailândia=TH, Vietnã=VN, Indonésia=ID, Singapura=SG, Índia=IN, Emirados=AE, Catar=QA, Turquia=TR, Marrocos=MA, África do Sul=ZA
+- cities: IATAs. Mapa: Roma=FCO, Milão=MXP, Veneza=VCE, Florença=FLR, Nápoles=NAP, Sicília=CTA, Lisboa=LIS, Porto=OPO, Madri=MAD, Barcelona=BCN, Paris=CDG, Londres=LHR, Amsterdã=AMS, Berlim=BER, Munique=MUC, Viena=VIE, Praga=PRG, Budapeste=BUD, Zurique=ZRH, Atenas=ATH, Santorini=ATH, Dubai=DXB, Doha=DOH, Istambul=IST, Marrakech=CMN, Tóquio=NRT, Bali=DPS, Bangkok=BKK, Singapura=SIN, Buenos Aires=EZE, Santiago=SCL, Lima=LIM, Cusco=CUZ, Cancún=CUN, Miami=MIA, Orlando=MCO, Nova York=JFK, NY=JFK, Las Vegas=LAS, Punta Cana=PUJ, Aruba=AUA, Reykjavík=KEF, Maceió=MCZ, Fernando de Noronha=FEN, Gramado=CXJ, Salvador=SSA, Fortaleza=FOR, Recife=REC, Natal=NAT, Porto Seguro=BPS, Rio=GIG, São Paulo=GRU
+- excludeCountries: ISO-2 de países a excluir | []
 
-Devolva APENAS o JSON, sem markdown, sem explicação.`;
+Devolva APENAS o JSON, sem markdown.`;
 
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -378,7 +393,7 @@ Devolva APENAS o JSON, sem markdown, sem explicação.`;
           { role: "user", content: query },
         ],
         response_format: { type: "json_object" },
-        temperature: 0.2,
+        temperature: 0.1,
       }),
       signal: AbortSignal.timeout(8000),
     });
@@ -395,6 +410,12 @@ Devolva APENAS o JSON, sem markdown, sem explicação.`;
       paxAdults: typeof parsed.paxAdults === "number" ? parsed.paxAdults : null,
       mood: typeof parsed.mood === "string" ? parsed.mood : null,
       regions: Array.isArray(parsed.regions) ? parsed.regions : [],
+      countries: Array.isArray(parsed.countries)
+        ? parsed.countries.map((c: any) => String(c).toUpperCase()).filter(Boolean) : [],
+      cities: Array.isArray(parsed.cities)
+        ? parsed.cities.map((c: any) => String(c).toUpperCase()).filter(Boolean) : [],
+      excludeCountries: Array.isArray(parsed.excludeCountries)
+        ? parsed.excludeCountries.map((c: any) => String(c).toUpperCase()).filter(Boolean) : [],
     };
   } catch {
     return regexFallback(query);
@@ -408,8 +429,13 @@ function regexFallback(q: string) {
     const n = Number(budgetMatch[1].replace(/[.,]/g, ""));
     budget = /mil|k/i.test(budgetMatch[0]) ? n * 1000 : n;
   }
-  return { budget, origin: null, monthOffset: null, durationDays: null, paxAdults: null, mood: null, regions: [] };
+  return {
+    budget, origin: null, monthOffset: null, durationDays: null,
+    paxAdults: null, mood: null, regions: [],
+    countries: [], cities: [], excludeCountries: [],
+  };
 }
+
 
 async function fetchUnsplashHero(query: string): Promise<{
   url: string; photographer: string; photographerUrl: string; id: string;
