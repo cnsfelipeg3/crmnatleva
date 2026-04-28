@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDiscoverDestinations, type DiscoveredDestination, type DiscoverResponse } from "@/hooks/useDiscoverDestinations";
 import { GFlightDestinationCard } from "./GFlightDestinationCard";
+import { AudioRecorder } from "./AudioRecorder";
 import { formatBRL } from "./gflightsTypes";
 
 interface Props {
@@ -30,6 +31,13 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
     discoverMutation.mutate({ naturalQuery: query.trim() });
   }
 
+  function handleAudioTranscribed(text: string) {
+    setQuery(text);
+    if (text.trim().length >= 10) {
+      discoverMutation.mutate({ naturalQuery: text.trim() });
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="p-4 md:p-5 border-primary/20 bg-gradient-to-br from-primary/5 via-background to-background">
@@ -38,7 +46,7 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
           <h2 className="text-lg font-semibold">Descobrir destinos com IA</h2>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Descreva a viagem em poucas palavras. A IA · busca de voos descobrem os destinos que cabem
+          Descreva a viagem em poucas palavras · ou grave um áudio. A IA descobre os destinos que cabem
           no seu orçamento e período.
         </p>
 
@@ -66,7 +74,13 @@ export function GFlightDiscoverPanel({ onSelectDestination }: Props) {
             )}
             {discoverMutation.isPending ? "Descobrindo..." : "Descobrir destinos"}
           </Button>
-          <span className="text-[10px] text-muted-foreground">⌘+Enter pra enviar</span>
+
+          <AudioRecorder
+            onTranscribed={handleAudioTranscribed}
+            disabled={discoverMutation.isPending}
+          />
+
+          <span className="text-[10px] text-muted-foreground">⌘+Enter · ou grave um áudio 🎙️</span>
         </div>
 
         <div className="flex flex-wrap gap-1 mt-3 pt-3 border-t border-border/40">
