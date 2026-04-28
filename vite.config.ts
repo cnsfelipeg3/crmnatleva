@@ -46,6 +46,9 @@ export default defineConfig(({ mode }) => ({
     chunkSizeWarningLimit: 1500,
     cssCodeSplit: true,
     sourcemap: false,
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    },
     rollupOptions: {
       output: {
         // Splitting agressivo · isola libs pesadas em chunks próprios pra que
@@ -96,6 +99,22 @@ export default defineConfig(({ mode }) => ({
       "lucide-react",
       "date-fns",
       "sonner",
+      // Lodash é CommonJS · precisa ser pre-bundled pelo Vite pra
+      // expor named e default exports. Submódulos comuns devem ser
+      // listados explicitamente porque Vite não detecta auto.
+      "lodash",
+      "lodash/get",
+      "lodash/set",
+      "lodash/debounce",
+      "lodash/throttle",
+      "lodash/merge",
+      "lodash/cloneDeep",
+      "lodash/isEqual",
+      "lodash/pick",
+      "lodash/omit",
+      "lodash/groupBy",
+      "lodash/sortBy",
+      "lodash/uniqBy",
       // Leaflet é CommonJS (UMD) · precisa ser pre-bundled pelo Vite
       // pra expor `export default L`. Sem isso, `import * as L from "leaflet"`
       // falha em dev com "does not provide an export named 'default'".
