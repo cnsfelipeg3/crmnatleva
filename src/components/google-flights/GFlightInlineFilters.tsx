@@ -189,12 +189,14 @@ function GFlightInlineFiltersImpl({
         <div
           role="radiogroup"
           aria-label="Filtrar por número de paradas"
+          onKeyDown={handleRadioGroupKeyDown}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 p-0.5"
         >
           <button
             type="button"
             role="radio"
             aria-checked={allStops}
+            tabIndex={allStops ? 0 : -1}
             onClick={() => onChange({ ...filters, stops: ["0", "1", "2+"] })}
             className={cn(
               "px-2.5 py-1 text-[11px] rounded-full transition-all",
@@ -213,6 +215,7 @@ function GFlightInlineFiltersImpl({
                 role="radio"
                 aria-checked={isSolo}
                 aria-label={opt.label}
+                tabIndex={isSolo ? 0 : -1}
                 onClick={() => onChange({ ...filters, stops: isSolo ? ["0", "1", "2+"] : [opt.v] })}
                 className={cn(
                   "px-2.5 py-1 text-[11px] rounded-full transition-all",
@@ -235,7 +238,7 @@ function GFlightInlineFiltersImpl({
               key={v}
               type="button"
               aria-pressed={active}
-              aria-label={`Filtro rápido: ${label}`}
+              aria-label={`Filtro rápido ${label}${active ? " · ativo" : ""}`}
               onClick={() => onChange({ ...filters, quickFilter: active ? null : v })}
               className={cn(
                 "inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-all",
