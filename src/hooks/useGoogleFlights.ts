@@ -45,19 +45,41 @@ export function useAirportSearch(query: string, enabled = true) {
         (Array.isArray(data?.airports) && data.airports) ||
         (Array.isArray(data) && data) ||
         [];
-      return candidates
-        .map((it: any) => {
-          const id = it?.id ?? it?.code ?? it?.iata ?? it?.airport_code;
-          if (!id || typeof id !== "string") return null;
-          return {
-            id: String(id).toUpperCase(),
-            name: it?.name ?? it?.airport_name ?? it?.title,
-            city: it?.city ?? it?.city_name,
-            country: it?.country ?? it?.country_name,
-            type: it?.type ?? "AIRPORT",
-          } as GAirport;
-        })
-        .filter((x): x is GAirport => !!x);
+      const flat: GAirport[] = [];
+      const seen = new Set<string>();
+
+      function pushAirport(it: any, nearLabel?: string) {
+        const id = it?.id ?? it?.code ?? it?.iata ?? it?.airport_code;
+        if (!id || typeof id !== "string") return;
+        // Ignora IDs internos do Google (formato "/m/xxx" ou "/g/xxx")
+        if (id.startsWith("/m/") || id.startsWith("/g/") || id.startsWith("/M/") || id.startsWith("/G/")) return;
+        if (it?.type && it.type !== "airport" && it.type !== "AIRPORT") return;
+        const code = String(id).toUpperCase();
+        if (seen.has(code)) return;
+        seen.add(code);
+        flat.push({
+          id: code,
+          name: it?.title ?? it?.name ?? it?.airport_name ?? code,
+          city: it?.city ?? it?.city_name ?? nearLabel,
+          country: it?.country ?? it?.country_name,
+          type: "AIRPORT",
+          nearLabel,
+          distance: it?.distance || undefined,
+        } as GAirport);
+      }
+
+      for (const it of candidates) {
+        if (it?.type === "airport") {
+          pushAirport(it);
+        } else if (it?.type === "other" && Array.isArray(it.list)) {
+          const nearLabel = it?.title || it?.city || "";
+          for (const sub of it.list) {
+            pushAirport(sub, nearLabel);
+          }
+        }
+      }
+
+      return flat;
     },
     enabled: enabled && trimmed.length >= 2,
     staleTime: 24 * 60 * 60 * 1000,

@@ -78,23 +78,30 @@ export function GFlightAirportAutocomplete({ value, onChange, placeholder, icon 
           )}
           {results.map((r) => (
             <button
-              key={`${r.id}-${r.name}`}
+              key={`${r.id}-${r.nearLabel || ''}`}
               type="button"
               onClick={() => { onChange(r); setOpen(false); setQuery(""); }}
-              className={cn(
-                "w-full flex items-start gap-2 px-3 py-2 text-left text-sm hover:bg-accent transition-colors",
-              )}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors border-b border-border/30 last:border-0"
             >
-              <Plane className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <div className="shrink-0 w-12 h-9 rounded-md bg-primary/10 flex items-center justify-center">
+                <span className="font-mono text-xs font-bold text-primary">{r.id}</span>
+              </div>
               <div className="flex-1 min-w-0">
-                <div className="font-medium">
-                  <span className="font-mono text-primary">{r.id}</span>
-                  {r.city && <span className="ml-2">{r.city}</span>}
+                <div className="text-sm font-medium truncate text-foreground">
+                  {r.city || r.name}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {r.name}{r.country ? ` · ${r.country}` : ""}
+                  {r.name && r.name !== r.city ? r.name : ""}
+                  {r.country && (r.name && r.name !== r.city ? " · " : "") + r.country}
                 </div>
+                {r.nearLabel && (
+                  <div className="text-[10px] text-muted-foreground/80 italic truncate mt-0.5">
+                    próximo a {r.nearLabel}
+                    {r.distance && ` · ${r.distance}`}
+                  </div>
+                )}
               </div>
+              <Plane className="h-4 w-4 text-muted-foreground/50 shrink-0" />
             </button>
           ))}
         </div>

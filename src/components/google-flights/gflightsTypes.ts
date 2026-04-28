@@ -18,6 +18,8 @@ export interface GAirport {
   city?: string;
   country?: string;
   type?: "AIRPORT" | "CITY" | string;
+  nearLabel?: string;  // ex: "próximo a Paris"
+  distance?: string;   // ex: "82 km to destination"
 }
 
 export interface GFlightLeg {
