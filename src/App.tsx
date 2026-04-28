@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import PerfDebugOverlay from "@/components/PerfDebugOverlay";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -202,6 +203,7 @@ function AppRoutes() {
   return (
     <SmartSuspense>
       <PerfDebugOverlay />
+      <ErrorBoundary>
       <Routes>
         <Route
           path="/login"
@@ -371,6 +373,7 @@ function AppRoutes() {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </ErrorBoundary>
     </SmartSuspense>
   );
 }
