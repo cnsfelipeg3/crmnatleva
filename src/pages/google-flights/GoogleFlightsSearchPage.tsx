@@ -509,6 +509,12 @@ export default function GoogleFlightsSearchPage() {
           </TabsContent>
         </Tabs>
       )}
+
+      <GFlightDetailDrawer
+        itinerary={selectedItinerary}
+        searchInput={searchInput}
+        onClose={() => setSelectedItinerary(null)}
+      />
     </div>
   );
 }
