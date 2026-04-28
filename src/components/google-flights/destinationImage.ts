@@ -731,11 +731,21 @@ export function getDestinationCoverUrl(
   if (countryKey && COUNTRY_FALLBACK[countryKey]) return COUNTRY_FALLBACK[countryKey];
 
   // 3. país inferido pela cidade (mesmo sem `country` no payload)
+  // Tenta tanto a chave canônica (com foto) quanto a forma normalizada bruta
+  // (cidades sem foto direta mas presentes em CITY_TO_COUNTRY · ex: Curitiba, Nice).
   let inferredCountry: string | null = null;
-  if (cityKey && CITY_TO_COUNTRY[cityKey]) {
-    inferredCountry = CITY_TO_COUNTRY[cityKey];
-    if (COUNTRY_FALLBACK[inferredCountry]) return COUNTRY_FALLBACK[inferredCountry];
+  const rawCityKey = normalize(city);
+  const lookupKeys = [cityKey, rawCityKey, rawCityKey.replace(/-/g, "")].filter(
+    (k): k is string => !!k,
+  );
+  for (const k of lookupKeys) {
+    if (CITY_TO_COUNTRY[k]) {
+      inferredCountry = CITY_TO_COUNTRY[k];
+      if (COUNTRY_FALLBACK[inferredCountry]) return COUNTRY_FALLBACK[inferredCountry];
+      break;
+    }
   }
+
 
   // 4. região / continente (explícita ou derivada do país conhecido)
   const baseCountry = countryKey || inferredCountry;
@@ -759,7 +769,7 @@ function countryToRegion(countryKey: string): string | null {
   const americaSul = new Set([
     "brasil","argentina","chile","peru","colombia","uruguai","paraguai","bolivia","equador",
   ]);
-  const caribe = new Set(["cuba","republica-dominicana","bahamas","jamaica","aruba","curacao"]);
+  const caribe = new Set(["cuba","republica-dominicana","bahamas","jamaica","aruba","curacao","antigua","barbados","saint-lucia"]);
   const asia = new Set([
     "japao","china","coreia-do-sul","tailandia","indonesia","vietna","india",
     "singapura","filipinas","maldivas",
@@ -778,5 +788,15 @@ function countryToRegion(countryKey: string): string | null {
   if (oceania.has(countryKey)) return "oceania";
   return null;
 }
+
+// Exposto APENAS para testes automatizados · não usar em runtime de produção.
+export const __testing = {
+  CITY_PHOTOS,
+  COUNTRY_FALLBACK,
+  REGION_FALLBACK,
+  CITY_TO_COUNTRY,
+  GENERIC_TRAVEL,
+};
+
 
 
