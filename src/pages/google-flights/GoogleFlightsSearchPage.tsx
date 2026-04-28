@@ -483,6 +483,8 @@ export default function GoogleFlightsSearchPage() {
               </Select>
             </div>
           </div>
+            </>
+          )}
 
           <div className="flex flex-col items-stretch justify-between gap-3 border-t border-border pt-4 md:flex-row md:items-center">
             <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
