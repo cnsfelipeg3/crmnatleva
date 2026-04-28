@@ -352,82 +352,111 @@ export default function GoogleFlightsSearchPage() {
       {/* Formulário */}
       <Card id="gflights-results-anchor" className="p-4 md:p-5">
         <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Origem</Label>
-              <GFlightAirportAutocomplete
-                value={from}
-                onChange={setFrom}
-                placeholder="GRU, São Paulo, JFK..."
-                icon="plane"
-              />
-            </div>
-            <div className="flex items-end justify-center pb-0.5 md:pb-2">
-              <Button
+          {/* Toggle de modo */}
+          <div className="inline-flex items-center gap-1 bg-muted/40 rounded-lg p-1">
+            {([
+              { v: "round", label: "Ida e volta" },
+              { v: "oneway", label: "Só ida" },
+              { v: "multi", label: "Multi-trecho" },
+            ] as const).map((m) => (
+              <button
+                key={m.v}
                 type="button"
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                onClick={swap}
-                disabled={!from && !to}
-                title="Inverter"
+                onClick={() => setTripMode(m.v)}
+                className={cn(
+                  "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                  tripMode === m.v
+                    ? "bg-background shadow-sm text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
               >
-                <ArrowRightLeft className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Destino</Label>
-              <GFlightAirportAutocomplete
-                value={to}
-                onChange={setTo}
-                placeholder="CDG, Paris, MIA..."
-                icon="mapPin"
-              />
-            </div>
+                {m.label}
+              </button>
+            ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Ida</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start", !outboundDate && "text-muted-foreground")}>
-                    <CalIcon className="mr-2 h-4 w-4" />
-                    {outboundDate ? format(outboundDate, "dd/MM/yyyy") : "Selecionar"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={outboundDate} onSelect={setOutboundDate} initialFocus />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-medium text-muted-foreground">Volta (opcional)</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full justify-start", !returnDate && "text-muted-foreground")}>
-                    <CalIcon className="mr-2 h-4 w-4" />
-                    {returnDate ? format(returnDate, "dd/MM/yyyy") : "Só ida"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={returnDate}
-                    onSelect={setReturnDate}
-                    disabled={(d) => (outboundDate ? d < outboundDate : false)}
-                    initialFocus
+          {tripMode === "multi" ? (
+            <GFlightLegsBuilder legs={multiLegs} onChange={setMultiLegs} />
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_auto_1fr] md:items-end">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Origem</Label>
+                  <GFlightAirportAutocomplete
+                    value={from}
+                    onChange={setFrom}
+                    placeholder="GRU, São Paulo, JFK..."
+                    icon="plane"
                   />
-                  {returnDate && (
-                    <div className="p-2 border-t border-border">
-                      <Button variant="ghost" size="sm" className="w-full" onClick={() => setReturnDate(undefined)}>
-                        Limpar (só ida)
+                </div>
+                <div className="flex items-end justify-center pb-0.5 md:pb-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={swap}
+                    disabled={!from && !to}
+                    title="Inverter"
+                  >
+                    <ArrowRightLeft className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Destino</Label>
+                  <GFlightAirportAutocomplete
+                    value={to}
+                    onChange={setTo}
+                    placeholder="CDG, Paris, MIA..."
+                    icon="mapPin"
+                  />
+                </div>
+              </div>
+
+              <div className={cn("grid grid-cols-1 gap-3", tripMode === "round" ? "md:grid-cols-4" : "md:grid-cols-3")}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Ida</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("w-full justify-start", !outboundDate && "text-muted-foreground")}>
+                        <CalIcon className="mr-2 h-4 w-4" />
+                        {outboundDate ? format(outboundDate, "dd/MM/yyyy") : "Selecionar"}
                       </Button>
-                    </div>
-                  )}
-                </PopoverContent>
-              </Popover>
-            </div>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar mode="single" selected={outboundDate} onSelect={setOutboundDate} initialFocus />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                {tripMode === "round" && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Volta</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn("w-full justify-start", !returnDate && "text-muted-foreground")}>
+                          <CalIcon className="mr-2 h-4 w-4" />
+                          {returnDate ? format(returnDate, "dd/MM/yyyy") : "Selecionar"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={returnDate}
+                          onSelect={setReturnDate}
+                          disabled={(d) => (outboundDate ? d < outboundDate : false)}
+                          initialFocus
+                        />
+                        {returnDate && (
+                          <div className="p-2 border-t border-border">
+                            <Button variant="ghost" size="sm" className="w-full" onClick={() => setReturnDate(undefined)}>
+                              Limpar
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                )}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <UsersIcon className="h-3 w-3" /> Adultos
