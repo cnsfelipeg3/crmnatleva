@@ -150,7 +150,8 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
         )}
         {itinerary.delay?.values && (
           <Badge variant="outline" className="text-[10px] gap-1 h-5 border-amber-500/30 text-amber-700 dark:text-amber-300">
-            <AlertTriangle className="h-2.5 w-2.5" /> Atrasos
+            <AlertTriangle className="h-2.5 w-2.5" />
+            Atrasos{itinerary.delay.text ? ` · ${itinerary.delay.text}${typeof itinerary.delay.text === "number" ? " min" : ""}` : ""}
           </Badge>
         )}
         {hasUSB && <Badge variant="outline" className="text-[10px] gap-1 h-5"><Power className="h-2.5 w-2.5" /> USB</Badge>}
