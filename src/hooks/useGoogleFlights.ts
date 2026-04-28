@@ -49,7 +49,7 @@ export function useAirportSearch(query: string, enabled = true) {
       const flat: GAirport[] = [];
       const seen = new Set<string>();
 
-      function pushAirport(it: any, nearLabel?: string) {
+      function pushAirport(it: any, nearLabel?: string, group?: { city: string; count: number }) {
         const id = it?.id;
         if (!id || typeof id !== "string") return;
         if (id.startsWith("/m/") || id.startsWith("/g/")) return;
@@ -65,6 +65,8 @@ export function useAirportSearch(query: string, enabled = true) {
           type: "AIRPORT",
           nearLabel,
           distance: typeof it?.distance === "string" ? it.distance : undefined,
+          groupCity: group?.city,
+          groupCount: group?.count,
         } as GAirport);
       }
 
@@ -73,7 +75,14 @@ export function useAirportSearch(query: string, enabled = true) {
           pushAirport(it);
         } else if (it?.type === "other" && Array.isArray(it.list)) {
           const nearLabel = it.title || it.city || "";
-          for (const sub of it.list) pushAirport(sub, nearLabel);
+          // Marca apenas o PRIMEIRO sub-aeroporto do grupo com o cabeçalho
+          // (a UI usa isso para renderizar o divisor "Paris · 4 aeroportos")
+          let first = true;
+          for (const sub of it.list) {
+            const groupMeta = first ? { city: nearLabel, count: it.list.length } : undefined;
+            pushAirport(sub, nearLabel, groupMeta);
+            first = false;
+          }
         }
       }
 
