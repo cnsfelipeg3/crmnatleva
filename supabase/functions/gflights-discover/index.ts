@@ -189,6 +189,36 @@ serve(async (req) => {
       .sort((a, b) => a.minPrice - b.minPrice)
       .slice(0, 5);
 
+    // Enriquecer com fotos Unsplash (cache de 30 dias na tabela)
+    const supaWrite = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const enriched = await Promise.all(ranked.map(async (r) => {
+      const heroFresh = r.dest.hero_fetched_at
+        ? (Date.now() - new Date(r.dest.hero_fetched_at).getTime()) < (30 * 24 * 60 * 60 * 1000)
+        : false;
+      if (r.dest.hero_image_url && heroFresh) return r;
+      const photo = await fetchUnsplashHero(`${r.dest.city} ${r.dest.country}`);
+      if (!photo) return r;
+      await supaWrite.from("popular_destinations").update({
+        hero_image_url: photo.url,
+        hero_photographer: photo.photographer,
+        hero_photographer_url: photo.photographerUrl,
+        hero_unsplash_id: photo.id,
+        hero_fetched_at: new Date().toISOString(),
+      }).eq("iata", r.dest.iata);
+      return {
+        ...r,
+        dest: {
+          ...r.dest,
+          hero_image_url: photo.url,
+          hero_photographer: photo.photographer,
+          hero_photographer_url: photo.photographerUrl,
+        },
+      };
+    }));
+
     return json({
       success: true,
       extracted,
@@ -196,21 +226,41 @@ serve(async (req) => {
       totalCandidates: filteredDests.length,
       totalWithFlights: successful.length,
       totalFitsBudget: fitsInBudget.length,
-      results: ranked.map((r) => ({
-        iata: r.dest.iata,
-        city: r.dest.city,
-        country: r.dest.country,
-        region: r.dest.region,
-        tags: r.dest.tags,
-        hero_image_url: r.dest.hero_image_url,
-        description: r.dest.description,
-        visa_required: r.dest.visa_required,
-        avg_trip_days: r.dest.avg_trip_days,
-        minPrice: r.minPrice,
-        sampleFlight: r.sample,
-        fromCache: r.fromCache,
-        fitsBudget: r.minPrice <= extracted.budget! * 0.7,
-      })),
+      results: enriched.map((r) => {
+        const flightsArr = Array.isArray(r.sample?.flights) ? r.sample.flights : [];
+        const layoversArr = Array.isArray(r.sample?.layovers) ? r.sample.layovers : [];
+        const lastFlight = flightsArr.length > 0 ? flightsArr[flightsArr.length - 1] : null;
+        return {
+          iata: r.dest.iata,
+          city: r.dest.city,
+          country: r.dest.country,
+          country_code: r.dest.country_code,
+          region: r.dest.region,
+          tags: r.dest.tags,
+          hero_image_url: r.dest.hero_image_url,
+          hero_photographer: r.dest.hero_photographer,
+          hero_photographer_url: r.dest.hero_photographer_url,
+          description: r.dest.description,
+          visa_required: r.dest.visa_required,
+          avg_trip_days: r.dest.avg_trip_days,
+          minPrice: r.minPrice,
+          sampleFlight: r.sample,
+          flightDeparture: flightsArr[0]?.departure_airport?.time ?? null,
+          flightArrival: lastFlight?.arrival_airport?.time ?? null,
+          flightDuration: r.sample?.duration?.text ?? null,
+          flightStops: Math.max(layoversArr.length, Math.max(0, flightsArr.length - 1)),
+          flightAirline: flightsArr[0]?.airline ?? null,
+          flightAirlineLogo: r.sample?.airline_logo ?? flightsArr[0]?.airline_logo ?? null,
+          flightLayovers: layoversArr.map((l: any) => ({
+            id: l.airport_code,
+            city: l.city,
+            duration: l.duration,
+            durationText: l.duration_label,
+          })),
+          fromCache: r.fromCache,
+          fitsBudget: r.minPrice <= extracted.budget! * 0.7,
+        };
+      }),
     });
   } catch (e: any) {
     console.error("[gflights-discover] error:", e?.message);
