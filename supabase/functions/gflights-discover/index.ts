@@ -283,6 +283,10 @@ serve(async (req) => {
       };
     }));
 
+    // Cache stats · visibilidade de quanto economizamos vs API fresh
+    const cacheHits = ranked.filter((r: any) => r.fromCache).length;
+    const apiCalls = ranked.filter((r: any) => !r.fromCache).length;
+
     return json({
       success: true,
       extracted,
@@ -290,6 +294,14 @@ serve(async (req) => {
       totalCandidates: filteredDests.length,
       totalWithFlights: successful.length,
       totalFitsBudget: fitsInBudget.length,
+      cache_stats: {
+        total_checked: filteredDests.length,
+        cache_hits: cacheHits,
+        api_calls: apiCalls,
+        hit_rate_percent: filteredDests.length > 0
+          ? Math.round((cacheHits / filteredDests.length) * 100)
+          : 0,
+      },
       results: enriched.map((r) => {
         const flightsArr = Array.isArray(r.sample?.flights) ? r.sample.flights : [];
         const layoversArr = Array.isArray(r.sample?.layovers) ? r.sample.layovers : [];
