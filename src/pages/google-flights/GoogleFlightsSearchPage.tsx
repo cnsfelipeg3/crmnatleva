@@ -143,8 +143,37 @@ export default function GoogleFlightsSearchPage() {
     : null;
 
   const { data: results, isLoading, isError, error } = useSearchGFlights(searchInput);
-  const { data: calendar = [], isLoading: calLoading } = useCalendarPicker(searchInput, tab === "calendar");
-  const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, tab === "trend");
+  // PriceGraph alimenta tanto a aba Tendência quanto a aba Calendário (fallback do getCalendarPicker quebrado).
+  // Carregamos sempre que houver snapshot pra ter insights agregados na lista também.
+  const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, !!snapshot);
+  const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, tab === "calendar");
+
+  // Calendário final: prioriza dados do getCalendarPicker; se vier vazio, deriva do priceGraph.
+  const calendar: GCalendarDay[] = useMemo(() => {
+    if (calendarApi.length > 0) return calendarApi;
+    return priceGraphToCalendar(trend);
+  }, [calendarApi, trend]);
+  const calLoading = calApiLoading || (calendarApi.length === 0 && trendLoading);
+
+  // Insights agregados a partir do priceGraph (60+ dias de janela)
+  const trendInsights = useMemo(() => {
+    const prices = trend.map(p => p.price).filter((p): p is number => typeof p === "number" && Number.isFinite(p));
+    if (!prices.length) return null;
+    const sorted = [...prices].sort((a, b) => a - b);
+    const lowest = sorted[0];
+    const highest = sorted[sorted.length - 1];
+    const avg = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const bestDay = trend.find(p => p.price === lowest)?.date;
+    const selectedPrice = snapshot
+      ? trend.find(p => p.date === snapshot.outbound_date)?.price ?? null
+      : null;
+    let savingsVsSelected: number | null = null;
+    if (selectedPrice !== null && lowest < selectedPrice) {
+      savingsVsSelected = selectedPrice - lowest;
+    }
+    return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
+  }, [trend, snapshot]);
 
   const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
 
