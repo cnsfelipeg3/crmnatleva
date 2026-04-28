@@ -375,6 +375,9 @@ export default function GoogleFlightsSearchPage() {
                   <Cloud className="h-3 w-3" /> Cache
                 </Badge>
               )}
+              {updatedAgoLabel && (
+                <span className="text-[10px] text-muted-foreground/80 italic">· {updatedAgoLabel}</span>
+              )}
             </div>
             <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
               <Search className="h-4 w-4" />
@@ -383,6 +386,33 @@ export default function GoogleFlightsSearchPage() {
           </div>
         </div>
       </Card>
+
+      {/* Painel Inteligência de Preço · price_history */}
+      {snapshot && priceIntel?.classification && (() => {
+        const c = priceIntel.classification;
+        const cfg = c === "low"
+          ? { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-400", label: "Preço baixo", desc: "abaixo da média histórica desta rota · ótima hora pra comprar" }
+          : c === "high"
+            ? { bg: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-400", label: "Preço alto", desc: "acima da média histórica · vale a pena monitorar mais alguns dias" }
+            : { bg: "bg-amber-500/10 border-amber-500/30", text: "text-amber-700 dark:text-amber-400", label: "Preço típico", desc: "dentro da faixa esperada para esta rota" };
+        const histCount = priceIntel.history.history?.length ?? 0;
+        return (
+          <Card className={cn("p-3 border", cfg.bg)}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <TrendingUp className={cn("h-4 w-4", cfg.text)} />
+                <span className={cn("text-sm font-semibold", cfg.text)}>{cfg.label}</span>
+              </div>
+              <span className="text-xs text-muted-foreground flex-1 min-w-0">{cfg.desc}</span>
+              {histCount > 0 && (
+                <span className="text-[10px] text-muted-foreground italic">
+                  baseado em {histCount} pontos históricos
+                </span>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Tabs com 3 visões */}
       {snapshot && (
