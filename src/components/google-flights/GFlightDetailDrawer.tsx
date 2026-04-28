@@ -672,20 +672,46 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                   ))}
                 </div>
               ) : providersSorted.length === 0 ? (
-                <div className="text-xs text-muted-foreground py-6 text-center bg-muted/20 rounded-md border border-dashed border-border">
-                  Nenhum canal de venda direto disponível para este voo.
-                  <div className="mt-2">
+                <div className="py-6 px-4 bg-muted/20 rounded-md border border-dashed border-border flex flex-col items-center text-center space-y-3">
+                  <AlertCircle className="h-10 w-10 text-amber-500" />
+                  <div className="space-y-1">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Sem ofertas diretas no momento
+                    </h3>
+                    <p className="text-xs text-muted-foreground max-w-md">
+                      Tokens de reserva têm validade curta. O voo é real, mas o link direto
+                      pode ter expirado ou ainda não foi indexado pelos canais de venda.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 justify-center">
                     <Button asChild variant="outline" size="sm" className="gap-2">
                       <a
-                        href={`https://www.google.com/travel/flights?q=${encodeURIComponent(
-                          `${dep?.id} to ${arr?.id} ${itinerary.flights?.[0]?.airline ?? ""}`,
-                        )}`}
+                        href={buildGoogleFlightsDeepLink(
+                          dep?.id,
+                          arr?.id,
+                          searchInput?.outbound_date,
+                          searchInput?.return_date,
+                          searchInput?.adults ?? 1,
+                        )}
                         target="_blank"
                         rel="noopener noreferrer"
                       >
                         <ExternalLink className="h-3 w-3" />
-                        Buscar no Google Flights
+                        Abrir no Google Flights (BRL)
                       </a>
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => {
+                        queryClient.invalidateQueries({
+                          queryKey: ["gflights", "getBookingDetails"],
+                        });
+                        toast.message("Buscando ofertas novamente...");
+                      }}
+                    >
+                      <RefreshCw className="h-3 w-3" /> Tentar de novo
                     </Button>
                   </div>
                 </div>
