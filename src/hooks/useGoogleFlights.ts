@@ -315,3 +315,30 @@ export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true)
     staleTime: 60 * 60 * 1000,
   });
 }
+
+// --------------------------------------------------------------------
+// 5) Helper: converte priceGraph[] em GCalendarDay[] com classificação low/typical/high.
+// Usado para alimentar o calendário quando getCalendarPicker da DataCrawler falha.
+// --------------------------------------------------------------------
+export function priceGraphToCalendar(points: GPriceGraphPoint[]): GCalendarDay[] {
+  if (!points?.length) return [];
+  const prices = points
+    .map(p => p.price)
+    .filter((p): p is number => typeof p === "number" && Number.isFinite(p));
+  if (!prices.length) {
+    return points.map(p => ({ date: p.date, price: p.price ?? null, level: null }));
+  }
+  const sorted = [...prices].sort((a, b) => a - b);
+  const q1 = sorted[Math.floor(sorted.length * 0.33)];
+  const q3 = sorted[Math.floor(sorted.length * 0.66)];
+  return points.map(p => {
+    let level: "low" | "typical" | "high" | null = null;
+    if (typeof p.price === "number") {
+      if (p.price <= q1) level = "low";
+      else if (p.price >= q3) level = "high";
+      else level = "typical";
+    }
+    return { date: p.date, price: p.price ?? null, level };
+  });
+}
+
