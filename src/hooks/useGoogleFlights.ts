@@ -19,6 +19,7 @@ import type {
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
 import { analyzeFare } from "@/components/google-flights/fareClassifier";
+import { resolveAirlineWebsite, AIRLINE_REGISTRY } from "@/components/google-flights/airlineRegistry";
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
@@ -486,12 +487,14 @@ function flatProviders(root: any): any[] {
   if (Array.isArray(root.together)) return root.together;
   if (Array.isArray(root.options)) return root.options;
   if (Array.isArray(root.together_offers)) return root.together_offers;
+  if (Array.isArray(root.offers)) return root.offers;
   if (Array.isArray(root.selected_flights)) {
     const merged: any[] = [];
     for (const sf of root.selected_flights) {
       if (Array.isArray(sf?.together)) merged.push(...sf.together);
       if (Array.isArray(sf?.providers)) merged.push(...sf.providers);
       if (Array.isArray(sf?.booking_options)) merged.push(...sf.booking_options);
+      if (Array.isArray(sf?.options)) merged.push(...sf.options);
     }
     if (merged.length) return merged;
   }
@@ -611,7 +614,8 @@ export function useFlightBookingDetails(
       }
     },
     enabled: enabled && !!input && !!bookingToken,
-    staleTime: 30 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     retry: false,
   });
 }
@@ -634,4 +638,50 @@ export async function fetchBookingURL(providerToken: string): Promise<string | n
     console.warn("[gflights] getBookingURL failed:", e);
     return null;
   }
+}
+
+// --------------------------------------------------------------------
+// 8) buildSyntheticProvider · fallback quando API não retorna ofertas
+// --------------------------------------------------------------------
+
+
+export function buildSyntheticProvider(itinerary: {
+  flights?: Array<{ airline?: string; airline_code?: string; airline_logo?: string; travel_class?: string }>;
+  price?: number;
+  airline_logo?: string;
+} | null | undefined): GBookingProvider | null {
+  if (!itinerary) return null;
+  const firstFlight = itinerary.flights?.[0];
+  const airlineName = firstFlight?.airline;
+  const airlineCode = firstFlight?.airline_code;
+  if (!airlineName && !airlineCode) return null;
+
+  const website = resolveAirlineWebsite(airlineCode || airlineName) || undefined;
+  const cabin = firstFlight?.travel_class || "ECONOMY";
+  const displayName =
+    cabin === "ECONOMY" ? "Econômica" :
+    cabin === "PREMIUM_ECONOMY" ? "Econômica Premium" :
+    cabin === "BUSINESS" ? "Executiva" :
+    cabin === "FIRST" ? "Primeira Classe" : "Padrão";
+
+  return {
+    id: `synthetic-${airlineCode || airlineName}`,
+    title: airlineName || AIRLINE_REGISTRY[(airlineCode || "").toUpperCase()]?.name || "Companhia",
+    website,
+    price: typeof itinerary.price === "number" ? itinerary.price : 0,
+    is_airline: true,
+    individualBooking: false,
+    token: undefined,
+    logo: itinerary.airline_logo || firstFlight?.airline_logo,
+    bookings: [],
+    meta: { synthetic: true, fare_type: cabin },
+    cabin,
+    fareType: cabin,
+    fareTier: "standard",
+    fareDisplayName: displayName,
+    benefits: ["Tarifa direta da companhia"],
+    restrictions: ["Confira condições no site da cia"],
+    baggage: undefined,
+    features: undefined,
+  } as any as GBookingProvider;
 }

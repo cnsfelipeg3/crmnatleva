@@ -14,7 +14,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useFlightBookingDetails, fetchBookingURL } from "@/hooks/useGoogleFlights";
+import { useFlightBookingDetails, fetchBookingURL, buildSyntheticProvider } from "@/hooks/useGoogleFlights";
 import {
   cabinLabel, classifyExtensions, classifyLayover, dayDiff, formatBRL, formatCO2, formatDateLong,
   formatMinutes, formatTime,
@@ -125,7 +125,16 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   const providers = bookingDetails?.providers ?? [];
   const bagInfo = bookingDetails?.bag_info ?? null;
 
-  const providersSorted = [...providers].sort((a, b) => a.price - b.price);
+  // Quando API não retorna providers, monta UM sintético com a cia oficial,
+  // preço do voo e link pro site da companhia. Garante que SEMPRE tenha
+  // pelo menos 1 opção visível com link clicável.
+  const synthetic = useMemo(
+    () => (providers.length === 0 ? buildSyntheticProvider(itinerary) : null),
+    [providers.length, itinerary],
+  );
+  const effectiveProviders = providers.length > 0 ? providers : (synthetic ? [synthetic] : []);
+
+  const providersSorted = [...effectiveProviders].sort((a, b) => a.price - b.price);
   const minPrice = providersSorted[0]?.price ?? 0;
   const maxPrice = providersSorted[providersSorted.length - 1]?.price ?? 0;
   const savings = maxPrice - minPrice;
@@ -229,8 +238,18 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
   async function handleReserveProvider(p: GBookingProvider) {
     const reserveId = `${p.id}-${p.title}`;
     if (!p.token) {
-      if (p.website) window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
-      else toast.error("Link de reserva indisponível neste canal");
+      if (p.website) {
+        window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
+        return;
+      }
+      // Última saída: Google Flights estruturado em BRL
+      const fallback = buildGoogleFlightsDeepLink(
+        dep?.id, arr?.id,
+        searchInput?.outbound_date,
+        searchInput?.return_date,
+        searchInput?.adults ?? 1,
+      );
+      window.open(fallback, "_blank", "noopener,noreferrer");
       return;
     }
     setReservingId(reserveId);
@@ -238,10 +257,16 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
       const link = await fetchBookingURL(p.token);
       if (!link) {
         if (p.website) {
-          toast.message("Link direto indisponível · abrindo site do canal");
+          toast.message("Link direto indisponível · abrindo site da cia");
           window.open(buildHref(p.website), "_blank", "noopener,noreferrer");
         } else {
-          toast.error("Não foi possível obter link de reserva");
+          const fallback = buildGoogleFlightsDeepLink(
+            dep?.id, arr?.id,
+            searchInput?.outbound_date,
+            searchInput?.return_date,
+            searchInput?.adults ?? 1,
+          );
+          window.open(fallback, "_blank", "noopener,noreferrer");
         }
         return;
       }
@@ -748,11 +773,18 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                             <span>{tmeta.emoji}</span>
                             <span>{p.fareDisplayName || tmeta.label}</span>
                           </div>
-                          {isCheapest && (
-                            <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
-                              <Sparkles className="h-2.5 w-2.5" /> Mais barato
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {(p as any).meta?.synthetic && (
+                              <Badge className="text-[9px] border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 gap-1">
+                                <AlertCircle className="h-2.5 w-2.5" /> Tarifa estimada · reserve no site da cia
+                              </Badge>
+                            )}
+                            {isCheapest && (
+                              <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
+                                <Sparkles className="h-2.5 w-2.5" /> Mais barato
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         {/* Conteúdo */}
@@ -872,7 +904,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         {/* Action bar */}
         <div className="border-t border-border p-3 flex gap-2">
-          {providersSorted.length > 0 ? (
+          {effectiveProviders.length > 0 ? (
             <Button
               variant="outline"
               size="default"
@@ -880,12 +912,25 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
               onClick={scrollToProviders}
             >
               <ShoppingCart className="h-4 w-4" />
-              Comparar {providersSorted.length} {providersSorted.length === 1 ? "oferta" : "ofertas"}
+              {providers.length > 0
+                ? `Comparar ${providers.length} ${providers.length === 1 ? "oferta" : "ofertas"}`
+                : "Ver tarifa estimada · reservar no site"}
             </Button>
           ) : (
-            <Button disabled className="flex-1 gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Sem ofertas disponíveis
+            <Button asChild variant="outline" size="default" className="flex-1 gap-2">
+              <a
+                href={buildGoogleFlightsDeepLink(
+                  dep?.id, arr?.id,
+                  searchInput?.outbound_date,
+                  searchInput?.return_date,
+                  searchInput?.adults ?? 1,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Buscar no Google Flights (BRL)
+              </a>
             </Button>
           )}
           <Button onClick={copyForProposal} variant="outline" size="icon" title="Copiar dados para proposta">
