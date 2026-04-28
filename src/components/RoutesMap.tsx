@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import { iataToLabel } from "@/lib/iataUtils";
 import { loadGoogleMapsCore, hasGoogleMapsAuthFailure } from "@/lib/googleMaps";
 import { getCityImageUrl } from "@/lib/cityImages";
+import { isLeafletAvailable, LeafletUnavailableNotice } from "@/components/maps/LeafletGuard";
 
 const AIRPORT_COORDS: Record<string, [number, number]> = {
   GRU: [-23.4356, -46.4731], CGH: [-23.6261, -46.6564], GIG: [-22.8090, -43.2506],
