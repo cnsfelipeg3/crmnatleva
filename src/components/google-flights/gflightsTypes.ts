@@ -163,6 +163,12 @@ export interface GFlightFilters {
   excludeConnectingAirports: string[];
   onlyConnectingAirports: string[];
   quickFilter: "direct" | "morning" | "afternoon" | "evening" | "eco" | null;
+  // Filtros de tarifa (atuam dentro do drawer · sobre os providers do voo selecionado):
+  fareTiers: GFareTier[];
+  requireCheckedBag: boolean;
+  requireRefundable: boolean;
+  requireFreeChange: boolean;
+  requireFreeSeat: boolean;
 }
 
 export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
@@ -183,6 +189,11 @@ export const DEFAULT_GFLIGHT_FILTERS: GFlightFilters = {
   excludeConnectingAirports: [],
   onlyConnectingAirports: [],
   quickFilter: null,
+  fareTiers: ["basic", "standard", "flexible", "premium", "business", "first"],
+  requireCheckedBag: false,
+  requireRefundable: false,
+  requireFreeChange: false,
+  requireFreeSeat: false,
 };
 
 export interface GPriceInsights {
