@@ -852,3 +852,29 @@ function InlineFiltersSection({
   );
 }
 
+/**
+ * Label "atualizado há X min" · isolada para evitar re-render da página inteira
+ * a cada 30s. Esse re-render era custoso porque dispara applyFilters() em todos
+ * os voos da lista atual.
+ */
+function UpdatedAgoLabel({ fetchedAt }: { fetchedAt: string }) {
+  const [, tick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => tick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const t = new Date(fetchedAt).getTime();
+  if (!Number.isFinite(t)) return null;
+  const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
+  let label: string;
+  if (diffSec < 60) label = "atualizado agora";
+  else {
+    const min = Math.round(diffSec / 60);
+    if (min < 60) label = `atualizado há ${min} min`;
+    else label = `atualizado há ${Math.round(min / 60)}h`;
+  }
+  return (
+    <span className="text-[10px] text-muted-foreground/80 italic">· {label}</span>
+  );
+}
+
