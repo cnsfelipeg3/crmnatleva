@@ -257,6 +257,41 @@ export default function GoogleFlightsSearchPage() {
         </AlertDescription>
       </Alert>
 
+      <Tabs defaultValue="search" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
+          <TabsTrigger value="search" className="gap-2">
+            <Search className="h-4 w-4" /> Busca específica
+          </TabsTrigger>
+          <TabsTrigger value="discover" className="gap-2">
+            <Plane className="h-4 w-4" /> Descobrir com IA
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="discover">
+          <GFlightDiscoverPanel
+            onSelectDestination={(dest, ctx) => {
+              setFrom({ id: ctx.extracted.origin || "GRU", name: ctx.extracted.origin || "GRU", type: "AIRPORT" });
+              setTo({ id: dest.iata, name: dest.city, city: dest.city, country: dest.country, type: "AIRPORT" });
+              const dep = parseISO(ctx.period.day1);
+              const ret = parseISO(ctx.period.returnDate);
+              if (isValid(dep)) setOutboundDate(dep);
+              if (isValid(ret)) setReturnDate(ret);
+              setAdults(ctx.extracted.paxAdults || 1);
+              setTravelClass("ECONOMY");
+              setSnapshot({
+                from: { id: ctx.extracted.origin || "GRU", name: ctx.extracted.origin || "GRU", type: "AIRPORT" },
+                to: { id: dest.iata, name: dest.city, city: dest.city, country: dest.country, type: "AIRPORT" },
+                outbound_date: ctx.period.day1,
+                return_date: ctx.period.returnDate,
+                adults: ctx.extracted.paxAdults || 1,
+                travel_class: "ECONOMY",
+              });
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="search" className="space-y-5">
+
       {/* Formulário */}
       <Card className="p-4 md:p-5">
         <div className="space-y-4">
