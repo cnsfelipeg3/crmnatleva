@@ -49,12 +49,15 @@ export function useAirportSearch(query: string, enabled = true) {
       const seen = new Set<string>();
 
       function pushAirport(it: any, nearLabel?: string) {
-        const id = it?.id ?? it?.code ?? it?.iata ?? it?.airport_code;
-        if (!id || typeof id !== "string") return;
-        // Ignora IDs internos do Google (formato "/m/xxx" ou "/g/xxx")
-        if (id.startsWith("/m/") || id.startsWith("/g/") || id.startsWith("/M/") || id.startsWith("/G/")) return;
-        if (it?.type && it.type !== "airport" && it.type !== "AIRPORT") return;
-        const code = String(id).toUpperCase();
+        const rawId = it?.id ?? it?.code ?? it?.iata ?? it?.airport_code;
+        if (!rawId || typeof rawId !== "string") return;
+        const normalizedId = rawId.trim();
+        const lowerId = normalizedId.toLowerCase();
+        if (lowerId.startsWith("/m/") || lowerId.startsWith("/g/")) return;
+        const type = typeof it?.type === "string" ? it.type.toLowerCase() : "airport";
+        if (type !== "airport") return;
+        const code = normalizedId.toUpperCase();
+        if (!/^[A-Z]{3}$/.test(code)) return;
         if (seen.has(code)) return;
         seen.add(code);
         flat.push({
@@ -69,10 +72,11 @@ export function useAirportSearch(query: string, enabled = true) {
       }
 
       for (const it of candidates) {
-        if (it?.type === "airport") {
+        const type = typeof it?.type === "string" ? it.type.toLowerCase() : "";
+        if (type === "airport") {
           pushAirport(it);
-        } else if (it?.type === "other" && Array.isArray(it.list)) {
-          const nearLabel = it?.title || it?.city || "";
+        } else if (type === "other" && Array.isArray(it.list)) {
+          const nearLabel = it?.title || it?.city || it?.name || "";
           for (const sub of it.list) {
             pushAirport(sub, nearLabel);
           }
