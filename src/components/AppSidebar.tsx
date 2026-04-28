@@ -44,6 +44,7 @@ const viagensItems = [
   { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
   { to: "/booking-search", icon: Hotel, label: "Busca Booking", showBeta: true },
   { to: "/flights-search", icon: PlaneTakeoff, label: "Busca de Voos", showBeta: true },
+  { to: "/google-flights-search", icon: PlaneTakeoff, label: "Google Flights", showBeta: true },
 ];
 
 const financeItems = [

@@ -331,6 +331,7 @@ function AppRoutes() {
           {/* Booking RapidAPI (BETA) — módulo experimental isolado */}
           <Route path="/booking-search" element={<BookingSearchPage />} />
           <Route path="/flights-search" element={<FlightsSearchPage />} />
+          <Route path="/google-flights-search" element={<GoogleFlightsSearchPage />} />
 
           {/* Apresentação */}
           <Route path="/apresentacao" element={<ApresentacaoGeral />} />
