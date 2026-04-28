@@ -1534,7 +1534,7 @@ function OperacaoInboxInner() {
                     )}
                     <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 flex-1" onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}>
                       {profilePicsRef.current.get(selected.id) ? (
-                        <img src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                        <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                       ) : null}
                       <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
                         {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
