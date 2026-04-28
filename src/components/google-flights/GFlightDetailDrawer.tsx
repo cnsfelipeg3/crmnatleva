@@ -773,11 +773,18 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                             <span>{tmeta.emoji}</span>
                             <span>{p.fareDisplayName || tmeta.label}</span>
                           </div>
-                          {isCheapest && (
-                            <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
-                              <Sparkles className="h-2.5 w-2.5" /> Mais barato
-                            </Badge>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {(p as any).meta?.synthetic && (
+                              <Badge className="text-[9px] border-amber-500/40 bg-amber-500/15 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15 gap-1">
+                                <AlertCircle className="h-2.5 w-2.5" /> Tarifa estimada · reserve no site da cia
+                              </Badge>
+                            )}
+                            {isCheapest && (
+                              <Badge className="text-[9px] gap-1 bg-emerald-500 text-white hover:bg-emerald-500">
+                                <Sparkles className="h-2.5 w-2.5" /> Mais barato
+                              </Badge>
+                            )}
+                          </div>
                         </div>
 
                         {/* Conteúdo */}
@@ -897,7 +904,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
 
         {/* Action bar */}
         <div className="border-t border-border p-3 flex gap-2">
-          {providersSorted.length > 0 ? (
+          {effectiveProviders.length > 0 ? (
             <Button
               variant="outline"
               size="default"
@@ -905,12 +912,25 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
               onClick={scrollToProviders}
             >
               <ShoppingCart className="h-4 w-4" />
-              Comparar {providersSorted.length} {providersSorted.length === 1 ? "oferta" : "ofertas"}
+              {providers.length > 0
+                ? `Comparar ${providers.length} ${providers.length === 1 ? "oferta" : "ofertas"}`
+                : "Ver tarifa estimada · reservar no site"}
             </Button>
           ) : (
-            <Button disabled className="flex-1 gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              Sem ofertas disponíveis
+            <Button asChild variant="outline" size="default" className="flex-1 gap-2">
+              <a
+                href={buildGoogleFlightsDeepLink(
+                  dep?.id, arr?.id,
+                  searchInput?.outbound_date,
+                  searchInput?.return_date,
+                  searchInput?.adults ?? 1,
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Buscar no Google Flights (BRL)
+              </a>
             </Button>
           )}
           <Button onClick={copyForProposal} variant="outline" size="icon" title="Copiar dados para proposta">
