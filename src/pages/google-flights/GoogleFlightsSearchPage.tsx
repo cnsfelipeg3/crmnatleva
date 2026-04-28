@@ -28,7 +28,7 @@ import {
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
-import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
+import { formatBRL, DEFAULT_GFLIGHT_FILTERS, classifyPriceAgainstHistory } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { cn } from "@/lib/utils";
@@ -178,6 +178,33 @@ export default function GoogleFlightsSearchPage() {
     }
     return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
   }, [trend, snapshot]);
+
+  // Inteligência de Preço · classifica preço atual contra histórico (low/typical/high)
+  const priceIntel = useMemo(() => {
+    const ph = results?.price_history;
+    const lowestNow = results?.price_insights?.lowest_price;
+    if (!ph || lowestNow == null) return null;
+    const classification = classifyPriceAgainstHistory(lowestNow, ph);
+    return { classification, history: ph, lowestNow };
+  }, [results]);
+
+  // Indicador "atualizado há X min" baseado em fetched_at
+  const [, forceTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => forceTick((n) => n + 1), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const updatedAgoLabel = useMemo(() => {
+    if (!results?.fetched_at) return null;
+    const t = new Date(results.fetched_at).getTime();
+    if (!Number.isFinite(t)) return null;
+    const diffSec = Math.max(0, Math.round((Date.now() - t) / 1000));
+    if (diffSec < 60) return `atualizado agora`;
+    const min = Math.round(diffSec / 60);
+    if (min < 60) return `atualizado há ${min} min`;
+    const h = Math.round(min / 60);
+    return `atualizado há ${h}h`;
+  }, [results?.fetched_at]);
 
   const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
 
@@ -348,6 +375,9 @@ export default function GoogleFlightsSearchPage() {
                   <Cloud className="h-3 w-3" /> Cache
                 </Badge>
               )}
+              {updatedAgoLabel && (
+                <span className="text-[10px] text-muted-foreground/80 italic">· {updatedAgoLabel}</span>
+              )}
             </div>
             <Button onClick={handleSearch} disabled={!canSearch || isLoading} className="gap-2 md:min-w-[180px]">
               <Search className="h-4 w-4" />
@@ -356,6 +386,33 @@ export default function GoogleFlightsSearchPage() {
           </div>
         </div>
       </Card>
+
+      {/* Painel Inteligência de Preço · price_history */}
+      {snapshot && priceIntel?.classification && (() => {
+        const c = priceIntel.classification;
+        const cfg = c === "low"
+          ? { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-700 dark:text-emerald-400", label: "Preço baixo", desc: "abaixo da média histórica desta rota · ótima hora pra comprar" }
+          : c === "high"
+            ? { bg: "bg-rose-500/10 border-rose-500/30", text: "text-rose-700 dark:text-rose-400", label: "Preço alto", desc: "acima da média histórica · vale a pena monitorar mais alguns dias" }
+            : { bg: "bg-amber-500/10 border-amber-500/30", text: "text-amber-700 dark:text-amber-400", label: "Preço típico", desc: "dentro da faixa esperada para esta rota" };
+        const histCount = priceIntel.history.history?.length ?? 0;
+        return (
+          <Card className={cn("p-3 border", cfg.bg)}>
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <TrendingUp className={cn("h-4 w-4", cfg.text)} />
+                <span className={cn("text-sm font-semibold", cfg.text)}>{cfg.label}</span>
+              </div>
+              <span className="text-xs text-muted-foreground flex-1 min-w-0">{cfg.desc}</span>
+              {histCount > 0 && (
+                <span className="text-[10px] text-muted-foreground italic">
+                  baseado em {histCount} pontos históricos
+                </span>
+              )}
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* Tabs com 3 visões */}
       {snapshot && (

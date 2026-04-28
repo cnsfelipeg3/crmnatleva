@@ -600,6 +600,43 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                           </div>
                         </div>
 
+                        {/* Sub-ofertas (bookings[] · combos ida/volta ou tarifas alternativas) */}
+                        {Array.isArray(p.bookings) && p.bookings.length > 0 && (
+                          <div className="mt-2 ml-5 pl-3 border-l border-border/40 space-y-1.5">
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                              {p.bookings.length} {p.bookings.length === 1 ? "tarifa disponível" : "tarifas disponíveis"}
+                            </div>
+                            {p.bookings.slice(0, 4).map((b, bi) => (
+                              <div
+                                key={bi}
+                                className="flex items-center justify-between gap-2 text-[11px] py-1"
+                              >
+                                <div className="flex-1 min-w-0 truncate text-foreground">
+                                  {b.title || `Opção ${bi + 1}`}
+                                </div>
+                                <div className="font-semibold shrink-0">
+                                  {b.price !== undefined ? formatBRL(b.price) : "—"}
+                                </div>
+                                {b.website && (
+                                  <a
+                                    href={buildHref(b.website)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-[10px] text-primary hover:underline shrink-0"
+                                  >
+                                    abrir
+                                  </a>
+                                )}
+                              </div>
+                            ))}
+                            {p.bookings.length > 4 && (
+                              <div className="text-[10px] text-muted-foreground italic">
+                                +{p.bookings.length - 4} outras tarifas
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Botão reservar · resolve deeplink real via getBookingURL(token) */}
                         <div className="flex gap-2 mt-3">
                           <Button

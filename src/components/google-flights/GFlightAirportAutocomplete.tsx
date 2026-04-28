@@ -77,8 +77,14 @@ export function GFlightAirportAutocomplete({ value, onChange, placeholder, icon 
             <div className="px-3 py-4 text-xs text-muted-foreground">Nenhum aeroporto encontrado.</div>
           )}
           {results.map((r) => (
+            <div key={`${r.id}-${r.nearLabel || ''}`}>
+              {r.groupCity && r.groupCount && r.groupCount > 1 && (
+                <div className="px-3 py-1.5 bg-muted/40 border-b border-border/30 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
+                  <MapPin className="h-3 w-3" />
+                  {r.groupCity} · {r.groupCount} aeroportos
+                </div>
+              )}
             <button
-              key={`${r.id}-${r.nearLabel || ''}`}
               type="button"
               onClick={() => { onChange(r); setOpen(false); setQuery(""); }}
               className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors border-b border-border/30 last:border-0"
@@ -108,6 +114,7 @@ export function GFlightAirportAutocomplete({ value, onChange, placeholder, icon 
               {/* Ícone direita */}
               <Plane className="h-4 w-4 text-muted-foreground/50 shrink-0" />
             </button>
+            </div>
           ))}
         </div>
       )}
