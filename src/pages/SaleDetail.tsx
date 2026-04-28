@@ -31,6 +31,7 @@ import SaleAttachmentsSection from "@/components/SaleAttachmentsSection";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
+import { DetailPageSkeleton } from "@/components/skeletons/PageSkeletons";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
