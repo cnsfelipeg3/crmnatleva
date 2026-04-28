@@ -486,12 +486,14 @@ function flatProviders(root: any): any[] {
   if (Array.isArray(root.together)) return root.together;
   if (Array.isArray(root.options)) return root.options;
   if (Array.isArray(root.together_offers)) return root.together_offers;
+  if (Array.isArray(root.offers)) return root.offers;
   if (Array.isArray(root.selected_flights)) {
     const merged: any[] = [];
     for (const sf of root.selected_flights) {
       if (Array.isArray(sf?.together)) merged.push(...sf.together);
       if (Array.isArray(sf?.providers)) merged.push(...sf.providers);
       if (Array.isArray(sf?.booking_options)) merged.push(...sf.booking_options);
+      if (Array.isArray(sf?.options)) merged.push(...sf.options);
     }
     if (merged.length) return merged;
   }
@@ -611,7 +613,8 @@ export function useFlightBookingDetails(
       }
     },
     enabled: enabled && !!input && !!bookingToken,
-    staleTime: 30 * 60 * 1000,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     retry: false,
   });
 }
