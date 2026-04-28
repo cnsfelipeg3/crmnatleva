@@ -360,10 +360,12 @@ export function usePriceGraph(input: SearchGFlightsInput | null, enabled = true)
           const date = it?.departure ?? it?.date ?? it?.day;
           if (!date) return null;
           const priceNum = typeof it?.price === "number" ? it.price : Number(it?.price);
+          const ret = it?.return ?? it?.return_date ?? null;
           return {
             date: String(date),
             price: Number.isFinite(priceNum) ? priceNum : null,
             is_outbound: true,
+            return_date: ret ? String(ret) : null,
           } as GPriceGraphPoint;
         })
         .filter((x): x is GPriceGraphPoint => !!x);
