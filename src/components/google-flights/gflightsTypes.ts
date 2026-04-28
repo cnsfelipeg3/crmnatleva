@@ -180,7 +180,7 @@ export function formatMinutes(min?: number | null): string {
  * A DataCrawler entrega timestamps no formato "YYYY-M-D HH:MM" (sem zero-padding e sem TZ).
  * Trabalhamos como hora local SEM aplicar timezone do browser.
  */
-function parseDcDateTime(s: string): { date: Date; hh: string; mm: string } | null {
+export function parseDcDateTime(s?: string): { date: Date; hh: string; mm: string } | null {
   if (!s) return null;
   const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})/);
   if (!m) return null;
@@ -190,6 +190,16 @@ function parseDcDateTime(s: string): { date: Date; hh: string; mm: string } | nu
     hh: h.padStart(2, "0"),
     mm: mi.padStart(2, "0"),
   };
+}
+
+export function getDepHour(it: GFlightItinerary): number | null {
+  const t = it.flights?.[0]?.departure_airport?.time;
+  const p = parseDcDateTime(t);
+  return p ? p.date.getHours() : null;
+}
+
+export function hasExtension(it: GFlightItinerary, regex: RegExp): boolean {
+  return it.flights?.some(f => f.extensions?.some(e => regex.test(e))) ?? false;
 }
 
 export function formatTime(iso?: string): string {
