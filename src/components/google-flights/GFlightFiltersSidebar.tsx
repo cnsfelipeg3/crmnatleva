@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import {
   Filter, X, Briefcase, Luggage, Plane, Sunrise, Sun, Moon, Leaf,
-  ShieldAlert, MapPin,
+  ShieldAlert, MapPin, Sparkles,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
