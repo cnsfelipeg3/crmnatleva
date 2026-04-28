@@ -456,14 +456,38 @@ export default function GoogleFlightsSearchPage() {
                 )}
               </Card>
             )}
-            <GFlightResultsList
-              best={results?.best_flights}
-              others={results?.other_flights}
-              isLoading={isLoading}
-              isError={isError}
-              error={error as Error | null}
-              hasSearched={!!snapshot}
-            />
+            {(() => {
+              const all = [...(results?.best_flights ?? []), ...(results?.other_flights ?? [])];
+              const filtered = applyFilters(all, filters);
+              const bestCount = results?.best_flights?.length ?? 0;
+              const filteredBest = filtered.slice(0, Math.min(bestCount, filtered.length));
+              const filteredOthers = filtered.slice(filteredBest.length);
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
+                  <aside className="hidden lg:block">
+                    {all.length > 0 && (
+                      <GFlightFiltersSidebar
+                        flights={all}
+                        filters={filters}
+                        onChange={setFilters}
+                        onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
+                      />
+                    )}
+                  </aside>
+                  <div>
+                    <GFlightResultsList
+                      best={filteredBest}
+                      others={filteredOthers}
+                      isLoading={isLoading}
+                      isError={isError}
+                      error={error as Error | null}
+                      hasSearched={!!snapshot}
+                      onSelect={(it) => setSelectedItinerary(it)}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="calendar">
