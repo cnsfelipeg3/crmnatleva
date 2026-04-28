@@ -37,6 +37,8 @@ export interface TripLengthValidation {
   message: string;
   /** Severidade pra estilização. */
   severity: "ok" | "warn" | "error";
+  /** Sugestão de return_date corrigido (YYYY-MM-DD) baseado nos segmentos. */
+  suggestedReturnDate: string | null;
 }
 
 function safeDays(from?: string | null, to?: string | null): number | null {
