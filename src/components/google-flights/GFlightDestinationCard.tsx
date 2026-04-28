@@ -62,6 +62,7 @@ export function GFlightDestinationCard({
   returnDate,
   paxAdults = 1,
   originIata = "GRU",
+  cacheStats,
   onSelectDestination,
 }: Props) {
   const bg = REGION_BG[destination.region] ?? "from-primary/20 to-primary/10";
