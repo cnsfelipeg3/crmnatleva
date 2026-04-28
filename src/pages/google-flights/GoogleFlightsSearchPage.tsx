@@ -24,9 +24,11 @@ import {
   useSearchGFlights,
   useCalendarPicker,
   usePriceGraph,
+  priceGraphToCalendar,
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
-import type { GAirport, GFlightCabin } from "@/components/google-flights/gflightsTypes";
+import type { GAirport, GCalendarDay, GFlightCabin } from "@/components/google-flights/gflightsTypes";
+import { formatBRL } from "@/components/google-flights/gflightsTypes";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
