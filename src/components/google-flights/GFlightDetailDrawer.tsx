@@ -220,7 +220,7 @@ export function GFlightDetailDrawer({ itinerary, searchInput, onClose }: Props) 
                 {(itinerary.stops ?? 0) === 0 ? "Direto" : `${itinerary.stops} parada${(itinerary.stops ?? 0) > 1 ? "s" : ""}`}
               </SheetDescription>
             </div>
-            <div className="text-right shrink-0">
+            <div className="text-right shrink-0 pr-8">
               <div className="text-2xl font-bold text-primary">{formatBRL(itinerary.price)}</div>
               <div className="text-[10px] text-muted-foreground">por adulto</div>
             </div>
