@@ -5,7 +5,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
-  cabinLabel, dayDiff, formatBRL, formatMinutes, formatTime, hasExtension,
+  cabinLabel, dayDiff, detectBags, formatBRL, formatMinutes, formatTime, hasExtension,
   type GFlightItinerary,
 } from "./gflightsTypes";
 
@@ -31,6 +31,7 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
   const logo = itinerary.airline_logo ?? first?.airline_logo;
   const co2 = itinerary.carbon_emissions;
   const bags = itinerary.bags;
+  const detected = detectBags(itinerary);
 
   const hasUSB = hasExtension(itinerary, /USB|power/i);
   const hasWifi = hasExtension(itinerary, /wi-?fi/i);
@@ -127,14 +128,22 @@ export function GFlightCard({ itinerary, isBest, isCheapest, isFastest, onSelect
 
       {/* Bottom: badges */}
       <div className="flex items-center gap-1.5 flex-wrap pt-3 border-t border-border/40">
-        {bags?.carry_on != null && bags.carry_on > 0 && (
+        {(bags?.carry_on != null && bags.carry_on > 0) ? (
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Briefcase className="h-2.5 w-2.5" /> Mão {bags.carry_on}
           </Badge>
+        ) : detected.carry_on && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5">
+            <Briefcase className="h-2.5 w-2.5" /> Mão inclusa
+          </Badge>
         )}
-        {bags?.checked != null && bags.checked > 0 && (
+        {(bags?.checked != null && bags.checked > 0) ? (
           <Badge variant="outline" className="text-[10px] gap-1 h-5">
             <Luggage className="h-2.5 w-2.5" /> Despachada {bags.checked}
+          </Badge>
+        ) : detected.checked && (
+          <Badge variant="outline" className="text-[10px] gap-1 h-5">
+            <Luggage className="h-2.5 w-2.5" /> Despachada inclusa
           </Badge>
         )}
         {co2?.difference_percent != null && (
