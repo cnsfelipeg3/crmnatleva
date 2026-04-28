@@ -6,6 +6,7 @@ import { Paperclip, FileText, Image as ImageIcon, File, FileSpreadsheet, Downloa
 import { formatDateBR } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import { getProductLabel } from "@/lib/productTypes";
+import { AttachmentsSkeleton } from "@/components/skeletons/PageSkeletons";
 
 interface Attachment {
   id: string;
