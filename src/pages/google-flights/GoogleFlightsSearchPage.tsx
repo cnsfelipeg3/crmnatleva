@@ -33,6 +33,7 @@ import {
 import type { GAirport, GCalendarDay, GFlightCabin, GFlightFilters, GFlightItinerary } from "@/components/google-flights/gflightsTypes";
 import { formatBRL, DEFAULT_GFLIGHT_FILTERS } from "@/components/google-flights/gflightsTypes";
 import { GFlightFiltersSidebar, applyFilters } from "@/components/google-flights/GFlightFiltersSidebar";
+import { GFlightInlineFilters } from "@/components/google-flights/GFlightInlineFilters";
 import { GFlightDetailDrawer } from "@/components/google-flights/GFlightDetailDrawer";
 import { GFlightLegsBuilder, type MultiLeg } from "@/components/google-flights/GFlightLegsBuilder";
 import { toast } from "sonner";
@@ -564,6 +565,19 @@ export default function GoogleFlightsSearchPage() {
               <Search className="h-4 w-4" />
               {isLoading ? "Buscando voos..." : "Buscar voos"}
             </Button>
+          </div>
+
+          {/* Filtros inline · sempre visíveis no buscador */}
+          <div className="border-t border-border pt-4">
+            <GFlightInlineFilters
+              filters={filters}
+              onChange={setFilters}
+              onReset={() => setFilters(DEFAULT_GFLIGHT_FILTERS)}
+              flights={[
+                ...(results?.best_flights ?? []),
+                ...(results?.other_flights ?? []),
+              ]}
+            />
           </div>
         </div>
       </Card>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate, useLocation, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,6 +33,7 @@ import SalePaymentsEditor, { type SalePayment } from "@/components/SalePaymentsE
 import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import { useQuery } from "@tanstack/react-query";
 import { getProductSlug, inferProductSlugsFromSale } from "@/lib/productTypes";
+import { validateTripLengthFromSegments } from "@/lib/tripLengthValidation";
 
 /* ─── Types ────────────────────────────────────────────── */
 
@@ -140,6 +141,13 @@ export default function NewSale() {
     const state = location.state as any;
     return state?.preSelectedPassengers || [];
   });
+
+  // Validação automática · trip_length manual vs. derivado dos segmentos
+  // Alerta inconsistências que distorcem gráficos/relatórios.
+  const tripLengthCheck = useMemo(
+    () => validateTripLengthFromSegments(form.departure_date, form.return_date, segments),
+    [form.departure_date, form.return_date, segments],
+  );
 
   // Queries
   const { data: suppliers = [] } = useQuery({
@@ -523,6 +531,18 @@ export default function NewSale() {
       toast({ title: "Nome da venda é obrigatório", variant: "destructive" });
       setActiveTab("info");
       return;
+    }
+    // Validação automática · trip_length manual vs. derivado dos segmentos
+    if (tripLengthCheck.hasMismatch) {
+      toast({
+        title: tripLengthCheck.severity === "error"
+          ? "Inconsistência grave nas datas da viagem"
+          : "Atenção · datas da viagem inconsistentes",
+        description: tripLengthCheck.message + " Confira a aba Aéreo antes de salvar para evitar distorção em gráficos e relatórios.",
+        variant: tripLengthCheck.severity === "error" ? "destructive" : "default",
+        duration: 8000,
+      });
+      // Não bloqueia o save · apenas alerta. Usuário decide.
     }
     setSaving(true);
     try {
@@ -1070,6 +1090,26 @@ export default function NewSale() {
         {/* ═══════════════ 3. AÉREO ═══════════════ */}
         <TabsContent value="aereo">
           <div className="space-y-4">
+            {tripLengthCheck.hasMismatch && (
+              <div className={cn(
+                "flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm",
+                tripLengthCheck.severity === "error"
+                  ? "border-destructive/40 bg-destructive/5 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+              )}>
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <div className="leading-relaxed">
+                  <strong className="font-semibold">Validação automática · </strong>
+                  {tripLengthCheck.message}
+                  <span className="block text-xs opacity-80 mt-1">
+                    Manual: {form.departure_date || "?"} → {form.return_date || "?"}
+                    {tripLengthCheck.formTripLength != null && ` (${tripLengthCheck.formTripLength}d)`}
+                    {" · "}
+                    Voos: {tripLengthCheck.segTripLength != null ? `${tripLengthCheck.segTripLength}d` : "?"}
+                  </span>
+                </div>
+              </div>
+            )}
             {/* Flight structure */}
             <FlightRegistrationSection
               segments={segments}
@@ -1468,6 +1508,20 @@ export default function NewSale() {
                     <span className="text-muted-foreground">Companhia</span><span>{form.airline || "—"}</span>
                     <span className="text-muted-foreground">Segmentos</span><span>{segments.filter(s => s.origin_iata).length} trecho(s)</span>
                   </div>
+                  {tripLengthCheck.hasMismatch && (
+                    <div className={cn(
+                      "flex items-start gap-2 rounded-lg border px-3 py-2 mb-3 text-xs",
+                      tripLengthCheck.severity === "error"
+                        ? "border-destructive/40 bg-destructive/5 text-destructive"
+                        : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-300",
+                    )}>
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <div className="leading-relaxed">
+                        <strong className="font-semibold">Datas inconsistentes · </strong>
+                        {tripLengthCheck.message}
+                      </div>
+                    </div>
+                  )}
                   {airCostBlocks.length > 0 && (
                     <div className="border-t pt-2 space-y-1">
                       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">Blocos de custo</p>
