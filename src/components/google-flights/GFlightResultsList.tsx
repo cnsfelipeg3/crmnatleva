@@ -15,7 +15,7 @@ interface Props {
   onSelect?: (it: GFlightItinerary) => void;
 }
 
-export function GFlightResultsList({ best = [], others = [], isLoading, isError, error, hasSearched, onSelect }: Props) {
+export const GFlightResultsList = forwardRef<HTMLDivElement, Props>(function GFlightResultsList({ best = [], others = [], isLoading, isError, error, hasSearched, onSelect }, _ref) {
   if (isLoading) {
     return (
       <div className="space-y-3">
