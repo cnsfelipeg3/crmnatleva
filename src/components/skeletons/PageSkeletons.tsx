@@ -409,11 +409,34 @@ export function ProgressOverlay({
  * Usado pelo Suspense global para evitar spinner sem contexto.
  */
 export function RouteAwareSkeleton({ pathname }: { pathname: string }) {
+  if (pathname === "/login") return <LoginSkeleton />;
+  if (pathname.startsWith("/sales/new") || pathname.endsWith("/edit")) {
+    return <WizardSkeleton />;
+  }
   if (pathname.startsWith("/sales/") && pathname.length > "/sales/".length) {
     return <DetailPageSkeleton />;
   }
   if (pathname.startsWith("/sales") || pathname.startsWith("/passengers") || pathname.startsWith("/viagens")) {
     return <ListPageSkeleton />;
+  }
+  if (pathname === "/settings" || pathname === "/settings/") {
+    return (
+      <div className="p-4 md:p-6 space-y-5 animate-fade-in" aria-busy="true">
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-72" />
+        </div>
+        <CardGridSkeleton count={9} />
+      </div>
+    );
+  }
+  if (pathname.startsWith("/settings/")) {
+    return (
+      <div className="p-4 md:p-6 space-y-5 animate-fade-in" aria-busy="true">
+        <PageHeaderSkeleton />
+        <SimpleListSkeleton rows={8} />
+      </div>
+    );
   }
   if (pathname === "/" || pathname.startsWith("/dashboard")) {
     return <DashboardSkeleton />;
