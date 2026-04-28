@@ -113,6 +113,34 @@ export function GFlightFiltersSidebar({ flights, filters, onChange, onReset }: P
         </Button>
       </div>
 
+      {/* Quick filters · chips */}
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Atalhos</Label>
+        <div className="flex flex-wrap gap-1.5">
+          {QUICK.map(({ v, label, icon: Icon }) => {
+            const active = filters.quickFilter === v;
+            return (
+              <button
+                key={v}
+                type="button"
+                onClick={() =>
+                  onChange({ ...filters, quickFilter: active ? null : v })
+                }
+                className={cn(
+                  "inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-full border transition-all",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Ordenação */}
       <div className="space-y-1.5">
         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Ordenar por</Label>
