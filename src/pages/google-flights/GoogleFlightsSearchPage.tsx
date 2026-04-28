@@ -24,9 +24,11 @@ import {
   useSearchGFlights,
   useCalendarPicker,
   usePriceGraph,
+  priceGraphToCalendar,
   type SearchGFlightsInput,
 } from "@/hooks/useGoogleFlights";
-import type { GAirport, GFlightCabin } from "@/components/google-flights/gflightsTypes";
+import type { GAirport, GCalendarDay, GFlightCabin } from "@/components/google-flights/gflightsTypes";
+import { formatBRL } from "@/components/google-flights/gflightsTypes";
 import { cn } from "@/lib/utils";
 
 const VALID_CABINS: GFlightCabin[] = ["ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST"];
@@ -141,8 +143,37 @@ export default function GoogleFlightsSearchPage() {
     : null;
 
   const { data: results, isLoading, isError, error } = useSearchGFlights(searchInput);
-  const { data: calendar = [], isLoading: calLoading } = useCalendarPicker(searchInput, tab === "calendar");
-  const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, tab === "trend");
+  // PriceGraph alimenta tanto a aba Tendência quanto a aba Calendário (fallback do getCalendarPicker quebrado).
+  // Carregamos sempre que houver snapshot pra ter insights agregados na lista também.
+  const { data: trend = [], isLoading: trendLoading } = usePriceGraph(searchInput, !!snapshot);
+  const { data: calendarApi = [], isLoading: calApiLoading } = useCalendarPicker(searchInput, tab === "calendar");
+
+  // Calendário final: prioriza dados do getCalendarPicker; se vier vazio, deriva do priceGraph.
+  const calendar: GCalendarDay[] = useMemo(() => {
+    if (calendarApi.length > 0) return calendarApi;
+    return priceGraphToCalendar(trend);
+  }, [calendarApi, trend]);
+  const calLoading = calApiLoading || (calendarApi.length === 0 && trendLoading);
+
+  // Insights agregados a partir do priceGraph (60+ dias de janela)
+  const trendInsights = useMemo(() => {
+    const prices = trend.map(p => p.price).filter((p): p is number => typeof p === "number" && Number.isFinite(p));
+    if (!prices.length) return null;
+    const sorted = [...prices].sort((a, b) => a - b);
+    const lowest = sorted[0];
+    const highest = sorted[sorted.length - 1];
+    const avg = Math.round(prices.reduce((s, p) => s + p, 0) / prices.length);
+    const median = sorted[Math.floor(sorted.length / 2)];
+    const bestDay = trend.find(p => p.price === lowest)?.date;
+    const selectedPrice = snapshot
+      ? trend.find(p => p.date === snapshot.outbound_date)?.price ?? null
+      : null;
+    let savingsVsSelected: number | null = null;
+    if (selectedPrice !== null && lowest < selectedPrice) {
+      savingsVsSelected = selectedPrice - lowest;
+    }
+    return { lowest, highest, avg, median, bestDay, selectedPrice, savingsVsSelected, count: prices.length };
+  }, [trend, snapshot]);
 
   const canSearch = useMemo(() => !!from && !!to && !!outboundDate, [from, to, outboundDate]);
 
@@ -338,24 +369,86 @@ export default function GoogleFlightsSearchPage() {
           </TabsList>
 
           <TabsContent value="list" className="space-y-3">
-            {results?.price_insights && (
-              <Card className="p-3 flex items-center gap-3 flex-wrap text-xs">
-                {results.price_insights.lowest_price !== undefined && (
-                  <span>
-                    Menor preço encontrado: <strong className="text-emerald-600 dark:text-emerald-400">
-                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(results.price_insights.lowest_price)}
-                    </strong>
-                  </span>
-                )}
-                {results.price_insights.price_level && (
-                  <Badge variant="outline" className={cn(
-                    "text-[10px]",
-                    results.price_insights.price_level === "low" && "border-emerald-500/40 text-emerald-700 dark:text-emerald-300",
-                    results.price_insights.price_level === "high" && "border-rose-500/40 text-rose-700 dark:text-rose-300",
-                    results.price_insights.price_level === "typical" && "border-amber-500/40 text-amber-700 dark:text-amber-300",
-                  )}>
-                    Nível: {results.price_insights.price_level}
-                  </Badge>
+            {/* Banner de Insights — agrega resultados + janela de 60 dias */}
+            {(results?.price_insights || trendInsights) && (
+              <Card className="p-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {results?.price_insights?.lowest_price !== undefined && (
+                    <div className="space-y-0.5">
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Mais barato hoje</div>
+                      <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {formatBRL(results.price_insights.lowest_price)}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {results.search_metadata && (results.search_metadata as any).count
+                          ? `${(results.search_metadata as any).count} opções`
+                          : ""}
+                      </div>
+                    </div>
+                  )}
+                  {trendInsights && (
+                    <>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Preço médio · 60 dias</div>
+                        <div className="text-lg font-bold">{formatBRL(trendInsights.avg)}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          mediana {formatBRL(trendInsights.median)}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Menor preço · janela</div>
+                        <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatBRL(trendInsights.lowest)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          em {trendInsights.bestDay
+                            ? new Date(trendInsights.bestDay + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                            : "—"}
+                        </div>
+                      </div>
+                      <div className="space-y-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          {trendInsights.savingsVsSelected ? "Economia possível" : "Pico · janela"}
+                        </div>
+                        <div className={cn(
+                          "text-lg font-bold",
+                          trendInsights.savingsVsSelected
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400",
+                        )}>
+                          {trendInsights.savingsVsSelected
+                            ? `−${formatBRL(trendInsights.savingsVsSelected)}`
+                            : formatBRL(trendInsights.highest)}
+                        </div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {trendInsights.savingsVsSelected
+                            ? `escolhendo ${trendInsights.bestDay
+                                ? new Date(trendInsights.bestDay + "T00:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                                : "outra data"}`
+                            : "data mais cara"}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+                {trendInsights && (
+                  <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground">
+                    <span>
+                      Variação na janela: <strong>{formatBRL(trendInsights.highest - trendInsights.lowest)}</strong>
+                      {" · "}
+                      {Math.round(((trendInsights.highest - trendInsights.lowest) / trendInsights.lowest) * 100)}% spread
+                    </span>
+                    {trendInsights.bestDay && trendInsights.bestDay !== snapshot?.outbound_date && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[11px]"
+                        onClick={() => handleCalendarSelect(trendInsights.bestDay!)}
+                      >
+                        Buscar no melhor dia →
+                      </Button>
+                    )}
+                  </div>
                 )}
               </Card>
             )}
