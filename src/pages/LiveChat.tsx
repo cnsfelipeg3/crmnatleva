@@ -2525,7 +2525,7 @@ export default function LiveChat() {
                   {mediaPendingFile && (
                     <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2">
                       <div className="flex items-center gap-3">
-                        <img src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
+                        <img loading="lazy" decoding="async" src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
                         <div className="flex-1">
                           <Input
                             placeholder="Legenda (opcional)..."
@@ -2886,7 +2886,7 @@ export default function LiveChat() {
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-3xl p-2">
-            <img src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
+            <img loading="lazy" decoding="async" src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
       )}

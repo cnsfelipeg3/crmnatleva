@@ -1797,7 +1797,7 @@ function OperacaoInboxInner() {
                 {mediaPendingFile && (
                   <div className="px-4 py-3 border-t border-border bg-card/50 space-y-2 shrink-0">
                     <div className="flex items-center gap-3">
-                      <img src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
+                      <img loading="lazy" decoding="async" src={mediaPendingFile.previewUrl} alt="Preview" className="h-16 w-16 rounded-lg object-cover" />
                       <div className="flex-1"><Input placeholder="Legenda (opcional)..." value={mediaCaption} onChange={e => setMediaCaption(e.target.value)} className="h-8 text-xs" /></div>
                       <Button size="sm" onClick={handleSendPendingMedia} disabled={isSending} className="text-xs gap-1">
                         {isSending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />} Enviar
@@ -2046,7 +2046,7 @@ function OperacaoInboxInner() {
       {lightboxUrl && (
         <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
           <DialogContent className="max-w-3xl p-2">
-            <img src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
+            <img loading="lazy" decoding="async" src={lightboxUrl} alt="Imagem" className="w-full rounded-lg" />
           </DialogContent>
         </Dialog>
       )}
