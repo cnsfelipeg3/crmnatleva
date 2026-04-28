@@ -294,7 +294,10 @@ export default function Sales() {
 
   return (
     <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in relative">
+        {exportProgress !== null && (
+          <ProgressOverlay label="Exportando vendas..." progress={exportProgress} fullscreen />
+        )}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-serif text-foreground">Vendas</h1>
