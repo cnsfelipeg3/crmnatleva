@@ -19,6 +19,7 @@ import type {
   GSearchFlightsResult,
 } from "@/components/google-flights/gflightsTypes";
 import { analyzeFare } from "@/components/google-flights/fareClassifier";
+import { resolveAirlineWebsite, AIRLINE_REGISTRY } from "@/components/google-flights/airlineRegistry";
 
 const FUNCTION_NAME = "google-flights-rapidapi";
 
@@ -642,7 +643,7 @@ export async function fetchBookingURL(providerToken: string): Promise<string | n
 // --------------------------------------------------------------------
 // 8) buildSyntheticProvider · fallback quando API não retorna ofertas
 // --------------------------------------------------------------------
-import { resolveAirlineWebsite, AIRLINE_REGISTRY } from "@/components/google-flights/airlineRegistry";
+
 
 export function buildSyntheticProvider(itinerary: {
   flights?: Array<{ airline?: string; airline_code?: string; airline_logo?: string; travel_class?: string }>;
