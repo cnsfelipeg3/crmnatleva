@@ -75,12 +75,9 @@ export function GFlightDestinationCard({
     destination.hero_image_url,
   );
 
-  // Preload imediato · garante imagem em cache antes do scroll/hover
-  useEffect(() => {
-    if (!coverUrl) return;
-    const img = new Image();
-    img.src = coverUrl;
-  }, [coverUrl]);
+  // Imagem é baixada via <img loading="eager" fetchPriority="high"> abaixo.
+  // Preload manual via new Image() foi removido (era redundante e gerava
+  // double-fetch em navegadores sem dedupe perfeito).
 
   return (
     <Card
