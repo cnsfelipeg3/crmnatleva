@@ -165,7 +165,7 @@ export const ConciergeAnswer = memo(function ConciergeAnswer({ text, streaming }
   }, [text]);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-3.5">
       {blocks.map((block, idx) => {
         // Tenta detectar se o bloco inteiro é um callout
         const callout = detectCallout(block);
@@ -216,29 +216,35 @@ export const ConciergeAnswer = memo(function ConciergeAnswer({ text, streaming }
                     </HeadingWithIcon>
                   ),
                   p: ({ children }) => (
-                    <p className="text-sm leading-[1.65] text-foreground/90 my-2 first:mt-0 last:mb-0">
+                    <p className="text-[14.5px] leading-[1.7] text-foreground/90 my-2.5 first:mt-0 last:mb-0">
                       {children}
                     </p>
                   ),
                   strong: ({ children }) => (
-                    <strong className="font-semibold text-foreground bg-accent/10 px-1 py-0.5 rounded-md decoration-accent/40">
+                    <strong className="font-semibold text-foreground">
                       {children}
                     </strong>
                   ),
                   em: ({ children }) => <em className="italic text-foreground/85">{children}</em>,
                   ul: ({ children }) => (
-                    <ul className="my-2 space-y-1.5 not-prose list-none pl-0">{children}</ul>
+                    <ul className="my-3 space-y-2 not-prose list-none pl-0">{children}</ul>
                   ),
                   ol: ({ children }) => (
-                    <ol className="my-2 space-y-1.5 not-prose list-none pl-0 counter-reset-[step]">
+                    <ol className="my-3 space-y-2 not-prose list-none pl-0 [counter-reset:step]">
                       {children}
                     </ol>
                   ),
-                  li: ({ children, ...props }) => {
-                    // Detecta se está dentro de ordered list pelo parent (heurística simples via counter)
-                    const isOrdered = (props as any).node?.position && false; // fallback
+                  li: ({ children, ordered, ...props }: any) => {
+                    if (ordered) {
+                      return (
+                        <li className="group flex gap-3 items-start text-[14.5px] leading-[1.65] text-foreground/90 [counter-increment:step] before:content-[counter(step)] before:flex before:items-center before:justify-center before:w-5 before:h-5 before:rounded-full before:bg-accent/15 before:text-accent before:text-[11px] before:font-bold before:shrink-0 before:mt-0.5">
+                          <span className="flex-1 min-w-0">{children}</span>
+                        </li>
+                      );
+                    }
                     return (
-                      <li className="group flex gap-2.5 items-start text-sm leading-[1.6] text-foreground/90 pl-3 border-l-2 border-accent/25 hover:border-accent/60 transition-colors py-0.5">
+                      <li className="group flex gap-2.5 items-start text-[14.5px] leading-[1.65] text-foreground/90">
+                        <span className="mt-[9px] w-1.5 h-1.5 rounded-full bg-accent/70 shrink-0" aria-hidden />
                         <span className="flex-1 min-w-0">{children}</span>
                       </li>
                     );
