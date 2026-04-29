@@ -15,8 +15,8 @@ const corsHeaders = {
 const RAPIDAPI_HOST = "booking-com15.p.rapidapi.com";
 const RAPIDAPI_BASE = `https://${RAPIDAPI_HOST}`;
 
-// Host alternativo pra Hotels.com (via RapidAPI, provider ntd119)
-const HOTELSCOM_HOST = "hotels-com6.p.rapidapi.com";
+// Host alternativo pra Hotels.com (via RapidAPI, provider tipsters/hotels-com-provider)
+const HOTELSCOM_HOST = "hotels-com-provider.p.rapidapi.com";
 const HOTELSCOM_BASE = `https://${HOTELSCOM_HOST}`;
 
 // TTL (em segundos) por ação — balanceia frescor e consumo de requests
