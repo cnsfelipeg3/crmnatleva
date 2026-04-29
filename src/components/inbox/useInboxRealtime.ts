@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "./types";
-import { toIsoTimestamp, stripQuotes, dedupeUiMessages } from "./helpers";
+import { toIsoTimestamp, stripQuotes, dedupeUiMessages, safeUnreadCount } from "./helpers";
 
 /**
  * Hook: manages a single stable Supabase realtime subscription for both
@@ -65,7 +65,7 @@ export function useInboxRealtime(
               ...c,
               last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
               last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
-              unread_count: isOpen ? 0 : c.unread_count + 1,
+              unread_count: isOpen ? 0 : safeUnreadCount(c.unread_count) + 1,
             };
           }));
         }
@@ -110,7 +110,7 @@ export function useInboxRealtime(
               phone: cleanPhone || c.phone,
               last_message_preview: bestPreview,
               last_message_at: bestTime,
-              unread_count: isOpen ? 0 : Math.max(c.unread_count, u.unread_count ?? 0),
+              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(c.unread_count), safeUnreadCount(u.unread_count)),
               stage: (u.stage as Stage) || c.stage,
               tags: u.tags || c.tags,
               contact_name: c.contact_name || u.contact_name,
@@ -132,7 +132,7 @@ export function useInboxRealtime(
             source: u.source || "",
             last_message_at: u.last_message_at || "",
             last_message_preview: u.last_message_preview || "",
-            unread_count: u.unread_count || 0,
+            unread_count: safeUnreadCount(u.unread_count),
             is_vip: u.is_vip || false,
             assigned_to: u.assigned_to || "",
             score_potential: u.score_potential || 0,
