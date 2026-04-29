@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import PortalLayout from "@/components/portal/PortalLayout";
 import AudioRecorder from "@/components/portal/AudioRecorder";
 import AudioBubble from "@/components/portal/AudioBubble";
@@ -132,6 +132,31 @@ function parseDataUrl(dataUrl: string): { base64: string; mime: string; format: 
   return { base64, mime, format };
 }
 
+const KNOWN_CITIES = [
+  "Lisboa", "Porto", "Madrid", "Barcelona", "Paris", "Roma", "Veneza",
+  "Milão", "Florença", "Londres", "Amsterdã", "Berlim", "Munique",
+  "Atenas", "Santorini", "Istambul", "Dubai", "Tóquio", "Bali",
+  "Buenos Aires", "Santiago", "Lima", "Cusco", "Cancún", "Miami",
+  "Orlando", "Nova York", "São Paulo", "Rio de Janeiro", "Salvador",
+  "Fortaleza", "Recife", "Maceió", "Natal", "Foz do Iguaçu", "Gramado",
+  "Marrakech", "Bangkok", "Singapura",
+];
+
+function detectCityFromMessages(messages: Array<{ role: string; content: any; displayText?: string }>): string | undefined {
+  const userMsgs = messages.filter((m) => m.role === "user").slice(-4);
+  for (const msg of userMsgs.reverse()) {
+    const text =
+      typeof msg.content === "string"
+        ? msg.content
+        : msg.displayText || "";
+    for (const city of KNOWN_CITIES) {
+      const re = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+      if (re.test(text)) return city;
+    }
+  }
+  return undefined;
+}
+
 export default function PortalConcierge() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -141,6 +166,8 @@ export default function PortalConcierge() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const cityContext = useMemo(() => detectCityFromMessages(messages), [messages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -581,6 +608,7 @@ export default function PortalConcierge() {
                         <ConciergeAnswer
                           text={msg.displayText}
                           streaming={isLoading && i === messages.length - 1}
+                          cityContext={cityContext}
                         />
                       ) : (
                         <div className="flex items-center gap-2 py-1">

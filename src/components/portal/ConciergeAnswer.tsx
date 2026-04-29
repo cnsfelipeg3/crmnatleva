@@ -18,6 +18,7 @@ import {
   Star,
   CheckCircle2,
 } from "lucide-react";
+import { RichPlace } from "./RichPlace";
 
 /**
  * ConciergeAnswer
@@ -35,6 +36,9 @@ import {
 interface Props {
   text: string;
   streaming?: boolean;
+  /** Cidade do contexto da conversa (ex: "Lisboa"), pra melhorar
+   * resolução do Google Places. Se ausente, usa busca global. */
+  cityContext?: string;
 }
 
 // Detecta o ícone mais adequado para um título (heading ou strong de seção)
@@ -152,7 +156,7 @@ function flattenChildren(node: any): string {
   return "";
 }
 
-export const ConciergeAnswer = memo(function ConciergeAnswer({ text, streaming }: Props) {
+export const ConciergeAnswer = memo(function ConciergeAnswer({ text, streaming, cityContext }: Props) {
   // Pré-processamento: separa o texto em "blocos" lógicos (parágrafos, separados por dupla quebra)
   // para podermos animar com stagger e detectar callouts antes de passar pro markdown.
   const blocks = useMemo(() => {
@@ -220,11 +224,10 @@ export const ConciergeAnswer = memo(function ConciergeAnswer({ text, streaming }
                       {children}
                     </p>
                   ),
-                  strong: ({ children }) => (
-                    <strong className="font-semibold text-foreground">
-                      {children}
-                    </strong>
-                  ),
+                  strong: ({ children }) => {
+                    const txt = flattenChildren(children);
+                    return <RichPlace name={txt} city={cityContext} />;
+                  },
                   em: ({ children }) => <em className="italic text-foreground/85">{children}</em>,
                   ul: ({ children }) => (
                     <ul className="my-3 space-y-2 not-prose list-none pl-0">{children}</ul>
