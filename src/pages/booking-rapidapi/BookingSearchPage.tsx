@@ -43,6 +43,12 @@ import { UnifiedHotelDetailDrawer } from "@/components/booking-rapidapi/UnifiedH
 import { HotelsPagination } from "@/components/booking-rapidapi/HotelsPagination";
 import { HotelFiltersSidebar } from "@/components/booking-rapidapi/HotelFiltersSidebar";
 import {
+  HotelscomPremiumFilters,
+  emptyHotelscomPremiumFilters,
+  premiumFiltersToParams,
+  type HotelscomPremiumFiltersState,
+} from "@/components/booking-rapidapi/HotelscomPremiumFilters";
+import {
   useSearchHotels,
   useHotelFilters,
   useHotelscomAutocomplete,
@@ -121,6 +127,9 @@ export default function BookingSearchPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [filtersCollapsed, setFiltersCollapsed] = useState(false);
+  const [hotelscomPremium, setHotelscomPremium] = useState<HotelscomPremiumFiltersState>(
+    () => emptyHotelscomPremiumFilters(),
+  );
 
   // Drawer unificado (1 hotel = vários providers em tabs)
   const [selectedGroup, setSelectedGroup] = useState<UnifiedHotelGroup | null>(null);
@@ -133,7 +142,7 @@ export default function BookingSearchPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchParams, filtersState]);
+  }, [searchParams, filtersState, hotelscomPremium]);
   useEffect(() => {
     setFiltersState(emptyHotelFiltersState());
   }, [searchParams?.destination.dest_id]);
@@ -213,7 +222,7 @@ export default function BookingSearchPage() {
           domain: "BR",
           locale: "pt_BR",
           page_number: currentPage,
-          sort_order: "RECOMMENDED",
+          ...premiumFiltersToParams(hotelscomPremium),
         }
       : null,
   );
@@ -417,6 +426,14 @@ export default function BookingSearchPage() {
               nameQuery={nameQuery}
               onNameQueryChange={setNameQuery}
             />
+            {sources.hotelscom && (
+              <div className="mt-4">
+                <HotelscomPremiumFilters
+                  state={hotelscomPremium}
+                  onStateChange={setHotelscomPremium}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -470,6 +487,14 @@ export default function BookingSearchPage() {
                         nameQuery={nameQuery}
                         onNameQueryChange={setNameQuery}
                       />
+                      {sources.hotelscom && (
+                        <div className="mt-4">
+                          <HotelscomPremiumFilters
+                            state={hotelscomPremium}
+                            onStateChange={setHotelscomPremium}
+                          />
+                        </div>
+                      )}
                     </div>
                   </SheetContent>
                 </Sheet>
