@@ -362,7 +362,7 @@ export default function LiveChat() {
     const lat = parseFloat(locationInput.lat);
     const lng = parseFloat(locationInput.lng);
     if (isNaN(lat) || isNaN(lng)) {
-      toast.error("Coordenadas inválidas");
+      toast({ title: "Coordenadas inválidas", variant: "destructive" });
       return;
     }
     try {
@@ -373,12 +373,12 @@ export default function LiveChat() {
         latitude: lat,
         longitude: lng,
       });
-      toast.success("Localização enviada");
+      toast({ title: "Localização enviada" });
       setShowLocationDialog(false);
       setLocationInput({ name: "", address: "", lat: "", lng: "" });
     } catch (err: any) {
       console.error("Erro ao enviar localização:", err);
-      toast.error("Erro ao enviar localização");
+      toast({ title: "Erro ao enviar localização", variant: "destructive" });
     }
   }, [selected?.phone, locationInput]);
 
