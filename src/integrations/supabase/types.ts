@@ -1748,6 +1748,24 @@ export type Database = {
           },
         ]
       }
+      chat_presence: {
+        Row: {
+          phone: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          phone: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          phone?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       chatbot_sessions: {
         Row: {
           current_node_id: string | null
