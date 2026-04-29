@@ -157,12 +157,20 @@ function detectCityFromMessages(messages: Array<{ role: string; content: any; di
   return undefined;
 }
 
+const THINKING_MESSAGES = [
+  "Pensando…",
+  "Consultando informações…",
+  "Cruzando dados de viagem…",
+  "Quase lá…",
+];
+
 export default function PortalConcierge() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [attachedImages, setAttachedImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [thinkingIdx, setThinkingIdx] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -172,6 +180,23 @@ export default function PortalConcierge() {
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isLoading]);
+
+  // Rotaciona mensagem de "Pensando…" enquanto carrega e o último
+  // assistant ainda está vazio (sem deltas recebidos).
+  useEffect(() => {
+    if (!isLoading) {
+      setThinkingIdx(0);
+      return;
+    }
+    const last = messages[messages.length - 1];
+    const stillEmpty = !last || (last.role === "assistant" && !last.displayText);
+    if (!stillEmpty) return;
+
+    const interval = setInterval(() => {
+      setThinkingIdx((i) => (i + 1) % THINKING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isLoading, messages]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -613,7 +638,7 @@ export default function PortalConcierge() {
                       ) : (
                         <div className="flex items-center gap-2 py-1">
                           <Loader2 className="w-4 h-4 animate-spin text-accent" />
-                          <span className="text-xs text-muted-foreground">Pensando...</span>
+                          <span className="text-xs text-muted-foreground transition-opacity duration-300">{THINKING_MESSAGES[thinkingIdx]}</span>
                         </div>
                       )}
                       {msg.generatedAudio && (
