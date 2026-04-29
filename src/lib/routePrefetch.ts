@@ -54,6 +54,19 @@ const loaders: Record<string, Loader> = {
   "/apresentacao": () => import("@/pages/ApresentacaoGeral"),
 };
 
+/**
+ * Detecta conexão lenta ou modo poupança via Network Information API.
+ */
+function shouldSkipPrefetch(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const conn = (navigator as any).connection;
+  if (!conn) return false;
+  if (conn.saveData === true) return true;
+  const slow = ["slow-2g", "2g"];
+  if (conn.effectiveType && slow.includes(conn.effectiveType)) return true;
+  return false;
+}
+
 export function prefetchRoute(path: string): void {
   const loader = loaders[path];
   if (!loader) return;
@@ -75,20 +88,53 @@ export function prefetchRoute(path: string): void {
 }
 
 /**
- * Warm up ALL known routes during browser idle time.
- * Called once after the app shell mounts so any sidebar click is instant —
- * the chunks are already in memory by the time the user moves the mouse.
+ * Lista priorizada · prefetch SOMENTE rotas mais usadas.
+ * Resto fica para hover/focus na sidebar (prefetchRoute).
+ */
+const HIGH_PRIORITY_ROUTES = [
+  "/dashboard",
+  "/sales",
+  "/livechat",
+  "/cotacoes",
+  "/viagens",
+  "/financeiro",
+  "/operacao/inbox",
+  "/propostas",
+];
+
+/**
+ * Prefetch das rotas top-priority com concorrência limitada (3 paralelas).
+ * Pula completamente em conexão lenta ou modo "Save Data".
  */
 let warmedAll = false;
 export function prefetchAllRoutes(): void {
   if (warmedAll) return;
   warmedAll = true;
-  const paths = Object.keys(loaders);
-  const ric: (cb: () => void, opts?: { timeout: number }) => void =
-    (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 200));
-  // Stagger so we don't fire 40+ network requests at the exact same instant.
-  paths.forEach((path, i) => {
-    setTimeout(() => ric(() => prefetchRoute(path), { timeout: 2000 }), i * 60);
-  });
-}
 
+  if (shouldSkipPrefetch()) {
+    if (typeof console !== "undefined") {
+      console.log("[prefetch] skipped: slow connection or saveData");
+    }
+    return;
+  }
+
+  const queue = HIGH_PRIORITY_ROUTES.filter((p) => !cache.has(p) && loaders[p]);
+  let active = 0;
+  let i = 0;
+
+  const next = () => {
+    while (active < 3 && i < queue.length) {
+      const path = queue[i++];
+      const loader = loaders[path];
+      active++;
+      const promise = loader()
+        .catch(() => null)
+        .finally(() => {
+          active--;
+          next();
+        });
+      cache.set(path, promise);
+    }
+  };
+  next();
+}
