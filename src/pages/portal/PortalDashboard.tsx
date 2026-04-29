@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, Suspense, lazy } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Plane, ArrowRight, FileText, DollarSign,
   MessageCircle, CheckSquare, Compass, Globe2,
-  MapPin, Calendar, Star, TrendingUp, Sparkles,
+  MapPin, Calendar, Star, Sparkles,
 } from "lucide-react";
 import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
 import {
@@ -15,8 +15,6 @@ import {
   Countdown, TripShelf,
 } from "@/components/travel-ui";
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
-
-const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
 
