@@ -58,7 +58,8 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return undefined;
 
           // === Libs MUITO pesadas · isolar 100% ===
-          if (id.includes("/cesium/") || id.includes("@cesium")) return "vendor-cesium";
+          // Cesium NÃO é agrupado: bundle monolítico causa TDZ ("Cannot access 'Dv' before initialization").
+          // Deixar o Vite splittar naturalmente via lazy imports (já está em optimizeDeps.exclude).
           if (id.includes("/three/") || id.includes("@react-three")) return "vendor-three";
           if (id.includes("/leaflet") || id.includes("react-leaflet")) return "vendor-leaflet";
           if (id.includes("recharts") || id.includes("/d3-")) return "vendor-charts";
