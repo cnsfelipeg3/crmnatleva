@@ -150,7 +150,7 @@ function detectCityFromMessages(messages: Array<{ role: string; content: any; di
         ? msg.content
         : msg.displayText || "";
     for (const city of KNOWN_CITIES) {
-      const re = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&")}\\b`, "i");
+      const re = new RegExp(`\\b${city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
       if (re.test(text)) return city;
     }
   }
