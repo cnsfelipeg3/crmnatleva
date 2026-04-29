@@ -2709,6 +2709,65 @@ export default function LiveChat() {
                     />
                   )}
 
+                  {/* Send Location Dialog */}
+                  <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-rose-500" />
+                          Enviar localização
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 pt-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Nome do local</label>
+                          <Input
+                            value={locationInput.name}
+                            onChange={(e) => setLocationInput(p => ({ ...p, name: e.target.value }))}
+                            placeholder="Ex: Hotel Copacabana Palace"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Endereço (opcional)</label>
+                          <Input
+                            value={locationInput.address}
+                            onChange={(e) => setLocationInput(p => ({ ...p, address: e.target.value }))}
+                            placeholder="Av. Atlântica, 1702"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Latitude</label>
+                            <Input
+                              value={locationInput.lat}
+                              onChange={(e) => setLocationInput(p => ({ ...p, lat: e.target.value }))}
+                              placeholder="-22.9714"
+                              inputMode="decimal"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Longitude</label>
+                            <Input
+                              value={locationInput.lng}
+                              onChange={(e) => setLocationInput(p => ({ ...p, lng: e.target.value }))}
+                              placeholder="-43.1825"
+                              inputMode="decimal"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Dica · pegue lat/lng no Google Maps · clique direito no local · "Copiar coordenadas".
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                          <Button variant="ghost" size="sm" onClick={() => setShowLocationDialog(false)}>Cancelar</Button>
+                          <Button size="sm" onClick={handleSendLocation} className="bg-rose-500 hover:bg-rose-600 text-white">
+                            <Send className="h-3.5 w-3.5 mr-1.5" /> Enviar
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
                   {/* Disconnected warning */}
                   {!waConnected && selectedId?.startsWith("wa_") && (
                     <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
