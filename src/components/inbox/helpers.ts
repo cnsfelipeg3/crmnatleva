@@ -146,3 +146,13 @@ export function normalizeDbStatus(value: string | null | undefined): MsgStatus {
   if (["delivered", "entregue", "received", "delivery_ack"].includes(raw)) return "delivered";
   return "sent";
 }
+
+// ─── Numeric safety: defends against postgres bigint-as-string in realtime payloads ───
+// Without this, "23" + 1 = "231" and the badge explodes to "230000000…".
+export function safeUnreadCount(value: unknown): number {
+  if (value === null || value === undefined || value === "") return 0;
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num) || num < 0) return 0;
+  // Hard cap to absorb any past corruption already persisted.
+  return Math.min(Math.floor(num), 999);
+}
