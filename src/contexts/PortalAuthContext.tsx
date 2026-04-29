@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useCallback, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 
@@ -28,7 +28,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
   const [portalAccess, setPortalAccess] = useState<PortalAccess | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchPortalAccess = async (userId: string) => {
+  const fetchPortalAccess = useCallback(async (userId: string) => {
     try {
       // Check if user is admin first
       const { data: roleData } = await (supabase as any)
@@ -85,7 +85,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       console.error("Portal access bootstrap error:", error);
       setPortalAccess(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -98,7 +98,12 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
 
       if (currentUser) {
-        void fetchPortalAccess(currentUser.id);
+        const pathname = window.location.pathname;
+        if (pathname.startsWith("/portal")) {
+          void fetchPortalAccess(currentUser.id);
+        } else {
+          setPortalAccess(null);
+        }
       } else {
         setPortalAccess(null);
       }
@@ -129,7 +134,7 @@ export function PortalAuthProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(bootTimeout);
       subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchPortalAccess]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
