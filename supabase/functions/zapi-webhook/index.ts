@@ -235,7 +235,7 @@ async function upsertConversation(
       // Update contact name if it looks like a phone number or generic
       const existing = (existingConv.contact_name || "").trim();
       const looksLikePhone = /^\+?\d[\d\s\-()]{6,}$/.test(existing);
-      const isGeneric = !existing || existing === "Novo Contato" || existing === "Desconhecido";
+      const isGeneric = isAgencyOrGenericName(existing);
       if (looksLikePhone || isGeneric) {
         updateData.contact_name = contactName;
       }
