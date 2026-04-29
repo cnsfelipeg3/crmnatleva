@@ -2216,6 +2216,66 @@ export type Database = {
         }
         Relationships: []
       }
+      concierge_places_cache: {
+        Row: {
+          address: string | null
+          business_status: string | null
+          city_context: string | null
+          fetched_at: string
+          google_maps_url: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          name: string
+          opening_hours: Json | null
+          photo_reference: string | null
+          place_id: string | null
+          price_level: number | null
+          query_normalized: string
+          rating: number | null
+          types: string[] | null
+          user_ratings_total: number | null
+        }
+        Insert: {
+          address?: string | null
+          business_status?: string | null
+          city_context?: string | null
+          fetched_at?: string
+          google_maps_url?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name: string
+          opening_hours?: Json | null
+          photo_reference?: string | null
+          place_id?: string | null
+          price_level?: number | null
+          query_normalized: string
+          rating?: number | null
+          types?: string[] | null
+          user_ratings_total?: number | null
+        }
+        Update: {
+          address?: string | null
+          business_status?: string | null
+          city_context?: string | null
+          fetched_at?: string
+          google_maps_url?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          name?: string
+          opening_hours?: Json | null
+          photo_reference?: string | null
+          place_id?: string | null
+          price_level?: number | null
+          query_normalized?: string
+          rating?: number | null
+          types?: string[] | null
+          user_ratings_total?: number | null
+        }
+        Relationships: []
+      }
       conversation_chunks: {
         Row: {
           chunk_index: number
