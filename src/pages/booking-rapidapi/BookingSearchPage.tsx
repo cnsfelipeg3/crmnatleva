@@ -43,6 +43,12 @@ import { UnifiedHotelDetailDrawer } from "@/components/booking-rapidapi/UnifiedH
 import { HotelsPagination } from "@/components/booking-rapidapi/HotelsPagination";
 import { HotelFiltersSidebar } from "@/components/booking-rapidapi/HotelFiltersSidebar";
 import {
+  HotelscomPremiumFilters,
+  emptyHotelscomPremiumFilters,
+  premiumFiltersToParams,
+  type HotelscomPremiumFiltersState,
+} from "@/components/booking-rapidapi/HotelscomPremiumFilters";
+import {
   useSearchHotels,
   useHotelFilters,
   useHotelscomAutocomplete,
