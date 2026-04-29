@@ -32,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
+import { ProfilePictureViewer } from "@/components/livechat/ProfilePictureViewer";
 import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
@@ -474,6 +475,7 @@ function OperacaoInboxInner() {
   const [isSending, setIsSending] = useState(false);
   
   const [showContactProfile, setShowContactProfile] = useState(false);
+  const [showProfileViewer, setShowProfileViewer] = useState(false);
   const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
@@ -1539,14 +1541,26 @@ function OperacaoInboxInner() {
                         <ArrowLeft className="h-5 w-5" />
                       </Button>
                     )}
-                    <div className="flex items-center gap-2 md:gap-3 cursor-pointer hover:opacity-80 transition-opacity min-w-0 flex-1" onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}>
-                      {profilePicsRef.current.get(selected.id) ? (
-                        <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
-                      ) : null}
-                      <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold shrink-0 ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
-                        {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
-                      </div>
-                      <div className="min-w-0">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      {/* Avatar · click opens WhatsApp-style picture viewer */}
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setShowProfileViewer(true); }}
+                        className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105"
+                        aria-label="Ver foto de perfil"
+                      >
+                        {profilePicsRef.current.get(selected.id) ? (
+                          <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                        ) : null}
+                        <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
+                          {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
+                        </div>
+                      </button>
+                      {/* Name + phone · click toggles side context panel */}
+                      <div
+                        className="min-w-0 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}
+                      >
                         <div className="flex items-center gap-1.5">
                           <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
                           {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
