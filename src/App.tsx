@@ -220,7 +220,11 @@ function AppRoutes() {
 
   return (
     <SmartSuspense>
-      <PerfDebugOverlay />
+      {import.meta.env.DEV && (
+        <Suspense fallback={null}>
+          <PerfDebugOverlay />
+        </Suspense>
+      )}
       <ErrorBoundary>
       <Routes>
         <Route
