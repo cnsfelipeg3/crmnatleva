@@ -1454,7 +1454,7 @@ function OperacaoInboxInner() {
                     <span className="text-sm font-bold tracking-tight text-foreground">Inbox</span>
                     {waConnected && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
                   </div>
-                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
+                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4 max-w-[44px] truncate">{totalUnread > 99 ? "99+" : totalUnread}</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
                   <Tooltip>
