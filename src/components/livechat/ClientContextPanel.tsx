@@ -142,6 +142,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [lastClientMsgAt, setLastClientMsgAt] = useState<string | null>(null);
   const [agentHasReplied, setAgentHasReplied] = useState(false);
   const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
+  const [showProfileViewer, setShowProfileViewer] = useState(false);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -733,7 +734,12 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           {/* ─── Client Card ─── */}
           <div className="px-4 py-4 border-b border-border/30">
             <div className="flex items-start gap-3">
-              <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowProfileViewer(true)}
+                className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105"
+                aria-label="Ver foto de perfil"
+              >
                 {profilePic ? (
                   <img src={profilePic} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-border/30" />
                 ) : (
@@ -746,7 +752,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                     <Star className="h-2.5 w-2.5 text-white fill-white" />
                   </div>
                 )}
-              </div>
+              </button>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-foreground truncate">{clientData?.display_name || conversation.contact_name}</h3>
                 <div className="flex items-center gap-1.5 mt-1">
