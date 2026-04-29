@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
-import PerfDebugOverlay from "@/components/PerfDebugOverlay";
+const PerfDebugOverlay: React.ComponentType = import.meta.env.DEV
+  ? (lazy(() => import("@/components/PerfDebugOverlay")) as unknown as React.ComponentType)
+  : (() => null);
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -218,7 +220,11 @@ function AppRoutes() {
 
   return (
     <SmartSuspense>
-      <PerfDebugOverlay />
+      {import.meta.env.DEV && (
+        <Suspense fallback={null}>
+          <PerfDebugOverlay />
+        </Suspense>
+      )}
       <ErrorBoundary>
       <Routes>
         <Route

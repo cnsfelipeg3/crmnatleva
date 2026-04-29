@@ -26,7 +26,15 @@
     <link rel="dns-prefetch" href="https://mexlhkqcmiaktjxsyvod.supabase.co" />
 
     <!-- Fonts loaded here (not via CSS @import) for faster paint and to avoid render-blocking -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;600&family=JetBrains+Mono:wght@400&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'"
+    />
+    <noscript>
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Instrument+Sans:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" />
+    </noscript>
 
     <meta property="og:title" content="NatLeva CRM" />
     <meta property="og:description" content="NatLeva — Viagens são a vida em movimento" />
