@@ -26,10 +26,13 @@ export default function AppLayout() {
   const isImmersive = IMMERSIVE_ROUTES.includes(location.pathname);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
 
-  // Em idle, baixa os chunks de TODAS as rotas em background — qualquer clique
-  // no menu vira navegação instantânea, sem spinner intermediário.
+  // Prefetch só depois do primeiro paint do app autenticado. Antes disso,
+  // disputar rede com a rota atual deixa o usuário preso no loader inicial.
   useEffect(() => {
-    prefetchAllRoutes();
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 2500));
+    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
+    const handle = idle(() => prefetchAllRoutes(), { timeout: 6000 });
+    return () => cancelIdle(handle as number);
   }, []);
 
   if (isMobile) {
