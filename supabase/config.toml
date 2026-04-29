@@ -190,3 +190,6 @@ verify_jwt = true
 
 [functions.concierge-resolve-place]
 verify_jwt = false  # Portal cliente · resolve nome de lugar via Google Places (sem dado sensível)
+
+[functions.backfill-profile-pics]
+verify_jwt = false  # Script admin manual de backfill
