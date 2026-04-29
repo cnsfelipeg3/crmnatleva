@@ -72,24 +72,27 @@ export function WhatsAppQRCard() {
     }
   }
 
+  const applyQRCodeData = useCallback((data: any) => {
+    const raw = data?.value || data?.qrcode || data?.base64 || data?.raw || "";
+    if (raw) {
+      const qrSrc = String(raw).startsWith("data:image") ? raw : `data:image/png;base64,${raw}`;
+      setQrBase64(qrSrc);
+      timerCountRef.current = QR_REFRESH_SECONDS;
+      setTimerProgress(100);
+      return true;
+    }
+    setQrBase64(null);
+    return false;
+  }, []);
+
   const fetchQRCode = useCallback(async () => {
     try {
       const data = await callZapiProxy("get-qrcode");
-      const raw = data?.value || data?.qrcode || data?.base64 || "";
-      // QR code data received
-      if (raw) {
-        // Normalize: if already has data:image prefix, use as-is; otherwise add it
-        const qrSrc = String(raw).startsWith("data:image") ? raw : `data:image/png;base64,${raw}`;
-        setQrBase64(qrSrc);
-        timerCountRef.current = QR_REFRESH_SECONDS;
-        setTimerProgress(100);
-      } else {
-        setQrBase64(null);
-      }
+      applyQRCodeData(data);
     } catch (err: any) {
       console.error("QR fetch error:", err);
     }
-  }, []);
+  }, [applyQRCodeData]);
 
   function handleConnectionSuccess(phoneData?: any) {
     clearAllTimers();
@@ -173,12 +176,16 @@ export function WhatsAppQRCard() {
   async function handleDisconnect() {
     setDisconnecting(true);
     try {
-      await callZapiProxy("disconnect");
+      const result = await callZapiProxy("disconnect");
       clearAllTimers();
-      setStatus("disconnected");
+      setStatus("awaiting_scan");
       setQrBase64(null);
       setConnInfo({});
-      toast.success("WhatsApp desconectado");
+      const qrApplied = result?.qr ? applyQRCodeData(result.qr) : false;
+      if (!qrApplied) await fetchQRCode();
+      startQRTimer();
+      startStatusPolling();
+      toast.success("WhatsApp desconectado. Escaneie o novo QR Code para reconectar.");
     } catch (err: any) {
       toast.error("Erro ao desconectar: " + err.message);
     } finally {
