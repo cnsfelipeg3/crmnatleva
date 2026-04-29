@@ -56,7 +56,9 @@ export default defineConfig(({ mode }) => ({
           if (!id.includes("node_modules")) return undefined;
 
           // === Libs MUITO pesadas · isolar 100% ===
-          if (id.includes("/three/") || id.includes("@react-three")) return "vendor-three";
+          // NOTE: Three.js / @react-three NÃO podem ser agrupados num chunk único
+          // porque dependem de React.useLayoutEffect no boot. Deixar Vite code-split
+          // naturalmente respeita a ordem de carga de React.
           if (id.includes("/leaflet") || id.includes("react-leaflet")) return "vendor-leaflet";
           if (id.includes("recharts") || id.includes("/d3-")) return "vendor-charts";
           if (id.includes("framer-motion")) return "vendor-framer";
