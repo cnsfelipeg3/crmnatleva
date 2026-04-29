@@ -545,10 +545,10 @@ export default function PortalConcierge() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[88%] sm:max-w-[85%] rounded-2xl px-3.5 sm:px-4 py-2.5 break-words ${
+                  className={`max-w-[92%] sm:max-w-[88%] break-words ${
                     msg.role === "user"
-                      ? "bg-accent text-accent-foreground"
-                      : "bg-muted/60 text-foreground"
+                      ? "rounded-2xl px-3.5 sm:px-4 py-2.5 bg-accent text-accent-foreground"
+                      : "rounded-2xl rounded-tl-md px-4 sm:px-5 py-3 sm:py-3.5 bg-card/70 backdrop-blur-sm border border-border/40 shadow-[0_2px_12px_-4px_hsl(var(--foreground)/0.08)] text-foreground"
                   }`}
                 >
                   {msg.displayImages && msg.displayImages.length > 0 && (
@@ -576,11 +576,17 @@ export default function PortalConcierge() {
                       <p className="text-sm whitespace-pre-wrap leading-relaxed mt-1">{msg.displayText}</p>
                     ) : null
                   ) : (
-                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-headings:mt-3 prose-headings:mb-1.5">
+                    <div>
                       {msg.displayText ? (
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.displayText}</ReactMarkdown>
+                        <ConciergeAnswer
+                          text={msg.displayText}
+                          streaming={isLoading && i === messages.length - 1}
+                        />
                       ) : (
-                        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                        <div className="flex items-center gap-2 py-1">
+                          <Loader2 className="w-4 h-4 animate-spin text-accent" />
+                          <span className="text-xs text-muted-foreground">Pensando...</span>
+                        </div>
                       )}
                       {msg.generatedAudio && (
                         <div className="mt-3 not-prose">
