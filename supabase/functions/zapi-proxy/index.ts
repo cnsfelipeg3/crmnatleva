@@ -15,6 +15,19 @@ const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+function parseJsonSafely(text: string) {
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function normalizePhone(raw: string): string {
   return String(raw || "")
     .replace(/@c\.us|@s\.whatsapp\.net|@g\.us|-group/gi, "")
@@ -95,13 +108,7 @@ async function callZapi(path: string, method = "GET", payload?: unknown) {
   });
 
   const responseText = await response.text();
-  const data = responseText ? (() => {
-    try {
-      return JSON.parse(responseText);
-    } catch {
-      return { raw: responseText };
-    }
-  })() : {};
+  const data = parseJsonSafely(responseText);
 
   if (!response.ok) {
     throw new Error(`Z-API ${path} failed (${response.status}): ${JSON.stringify(data).slice(0, 300)}`);
@@ -647,7 +654,53 @@ serve(async (req) => {
     console.log(`[Z-API] ${action} → ${method} ${url}`);
 
     const response = await fetch(url, fetchOpts);
-    const data = await response.json().catch(() => ({}));
+    let data = parseJsonSafely(await response.text());
+
+    if (action === "disconnect") {
+      const statusResponse = await fetch(`${BASE_URL}/status`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Client-Token": CLIENT_TOKEN,
+        },
+      });
+      const statusData = parseJsonSafely(await statusResponse.text());
+      const stillConnected = statusData?.connected === true || statusData?.smartphoneConnected === true;
+
+      if (response.ok || !stillConnected) {
+        return new Response(JSON.stringify({ success: true, disconnected: true, data, status: statusData }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (response.status === 405) {
+        console.warn("[Z-API] disconnect returned 405 and status still connected; trying restart fallback");
+        const restartResponse = await fetch(`${BASE_URL}/restart`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Client-Token": CLIENT_TOKEN,
+          },
+        });
+        const restartData = parseJsonSafely(await restartResponse.text());
+        await wait(1200);
+        const qrResponse = await fetch(`${BASE_URL}/qr-code/image`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Client-Token": CLIENT_TOKEN,
+          },
+        });
+        const qrData = parseJsonSafely(await qrResponse.text());
+        if (restartResponse.ok || qrResponse.ok) {
+          return new Response(JSON.stringify({ success: true, disconnected: false, requiresQr: true, data, restart: restartData, qr: qrData }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
 
     return new Response(JSON.stringify(data), {
       status: response.ok ? 200 : response.status,
