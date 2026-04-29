@@ -1153,19 +1153,32 @@ export default function LiveChat() {
               }
             }
           }
-          // Fetch profile pictures via API for those still missing
-          for (const conv of dedupedConvs.slice(0, 30)) {
-            if (!profilePicsRef.current.has(conv.id)) {
-              callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
-                const picUrl = data?.link || data?.profilePictureUrl || "";
-                if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
-                  profilePicsRef.current.set(conv.id, picUrl);
-                  profilePicsRef.current.set(`wa_${conv.phone}`, picUrl);
-                  setProfilePicsVersion(v => v + 1);
-                }
-              }).catch(() => {});
+          // Fetch profile pictures via API for those still missing — process all, in parallel chunks
+          const missing = dedupedConvs.filter(conv => !profilePicsRef.current.has(conv.id));
+          (async () => {
+            const chunkSize = 6;
+            for (let i = 0; i < missing.length; i += chunkSize) {
+              const chunk = missing.slice(i, i + chunkSize);
+              await Promise.all(chunk.map(async (conv) => {
+                try {
+                  const data = await callZapiProxy("get-profile-picture", { phone: conv.phone });
+                  const picUrl = data?.link || data?.profilePictureUrl || "";
+                  if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
+                    profilePicsRef.current.set(conv.id, picUrl);
+                    profilePicsRef.current.set(`wa_${conv.phone}`, picUrl);
+                    setProfilePicsVersion(v => v + 1);
+                    // Persist to DB so next load is instant
+                    supabase.from("conversations").update({
+                      profile_picture_url: picUrl,
+                      profile_picture_fetched_at: new Date().toISOString(),
+                    } as any).eq("phone", conv.phone).is("profile_picture_url", null).then(() => {});
+                  }
+                } catch { /* ignore individual failures */ }
+              }));
+              // Tiny breather between chunks to be nice to Z-API
+              await new Promise(r => setTimeout(r, 80));
             }
-          }
+          })();
         }
         chatsLoadedRef.current = true;
       } catch (err) {
