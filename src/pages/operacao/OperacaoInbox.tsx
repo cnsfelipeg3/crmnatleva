@@ -57,6 +57,10 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const toUnreadCount = (value: unknown) => {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? Math.max(0, num) : 0;
+};
 function Linkify({ text }: { text: string }) {
   if (!text) return null;
   const parts = text.split(URL_REGEX);
@@ -559,7 +563,7 @@ function OperacaoInboxInner() {
             source: c.source || "",
             last_message_at: c.last_message_at || "",
             last_message_preview: c.last_message_preview || fallbackPreview || "",
-            unread_count: c.unread_count || 0,
+            unread_count: toUnreadCount(c.unread_count),
             is_vip: c.is_vip || false,
             assigned_to: c.assigned_to || "",
             score_potential: c.score_potential || 0,
@@ -630,7 +634,7 @@ function OperacaoInboxInner() {
             stage: "novo_lead" as Stage, tags: [], source: "whatsapp",
             last_message_at: lastMsgTime || "",
             last_message_preview: chat.lastMessage || chat.lastMessageText || "",
-            unread_count: chat.unreadMessages || chat.unread || 0,
+            unread_count: toUnreadCount(chat.unreadMessages ?? chat.unread),
             is_vip: false, assigned_to: "", score_potential: 0, score_risk: 0,
             _hasReliableActivity: hasReliableActivity,
           });
@@ -669,7 +673,8 @@ function OperacaoInboxInner() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           });
-          for (const conv of dedupedConvs.filter(c => c._hasReliableActivity)) persistConversation(conv).catch(() => {});
+          const existingIds = new Set(conversationsRef.current.map(c => c.id));
+          for (const conv of dedupedConvs.filter(c => c._hasReliableActivity && !existingIds.has(c.id))) persistConversation(conv).catch(() => {});
           // Fetch profile pictures in parallel batches
           const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
           if (needsPic.length > 0) {
@@ -1397,7 +1402,7 @@ function OperacaoInboxInner() {
     } catch (err: any) { toast({ title: "Erro ao iniciar fluxo", description: err.message, variant: "destructive" }); }
   }, [selectedId, selected]);
 
-  const totalUnread = conversations.reduce((s, c) => s + c.unread_count, 0);
+  const totalUnread = conversations.reduce((s, c) => s + toUnreadCount(c.unread_count), 0);
 
   return (
     <div
