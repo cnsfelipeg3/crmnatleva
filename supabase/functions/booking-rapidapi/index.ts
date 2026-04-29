@@ -15,8 +15,8 @@ const corsHeaders = {
 const RAPIDAPI_HOST = "booking-com15.p.rapidapi.com";
 const RAPIDAPI_BASE = `https://${RAPIDAPI_HOST}`;
 
-// Host alternativo pra Hotels.com (via RapidAPI, provider ntd119)
-const HOTELSCOM_HOST = "hotels-com6.p.rapidapi.com";
+// Host alternativo pra Hotels.com (via RapidAPI, provider tipsters/hotels-com-provider)
+const HOTELSCOM_HOST = "hotels-com-provider.p.rapidapi.com";
 const HOTELSCOM_BASE = `https://${HOTELSCOM_HOST}`;
 
 // TTL (em segundos) por ação — balanceia frescor e consumo de requests
@@ -44,6 +44,7 @@ const CACHE_TTL: Record<string, number> = {
   hotelscomReviewsList: 60 * 60 * 12,
   hotelscomReviewsSummary: 60 * 60 * 12,
   hotelscomHeadline: 60 * 60 * 24,
+  hotelscomSlugToId: 60 * 60 * 24 * 7,
   // ---- Voos ----
   searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
   searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
@@ -63,21 +64,37 @@ const ACTION_ENDPOINTS: Record<string, string> = {
   roomAvailability: "/api/v1/hotels/getAvailability",
   getRoomList: "/api/v1/hotels/getRoomList",
   getHotelFilter: "/api/v1/hotels/getFilter",
-  // ---- Hotels.com (host diferente, roteado via HOTELSCOM_HOST) ----
-  hotelscomAutocomplete: "/hotels/auto-complete",
-  hotelscomSearch: "/hotels/search",
-  hotelscomDetails: "/hotels/details-content", // alias compat
-  hotelscomContent: "/hotels/details-content",
-  hotelscomGallery: "/hotels/details-gallery",
-  hotelscomAmenities: "/hotels/details-amenities",
-  hotelscomOffers: "/hotels/details-offers",
-  hotelscomSummary: "/hotels/details-summary",
-  hotelscomLocation: "/hotels/details-location",
-  hotelscomRatingSummary: "/hotels/details-rating-summary",
-  hotelscomHighlights: "/hotels/details-highlights",
-  hotelscomReviewsList: "/hotels/reviews-list",
-  hotelscomReviewsSummary: "/hotels/reviews-summary",
-  hotelscomHeadline: "/hotels/details-headline",
+  // ---- Hotels.com (legado provider ntd119 — comentado pra referência) ----
+  // hotelscomAutocomplete: "/hotels/auto-complete",
+  // hotelscomSearch: "/hotels/search",
+  // hotelscomDetails: "/hotels/details-content",
+  // hotelscomContent: "/hotels/details-content",
+  // hotelscomGallery: "/hotels/details-gallery",
+  // hotelscomAmenities: "/hotels/details-amenities",
+  // hotelscomOffers: "/hotels/details-offers",
+  // hotelscomSummary: "/hotels/details-summary",
+  // hotelscomLocation: "/hotels/details-location",
+  // hotelscomRatingSummary: "/hotels/details-rating-summary",
+  // hotelscomHighlights: "/hotels/details-highlights",
+  // hotelscomReviewsList: "/hotels/reviews-list",
+  // hotelscomReviewsSummary: "/hotels/reviews-summary",
+  // hotelscomHeadline: "/hotels/details-headline",
+  // ---- Hotels.com (tipsters/hotels-com-provider) ----
+  hotelscomAutocomplete: "/v2/regions",
+  hotelscomSearch: "/v3/hotels/search",
+  hotelscomDetails: "/v2/hotels/details",
+  hotelscomContent: "/v2/hotels/details",
+  hotelscomGallery: "/v2/hotels/details",
+  hotelscomAmenities: "/v2/hotels/details",
+  hotelscomOffers: "/v3/hotels/offers",
+  hotelscomSummary: "/v3/hotels/summary",
+  hotelscomLocation: "/v2/hotels/details",
+  hotelscomRatingSummary: "/v2/hotels/reviews/scores",
+  hotelscomHighlights: "/v2/hotels/details",
+  hotelscomReviewsList: "/v2/hotels/reviews/list",
+  hotelscomReviewsSummary: "/v2/hotels/reviews/summary",
+  hotelscomHeadline: "/v3/hotels/info",
+  hotelscomSlugToId: "/v2/meta/convert/slug-id",
   // ---- Voos ----
   searchFlightDestinations: "/api/v1/flights/searchDestination",
   searchFlights: "/api/v1/flights/searchFlights",
@@ -186,6 +203,7 @@ const HOTELSCOM_ACTIONS = new Set([
   "hotelscomReviewsList",
   "hotelscomReviewsSummary",
   "hotelscomHeadline",
+  "hotelscomSlugToId",
 ]);
 
 async function callRapidApi(
@@ -385,39 +403,52 @@ function buildParams(
       };
     }
     // ============================================================
-    // Hotels.com (provider ntd119 via RapidAPI)
+    // Hotels.com (provider tipsters/hotels-com-provider via RapidAPI)
     // ============================================================
 
     case "hotelscomAutocomplete": {
       assertParams(input, ["query"]);
       return {
-        query: String(input.query),
         locale: String(input.locale ?? "pt_BR"),
+        domain: String(input.domain ?? "BR"),
+        query: String(input.query),
       };
     }
 
     case "hotelscomSearch": {
-      assertParams(input, ["locationId", "checkinDate", "checkoutDate"]);
+      const regionId = input.region_id ?? input.locationId;
+      const checkin = input.checkin_date ?? input.checkinDate;
+      const checkout = input.checkout_date ?? input.checkoutDate;
+      const adultsNum = input.adults_number ?? input.adults ?? 2;
+      assertParams(
+        { region_id: regionId, checkin_date: checkin, checkout_date: checkout },
+        ["region_id", "checkin_date", "checkout_date"],
+      );
       const p: Record<string, string> = {
-        locationId: String(input.locationId),
-        checkinDate: String(input.checkinDate),
-        checkoutDate: String(input.checkoutDate),
-        adults: String(input.adults ?? 2),
-        currency: String(input.currency ?? "BRL"),
-        // Tenta forçar mercado/moeda BR no provider (alguns aliases que diferentes
-        // wrappers da Hotels.com aceitam — mandamos todos pra maximizar a chance).
-        top_cur: String(input.currency ?? "BRL"),
-        siteid: "300000035", // Hotels.com BR
-        eapid: "35",         // Expedia Affiliate Partner ID Brasil
-        langid: "1046",      // pt_BR
+        domain: String(input.domain ?? "BR"),
         locale: String(input.locale ?? "pt_BR"),
         sort_order: String(input.sort_order ?? "RECOMMENDED"),
-        page_number: String(input.page_number ?? 1),
+        region_id: String(regionId),
+        checkin_date: String(checkin),
+        checkout_date: String(checkout),
+        adults_number: String(adultsNum),
       };
       if (input.children_ages) p.children_ages = String(input.children_ages);
-      if (input.price_min) p.price_min = String(input.price_min);
-      if (input.price_max) p.price_max = String(input.price_max);
-      if (input.star_rating) p.star_rating = String(input.star_rating);
+      if (input.star_rating_ids) p.star_rating_ids = String(input.star_rating_ids);
+      else if (input.star_rating) p.star_rating_ids = String(input.star_rating);
+      if (input.price_min !== undefined && input.price_min !== "")
+        p.price_min = String(input.price_min);
+      if (input.price_max !== undefined && input.price_max !== "")
+        p.price_max = String(input.price_max);
+      if (input.guest_rating_min !== undefined)
+        p.guest_rating_min = String(input.guest_rating_min);
+      if (input.page_number) p.page_number = String(input.page_number);
+      if (input.lodging_type) p.lodging_type = String(input.lodging_type);
+      if (input.meal_plan) p.meal_plan = String(input.meal_plan);
+      if (input.amenities) p.amenities = String(input.amenities);
+      if (input.payment_type) p.payment_type = String(input.payment_type);
+      if (input.available_filter) p.available_filter = String(input.available_filter);
+      if (input.accessibility) p.accessibility = String(input.accessibility);
       return p;
     }
 
@@ -425,31 +456,57 @@ function buildParams(
     case "hotelscomContent":
     case "hotelscomGallery":
     case "hotelscomAmenities":
-    case "hotelscomSummary":
     case "hotelscomLocation":
-    case "hotelscomRatingSummary":
     case "hotelscomHighlights":
-    case "hotelscomReviewsList":
-    case "hotelscomReviewsSummary":
-    case "hotelscomHeadline": {
-      assertParams(input, ["propertyId"]);
+    case "hotelscomSummary":
+    case "hotelscomHeadline":
+    case "hotelscomRatingSummary":
+    case "hotelscomReviewsSummary": {
+      const hotelId = input.hotel_id ?? input.propertyId;
+      assertParams({ hotel_id: hotelId }, ["hotel_id"]);
       return {
-        propertyId: String(input.propertyId),
-        domain: String(input.domain ?? "US"),
-        locale: String(input.locale ?? "en_US"),
+        domain: String(input.domain ?? "BR"),
+        locale: String(input.locale ?? "pt_BR"),
+        hotel_id: String(hotelId),
       };
     }
 
     case "hotelscomOffers": {
-      assertParams(input, ["propertyId", "checkinDate", "checkoutDate"]);
-      return {
-        propertyId: String(input.propertyId),
-        checkinDate: String(input.checkinDate),
-        checkoutDate: String(input.checkoutDate),
-        adults: String(input.adults ?? 1),
-        domain: String(input.domain ?? "US"),
-        locale: String(input.locale ?? "en_US"),
+      const hotelId = input.hotel_id ?? input.propertyId;
+      const checkin = input.checkin_date ?? input.checkinDate;
+      const checkout = input.checkout_date ?? input.checkoutDate;
+      const adultsNum = input.adults_number ?? input.adults ?? 2;
+      assertParams(
+        { hotel_id: hotelId, checkin_date: checkin, checkout_date: checkout },
+        ["hotel_id", "checkin_date", "checkout_date"],
+      );
+      const p: Record<string, string> = {
+        domain: String(input.domain ?? "BR"),
+        locale: String(input.locale ?? "pt_BR"),
+        hotel_id: String(hotelId),
+        checkin_date: String(checkin),
+        checkout_date: String(checkout),
+        adults_number: String(adultsNum),
       };
+      if (input.children_ages) p.children_ages = String(input.children_ages);
+      return p;
+    }
+
+    case "hotelscomReviewsList": {
+      const hotelId = input.hotel_id ?? input.propertyId;
+      assertParams({ hotel_id: hotelId }, ["hotel_id"]);
+      return {
+        domain: String(input.domain ?? "BR"),
+        locale: String(input.locale ?? "pt_BR"),
+        hotel_id: String(hotelId),
+        page_number: String(input.page_number ?? 1),
+        sort_order: String(input.sort_order ?? "NEWEST_TO_OLDEST"),
+      };
+    }
+
+    case "hotelscomSlugToId": {
+      assertParams(input, ["slug"]);
+      return { slug: String(input.slug) };
     }
 
     case "getHotelFilter": {
@@ -648,10 +705,13 @@ serve(async (req) => {
 
       for (const r of results.sort((a, b) => a.page - b.page)) {
         if (r.status >= 400) continue;
-        const d: any = r.data?.data ?? {};
-        const listings: any[] = Array.isArray(d.propertySearchListings)
-          ? d.propertySearchListings
-          : [];
+        const d: any = r.data?.data ?? r.data ?? {};
+        // tipsters: data.properties[]; legado ntd119: data.propertySearchListings[]
+        const listings: any[] = Array.isArray(d.properties)
+          ? d.properties
+          : Array.isArray(d.propertySearchListings)
+            ? d.propertySearchListings
+            : [];
         for (const item of listings) {
           const id = String(item?.id ?? item?.propertyId ?? Math.random());
           if (seenIds.has(id)) continue;
@@ -661,6 +721,10 @@ serve(async (req) => {
         if (totalCount == null) {
           if (typeof d?.pagination?.totalCount === "number") {
             totalCount = d.pagination.totalCount;
+          } else if (typeof d?.totalCount === "number") {
+            totalCount = d.totalCount;
+          } else if (typeof d?.summary?.matchedPropertiesSize === "number") {
+            totalCount = d.summary.matchedPropertiesSize;
           } else {
             totalCount = extractHotelscomTotalFromSummary(d?.summary);
           }
@@ -673,6 +737,8 @@ serve(async (req) => {
         message: "Success",
         timestamp: Date.now(),
         data: {
+          properties: aggregated,
+          // alias legado pra UIs que ainda leem propertySearchListings
           propertySearchListings: aggregated,
           pagination: { totalCount: totalCount ?? aggregated.length },
           summary,
@@ -680,6 +746,7 @@ serve(async (req) => {
           __logicalPage: logicalPage,
         },
       };
+
 
       await writeCache(action, params, aggregatedEnvelope);
       await logCall({

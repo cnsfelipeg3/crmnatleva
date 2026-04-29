@@ -599,24 +599,24 @@ export function useSeatMap(token: string | null) {
 }
 
 // ============================================================
-// HOTELS.COM (via ntd119)
+// HOTELS.COM (via tipsters/hotels-com-provider)
 // ============================================================
 
+import {
+  normalizeHotelscomTipsterSearch,
+  normalizeHotelscomTipsterDetails,
+  normalizeHotelscomTipsterAutocomplete,
+} from "@/components/booking-rapidapi/hotelscomNormalizers";
+import type { UnifiedHotel } from "@/components/booking-rapidapi/unifiedHotelTypes";
+
 export interface HotelscomRegion {
-  gaiaId: string;
+  id: string;
+  name: string;
+  fullName: string;
   type: string;
-  regionNames?: {
-    fullName?: string;
-    shortName?: string;
-    displayName?: string;
-    primaryDisplayName?: string;
-    secondaryDisplayName?: string;
-    lastSearchName?: string;
-  };
-  coordinates?: { lat?: string; long?: string };
-  hierarchyInfo?: {
-    country?: { name?: string; isoCode2?: string };
-  };
+  coords?: { lat: number; lng: number };
+  /** Compat: alguns componentes ainda leem gaiaId. */
+  gaiaId?: string;
 }
 
 export function useHotelscomAutocomplete(
@@ -627,10 +627,13 @@ export function useHotelscomAutocomplete(
   return useQuery({
     queryKey: ["booking-rapidapi", "hotelscomAutocomplete", trimmed],
     queryFn: async () => {
-      const envelope = await invokeBooking<{
-        data: { sr?: HotelscomRegion[]; q?: string };
-      }>("hotelscomAutocomplete" as BookingAction, { query: trimmed });
-      return (envelope?.data?.sr || []) as HotelscomRegion[];
+      const envelope = await invokeBooking<{ data?: any[]; sr?: any[] }>(
+        "hotelscomAutocomplete" as BookingAction,
+        { query: trimmed },
+      );
+      // Tipsters: { data: [...] }; legado: { data: { sr: [...] } }
+      const items = normalizeHotelscomTipsterAutocomplete(envelope);
+      return items.map((r) => ({ ...r, gaiaId: r.id })) as HotelscomRegion[];
     },
     enabled: enabled && trimmed.length >= 2,
     staleTime: 24 * 60 * 60 * 1000,
@@ -638,22 +641,43 @@ export function useHotelscomAutocomplete(
 }
 
 export interface HotelscomSearchInput {
-  locationId: string;
-  checkinDate: string;
-  checkoutDate: string;
+  /** Compat: aceita region_id (novo) ou locationId (legado). */
+  region_id?: string;
+  locationId?: string;
+  /** Datas: aceita checkin_date (novo) ou checkinDate (legado). */
+  checkin_date?: string;
+  checkinDate?: string;
+  checkout_date?: string;
+  checkoutDate?: string;
+  adults_number?: number;
   adults?: number;
   children_ages?: string;
-  currency?: string;
+  domain?: string;
   locale?: string;
-  sort_order?: string;
-  page_number?: number;
+  sort_order?:
+    | "PRICE_LOW_TO_HIGH"
+    | "RECOMMENDED"
+    | "REVIEW"
+    | "DISTANCE"
+    | "PROPERTY_CLASS"
+    | "PRICE_RELEVANT";
+  star_rating_ids?: string;
+  /** Legado — mapeado pra star_rating_ids. */
+  star_rating?: string;
   price_min?: number;
   price_max?: number;
-  star_rating?: string;
+  guest_rating_min?: 7 | 8 | 9;
+  page_number?: number;
+  lodging_type?: string;
+  meal_plan?: string;
+  amenities?: string;
+  payment_type?: string;
+  available_filter?: "SHOW_AVAILABLE_ONLY";
+  accessibility?: string;
 }
 
 export interface HotelscomSearchResult {
-  cards: HotelscomLodgingCard[];
+  cards: UnifiedHotel[];
   totalCount: number | null;
   cache_hit: boolean;
   raw?: unknown;
@@ -661,9 +685,13 @@ export interface HotelscomSearchResult {
 
 function extractHotelscomTotal(raw: {
   pagination?: { totalCount?: number };
-  summary?: { resultMessages?: Array<{ text?: string }> };
+  totalCount?: number;
+  summary?: { resultMessages?: Array<{ text?: string }>; matchedPropertiesSize?: number };
 } | undefined): number | null {
   if (typeof raw?.pagination?.totalCount === "number") return raw.pagination.totalCount;
+  if (typeof raw?.totalCount === "number") return raw.totalCount;
+  if (typeof raw?.summary?.matchedPropertiesSize === "number")
+    return raw.summary.matchedPropertiesSize;
   const messages = Array.isArray(raw?.summary?.resultMessages) ? raw.summary.resultMessages : [];
   for (const item of messages) {
     const text = typeof item?.text === "string" ? item.text : "";
@@ -679,20 +707,31 @@ export function useHotelscomSearch(
   params: HotelscomSearchInput | null,
   enabled: boolean = true,
 ) {
-  const keyParams = params
+  const regionId = params?.region_id ?? params?.locationId ?? null;
+  const checkin = params?.checkin_date ?? params?.checkinDate ?? null;
+  const checkout = params?.checkout_date ?? params?.checkoutDate ?? null;
+
+  const keyParams = params && regionId && checkin && checkout
     ? {
-        locationId: params.locationId,
-        checkinDate: params.checkinDate,
-        checkoutDate: params.checkoutDate,
-        adults: params.adults ?? 2,
+        region_id: regionId,
+        checkin_date: checkin,
+        checkout_date: checkout,
+        adults_number: params.adults_number ?? params.adults ?? 2,
         children_ages: params.children_ages ?? "",
-        currency: params.currency ?? "BRL",
+        domain: params.domain ?? "BR",
         locale: params.locale ?? "pt_BR",
         sort_order: params.sort_order ?? "RECOMMENDED",
         page_number: params.page_number ?? 1,
+        star_rating_ids: params.star_rating_ids ?? params.star_rating,
         price_min: params.price_min,
         price_max: params.price_max,
-        star_rating: params.star_rating,
+        guest_rating_min: params.guest_rating_min,
+        lodging_type: params.lodging_type,
+        meal_plan: params.meal_plan,
+        amenities: params.amenities,
+        payment_type: params.payment_type,
+        available_filter: params.available_filter,
+        accessibility: params.accessibility,
       }
     : null;
 
@@ -702,28 +741,23 @@ export function useHotelscomSearch(
       if (!keyParams) throw new Error("Params inválidos");
       const envelope = await invokeBooking<{
         data: {
-          propertySearchListings?: HotelscomLodgingCard[];
+          properties?: any[];
+          propertySearchListings?: any[];
           pagination?: { totalCount?: number };
           summary?: Record<string, unknown>;
         };
         __cache?: boolean;
       }>("hotelscomSearch" as BookingAction, keyParams);
-      const listings =
-        envelope?.data?.propertySearchListings?.filter(
-          (l: any) => l.__typename === "LodgingCard",
-        ) ?? [];
+
+      const cards = normalizeHotelscomTipsterSearch(envelope);
       return {
-        cards: listings,
-        totalCount: extractHotelscomTotal(envelope?.data),
+        cards,
+        totalCount: extractHotelscomTotal(envelope?.data as any),
         cache_hit: !!envelope?.__cache,
         raw: envelope?.data,
       };
     },
-    enabled:
-      enabled &&
-      !!keyParams?.locationId &&
-      !!keyParams?.checkinDate &&
-      !!keyParams?.checkoutDate,
+    enabled: enabled && !!keyParams,
     staleTime: 10 * 60 * 1000,
   });
 }
@@ -737,7 +771,7 @@ export function useHotelscomDetails(
     queryFn: async () => {
       const envelope = await invokeBooking<{ data: unknown }>(
         "hotelscomDetails" as BookingAction,
-        { propertyId: hotelId },
+        { hotel_id: hotelId },
       );
       return envelope?.data;
     },
@@ -747,10 +781,13 @@ export function useHotelscomDetails(
 }
 
 // ============================================================
-// HOTELS.COM — DETALHES COMPLETOS (11 endpoints em paralelo)
+// HOTELS.COM — DETALHES COMPLETOS (5 chamadas tipsters)
 // ============================================================
 
 export interface HotelscomFullDetails {
+  /** Bloco consolidado da tipsters (details + offers + reviews) */
+  consolidated?: ReturnType<typeof normalizeHotelscomTipsterDetails>;
+  // Campos legados mantidos como fallback opcional pra UI antiga
   content?: any;
   gallery?: any;
   amenities?: any;
@@ -765,9 +802,8 @@ export interface HotelscomFullDetails {
 }
 
 /**
- * Busca em paralelo os 11 endpoints de detalhe do Hotels.com.
- * `propertyId` deve ser o ID composto "regionId_propertyId".
- * Tolerante a falhas: se um endpoint falhar, retorna undefined naquele campo.
+ * Tipsters: 5 chamadas em paralelo (vs 11 do legado).
+ * `propertyId` é o hotel_id direto (não mais composto regionId_propertyId).
  */
 export function useHotelscomFullDetails(
   propertyId: string | null,
@@ -789,74 +825,87 @@ export function useHotelscomFullDetails(
       if (!propertyId) throw new Error("propertyId obrigatório");
 
       const baseParams = {
-        propertyId,
-        domain: "US",
-        locale: "en_US",
+        hotel_id: propertyId,
+        domain: "BR",
+        locale: "pt_BR",
       };
+      const offersParams =
+        checkinDate && checkoutDate
+          ? {
+              ...baseParams,
+              checkin_date: checkinDate,
+              checkout_date: checkoutDate,
+              adults_number: adults,
+            }
+          : null;
 
       const safe = async <T = any>(
         action: string,
-        params: Record<string, unknown>,
+        p: Record<string, unknown>,
       ): Promise<T | undefined> => {
         try {
-          const env = await invokeBooking<{ data: T }>(
+          const env = await invokeBooking<{ data: T } | T>(
             action as BookingAction,
-            params,
+            p,
           );
-          return (env as any)?.data;
+          return ((env as any)?.data ?? env) as T;
         } catch (err) {
           console.warn(`[hotelscomFullDetails] ${action} falhou:`, err);
           return undefined;
         }
       };
 
-      const offersParams =
-        checkinDate && checkoutDate
-          ? { ...baseParams, checkinDate, checkoutDate, adults }
-          : null;
+      const [details, offers, reviewsSummary, reviewsScores, reviewsList] =
+        await Promise.all([
+          safe("hotelscomDetails", baseParams),
+          offersParams ? safe("hotelscomOffers", offersParams) : Promise.resolve(undefined),
+          safe("hotelscomReviewsSummary", baseParams),
+          safe("hotelscomRatingSummary", baseParams),
+          safe("hotelscomReviewsList", baseParams),
+        ]);
 
-      const [
-        content,
-        gallery,
-        amenities,
+      const consolidated = normalizeHotelscomTipsterDetails({
+        details,
         offers,
-        summary,
-        location,
-        ratingSummary,
-        highlights,
-        reviewsList,
         reviewsSummary,
-        headline,
-      ] = await Promise.all([
-        safe("hotelscomContent", baseParams),
-        safe("hotelscomGallery", baseParams),
-        safe("hotelscomAmenities", baseParams),
-        offersParams ? safe("hotelscomOffers", offersParams) : Promise.resolve(undefined),
-        safe("hotelscomSummary", baseParams),
-        safe("hotelscomLocation", baseParams),
-        safe("hotelscomRatingSummary", baseParams),
-        safe("hotelscomHighlights", baseParams),
-        safe("hotelscomReviewsList", baseParams),
-        safe("hotelscomReviewsSummary", baseParams),
-        safe("hotelscomHeadline", baseParams),
-      ]);
+        reviewsScores,
+        reviewsList,
+      });
 
       return {
-        content,
-        gallery,
-        amenities,
+        consolidated,
+        // Mantém campos legados pra retrocompat dos extractors antigos do drawer
+        content: details,
+        gallery: details,
+        amenities: details,
         offers,
-        summary,
-        location,
-        ratingSummary,
-        highlights,
+        location: details,
+        highlights: details,
+        ratingSummary: reviewsScores,
         reviewsList,
         reviewsSummary,
-        headline,
+        headline: details,
+        summary: details,
       };
     },
     enabled: enabled && !!propertyId,
-    staleTime: 30 * 60 * 1000, // 30min — preços/disponibilidade não envelhecem demais
+    staleTime: 30 * 60 * 1000,
+  });
+}
+
+export function useHotelscomSlugToId(slug: string | null) {
+  return useQuery({
+    queryKey: ["booking-rapidapi", "hotelscomSlugToId", slug],
+    queryFn: async () => {
+      if (!slug) return null;
+      const r = await invokeBooking<{ hotel_id?: string; data?: { hotel_id?: string } }>(
+        "hotelscomSlugToId" as BookingAction,
+        { slug },
+      );
+      return (r as any)?.hotel_id ?? (r as any)?.data?.hotel_id ?? null;
+    },
+    enabled: !!slug,
+    staleTime: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
