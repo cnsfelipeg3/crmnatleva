@@ -467,3 +467,133 @@ export function extractAllOfferPerks(offers: any): OfferPerk[] {
   }
   return out;
 }
+
+// ============================================================
+// Tipsters / hotels-com-provider — normalizers
+// ============================================================
+
+import type { UnifiedHotel } from "./unifiedHotelTypes";
+
+/**
+ * Normaliza a resposta de /v3/hotels/search (tipsters).
+ * Estrutura: { data: { properties: [...] } }
+ */
+export function normalizeHotelscomTipsterSearch(raw: any): UnifiedHotel[] {
+  const properties: any[] = raw?.data?.properties ?? raw?.properties ?? [];
+  return properties.map((p: any) => {
+    const priceLead = p?.price?.lead;
+    const priceStrike = p?.price?.strikeOut;
+    const photo = p?.propertyImage?.image?.url ?? null;
+    const guestRating = p?.guestRating ?? p?.reviews;
+
+    const messages: any[] = Array.isArray(p?.messages) ? p.messages : [];
+
+    return {
+      source: "hotelscom" as const,
+      id: String(p.id),
+      uid: `hotelscom:${p.id}`,
+      name: p.name || "Hotel sem nome",
+      location: p.neighborhood ?? p?.regionNames?.shortName,
+      latitude: p?.mapMarker?.latLong?.latitude,
+      longitude: p?.mapMarker?.latLong?.longitude,
+      photoUrl: photo,
+      photoUrls: photo ? [photo] : [],
+      stars: p.starRating ?? null,
+      reviewScore: guestRating?.rating ?? null,
+      reviewScoreWord: guestRating?.wordRating ?? null,
+      reviewCount: guestRating?.totalReviewCount ?? guestRating?.totalCount ?? 0,
+      priceTotal: priceLead?.amount ?? null,
+      priceCurrency: priceLead?.currencyInfo?.code ?? "BRL",
+      priceStriked: priceStrike?.amount ?? null,
+      pricePerNight: priceLead?.amount ?? null,
+      priceFormatted: priceLead?.formatted ?? null,
+      freeCancellation: messages.some((m: any) => m?.type === "FREE_CANCELLATION"),
+      breakfastIncluded: messages.some((m: any) => m?.type === "BREAKFAST"),
+      amenities: (p?.amenities ?? []).map((a: any) => a?.label || a?.id).filter(Boolean),
+      externalUrl: `https://www.hotels.com/ho${p.id}`,
+      discountBadge:
+        priceStrike?.amount && priceLead?.amount
+          ? `-${Math.round(((priceStrike.amount - priceLead.amount) / priceStrike.amount) * 100)}%`
+          : undefined,
+      photoCaptions: [p?.propertyImage?.image?.description].filter(Boolean) as string[],
+      promoBadges: messages.filter((m: any) => m?.type === "DEAL").map((m: any) => m?.text).filter(Boolean),
+      neighborhood: p.neighborhood,
+      raw: p,
+    } as unknown as UnifiedHotel;
+  });
+}
+
+/**
+ * Consolida partes da tipsters (details + offers + reviews) num shape único.
+ * Tolerante a campos ausentes — todos os getters caem em fallback.
+ */
+export function normalizeHotelscomTipsterDetails(parts: {
+  details?: any;
+  info?: any;
+  offers?: any;
+  summary?: any;
+  reviewsSummary?: any;
+  reviewsScores?: any;
+  reviewsList?: any;
+}) {
+  const d = parts.details?.data ?? parts.details ?? {};
+  const info = parts.info?.data ?? parts.info ?? {};
+  return {
+    name: d?.name ?? info?.name,
+    starRating: d?.starRating ?? info?.starRating,
+    address: d?.address ?? info?.address,
+    latitude: d?.coordinates?.lat ?? info?.coordinates?.lat,
+    longitude: d?.coordinates?.lng ?? info?.coordinates?.lng,
+    phone: d?.phone ?? info?.phone,
+    email: d?.email ?? info?.email,
+    gallery: d?.gallery?.images ?? d?.images ?? [],
+    amenitiesByCategory: d?.amenities?.categories ?? d?.amenityGroups ?? [],
+    highlights: d?.highlights ?? d?.propertyHighlights ?? [],
+    sustainability: d?.sustainability ?? d?.ecoCertifications ?? null,
+    surroundings: d?.surroundings ?? d?.neighborhoodHighlights ?? [],
+    policies: {
+      checkIn: d?.policies?.checkIn ?? d?.checkInTime,
+      checkOut: d?.policies?.checkOut ?? d?.checkOutTime,
+      languages: d?.policies?.languagesSpoken ?? d?.languagesSpoken,
+      pets: d?.policies?.pets ?? d?.petPolicy,
+      family: d?.policies?.family ?? d?.familyPolicy,
+    },
+    brand: d?.brand ?? info?.brand,
+    categories: d?.categories ?? info?.themes ?? [],
+    description: d?.description ?? info?.description,
+    rooms: parts.offers?.rooms ?? parts.offers?.data?.rooms ?? [],
+    reviewsSummary: {
+      rating: parts.reviewsSummary?.rating ?? null,
+      ratingWord: parts.reviewsSummary?.ratingWord ?? null,
+      totalCount: parts.reviewsSummary?.totalReviewCount ?? 0,
+      summary: parts.reviewsSummary?.summary ?? null,
+    },
+    reviewsScoresBreakdown: parts.reviewsScores?.categories ?? [],
+    reviewsList: parts.reviewsList?.reviews ?? [],
+  };
+}
+
+/**
+ * Normaliza /v2/regions (tipsters autocomplete).
+ */
+export function normalizeHotelscomTipsterAutocomplete(raw: any): Array<{
+  id: string;
+  name: string;
+  fullName: string;
+  type: string;
+  coords?: { lat: number; lng: number };
+}> {
+  const items: any[] = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+  return items
+    .filter((it: any) => it?.gaiaId ?? it?.id)
+    .map((it: any) => ({
+      id: String(it.gaiaId ?? it.id),
+      name: it?.regionNames?.shortName ?? it?.name ?? "",
+      fullName: it?.regionNames?.fullName ?? it?.name ?? "",
+      type: it?.type ?? "REGION",
+      coords:
+        it?.coordinates && typeof it.coordinates.lat === "number"
+          ? { lat: it.coordinates.lat, lng: it.coordinates.lng ?? it.coordinates.long }
+          : undefined,
+    }));
+}
