@@ -2806,6 +2806,12 @@ export default function LiveChat() {
                               >
                                 <File className="h-4 w-4 text-amber-400" /> Documento
                               </button>
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors"
+                                onClick={() => { setShowLocationDialog(true); setShowMobilePlusMenu(false); }}
+                              >
+                                <MapPin className="h-4 w-4 text-rose-400" /> Localização
+                              </button>
                               <Separator className="my-1" />
                               <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ferramentas</p>
                               <button
@@ -2848,6 +2854,12 @@ export default function LiveChat() {
                                 onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); }}
                               >
                                 <File className="h-4 w-4 text-amber-400" /> Documento
+                              </button>
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors"
+                                onClick={() => { setShowLocationDialog(true); setShowMediaMenu(false); }}
+                              >
+                                <MapPin className="h-4 w-4 text-rose-400" /> Localização
                               </button>
                             </PopoverContent>
                           </Popover>
