@@ -222,7 +222,7 @@ export default function BookingSearchPage() {
           domain: "BR",
           locale: "pt_BR",
           page_number: currentPage,
-          sort_order: "RECOMMENDED",
+          ...premiumFiltersToParams(hotelscomPremium),
         }
       : null,
   );
