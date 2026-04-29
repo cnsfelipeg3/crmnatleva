@@ -1,0 +1,1 @@
+UPDATE public.conversations SET unread_count = 0 WHERE unread_count > 999 OR unread_count < 0;
