@@ -130,10 +130,12 @@ async function resolveLidPhone(
       });
       if (match?.phone) {
         const resolved = normalizePhone(String(match.phone));
+        // Only cache senderPhoto for inbound msgs (fromMe=true would store agency photo)
+        const photo = !body.fromMe ? (body.senderPhoto || match.profilePictureUrl || match.imageUrl || null) : (match.profilePictureUrl || match.imageUrl || null);
         await supabase.from("zapi_contacts").upsert({
           phone: resolved, lid,
           name: body.chatName || match.name || null,
-          profile_pic: body.senderPhoto || null,
+          profile_picture_url: photo,
           updated_at: new Date().toISOString(),
         }, { onConflict: "phone" });
         console.log(`[Webhook] LID ${lid} → resolved via API to ${resolved}`);
@@ -472,7 +474,7 @@ Deno.serve(async (req) => {
         phone: normalizePhone(phone),
         lid,
         name: body.chatName || body.senderName || null,
-        profile_pic: body.senderPhoto || body.photo || null,
+        profile_picture_url: body.senderPhoto || body.photo || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "phone" });
     }
@@ -667,14 +669,24 @@ Deno.serve(async (req) => {
 async function saveContact(supabase: any, phone: string, body: any, chatLid: string | null) {
   if (!phone || !body.chatName) return;
   const contactPhone = normalizePhone(phone);
+  // Only persist senderPhoto when inbound (fromMe = our agency, photo would be ours)
+  const incomingPhoto = !body.fromMe ? (body.senderPhoto || body.photo || null) : null;
   const upsertData: Record<string, unknown> = {
     phone: contactPhone,
     name: body.chatName || null,
-    profile_pic: body.senderPhoto || body.photo || null,
     updated_at: new Date().toISOString(),
   };
+  if (incomingPhoto) upsertData.profile_picture_url = incomingPhoto;
   if (chatLid) {
     upsertData.lid = chatLid.replace("@lid", "");
   }
   await supabase.from("zapi_contacts").upsert(upsertData, { onConflict: "phone" });
+
+  // Also cache on conversation row for instant frontend display
+  if (incomingPhoto) {
+    await supabase.from("conversations").update({
+      profile_picture_url: incomingPhoto,
+      profile_picture_fetched_at: new Date().toISOString(),
+    }).eq("phone", contactPhone).is("profile_picture_url", null);
+  }
 }
