@@ -95,6 +95,7 @@ export async function fetchAllRows(
       }
 
       allRows.push(...page);
+      if (maxRows && allRows.length >= maxRows) break;
       hasMore = page.length === safeBatchSize;
       from += safeBatchSize;
     }
