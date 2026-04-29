@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
-import PerfDebugOverlay from "@/components/PerfDebugOverlay";
+const PerfDebugOverlay = import.meta.env.DEV
+  ? lazy(() => import("@/components/PerfDebugOverlay"))
+  : ((() => null) as unknown as React.LazyExoticComponent<React.ComponentType>);
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
