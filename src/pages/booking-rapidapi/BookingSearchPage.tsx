@@ -57,14 +57,12 @@ import type {
 import { emptyHotelFiltersState } from "@/components/booking-rapidapi/types";
 import {
   normalizeBookingHotel,
-  normalizeHotelscomHotel,
   convertPriceToBRL,
   groupHotelsByIdentity,
   type UnifiedHotel,
   type UnifiedHotelGroup,
   type UnifiedHotelOffer,
   type HotelSource,
-  type HotelscomLodgingCard,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
 
 const SORT_OPTIONS = [
