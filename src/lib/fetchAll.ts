@@ -33,7 +33,8 @@ export async function fetchAllRows(
   options?: FetchAllOptions,
   batchSize: number = 1000,
 ): Promise<any[]> {
-  const safeBatchSize = Math.max(100, Math.min(batchSize, 1000));
+  const maxRows = options?.maxRows && options.maxRows > 0 ? options.maxRows : undefined;
+  const safeBatchSize = Math.max(1, Math.min(batchSize, maxRows ?? 1000, 1000));
   const requestKey = JSON.stringify({ table, select, options: { ...options, bypassCache: undefined }, batchSize: safeBatchSize });
   const cacheMs = Math.max(0, options?.cacheMs ?? DEFAULT_CACHE_MS);
 
@@ -94,6 +95,7 @@ export async function fetchAllRows(
       }
 
       allRows.push(...page);
+      if (maxRows && allRows.length >= maxRows) break;
       hasMore = page.length === safeBatchSize;
       from += safeBatchSize;
     }

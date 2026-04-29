@@ -57,6 +57,10 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+const toUnreadCount = (value: unknown) => {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? Math.max(0, num) : 0;
+};
 function Linkify({ text }: { text: string }) {
   if (!text) return null;
   const parts = text.split(URL_REGEX);
@@ -536,11 +540,11 @@ function OperacaoInboxInner() {
   // Load DB conversations on mount
   useEffect(() => {
     const loadDbConversations = async () => {
-      await initPersistence();
+      initPersistence().catch(() => {});
       const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned", {
         order: { column: "last_message_at", ascending: false },
-        cacheMs: 0,
-        bypassCache: true,
+        maxRows: 250,
+        cacheMs: 30_000,
         isFilters: { excluded_at: null },
       });
 
@@ -559,7 +563,7 @@ function OperacaoInboxInner() {
             source: c.source || "",
             last_message_at: c.last_message_at || "",
             last_message_preview: c.last_message_preview || fallbackPreview || "",
-            unread_count: c.unread_count || 0,
+            unread_count: toUnreadCount(c.unread_count),
             is_vip: c.is_vip || false,
             assigned_to: c.assigned_to || "",
             score_potential: c.score_potential || 0,
@@ -610,7 +614,7 @@ function OperacaoInboxInner() {
       try {
         const data = await callZapiProxy("get-chats");
         const chats = Array.isArray(data) ? data : [];
-        const newConvs: Conversation[] = [];
+          const newConvs: Array<Conversation & { _hasReliableActivity?: boolean }> = [];
         for (const chat of chats) {
           const phone = chat.phone || chat.id || "";
           if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
@@ -624,13 +628,15 @@ function OperacaoInboxInner() {
             else if (chat.lastMessageTime && Number(chat.lastMessageTime) > 0) lastMsgTime = new Date(Number(chat.lastMessageTime)).toISOString();
           } catch { lastMsgTime = null; }
           const chatPhoto = chat.imgUrl || chat.image || chat.photo || "";
+          const hasReliableActivity = Boolean(lastMsgTime || chat.lastMessage || chat.lastMessageText);
           newConvs.push({
             id: convId, phone: cleanPhone, contact_name: contactName,
             stage: "novo_lead" as Stage, tags: [], source: "whatsapp",
-            last_message_at: lastMsgTime || new Date().toISOString(),
+            last_message_at: lastMsgTime || "",
             last_message_preview: chat.lastMessage || chat.lastMessageText || "",
-            unread_count: chat.unreadMessages || chat.unread || 0,
+            unread_count: toUnreadCount(chat.unreadMessages ?? chat.unread),
             is_vip: false, assigned_to: "", score_potential: 0, score_risk: 0,
+            _hasReliableActivity: hasReliableActivity,
           });
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
@@ -639,23 +645,25 @@ function OperacaoInboxInner() {
         // Save any inline chat photos to cache
         if (newConvs.length > 0) saveProfilePicsCache();
         if (newConvs.length > 0) {
-          const deduped = new Map<string, Conversation>();
+          const deduped = new Map<string, Conversation & { _hasReliableActivity?: boolean }>();
           for (const conv of newConvs) {
             const existing = deduped.get(conv.id);
             if (!existing || new Date(conv.last_message_at).getTime() > new Date(existing.last_message_at).getTime()) deduped.set(conv.id, conv);
           }
-          const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+          const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
           setConversations(prev => {
             const prevMap = new Map(prev.map(c => [c.id, c]));
-            const merged = dedupedConvs.map(c => {
+            const merged = dedupedConvs.flatMap(c => {
               const existing = prevMap.get(c.id);
               if (existing) {
                 const isOpen = c.id === selectedIdRef.current;
-                const existingTime = new Date(existing.last_message_at).getTime();
-                const freshTime = new Date(c.last_message_at).getTime();
-                return { ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: freshTime > existingTime ? c.last_message_at : existing.last_message_at, last_message_preview: (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : existing.unread_count, stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
+                const existingTime = new Date(existing.last_message_at || 0).getTime();
+                const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
+                const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
+                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(existing.unread_count, c.unread_count || 0), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
               }
-              return c;
+              if (!c._hasReliableActivity) return [];
+              return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
             });
             const freshIds = new Set(dedupedConvs.map(c => c.id));
             const kept = prev.filter(c => !freshIds.has(c.id));
@@ -665,9 +673,10 @@ function OperacaoInboxInner() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           });
-          for (const conv of dedupedConvs) persistConversation(conv).catch(() => {});
+          const existingIds = new Set(conversationsRef.current.map(c => c.id));
+          for (const conv of dedupedConvs.filter(c => c._hasReliableActivity && !existingIds.has(c.id))) persistConversation(conv).catch(() => {});
           // Fetch profile pictures in parallel batches
-          const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 20);
+          const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
           if (needsPic.length > 0) {
             const BATCH = 5;
             for (let i = 0; i < needsPic.length; i += BATCH) {
@@ -1393,7 +1402,7 @@ function OperacaoInboxInner() {
     } catch (err: any) { toast({ title: "Erro ao iniciar fluxo", description: err.message, variant: "destructive" }); }
   }, [selectedId, selected]);
 
-  const totalUnread = conversations.reduce((s, c) => s + c.unread_count, 0);
+  const totalUnread = conversations.reduce((s, c) => s + toUnreadCount(c.unread_count), 0);
 
   return (
     <div
