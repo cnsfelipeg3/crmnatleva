@@ -104,22 +104,10 @@ export default defineConfig(({ mode }) => ({
       "clsx",
       "tailwind-merge",
       "class-variance-authority",
-      // Lodash é CommonJS · precisa ser pre-bundled pelo Vite pra
-      // expor named e default exports. Submódulos comuns devem ser
-      // listados explicitamente porque Vite não detecta auto.
-      "lodash",
-      "lodash/get",
-      "lodash/set",
-      "lodash/debounce",
-      "lodash/throttle",
-      "lodash/merge",
-      "lodash/cloneDeep",
-      "lodash/isEqual",
-      "lodash/pick",
-      "lodash/omit",
-      "lodash/groupBy",
-      "lodash/sortBy",
-      "lodash/uniqBy",
+      // Nota: `lodash` não é dependência direta · recharts usa `lodash/*`
+      // internamente, mas o Vite resolve isso via dep-scan automático
+      // ao pre-bundlear o próprio recharts. Listar `lodash/*` aqui sem
+      // o pacote instalado quebra o boot inteiro com "Failed to resolve dependency".
       // Leaflet é CommonJS (UMD) · precisa ser pre-bundled pelo Vite
       // pra expor `export default L`. Sem isso, `import * as L from "leaflet"`
       // falha em dev com "does not provide an export named 'default'".
