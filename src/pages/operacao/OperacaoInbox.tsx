@@ -17,7 +17,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
@@ -1500,20 +1500,21 @@ function OperacaoInboxInner() {
                   </button>
                 )}
               </div>
-              <ScrollArea className="w-full">
-                <div className="flex gap-1 pb-0.5">
+              <ScrollArea className="w-full whitespace-nowrap">
+                <div className="flex gap-1 pb-1.5 w-max">
                   {FILTERS.map(f => {
                     const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0).length
                       : f.key === "vip" ? conversations.filter(c => c.is_vip).length
                       : 0;
                     return (
-                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
                         {f.label}
                         {count > 0 && <span className={`text-[9px] ${activeFilter === f.key ? "opacity-80" : "opacity-50"}`}>({count})</span>}
                       </button>
                     );
                   })}
                 </div>
+                <ScrollBar orientation="horizontal" className="h-1.5" />
               </ScrollArea>
             </div>
 
