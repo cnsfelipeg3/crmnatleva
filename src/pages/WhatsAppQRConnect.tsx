@@ -1,4 +1,5 @@
 import { WhatsAppQRCard } from "@/components/livechat/WhatsAppQRCard";
+import { AutoRejectCallsCard } from "@/components/livechat/AutoRejectCallsCard";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +19,9 @@ export default function WhatsAppQRConnect() {
       </div>
 
       <WhatsAppQRCard />
+
+      <AutoRejectCallsCard />
     </div>
   );
 }
+

@@ -384,6 +384,28 @@ Deno.serve(async (req) => {
     const eventType = classifyEvent(body);
 
     // ═══════════════════════════════════════════════════════════
+    // FAST-PATH: PresenceChatCallback (cliente digitando/gravando)
+    // Alta frequência · não salvamos em whatsapp_events_raw pra
+    // não inflar a tabela. Só upsert em chat_presence + retorna.
+    // ═══════════════════════════════════════════════════════════
+    if (body?.type === "PresenceChatCallback" && body?.phone) {
+      const cleanPhone = String(body.phone).replace(/\D/g, "");
+      const status = String(body.status || "available");
+      try {
+        await supabase.from("chat_presence").upsert({
+          phone: cleanPhone,
+          status,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "phone" });
+      } catch (e: any) {
+        console.warn("[Webhook] presence upsert failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "presence" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // STEP 0: SAVE RAW EVENT IMMEDIATELY — ZERO loss guarantee
     // ═══════════════════════════════════════════════════════════
     const { data: rawEvent, error: rawErr } = await supabase

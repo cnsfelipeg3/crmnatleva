@@ -9,7 +9,7 @@ import {
   Target, TrendingUp, Shield, Zap, Hash, Globe, ChevronRight, Bot,
   Circle, CheckCheck, Ban, Link2, Clipboard, Calendar, BarChart3,
   Workflow, Link, Brain, TestTube, ScrollText, Cog, Loader2, StopCircle,
-  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download,
+  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download, MapPin,
 } from "lucide-react";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -315,10 +315,73 @@ export default function LiveChat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
 
+  // ─── Presence (digitando/gravando) via realtime chat_presence ───
+  const [presenceByPhone, setPresenceByPhone] = useState<Record<string, { status: string; updated_at: string }>>({});
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('chat-presence-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_presence' }, (payload) => {
+        const n: any = payload.new;
+        if (!n?.phone) return;
+        setPresenceByPhone(prev => ({
+          ...prev,
+          [n.phone]: { status: n.status, updated_at: n.updated_at },
+        }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // ─── Send-location dialog ───
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
+
   const selected = conversations.find(c => c.id === selectedId);
   const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
   const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
+
+  // Helper · label de presença ativa (válida apenas se < 30s atrás)
+  const presenceLabel = useMemo(() => {
+    const phone = selected?.phone;
+    if (!phone) return null;
+    const cleanPhone = String(phone).replace(/\D/g, "");
+    const entry = presenceByPhone[cleanPhone];
+    if (!entry) return null;
+    const age = Date.now() - new Date(entry.updated_at).getTime();
+    if (age > 30_000) return null;
+    if (entry.status === "composing") return "digitando…";
+    if (entry.status === "recording") return "gravando áudio…";
+    return null;
+  }, [selected?.phone, presenceByPhone]);
+
+  // Handler · enviar localização via Z-API
+  const handleSendLocation = useCallback(async () => {
+    if (!selected?.phone) return;
+    const lat = parseFloat(locationInput.lat);
+    const lng = parseFloat(locationInput.lng);
+    if (isNaN(lat) || isNaN(lng)) {
+      toast({ title: "Coordenadas inválidas", variant: "destructive" });
+      return;
+    }
+    try {
+      await callZapiProxy("send-message-location", {
+        phone: selected.phone,
+        title: locationInput.name || "Localização",
+        address: locationInput.address || "",
+        latitude: lat,
+        longitude: lng,
+      });
+      toast({ title: "Localização enviada" });
+      setShowLocationDialog(false);
+      setLocationInput({ name: "", address: "", lat: "", lng: "" });
+    } catch (err: any) {
+      console.error("Erro ao enviar localização:", err);
+      toast({ title: "Erro ao enviar localização", variant: "destructive" });
+    }
+  }, [selected?.phone, locationInput]);
+
 
   // Load active flow name for selected conversation
   useEffect(() => {
@@ -2249,9 +2312,15 @@ export default function LiveChat() {
                             <span className="text-sm font-bold truncate">{selectedDisplayName}</span>
                             {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
                           </div>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {formatPhoneDisplay(selected.phone)}
-                          </p>
+                          {presenceLabel ? (
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 italic truncate animate-pulse">
+                              {presenceLabel}
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {formatPhoneDisplay(selected.phone)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -2640,6 +2709,65 @@ export default function LiveChat() {
                     />
                   )}
 
+                  {/* Send Location Dialog */}
+                  <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 text-rose-500" />
+                          Enviar localização
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-3 pt-2">
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Nome do local</label>
+                          <Input
+                            value={locationInput.name}
+                            onChange={(e) => setLocationInput(p => ({ ...p, name: e.target.value }))}
+                            placeholder="Ex: Hotel Copacabana Palace"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">Endereço (opcional)</label>
+                          <Input
+                            value={locationInput.address}
+                            onChange={(e) => setLocationInput(p => ({ ...p, address: e.target.value }))}
+                            placeholder="Av. Atlântica, 1702"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Latitude</label>
+                            <Input
+                              value={locationInput.lat}
+                              onChange={(e) => setLocationInput(p => ({ ...p, lat: e.target.value }))}
+                              placeholder="-22.9714"
+                              inputMode="decimal"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Longitude</label>
+                            <Input
+                              value={locationInput.lng}
+                              onChange={(e) => setLocationInput(p => ({ ...p, lng: e.target.value }))}
+                              placeholder="-43.1825"
+                              inputMode="decimal"
+                            />
+                          </div>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          Dica · pegue lat/lng no Google Maps · clique direito no local · "Copiar coordenadas".
+                        </p>
+                        <div className="flex justify-end gap-2 pt-2">
+                          <Button variant="ghost" size="sm" onClick={() => setShowLocationDialog(false)}>Cancelar</Button>
+                          <Button size="sm" onClick={handleSendLocation} className="bg-rose-500 hover:bg-rose-600 text-white">
+                            <Send className="h-3.5 w-3.5 mr-1.5" /> Enviar
+                          </Button>
+                        </div>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+
                   {/* Disconnected warning */}
                   {!waConnected && selectedId?.startsWith("wa_") && (
                     <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
@@ -2737,6 +2865,12 @@ export default function LiveChat() {
                               >
                                 <File className="h-4 w-4 text-amber-400" /> Documento
                               </button>
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors"
+                                onClick={() => { setShowLocationDialog(true); setShowMobilePlusMenu(false); }}
+                              >
+                                <MapPin className="h-4 w-4 text-rose-400" /> Localização
+                              </button>
                               <Separator className="my-1" />
                               <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ferramentas</p>
                               <button
@@ -2779,6 +2913,12 @@ export default function LiveChat() {
                                 onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); }}
                               >
                                 <File className="h-4 w-4 text-amber-400" /> Documento
+                              </button>
+                              <button
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors"
+                                onClick={() => { setShowLocationDialog(true); setShowMediaMenu(false); }}
+                              >
+                                <MapPin className="h-4 w-4 text-rose-400" /> Localização
                               </button>
                             </PopoverContent>
                           </Popover>

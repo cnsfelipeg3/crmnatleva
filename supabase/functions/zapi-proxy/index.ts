@@ -632,6 +632,120 @@ serve(async (req) => {
         });
         break;
 
+      // ═══════════════════════════════════════════════════════════
+      // === SPRINT 1 QUICK WINS ===
+      // ═══════════════════════════════════════════════════════════
+
+      // Reagir mensagem (atalho on-hover · 6 emojis)
+      case "send-message-reaction":
+        url = `${BASE_URL}/send-reaction`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          messageId: payload.messageId,
+          reaction: payload.value || payload.reaction,
+        });
+        break;
+
+      // Remover reação previamente enviada
+      case "send-remove-reaction":
+        url = `${BASE_URL}/send-remove-reaction`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          messageId: payload.messageId,
+        });
+        break;
+
+      // Fixar / desafixar mensagem (pinDuration: "24H" | "7D" | "30D")
+      case "send-pin-message":
+        url = `${BASE_URL}/pin-message`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          messageId: payload.messageId,
+          messageAction: payload.pin === false ? "unpin" : "pin",
+          pinMessageDuration: payload.pinDuration || "30D",
+        });
+        break;
+
+      // Enviar localização (lat/lng + título + endereço)
+      case "send-message-location":
+        url = `${BASE_URL}/send-location`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          title: payload.title || "Localização",
+          address: payload.address || "",
+          latitude: payload.latitude,
+          longitude: payload.longitude,
+        });
+        break;
+
+      // Link com preview rico (foto + título do site)
+      case "send-link":
+        url = `${BASE_URL}/send-link`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          message: payload.message,
+          image: payload.image || "",
+          linkUrl: payload.linkUrl || payload.url,
+          title: payload.title || "",
+          linkDescription: payload.linkDescription || payload.description || "",
+        });
+        break;
+
+      // Botões interativos clicáveis (lista)
+      case "send-button-list":
+        url = `${BASE_URL}/send-button-list`;
+        method = "POST";
+        body = JSON.stringify(payload);
+        break;
+
+      // Marca mensagem como lida via API (não só localmente)
+      case "read-message":
+        url = `${BASE_URL}/read-message`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: payload.phone,
+          messageId: payload.messageId,
+        });
+        break;
+
+      // Verifica em lote se números têm WhatsApp ativo
+      case "is-whatsapp-batch":
+        url = `${BASE_URL}/phone-exists-batch`;
+        method = "POST";
+        body = JSON.stringify({ phones: payload.phones || [] });
+        break;
+
+      // Verifica um único número
+      case "is-whatsapp-single":
+        if (!payload?.phone) {
+          return new Response(
+            JSON.stringify({ error: "phone obrigatório" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        url = `${BASE_URL}/phone-exists/${payload.phone}`;
+        method = "GET";
+        break;
+
+      // Auto-rejeitar ligações (toggle on/off)
+      case "update-call-reject-auto":
+        url = `${BASE_URL}/update-call-reject-auto`;
+        method = "PUT";
+        body = JSON.stringify({ value: payload.enabled === true });
+        break;
+
+      // Mensagem custom enviada quando rejeita ligação automaticamente
+      case "update-call-reject-message":
+        url = `${BASE_URL}/update-call-reject-message`;
+        method = "PUT";
+        body = JSON.stringify({ value: payload.message || "" });
+        break;
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
