@@ -649,16 +649,17 @@ function OperacaoInboxInner() {
           const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
           setConversations(prev => {
             const prevMap = new Map(prev.map(c => [c.id, c]));
-            const merged = dedupedConvs.map(c => {
+            const merged = dedupedConvs.flatMap(c => {
               const existing = prevMap.get(c.id);
               if (existing) {
                 const isOpen = c.id === selectedIdRef.current;
                 const existingTime = new Date(existing.last_message_at || 0).getTime();
                 const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
                 const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
-                return { ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(existing.unread_count, c.unread_count || 0), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned };
+                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(existing.unread_count, c.unread_count || 0), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
               }
-              return { ...c, last_message_at: c.last_message_at || new Date().toISOString() };
+              if (!c._hasReliableActivity) return [];
+              return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
             });
             const freshIds = new Set(dedupedConvs.map(c => c.id));
             const kept = prev.filter(c => !freshIds.has(c.id));
@@ -668,7 +669,7 @@ function OperacaoInboxInner() {
               return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
             });
           });
-          for (const conv of dedupedConvs) persistConversation(conv).catch(() => {});
+          for (const conv of dedupedConvs.filter(c => c._hasReliableActivity)) persistConversation(conv).catch(() => {});
           // Fetch profile pictures in parallel batches
           const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
           if (needsPic.length > 0) {
