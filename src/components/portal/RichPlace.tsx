@@ -101,7 +101,12 @@ export function RichPlace({ name, city, tryResolve = true }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLSpanElement | HTMLButtonElement>(null);
 
-  const shouldTry = tryResolve && isLikelyPlaceName(name);
+  // Extrai candidatos limpos: descarta prefixos de etapa, separa parênteses
+  const candidates = extractCandidates(name);
+  const primary = candidates.find(isLikelyPlaceName) ?? "";
+  // Fallback: se "Mercado da Ribeira (Time Out Market)" não bater, tenta o do parêntese
+  const secondary = candidates.find((c) => c !== primary && isLikelyPlaceName(c)) ?? "";
+  const shouldTry = tryResolve && primary.length > 0;
 
   useEffect(() => {
     if (!shouldTry) return;
@@ -118,11 +123,23 @@ export function RichPlace({ name, city, tryResolve = true }: Props) {
     return () => obs.disconnect();
   }, [shouldTry]);
 
-  const { data: place, isFetching } = useConciergePlace(
-    name,
+  const { data: placePrimary, isFetching: fetchingPrimary } = useConciergePlace(
+    primary,
     city,
     shouldTry && isVisible,
   );
+
+  // Tenta o secundário só se o primário falhou
+  const trySecondary =
+    shouldTry && isVisible && !!secondary && placePrimary && !placePrimary.resolved;
+  const { data: placeSecondary, isFetching: fetchingSecondary } = useConciergePlace(
+    secondary,
+    city,
+    !!trySecondary,
+  );
+
+  const place = placePrimary?.resolved ? placePrimary : placeSecondary;
+  const isFetching = fetchingPrimary || fetchingSecondary;
 
   if (!shouldTry || !place || !place.resolved) {
     return (
