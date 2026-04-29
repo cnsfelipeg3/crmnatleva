@@ -1445,16 +1445,16 @@ function OperacaoInboxInner() {
           <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             {/* Sidebar Header */}
             <div className="px-3 pt-3 pb-2 space-y-2.5 shrink-0 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <MessageSquare className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <div>
-                    <span className="text-sm font-bold tracking-tight text-foreground">Inbox</span>
-                    {waConnected && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <span className="text-sm font-bold tracking-tight text-foreground truncate">Inbox</span>
+                    {waConnected && <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
                   </div>
-                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4 max-w-[44px] truncate">{totalUnread > 99 ? "99+" : totalUnread}</Badge>}
+                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4 shrink-0">{totalUnread > 99 ? "99+" : totalUnread}</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
                   <Tooltip>
