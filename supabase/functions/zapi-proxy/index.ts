@@ -466,7 +466,7 @@ serve(async (req) => {
 
       case "disconnect":
         url = `${BASE_URL}/disconnect`;
-        method = "DELETE";
+        method = "GET";
         break;
 
       case "restart":
