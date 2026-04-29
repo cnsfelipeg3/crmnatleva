@@ -11,7 +11,7 @@ import { RouteAwareSkeleton } from "./skeletons/PageSkeletons";
  *
  * Fail-safe: even if Suspense never resolves cleanly, we hard-show content after MAX_HOLD_MS.
  */
-const MAX_HOLD_MS = 1500;
+const MAX_HOLD_MS = 1200;
 
 export default function SmartSuspense({ children }: { children: ReactNode }) {
   const location = useLocation();
@@ -67,6 +67,7 @@ export default function SmartSuspense({ children }: { children: ReactNode }) {
         <div
           className="fixed inset-0 z-[9999] transition-opacity duration-300"
           style={{ opacity: phase === "fading" ? 0 : 1 }}
+          aria-hidden="true"
         >
           <NatLevaLoader />
         </div>
@@ -81,5 +82,5 @@ function ContentReadySignal({ onReady }: { onReady: () => void }) {
 }
 
 function SuspenseBridge() {
-  return <div className="min-h-screen" />;
+  return <RouteAwareSkeleton pathname={typeof window === "undefined" ? "/" : window.location.pathname} />;
 }
