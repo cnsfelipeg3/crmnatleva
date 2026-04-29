@@ -4,8 +4,7 @@ import AudioRecorder from "@/components/portal/AudioRecorder";
 import AudioBubble from "@/components/portal/AudioBubble";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Send, Image as ImageIcon, X, Loader2, Bot, User as UserIcon, Mic } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import ConciergeAnswer from "@/components/portal/ConciergeAnswer";
 import { toast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
