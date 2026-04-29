@@ -654,7 +654,53 @@ serve(async (req) => {
     console.log(`[Z-API] ${action} → ${method} ${url}`);
 
     const response = await fetch(url, fetchOpts);
-    const data = await response.json().catch(() => ({}));
+    let data = parseJsonSafely(await response.text());
+
+    if (action === "disconnect") {
+      const statusResponse = await fetch(`${BASE_URL}/status`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Client-Token": CLIENT_TOKEN,
+        },
+      });
+      const statusData = parseJsonSafely(await statusResponse.text());
+      const stillConnected = statusData?.connected === true || statusData?.smartphoneConnected === true;
+
+      if (response.ok || !stillConnected) {
+        return new Response(JSON.stringify({ success: true, disconnected: true, data, status: statusData }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (response.status === 405) {
+        console.warn("[Z-API] disconnect returned 405 and status still connected; trying restart fallback");
+        const restartResponse = await fetch(`${BASE_URL}/restart`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Client-Token": CLIENT_TOKEN,
+          },
+        });
+        const restartData = parseJsonSafely(await restartResponse.text());
+        await wait(1200);
+        const qrResponse = await fetch(`${BASE_URL}/qr-code/image`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Client-Token": CLIENT_TOKEN,
+          },
+        });
+        const qrData = parseJsonSafely(await qrResponse.text());
+        if (restartResponse.ok || qrResponse.ok) {
+          return new Response(JSON.stringify({ success: true, disconnected: false, requiresQr: true, data, restart: restartData, qr: qrData }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
 
     return new Response(JSON.stringify(data), {
       status: response.ok ? 200 : response.status,
