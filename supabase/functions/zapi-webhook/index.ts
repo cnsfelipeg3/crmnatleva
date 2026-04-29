@@ -9,6 +9,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── Helper: detecta nomes "ruins" (agência, genéricos, telefone) ───
+function isAgencyOrGenericName(name: string | null | undefined): boolean {
+  if (!name) return true;
+  const t = name.trim().toLowerCase();
+  if (!t) return true;
+  const agencyName = (Deno.env.get("AGENCY_NAME") || "natleva viagens").toLowerCase();
+  if (t === agencyName) return true;
+  if (t === "natleva" || t === "natleva viagens" || t === "natleva wings") return true;
+  if (t === "atendente" || t === "operador" || t === "agencia" || t === "agência") return true;
+  if (t === "novo contato" || t === "desconhecido" || t === "contato sem nome") return true;
+  if (/^\+?\d[\d\s\-()]{6,}$/.test(t)) return true;
+  return false;
+}
+
 // ─── Helper: normalize phone to digits only ───
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "");
