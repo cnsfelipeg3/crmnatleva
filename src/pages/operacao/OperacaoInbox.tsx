@@ -45,7 +45,7 @@ import {
   normalizeTimestamp, toIsoTimestamp, getMessageTimestamp, compareMessagesChronologically,
   getMessageStableKey, dedupeUiMessages, formatTimestamp, formatMsgTime, formatDateSeparator,
   shouldShowDateSeparator, stripQuotes, formatPhoneDisplay, getStageInfo, mapZapiStatus,
-  normalizeDbMessageType, normalizeDbStatus,
+  normalizeDbMessageType, normalizeDbStatus, safeUnreadCount,
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
@@ -57,10 +57,8 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-const toUnreadCount = (value: unknown) => {
-  const num = Number(value || 0);
-  return Number.isFinite(num) ? Math.max(0, num) : 0;
-};
+// Local alias kept for legacy call sites — uses centralized hardened helper.
+const toUnreadCount = safeUnreadCount;
 function Linkify({ text }: { text: string }) {
   if (!text) return null;
   const parts = text.split(URL_REGEX);
@@ -588,7 +586,7 @@ function OperacaoInboxInner() {
                 stage: incomingIsFresher && dc.stage !== "novo_lead" ? dc.stage : existing.stage,
                 tags: incomingIsFresher && dc.tags.length > 0 ? dc.tags : existing.tags,
                 contact_name: incomingIsFresher && dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
-                unread_count: Math.max(dc.unread_count, existing.unread_count),
+                unread_count: Math.max(safeUnreadCount(dc.unread_count), safeUnreadCount(existing.unread_count)),
                 last_message_at: incomingIsFresher ? dc.last_message_at : existing.last_message_at,
                 last_message_preview: incomingIsFresher ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
               });
@@ -660,7 +658,7 @@ function OperacaoInboxInner() {
                 const existingTime = new Date(existing.last_message_at || 0).getTime();
                 const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
                 const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
-                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(existing.unread_count, c.unread_count || 0), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
+                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
               }
               if (!c._hasReliableActivity) return [];
               return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
