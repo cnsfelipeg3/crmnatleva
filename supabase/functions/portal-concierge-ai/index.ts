@@ -102,8 +102,10 @@ serve(async (req) => {
       console.log("portal-concierge-ai: audio payload size (base64 chars):", audioPart?.input_audio?.data?.length, "format:", audioPart?.input_audio?.format);
     }
 
-    // Gemini 2.5 Flash handles audio input natively and reliably via the gateway
-    const model = hasAudio ? "google/gemini-2.5-flash" : "google/gemini-2.5-pro";
+    // Flash entrega qualidade equivalente pra texto natural com TTFT
+    // ~5x menor (0.5-1.5s vs 3-8s do Pro). Suporta visão multimodal e
+    // áudio nativamente. Pro só vale pra raciocínio matemático complexo.
+    const model = "google/gemini-2.5-flash";
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -118,8 +120,13 @@ serve(async (req) => {
           ...sanitized,
         ],
         stream: true,
-        max_tokens: 8192,
+        // 2048 cabe roteiros completos (3 dias detalhados) sem permitir
+        // respostas absurdamente longas que travam o stream.
+        max_tokens: 2048,
       }),
+      // 60s timeout: TTFT do Flash é <2s; se passar 60s sem 1º byte,
+      // o gateway tá com problema e queremos abortar.
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
