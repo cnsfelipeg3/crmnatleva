@@ -104,10 +104,10 @@ export default defineConfig(({ mode }) => ({
       "clsx",
       "tailwind-merge",
       "class-variance-authority",
-      // Nota: `lodash` não é dependência direta · recharts usa `lodash/*`
-      // internamente, mas o Vite resolve isso via dep-scan automático
-      // ao pre-bundlear o próprio recharts. Listar `lodash/*` aqui sem
-      // o pacote instalado quebra o boot inteiro com "Failed to resolve dependency".
+      // Recharts é CJS-heavy via lodash/* internamente. Pre-bundling resolve
+      // o "does not provide an export named 'default'" e acelera dev start
+      // porque Vite não precisa fazer dep-scan a cada request.
+      "recharts",
       // Leaflet é CommonJS (UMD) · precisa ser pre-bundled pelo Vite
       // pra expor `export default L`. Sem isso, `import * as L from "leaflet"`
       // falha em dev com "does not provide an export named 'default'".
