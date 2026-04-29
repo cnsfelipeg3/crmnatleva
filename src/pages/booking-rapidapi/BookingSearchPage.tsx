@@ -207,12 +207,12 @@ export default function BookingSearchPage() {
   } = useHotelscomSearch(
     searchParams && sources.hotelscom && hotelscomLocationId
       ? {
-          locationId: hotelscomLocationId,
-          checkinDate: searchParams.arrival,
-          checkoutDate: searchParams.departure,
-          adults: searchParams.adults,
+          region_id: hotelscomLocationId,
+          checkin_date: searchParams.arrival,
+          checkout_date: searchParams.departure,
+          adults_number: searchParams.adults,
           children_ages: searchParams.children.join(","),
-          currency: "BRL",
+          domain: "BR",
           locale: "pt_BR",
           page_number: currentPage,
           sort_order: "RECOMMENDED",
@@ -220,12 +220,11 @@ export default function BookingSearchPage() {
       : null,
   );
 
-  // 5) Normalizar Hotels.com e converter preços pra BRL
+  // 5) Hotels.com já vem normalizado em UnifiedHotel — só converte preços pra BRL
   const hotelscomUnified: UnifiedHotel[] = useMemo(() => {
     if (!hotelscomData?.cards) return [];
-    return hotelscomData.cards.map((card: HotelscomLodgingCard) => {
-      const base = normalizeHotelscomHotel(card);
-      if (base.priceCurrency !== "BRL") {
+    return hotelscomData.cards.map((base: UnifiedHotel) => {
+      if (base.priceCurrency && base.priceCurrency !== "BRL") {
         const totalConv = convertPriceToBRL(base.priceTotal, base.priceCurrency, rates);
         const strikedConv = convertPriceToBRL(base.priceStriked, base.priceCurrency, rates);
         const perNightConv = convertPriceToBRL(base.pricePerNight, base.priceCurrency, rates);
