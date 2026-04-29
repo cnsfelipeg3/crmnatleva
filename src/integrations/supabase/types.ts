@@ -2492,6 +2492,8 @@ export type Database = {
           payment_method: string | null
           phone: string | null
           price_range: string | null
+          profile_picture_fetched_at: string | null
+          profile_picture_url: string | null
           proposal_value: number | null
           proposal_viewed_at: string | null
           reconciled_at: string | null
@@ -2532,6 +2534,8 @@ export type Database = {
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          profile_picture_fetched_at?: string | null
+          profile_picture_url?: string | null
           proposal_value?: number | null
           proposal_viewed_at?: string | null
           reconciled_at?: string | null
@@ -2572,6 +2576,8 @@ export type Database = {
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
+          profile_picture_fetched_at?: string | null
+          profile_picture_url?: string | null
           proposal_value?: number | null
           proposal_viewed_at?: string | null
           reconciled_at?: string | null
