@@ -1034,6 +1034,22 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           )}
         </ScrollArea>
       )}
+
+      <ProfilePictureViewer
+        open={showProfileViewer}
+        onClose={() => setShowProfileViewer(false)}
+        name={clientData?.display_name || conversation.contact_name || formatPhoneDisplay(conversation.phone)}
+        phone={conversation.phone}
+        phoneDisplay={formatPhoneDisplay(conversation.phone)}
+        email={clientData?.email}
+        city={clientData?.city}
+        state={clientData?.state}
+        pictureUrl={profilePic}
+        initials={initials}
+        isVip={conversation.is_vip}
+        source={conversation.source}
+        tags={conversation.tags}
+      />
     </div>
   );
 }
