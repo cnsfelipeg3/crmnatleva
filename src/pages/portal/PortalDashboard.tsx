@@ -1,13 +1,13 @@
-import { useState, useEffect, useMemo, Suspense, lazy } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Plane, ArrowRight, FileText, DollarSign,
   MessageCircle, CheckSquare, Compass, Globe2,
-  MapPin, Calendar, Star, TrendingUp, Sparkles,
+  MapPin, Calendar, Star, Sparkles,
 } from "lucide-react";
 import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
 import {
@@ -15,8 +15,6 @@ import {
   Countdown, TripShelf,
 } from "@/components/travel-ui";
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
-
-const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
 
@@ -135,13 +133,18 @@ export default function PortalDashboard() {
   if (loading) {
     return (
       <PortalLayout>
-        <div className="flex items-center justify-center py-40 px-4">
-          <div className="flex flex-col items-center gap-5">
-            <div className="relative">
-              <div className="w-14 h-14 border-[3px] border-accent/20 border-t-accent rounded-full animate-spin" />
-              <Plane className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-5 w-5 text-accent/60" />
+        {/* Skeleton com mesma altura do hero pra evitar CLS */}
+        <div className="relative overflow-hidden bg-gradient-to-b from-[hsl(160,30%,3%)] via-[hsl(160,25%,6%)] to-background">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center min-h-[85vh]">
+              <div className="space-y-6 py-12">
+                <div className="h-4 w-32 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-14 w-3/4 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="h-10 w-2/3 bg-white/5 rounded-full animate-pulse" />
+                <div className="h-12 w-48 bg-accent/20 rounded-full animate-pulse mt-8" />
+              </div>
+              <div className="hidden lg:block w-[480px] h-[540px] rounded-[2.5rem] bg-white/5 animate-pulse mx-auto" />
             </div>
-            <p className="text-muted-foreground text-sm tracking-wide">Carregando suas jornadas...</p>
           </div>
         </div>
       </PortalLayout>
@@ -299,14 +302,13 @@ export default function PortalDashboard() {
                     transition={{ type: "spring", stiffness: 200 }}
                     onClick={() => navigate(`/portal/viagem/${nextTrip.sale_id}`)}
                   >
-                    {/* Destination image */}
-                    <motion.img
+                    {/* Destination image · estática (loading=lazy + decoding=async pra performance) */}
+                    <img
                       src={getDestinationImage(nextTrip.sale?.destination_iata, nextTrip.cover_image_url)}
                       alt={nextTrip.custom_title || nextTrip.sale?.name || "Destino"}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      initial={{ scale: 1.1 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 20, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-105"
                     />
 
                     {/* Gradient overlays */}
