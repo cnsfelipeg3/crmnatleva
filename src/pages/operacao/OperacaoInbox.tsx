@@ -45,7 +45,7 @@ import {
   normalizeTimestamp, toIsoTimestamp, getMessageTimestamp, compareMessagesChronologically,
   getMessageStableKey, dedupeUiMessages, formatTimestamp, formatMsgTime, formatDateSeparator,
   shouldShowDateSeparator, stripQuotes, formatPhoneDisplay, getStageInfo, mapZapiStatus,
-  normalizeDbMessageType, normalizeDbStatus,
+  normalizeDbMessageType, normalizeDbStatus, safeUnreadCount,
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
@@ -57,10 +57,8 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
-const toUnreadCount = (value: unknown) => {
-  const num = Number(value || 0);
-  return Number.isFinite(num) ? Math.max(0, num) : 0;
-};
+// Local alias kept for legacy call sites — uses centralized hardened helper.
+const toUnreadCount = safeUnreadCount;
 function Linkify({ text }: { text: string }) {
   if (!text) return null;
   const parts = text.split(URL_REGEX);
@@ -588,7 +586,7 @@ function OperacaoInboxInner() {
                 stage: incomingIsFresher && dc.stage !== "novo_lead" ? dc.stage : existing.stage,
                 tags: incomingIsFresher && dc.tags.length > 0 ? dc.tags : existing.tags,
                 contact_name: incomingIsFresher && dc.contact_name !== "Novo Contato" ? dc.contact_name : existing.contact_name,
-                unread_count: Math.max(dc.unread_count, existing.unread_count),
+                unread_count: Math.max(safeUnreadCount(dc.unread_count), safeUnreadCount(existing.unread_count)),
                 last_message_at: incomingIsFresher ? dc.last_message_at : existing.last_message_at,
                 last_message_preview: incomingIsFresher ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
               });
@@ -660,7 +658,7 @@ function OperacaoInboxInner() {
                 const existingTime = new Date(existing.last_message_at || 0).getTime();
                 const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
                 const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
-                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(existing.unread_count, c.unread_count || 0), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
+                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
               }
               if (!c._hasReliableActivity) return [];
               return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
@@ -1447,16 +1445,16 @@ function OperacaoInboxInner() {
           <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             {/* Sidebar Header */}
             <div className="px-3 pt-3 pb-2 space-y-2.5 shrink-0 border-b border-border/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
                     <MessageSquare className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <div>
-                    <span className="text-sm font-bold tracking-tight text-foreground">Inbox</span>
-                    {waConnected && <span className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                  <div className="min-w-0 flex items-center gap-1.5">
+                    <span className="text-sm font-bold tracking-tight text-foreground truncate">Inbox</span>
+                    {waConnected && <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
                   </div>
-                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4">{totalUnread}</Badge>}
+                  {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4 shrink-0">{totalUnread > 99 ? "99+" : totalUnread}</Badge>}
                 </div>
                 <div className="flex items-center gap-1">
                   <Tooltip>
