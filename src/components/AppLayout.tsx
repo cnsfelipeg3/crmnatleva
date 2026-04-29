@@ -12,7 +12,6 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Menu, Maximize, Minimize } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { prefetchAllRoutes } from "@/lib/routePrefetch";
 import logoNatleva from "@/assets/logo-natleva.webp";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
@@ -25,15 +24,6 @@ export default function AppLayout() {
   const location = useLocation();
   const isImmersive = IMMERSIVE_ROUTES.includes(location.pathname);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
-
-  // Prefetch só depois do primeiro paint do app autenticado. Antes disso,
-  // disputar rede com a rota atual deixa o usuário preso no loader inicial.
-  useEffect(() => {
-    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 2500));
-    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
-    const handle = idle(() => prefetchAllRoutes(), { timeout: 6000 });
-    return () => cancelIdle(handle as number);
-  }, []);
 
   if (isMobile) {
     return (
