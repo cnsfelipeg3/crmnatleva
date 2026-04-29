@@ -142,7 +142,7 @@ export default function BookingSearchPage() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchParams, filtersState]);
+  }, [searchParams, filtersState, hotelscomPremium]);
   useEffect(() => {
     setFiltersState(emptyHotelFiltersState());
   }, [searchParams?.destination.dest_id]);
