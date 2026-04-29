@@ -315,10 +315,73 @@ export default function LiveChat() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
 
+  // ─── Presence (digitando/gravando) via realtime chat_presence ───
+  const [presenceByPhone, setPresenceByPhone] = useState<Record<string, { status: string; updated_at: string }>>({});
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('chat-presence-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_presence' }, (payload) => {
+        const n: any = payload.new;
+        if (!n?.phone) return;
+        setPresenceByPhone(prev => ({
+          ...prev,
+          [n.phone]: { status: n.status, updated_at: n.updated_at },
+        }));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, []);
+
+  // ─── Send-location dialog ───
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
+
   const selected = conversations.find(c => c.id === selectedId);
   const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
   const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
+
+  // Helper · label de presença ativa (válida apenas se < 30s atrás)
+  const presenceLabel = useMemo(() => {
+    const phone = selected?.phone;
+    if (!phone) return null;
+    const cleanPhone = String(phone).replace(/\D/g, "");
+    const entry = presenceByPhone[cleanPhone];
+    if (!entry) return null;
+    const age = Date.now() - new Date(entry.updated_at).getTime();
+    if (age > 30_000) return null;
+    if (entry.status === "composing") return "digitando…";
+    if (entry.status === "recording") return "gravando áudio…";
+    return null;
+  }, [selected?.phone, presenceByPhone]);
+
+  // Handler · enviar localização via Z-API
+  const handleSendLocation = useCallback(async () => {
+    if (!selected?.phone) return;
+    const lat = parseFloat(locationInput.lat);
+    const lng = parseFloat(locationInput.lng);
+    if (isNaN(lat) || isNaN(lng)) {
+      toast.error("Coordenadas inválidas");
+      return;
+    }
+    try {
+      await callZapiProxy("send-message-location", {
+        phone: selected.phone,
+        title: locationInput.name || "Localização",
+        address: locationInput.address || "",
+        latitude: lat,
+        longitude: lng,
+      });
+      toast.success("Localização enviada");
+      setShowLocationDialog(false);
+      setLocationInput({ name: "", address: "", lat: "", lng: "" });
+    } catch (err: any) {
+      console.error("Erro ao enviar localização:", err);
+      toast.error("Erro ao enviar localização");
+    }
+  }, [selected?.phone, locationInput]);
+
 
   // Load active flow name for selected conversation
   useEffect(() => {
