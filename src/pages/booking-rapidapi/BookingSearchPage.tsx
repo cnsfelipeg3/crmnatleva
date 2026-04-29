@@ -487,6 +487,14 @@ export default function BookingSearchPage() {
                         nameQuery={nameQuery}
                         onNameQueryChange={setNameQuery}
                       />
+                      {sources.hotelscom && (
+                        <div className="mt-4">
+                          <HotelscomPremiumFilters
+                            state={hotelscomPremium}
+                            onStateChange={setHotelscomPremium}
+                          />
+                        </div>
+                      )}
                     </div>
                   </SheetContent>
                 </Sheet>
