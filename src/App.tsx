@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
@@ -202,18 +202,19 @@ function AppRoutes() {
     location.pathname.startsWith("/portal/") ||
     location.pathname === "/cadastro-fornecedor";
 
-  // Prefetch oportunista das rotas mais comuns assim que o usuário autentica.
-  // Roda em idle pra não competir com o paint inicial.
-  if (typeof window !== "undefined" && isAuthenticated && !(window as any).__natlevaPrefetched) {
-    (window as any).__natlevaPrefetched = true;
-    const ric = (window as any).requestIdleCallback || ((cb: () => void) => setTimeout(cb, 1200));
-    ric(() => {
-      import("@/pages/Dashboard");
+  // Prefetch mínimo e tardio. O boot precisa abrir a rota atual primeiro;
+  // chunks secundários só entram quando o navegador estiver ocioso.
+  useEffect(() => {
+    if (!isAuthenticated || isLoading || typeof window === "undefined" || (window as any).__natlevaCorePrefetched) return;
+    (window as any).__natlevaCorePrefetched = true;
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 4500));
+    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
+    const handle = idle(() => {
       import("@/pages/Sales");
-      import("@/pages/SaleDetail");
       import("@/pages/LiveChat");
-    });
-  }
+    }, { timeout: 9000 });
+    return () => cancelIdle(handle as number);
+  }, [isAuthenticated, isLoading]);
 
   return (
     <SmartSuspense>
