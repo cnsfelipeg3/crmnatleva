@@ -641,12 +641,12 @@ function OperacaoInboxInner() {
         // Save any inline chat photos to cache
         if (newConvs.length > 0) saveProfilePicsCache();
         if (newConvs.length > 0) {
-          const deduped = new Map<string, Conversation>();
+          const deduped = new Map<string, Conversation & { _hasReliableActivity?: boolean }>();
           for (const conv of newConvs) {
             const existing = deduped.get(conv.id);
             if (!existing || new Date(conv.last_message_at).getTime() > new Date(existing.last_message_at).getTime()) deduped.set(conv.id, conv);
           }
-          const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+          const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
           setConversations(prev => {
             const prevMap = new Map(prev.map(c => [c.id, c]));
             const merged = dedupedConvs.map(c => {
