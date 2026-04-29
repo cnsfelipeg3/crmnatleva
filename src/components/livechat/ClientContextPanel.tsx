@@ -18,6 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { QuoteSummaryCard } from "./QuoteSummaryCard";
 import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
+import { ProfilePictureViewer } from "./ProfilePictureViewer";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
@@ -141,6 +142,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [lastClientMsgAt, setLastClientMsgAt] = useState<string | null>(null);
   const [agentHasReplied, setAgentHasReplied] = useState(false);
   const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
+  const [showProfileViewer, setShowProfileViewer] = useState(false);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -732,7 +734,12 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           {/* ─── Client Card ─── */}
           <div className="px-4 py-4 border-b border-border/30">
             <div className="flex items-start gap-3">
-              <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowProfileViewer(true)}
+                className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105"
+                aria-label="Ver foto de perfil"
+              >
                 {profilePic ? (
                   <img src={profilePic} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-border/30" />
                 ) : (
@@ -745,7 +752,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                     <Star className="h-2.5 w-2.5 text-white fill-white" />
                   </div>
                 )}
-              </div>
+              </button>
               <div className="flex-1 min-w-0">
                 <h3 className="text-sm font-bold text-foreground truncate">{clientData?.display_name || conversation.contact_name}</h3>
                 <div className="flex items-center gap-1.5 mt-1">
@@ -1027,6 +1034,22 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           )}
         </ScrollArea>
       )}
+
+      <ProfilePictureViewer
+        open={showProfileViewer}
+        onClose={() => setShowProfileViewer(false)}
+        name={clientData?.display_name || conversation.contact_name || formatPhoneDisplay(conversation.phone)}
+        phone={conversation.phone}
+        phoneDisplay={formatPhoneDisplay(conversation.phone)}
+        email={clientData?.email}
+        city={clientData?.city}
+        state={clientData?.state}
+        pictureUrl={profilePic}
+        initials={initials}
+        isVip={conversation.is_vip}
+        source={conversation.source}
+        tags={conversation.tags}
+      />
     </div>
   );
 }
