@@ -15,6 +15,19 @@ const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+function parseJsonSafely(text: string) {
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { raw: text };
+  }
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function normalizePhone(raw: string): string {
   return String(raw || "")
     .replace(/@c\.us|@s\.whatsapp\.net|@g\.us|-group/gi, "")
@@ -95,13 +108,7 @@ async function callZapi(path: string, method = "GET", payload?: unknown) {
   });
 
   const responseText = await response.text();
-  const data = responseText ? (() => {
-    try {
-      return JSON.parse(responseText);
-    } catch {
-      return { raw: responseText };
-    }
-  })() : {};
+  const data = parseJsonSafely(responseText);
 
   if (!response.ok) {
     throw new Error(`Z-API ${path} failed (${response.status}): ${JSON.stringify(data).slice(0, 300)}`);
