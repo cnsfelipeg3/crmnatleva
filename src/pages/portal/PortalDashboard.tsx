@@ -17,7 +17,8 @@ import {
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 
 const GlobeScene = lazy(() => import("@/components/portal/GlobeScene"));
-import LazyViewportGlobe from "@/components/globe/LazyViewportGlobe";
+import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
+import { getIataCoords } from "@/components/maps/iataCoords";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
@@ -412,12 +413,28 @@ export default function PortalDashboard() {
                 <Globe2 className="h-5 w-5 text-accent" />
               </div>
               <div>
-                <h2 className="text-lg font-bold text-foreground tracking-tight">Journey Globe</h2>
-                <p className="text-xs text-muted-foreground">Explore suas rotas em 3D</p>
+                <h2 className="text-lg font-bold text-foreground tracking-tight">Journey Map</h2>
+                <p className="text-xs text-muted-foreground">Explore suas rotas no mapa</p>
               </div>
-              <span className="text-[10px] text-accent bg-accent/10 px-2.5 py-1 rounded-full font-mono font-bold ml-auto">3D</span>
+              <span className="text-[10px] text-accent bg-accent/10 px-2.5 py-1 rounded-full font-mono font-bold ml-auto">Mapa</span>
             </div>
-            <LazyViewportGlobe className="h-[500px] lg:h-[600px] w-full" />
+            <LazyViewportTravelMap
+              className="h-[500px] lg:h-[600px] w-full"
+              waypoints={[...categorized.upcoming, ...categorized.active, ...categorized.completed]
+                .map((t) => {
+                  const coords = getIataCoords(t.sale?.destination_iata);
+                  if (!coords) return null;
+                  return {
+                    id: t.id,
+                    name: t.sale?.destination_iata ?? "Destino",
+                    lat: coords.lat,
+                    lng: coords.lng,
+                    color: categorized.completed.includes(t) ? "success" as const : "primary" as const,
+                  };
+                })
+                .filter((w): w is NonNullable<typeof w> => w !== null)}
+              onWaypointClick={(id) => navigate(`/portal/viagem/${id}`)}
+            />
           </motion.section>
 
           {/* Recent trips preview — just top 3 upcoming */}
