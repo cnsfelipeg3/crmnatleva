@@ -527,7 +527,7 @@ Deno.serve(async (req) => {
       from_me: fromMe,
       text: textContent || null,
       type: msgType,
-      sender_name: contactName,
+      sender_name: fromMe ? (body.senderName || "Atendente") : contactName,
       sender_photo: body.senderPhoto || null,
       status: rawMsgStatus,
       timestamp: timestampEpoch,
@@ -665,11 +665,11 @@ Deno.serve(async (req) => {
 
 // ─── Helper: save contact info ───
 async function saveContact(supabase: any, phone: string, body: any, chatLid: string | null) {
-  if (!phone || (!body.senderName && !body.chatName)) return;
+  if (!phone || !body.chatName) return;
   const contactPhone = normalizePhone(phone);
   const upsertData: Record<string, unknown> = {
     phone: contactPhone,
-    name: body.senderName || body.chatName || null,
+    name: body.chatName || null,
     profile_pic: body.senderPhoto || body.photo || null,
     updated_at: new Date().toISOString(),
   };
