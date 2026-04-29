@@ -203,6 +203,7 @@ const HOTELSCOM_ACTIONS = new Set([
   "hotelscomReviewsList",
   "hotelscomReviewsSummary",
   "hotelscomHeadline",
+  "hotelscomSlugToId",
 ]);
 
 async function callRapidApi(
