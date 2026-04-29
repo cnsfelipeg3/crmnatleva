@@ -302,14 +302,13 @@ export default function PortalDashboard() {
                     transition={{ type: "spring", stiffness: 200 }}
                     onClick={() => navigate(`/portal/viagem/${nextTrip.sale_id}`)}
                   >
-                    {/* Destination image */}
-                    <motion.img
+                    {/* Destination image · estática (loading=lazy + decoding=async pra performance) */}
+                    <img
                       src={getDestinationImage(nextTrip.sale?.destination_iata, nextTrip.cover_image_url)}
                       alt={nextTrip.custom_title || nextTrip.sale?.name || "Destino"}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      initial={{ scale: 1.1 }}
-                      animate={{ scale: 1 }}
-                      transition={{ duration: 20, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
+                      loading="lazy"
+                      decoding="async"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[6000ms] group-hover:scale-105"
                     />
 
                     {/* Gradient overlays */}
