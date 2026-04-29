@@ -433,7 +433,12 @@ Deno.serve(async (req) => {
     const fromMe = body.fromMe || false;
     const textContent = extractTextContent(body);
     const msgType = extractMsgType(body);
-    const contactName = body.senderName || body.chatName || rawPhone || "Desconhecido";
+    // chatName é SEMPRE o nome do contato/cliente. senderName depende de fromMe
+    // (quando a agência envia, senderName = nome da agência). Pegamos chatName
+    // primeiro pra não contaminar contatos com "NatLeva Viagens".
+    const contactName = fromMe
+      ? (body.chatName || rawPhone || "Desconhecido")
+      : (body.chatName || body.senderName || rawPhone || "Desconhecido");
 
     const momentRaw = Number(body.momment);
     const eventTsMs = Number.isFinite(momentRaw)
@@ -466,7 +471,7 @@ Deno.serve(async (req) => {
       await supabase.from("zapi_contacts").upsert({
         phone: normalizePhone(phone),
         lid,
-        name: body.senderName || body.chatName || null,
+        name: body.chatName || body.senderName || null,
         profile_pic: body.senderPhoto || body.photo || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "phone" });
