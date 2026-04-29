@@ -2048,6 +2048,22 @@ function OperacaoInboxInner() {
                 />
               )}
             </AnimatePresence>
+
+            {/* WhatsApp-style profile picture viewer */}
+            {selected && (
+              <ProfilePictureViewer
+                open={showProfileViewer}
+                onClose={() => setShowProfileViewer(false)}
+                name={selected.contact_name || formatPhoneDisplay(selected.phone || "") || "Sem nome"}
+                phone={selected.phone}
+                phoneDisplay={formatPhoneDisplay(selected.phone || "")}
+                pictureUrl={profilePicsRef.current.get(selected.id)}
+                initials={(selected.contact_name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
+                isVip={selected.is_vip}
+                source={selected.source}
+                tags={selected.tags}
+              />
+            )}
           </div>
 
           {/* ─── Column 3: Client Context Panel ─── */}
