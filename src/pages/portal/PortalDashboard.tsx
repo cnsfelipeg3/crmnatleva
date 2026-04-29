@@ -420,7 +420,7 @@ export default function PortalDashboard() {
             </div>
             <LazyViewportTravelMap
               className="h-[500px] lg:h-[600px] w-full"
-              waypoints={[...categorized.upcoming, ...categorized.active, ...categorized.completed]
+              waypoints={[...categorized.upcoming, ...categorized.active, ...categorized.past]
                 .map((t) => {
                   const coords = getIataCoords(t.sale?.destination_iata);
                   if (!coords) return null;
@@ -429,7 +429,7 @@ export default function PortalDashboard() {
                     name: t.sale?.destination_iata ?? "Destino",
                     lat: coords.lat,
                     lng: coords.lng,
-                    color: categorized.completed.includes(t) ? "success" as const : "primary" as const,
+                    color: categorized.past.includes(t) ? "success" as const : "primary" as const,
                   };
                 })
                 .filter((w): w is NonNullable<typeof w> => w !== null)}
