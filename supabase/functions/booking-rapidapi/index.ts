@@ -705,10 +705,13 @@ serve(async (req) => {
 
       for (const r of results.sort((a, b) => a.page - b.page)) {
         if (r.status >= 400) continue;
-        const d: any = r.data?.data ?? {};
-        const listings: any[] = Array.isArray(d.propertySearchListings)
-          ? d.propertySearchListings
-          : [];
+        const d: any = r.data?.data ?? r.data ?? {};
+        // tipsters: data.properties[]; legado ntd119: data.propertySearchListings[]
+        const listings: any[] = Array.isArray(d.properties)
+          ? d.properties
+          : Array.isArray(d.propertySearchListings)
+            ? d.propertySearchListings
+            : [];
         for (const item of listings) {
           const id = String(item?.id ?? item?.propertyId ?? Math.random());
           if (seenIds.has(id)) continue;
@@ -718,6 +721,10 @@ serve(async (req) => {
         if (totalCount == null) {
           if (typeof d?.pagination?.totalCount === "number") {
             totalCount = d.pagination.totalCount;
+          } else if (typeof d?.totalCount === "number") {
+            totalCount = d.totalCount;
+          } else if (typeof d?.summary?.matchedPropertiesSize === "number") {
+            totalCount = d.summary.matchedPropertiesSize;
           } else {
             totalCount = extractHotelscomTotalFromSummary(d?.summary);
           }
@@ -730,6 +737,8 @@ serve(async (req) => {
         message: "Success",
         timestamp: Date.now(),
         data: {
+          properties: aggregated,
+          // alias legado pra UIs que ainda leem propertySearchListings
           propertySearchListings: aggregated,
           pagination: { totalCount: totalCount ?? aggregated.length },
           summary,
@@ -737,6 +746,7 @@ serve(async (req) => {
           __logicalPage: logicalPage,
         },
       };
+
 
       await writeCache(action, params, aggregatedEnvelope);
       await logCall({
