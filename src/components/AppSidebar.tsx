@@ -16,7 +16,7 @@ import {
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { prefetchRoute, prefetchAllRoutes } from "@/lib/routePrefetch";
+import { prefetchRoute } from "@/lib/routePrefetch";
 import { usePermissions } from "@/hooks/usePermissions";
 import { MENU_BY_PATH } from "@/lib/systemMenus";
 
@@ -74,12 +74,24 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [employeePosition, setEmployeePosition] = useState<string | null>(null);
   useEffect(() => {
     if (!user?.id) { setEmployeePosition(null); return; }
-    supabase
-      .from("employees")
-      .select("position")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => setEmployeePosition(data?.position ?? null));
+    let cancelled = false;
+    const loadPosition = () => {
+      supabase
+        .from("employees")
+        .select("position")
+        .eq("user_id", user.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (!cancelled) setEmployeePosition(data?.position ?? null);
+        });
+    };
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 1800));
+    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
+    const handle = idle(loadPosition, { timeout: 3500 });
+    return () => {
+      cancelled = true;
+      cancelIdle(handle as number);
+    };
   }, [user?.id]);
   const canSee = (path: string) => {
     if (isAdmin) return true;
@@ -103,25 +115,36 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [pendingBriefings, setPendingBriefings] = useState(0);
 
   useEffect(() => {
+    let cancelled = false;
+    let channel: ReturnType<typeof supabase.channel> | null = null;
     const fetchCount = async () => {
       try {
         const { count, error } = await (supabase as any)
           .from("quotation_briefings")
           .select("*", { count: "exact", head: true })
           .eq("status", "pendente");
-        if (!error) setPendingBriefings(count || 0);
+        if (!error && !cancelled) setPendingBriefings(count || 0);
       } catch {
         // Silently handle 503 or connection errors
       }
     };
-    fetchCount();
-    const channel = supabase
-      .channel("sidebar-briefings")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "quotation_briefings" }, () => fetchCount())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quotation_briefings", filter: "status=eq.pendente" }, () => fetchCount())
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "quotation_briefings" }, () => fetchCount())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    const start = () => {
+      fetchCount();
+      channel = supabase
+        .channel("sidebar-briefings")
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "quotation_briefings", filter: "status=eq.pendente" }, () => fetchCount())
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "quotation_briefings" }, () => fetchCount())
+        .subscribe();
+    };
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 2500));
+    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
+    const handle = idle(start, { timeout: 5000 });
+    return () => {
+      cancelled = true;
+      cancelIdle(handle as number);
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
@@ -145,13 +168,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     if (p.startsWith("/implementacao") || p.startsWith("/import") || p.startsWith("/livechat/import")) setImplOpen(true);
     if (p.startsWith("/admin")) setAdminOpen(true);
     if (p.startsWith("/portal-admin")) setPortalAdminOpen(true);
-  }, []);
-
-  // Aggressively prefetch every sidebar route during browser idle time so
-  // the first click on any menu item is essentially instant.
-  useEffect(() => {
-    const t = setTimeout(() => prefetchAllRoutes(), 600);
-    return () => clearTimeout(t);
   }, []);
 
   const renderNavItem = (item: typeof navItems[0], indent = false) => (
