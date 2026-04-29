@@ -523,6 +523,13 @@ export default function LiveChat() {
           const msgAt = c.last_message_at || (fallback ? fallback.created_at : c.last_message_at);
           const safeName = getSafeContactName(c.contact_name, rawPhone);
 
+          // ─── Hydrate cached profile picture from DB (instant, zero API calls) ───
+          const cachedPic = (c as any).profile_picture_url;
+          if (cachedPic && typeof cachedPic === "string" && cachedPic.startsWith("http")) {
+            profilePicsRef.current.set(canonicalId, cachedPic);
+            if (cleanPhone) profilePicsRef.current.set(`wa_${cleanPhone}`, cachedPic);
+          }
+
           return {
             id: canonicalId,
             phone: cleanPhone || rawPhone,
