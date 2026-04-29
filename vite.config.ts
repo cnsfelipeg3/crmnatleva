@@ -30,9 +30,7 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
-  define: {
-    CESIUM_BASE_URL: JSON.stringify("/cesium/"),
-  },
+  define: {},
   esbuild: {
     // Em produção remove console.* (exceto warn/error) e debugger
     // → bundle menor + zero ruído no console do cliente.
@@ -52,14 +50,12 @@ export default defineConfig(({ mode }) => ({
     rollupOptions: {
       output: {
         // Splitting agressivo · isola libs pesadas em chunks próprios pra que
-        // o boot inicial NÃO carregue Cesium/Three/Leaflet/Recharts etc.
+        // o boot inicial NÃO carregue Three/Leaflet/Recharts etc.
         // Cada uma só baixa quando a rota correspondente é visitada.
         manualChunks(id) {
           if (!id.includes("node_modules")) return undefined;
 
           // === Libs MUITO pesadas · isolar 100% ===
-          // Cesium NÃO é agrupado: bundle monolítico causa TDZ ("Cannot access 'Dv' before initialization").
-          // Deixar o Vite splittar naturalmente via lazy imports (já está em optimizeDeps.exclude).
           if (id.includes("/three/") || id.includes("@react-three")) return "vendor-three";
           if (id.includes("/leaflet") || id.includes("react-leaflet")) return "vendor-leaflet";
           if (id.includes("recharts") || id.includes("/d3-")) return "vendor-charts";
@@ -116,7 +112,6 @@ export default defineConfig(({ mode }) => ({
     ],
     exclude: [
       // Pesadas · só carregam sob demanda
-      "cesium",
       "three",
       "@react-three/fiber",
       "@react-three/drei",
