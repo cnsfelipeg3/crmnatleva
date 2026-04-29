@@ -44,6 +44,7 @@ const CACHE_TTL: Record<string, number> = {
   hotelscomReviewsList: 60 * 60 * 12,
   hotelscomReviewsSummary: 60 * 60 * 12,
   hotelscomHeadline: 60 * 60 * 24,
+  hotelscomSlugToId: 60 * 60 * 24 * 7,
   // ---- Voos ----
   searchFlightDestinations: 60 * 60 * 24 * 30, // 30 dias — aeroportos não mudam
   searchFlights: 60 * 30,                       // 30 min — preços mudam rápido
