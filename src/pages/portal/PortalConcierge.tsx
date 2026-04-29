@@ -167,6 +167,8 @@ export default function PortalConcierge() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const cityContext = useMemo(() => detectCityFromMessages(messages), [messages]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, isLoading]);
@@ -606,6 +608,7 @@ export default function PortalConcierge() {
                         <ConciergeAnswer
                           text={msg.displayText}
                           streaming={isLoading && i === messages.length - 1}
+                          cityContext={cityContext}
                         />
                       ) : (
                         <div className="flex items-center gap-2 py-1">
