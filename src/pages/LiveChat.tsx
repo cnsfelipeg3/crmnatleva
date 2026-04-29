@@ -2312,9 +2312,15 @@ export default function LiveChat() {
                             <span className="text-sm font-bold truncate">{selectedDisplayName}</span>
                             {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
                           </div>
-                          <p className="text-[10px] text-muted-foreground truncate">
-                            {formatPhoneDisplay(selected.phone)}
-                          </p>
+                          {presenceLabel ? (
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 italic truncate animate-pulse">
+                              {presenceLabel}
+                            </p>
+                          ) : (
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {formatPhoneDisplay(selected.phone)}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>
