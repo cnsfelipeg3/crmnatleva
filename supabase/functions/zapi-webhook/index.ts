@@ -9,6 +9,20 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ─── Helper: detecta nomes "ruins" (agência, genéricos, telefone) ───
+function isAgencyOrGenericName(name: string | null | undefined): boolean {
+  if (!name) return true;
+  const t = name.trim().toLowerCase();
+  if (!t) return true;
+  const agencyName = (Deno.env.get("AGENCY_NAME") || "natleva viagens").toLowerCase();
+  if (t === agencyName) return true;
+  if (t === "natleva" || t === "natleva viagens" || t === "natleva wings") return true;
+  if (t === "atendente" || t === "operador" || t === "agencia" || t === "agência") return true;
+  if (t === "novo contato" || t === "desconhecido" || t === "contato sem nome") return true;
+  if (/^\+?\d[\d\s\-()]{6,}$/.test(t)) return true;
+  return false;
+}
+
 // ─── Helper: normalize phone to digits only ───
 function normalizePhone(raw: string): string {
   return raw.replace(/\D/g, "");
@@ -221,7 +235,7 @@ async function upsertConversation(
       // Update contact name if it looks like a phone number or generic
       const existing = (existingConv.contact_name || "").trim();
       const looksLikePhone = /^\+?\d[\d\s\-()]{6,}$/.test(existing);
-      const isGeneric = !existing || existing === "Novo Contato" || existing === "Desconhecido";
+      const isGeneric = isAgencyOrGenericName(existing);
       if (looksLikePhone || isGeneric) {
         updateData.contact_name = contactName;
       }
@@ -419,7 +433,12 @@ Deno.serve(async (req) => {
     const fromMe = body.fromMe || false;
     const textContent = extractTextContent(body);
     const msgType = extractMsgType(body);
-    const contactName = body.senderName || body.chatName || rawPhone || "Desconhecido";
+    // chatName é SEMPRE o nome do contato/cliente. senderName depende de fromMe
+    // (quando a agência envia, senderName = nome da agência). Pegamos chatName
+    // primeiro pra não contaminar contatos com "NatLeva Viagens".
+    const contactName = fromMe
+      ? (body.chatName || rawPhone || "Desconhecido")
+      : (body.chatName || body.senderName || rawPhone || "Desconhecido");
 
     const momentRaw = Number(body.momment);
     const eventTsMs = Number.isFinite(momentRaw)
@@ -452,7 +471,7 @@ Deno.serve(async (req) => {
       await supabase.from("zapi_contacts").upsert({
         phone: normalizePhone(phone),
         lid,
-        name: body.senderName || body.chatName || null,
+        name: body.chatName || body.senderName || null,
         profile_pic: body.senderPhoto || body.photo || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "phone" });
@@ -508,7 +527,7 @@ Deno.serve(async (req) => {
       from_me: fromMe,
       text: textContent || null,
       type: msgType,
-      sender_name: contactName,
+      sender_name: fromMe ? (body.senderName || "Atendente") : contactName,
       sender_photo: body.senderPhoto || null,
       status: rawMsgStatus,
       timestamp: timestampEpoch,
@@ -646,11 +665,11 @@ Deno.serve(async (req) => {
 
 // ─── Helper: save contact info ───
 async function saveContact(supabase: any, phone: string, body: any, chatLid: string | null) {
-  if (!phone || (!body.senderName && !body.chatName)) return;
+  if (!phone || !body.chatName) return;
   const contactPhone = normalizePhone(phone);
   const upsertData: Record<string, unknown> = {
     phone: contactPhone,
-    name: body.senderName || body.chatName || null,
+    name: body.chatName || null,
     profile_pic: body.senderPhoto || body.photo || null,
     updated_at: new Date().toISOString(),
   };

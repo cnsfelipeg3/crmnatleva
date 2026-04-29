@@ -220,7 +220,20 @@ function formatPhoneDisplay(number?: string | null): string {
 
 function getSafeContactName(contactName?: string | null, phone?: string | null): string {
   const trimmedName = (contactName || "").trim();
-  if (trimmedName) return trimmedName;
+  const lower = trimmedName.toLowerCase();
+  // Bloqueia nome da agência ou genéricos sendo exibidos como contato
+  const isBadName =
+    !trimmedName ||
+    lower === "natleva" ||
+    lower === "natleva viagens" ||
+    lower === "natleva wings" ||
+    lower === "atendente" ||
+    lower === "operador" ||
+    lower === "agencia" ||
+    lower === "agência" ||
+    lower === "novo contato" ||
+    lower === "desconhecido";
+  if (!isBadName) return trimmedName;
   const trimmedPhone = (phone || "").trim();
   if (trimmedPhone) return formatPhoneDisplay(trimmedPhone);
   return "Contato sem nome";
