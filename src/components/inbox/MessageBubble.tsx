@@ -194,9 +194,10 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.msg.status === next.msg.status &&
     prev.msg.edited === next.msg.edited &&
     prev.msg.media_url === next.msg.media_url &&
+    prev.msg.media_storage_url === next.msg.media_storage_url &&
+    prev.msg.media_status === next.msg.media_status &&
     prev.index === next.index &&
     prev.contactName === next.contactName &&
-    // Check if date separator would change (only if messages array ref changes)
     prev.messages === next.messages
   );
 });
