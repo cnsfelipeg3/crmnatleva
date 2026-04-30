@@ -19,14 +19,24 @@ serve(async (req) => {
     );
 
     const { data: conn, error: fetchErr } = await supabase
-      .from("whatsapp_connections")
+      .from("whatsapp_cloud_config")
       .select("*")
       .eq("id", connection_id)
       .single();
 
     if (fetchErr || !conn) throw new Error("Connection not found");
 
-    const testUrl = `https://graph.facebook.com/v21.0/${conn.phone_number_id}?access_token=${conn.access_token}`;
+    // Decrypt the access token via service role RPC
+    const { data: decryptedToken, error: decryptErr } = await supabase.rpc(
+      "decrypt_whatsapp_secret",
+      { ciphertext: conn.access_token_encrypted }
+    );
+
+    if (decryptErr || !decryptedToken) {
+      throw new Error("Failed to decrypt access token");
+    }
+
+    const testUrl = `https://graph.facebook.com/v21.0/${conn.phone_number_id}?access_token=${decryptedToken}`;
     const testRes = await fetch(testUrl);
     const testData = await testRes.json();
 
