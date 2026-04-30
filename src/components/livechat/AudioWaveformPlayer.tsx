@@ -92,8 +92,14 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) audio.play().catch(() => {});
-    else audio.pause();
+    if (audio.paused) {
+      audio.play().catch(() => {
+        // If play fails (e.g. Safari can't decode ogg), show fallback
+        setUseFallback(true);
+      });
+    } else {
+      audio.pause();
+    }
   };
 
   const cycleSpeed = () => {
