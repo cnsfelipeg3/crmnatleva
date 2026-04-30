@@ -128,6 +128,18 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
   const displayTime = isPlaying || currentTime > 0 ? currentTime : duration;
   const speed = SPEEDS[speedIdx];
 
+  // Fallback: if browser can't play, show native audio controls
+  if (useFallback) {
+    return (
+      <div className="flex flex-col gap-1 min-w-[220px] py-1">
+        <audio controls src={src} preload="metadata" className="w-full h-8" />
+        <span className={`text-[9px] ${isOutgoing ? "text-primary-foreground/50" : "text-muted-foreground"}`}>
+          Formato incompatível · player nativo
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2.5 min-w-[260px] py-1">
       <audio ref={audioRef} src={src} preload="metadata" />
