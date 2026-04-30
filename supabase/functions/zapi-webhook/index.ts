@@ -389,21 +389,22 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   // ═══════════════════════════════════════════════════════════
-  // AUTH: Validate X-NatLeva-Token header
+  // AUTH: Validate token via query string (?token=...)
   // ═══════════════════════════════════════════════════════════
   const sharedSecret = Deno.env.get("WEBHOOK_SHARED_SECRET") || "";
-  const headerToken = req.headers.get("X-NatLeva-Token") || "";
+  const url = new URL(req.url);
+  const queryToken = url.searchParams.get("token") || "";
   const allowUnauth = Deno.env.get("WEBHOOK_ALLOW_UNAUTH") === "true";
 
   if (sharedSecret && !allowUnauth) {
-    const isValid = headerToken.length > 0 && timingSafeEqual(headerToken, sharedSecret);
+    const isValid = queryToken.length > 0 && timingSafeEqual(queryToken, sharedSecret);
     if (!isValid) {
       // Log failed attempt
       try {
         const sourceIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
         await supabase.from("webhook_audit_log").insert({
           source_ip: sourceIp,
-          header_present: headerToken.length > 0,
+          header_present: queryToken.length > 0,
           success: false,
         });
       } catch { /* best effort */ }
