@@ -2347,12 +2347,19 @@ export type Database = {
       }
       conversation_messages: {
         Row: {
+          audio_duration_sec: number | null
           content: string
           conversation_id: string
           created_at: string
           direction: string
           external_message_id: string | null
           id: string
+          is_voice_note: boolean | null
+          media_mimetype: string | null
+          media_original_url: string | null
+          media_size_bytes: number | null
+          media_status: string | null
+          media_storage_url: string | null
           media_url: string | null
           message_type: string
           metadata: Json | null
@@ -2361,12 +2368,19 @@ export type Database = {
           timestamp: string | null
         }
         Insert: {
+          audio_duration_sec?: number | null
           content?: string
           conversation_id: string
           created_at?: string
           direction?: string
           external_message_id?: string | null
           id?: string
+          is_voice_note?: boolean | null
+          media_mimetype?: string | null
+          media_original_url?: string | null
+          media_size_bytes?: number | null
+          media_status?: string | null
+          media_storage_url?: string | null
           media_url?: string | null
           message_type?: string
           metadata?: Json | null
@@ -2375,12 +2389,19 @@ export type Database = {
           timestamp?: string | null
         }
         Update: {
+          audio_duration_sec?: number | null
           content?: string
           conversation_id?: string
           created_at?: string
           direction?: string
           external_message_id?: string | null
           id?: string
+          is_voice_note?: boolean | null
+          media_mimetype?: string | null
+          media_original_url?: string | null
+          media_size_bytes?: number | null
+          media_status?: string | null
+          media_storage_url?: string | null
           media_url?: string | null
           message_type?: string
           metadata?: Json | null
@@ -7683,6 +7704,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      webhook_audit_log: {
+        Row: {
+          created_at: string | null
+          header_present: boolean | null
+          id: string
+          source_ip: string | null
+          success: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          header_present?: boolean | null
+          id?: string
+          source_ip?: string | null
+          success?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          header_present?: boolean | null
+          id?: string
+          source_ip?: string | null
+          success?: boolean | null
+        }
+        Relationships: []
+      }
+      webhook_errors: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_id: string | null
+          raw_body: Json | null
+          stack_trace: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          raw_body?: Json | null
+          stack_trace?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          raw_body?: Json | null
+          stack_trace?: string | null
+        }
+        Relationships: []
       }
       webhook_logs: {
         Row: {
