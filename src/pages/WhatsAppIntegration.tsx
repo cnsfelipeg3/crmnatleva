@@ -276,7 +276,7 @@ export default function WhatsAppIntegration() {
 
   const completedSteps = [
     Object.values(prereqs).filter(Boolean).length === PREREQUISITES.length,
-    !!config?.access_token,
+    !!config?.access_token_encrypted,
     !!config?.webhook_url && !!config?.verify_token,
     testResult === "success" || config?.status === "connected",
     config?.status === "connected",
