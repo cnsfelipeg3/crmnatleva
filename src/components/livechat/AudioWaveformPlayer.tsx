@@ -6,6 +6,7 @@ interface AudioWaveformPlayerProps {
   isOutgoing?: boolean;
   msgId: string;
   waveformData?: string;
+  durationSec?: number;
 }
 
 const SPEEDS = [1, 1.5, 2];
