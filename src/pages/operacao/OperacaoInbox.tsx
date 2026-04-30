@@ -1535,15 +1535,16 @@ function OperacaoInboxInner() {
             {selected ? (
               <>
                 {/* Chat header */}
-                <div className="flex items-center justify-between px-2 md:px-4 py-2 md:py-2.5 border-b border-border bg-card/50 shrink-0">
-                  <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                    {isMobile && (
-                      <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setSelectedId(null)}>
-                        <ArrowLeft className="h-5 w-5" />
-                      </Button>
-                    )}
-                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                      {/* Avatar · click opens WhatsApp-style picture viewer */}
+                <div className="border-b border-border bg-card/50 shrink-0">
+                  {/* Row 1: Contact info + stage */}
+                  <div className="flex items-center justify-between px-3 md:px-4 py-2">
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      {isMobile && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setSelectedId(null)}>
+                          <ArrowLeft className="h-5 w-5" />
+                        </Button>
+                      )}
+                      {/* Avatar */}
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setShowProfileViewer(true); }}
@@ -1551,28 +1552,55 @@ function OperacaoInboxInner() {
                         aria-label="Ver foto de perfil"
                       >
                         {profilePicsRef.current.get(selected.id) ? (
-                          <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-8 w-8 md:h-9 md:w-9 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                          <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-9 w-9 md:h-10 md:w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
                         ) : null}
-                        <div className={`h-8 w-8 md:h-9 md:w-9 rounded-full bg-secondary flex items-center justify-center text-xs md:text-sm font-bold ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
+                        <div className={`h-9 w-9 md:h-10 md:w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
                           {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
                         </div>
                       </button>
-                      {/* Name + phone · click toggles side context panel */}
+                      {/* Name + phone */}
                       <div
                         className="min-w-0 flex-1 cursor-pointer hover:opacity-80 transition-opacity"
                         onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}
                       >
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
-                          {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[8px] px-1.5 py-0 shrink-0">VIP</Badge>}
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-semibold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
+                          {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[9px] px-1.5 py-0 shrink-0">VIP</Badge>}
                         </div>
-                        <p className="text-[10px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "")}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "")}</p>
                       </div>
                     </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
+                        <SelectTrigger className="h-8 text-xs w-[120px] md:w-[140px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {STAGES.map(s => (
+                            <SelectItem key={s.key} value={s.key} className="text-xs">
+                              <div className="flex items-center gap-2">
+                                <div className={`h-2 w-2 rounded-full ${s.color}`} />{s.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {!isMobile && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
+                              <User className="h-4 w-4 text-primary" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+                  {/* Row 2: Action buttons */}
+                  <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
                     {activeFlowName && !isMobile && (
-                      <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary mr-2">
+                      <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary mr-1">
                         <Workflow className="h-3 w-3" />{activeFlowName}
                       </Badge>
                     )}
@@ -1581,7 +1609,7 @@ function OperacaoInboxInner() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 gap-1.5 text-[10px] px-2"
+                          className="h-7 gap-1.5 text-[11px] px-2.5"
                           disabled={rebuildingHistoryAll}
                           onClick={handleRebuildAllHistory}
                         >
@@ -1596,7 +1624,7 @@ function OperacaoInboxInner() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 gap-1.5 text-[10px] px-2"
+                          className="h-7 gap-1.5 text-[11px] px-2.5"
                           disabled={reloadingMessages || rebuildingHistoryAll}
                           onClick={handleReloadMessages}
                         >
@@ -1608,13 +1636,13 @@ function OperacaoInboxInner() {
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setShowSummaryDialog(true)}>
-                          <Brain className="h-4 w-4 text-primary" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
+                          <Brain className="h-3.5 w-3.5 text-primary" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Resumir conversa com IA</TooltipContent>
                     </Tooltip>
-                     <NathOpinionButton
+                    <NathOpinionButton
                       messages={currentMessages.map(m => ({
                         role: m.sender_type === "atendente" ? "agent" : "user",
                         content: m.text || "",
@@ -1626,39 +1654,15 @@ function OperacaoInboxInner() {
                       context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
                       variant="inline"
                     />
-                    <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
-                      <SelectTrigger className="h-7 text-[10px] w-[100px] md:w-[130px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {STAGES.map(s => (
-                          <SelectItem key={s.key} value={s.key} className="text-xs">
-                            <div className="flex items-center gap-2">
-                              <div className={`h-2 w-2 rounded-full ${s.color}`} />{s.label}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     {!isMobile && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-[10px] px-2" onClick={() => setShowLinkClient(true)}>
+                          <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[11px] px-2.5" onClick={() => setShowLinkClient(true)}>
                             <Link2 className="h-3.5 w-3.5" />
                             Vincular Cliente
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
-                      </Tooltip>
-                    )}
-                    {!isMobile && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className={`h-8 w-8 ${showClientContext ? 'bg-primary/10' : ''}`} onClick={() => setShowClientContext(prev => !prev)}>
-                            <User className="h-4 w-4 text-primary" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
                       </Tooltip>
                     )}
                   </div>
