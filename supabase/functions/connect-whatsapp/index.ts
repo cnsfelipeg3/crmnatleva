@@ -96,23 +96,25 @@ serve(async (req) => {
       userId = user?.id;
     }
 
-    // Upsert connection
+    // Encrypt access token before saving
+    const { data: encryptedToken, error: encryptErr } = await supabase.rpc(
+      "encrypt_whatsapp_secret",
+      { plaintext: accessToken }
+    );
+
+    if (encryptErr) throw new Error("Failed to encrypt token: " + encryptErr.message);
+
+    // Upsert connection into whatsapp_cloud_config
     const { data: conn, error: dbError } = await supabase
-      .from("whatsapp_connections")
+      .from("whatsapp_cloud_config")
       .upsert({
-        user_id: userId,
-        waba_id: wabaId,
         phone_number_id: phone.id,
-        phone_number: phone.display_phone_number || phone.phone_number || "",
-        display_name: phone.verified_name || phone.display_phone_number || "",
-        business_name: businessName,
-        business_id: businessId,
-        access_token: accessToken,
-        quality_rating: phone.quality_rating || "GREEN",
-        status: "active",
+        waba_id: wabaId,
+        access_token_encrypted: encryptedToken,
+        verify_token: `wh_${Date.now()}`,
+        is_active: true,
         connected_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      }, { onConflict: "user_id" })
+      }, { onConflict: "waba_id" })
       .select()
       .single();
 
