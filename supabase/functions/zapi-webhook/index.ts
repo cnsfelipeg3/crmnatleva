@@ -619,6 +619,19 @@ Deno.serve(async (req) => {
     const msgStatusFinal = fromMe ? "sent" : "delivered";
 
     // PRIMARY: conversation_messages (with idempotency via unique external_message_id)
+    const audioMeta: Record<string, any> = {};
+    if (body.audio) {
+      audioMeta.audio_duration_sec = body.audio.seconds || null;
+      audioMeta.is_voice_note = body.audio.ptt ?? null;
+      audioMeta.media_mimetype = body.audio.mimeType || null;
+    } else if (body.image) {
+      audioMeta.media_mimetype = body.image.mimeType || null;
+    } else if (body.video) {
+      audioMeta.media_mimetype = body.video.mimeType || null;
+    } else if (body.document) {
+      audioMeta.media_mimetype = body.document.mimeType || null;
+    }
+
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
@@ -627,9 +640,12 @@ Deno.serve(async (req) => {
       content: textContent || "",
       message_type: msgType,
       media_url: mediaUrl,
+      media_original_url: mediaUrl,
+      media_status: mediaUrl ? "pending" : null,
       status: msgStatusFinal,
       timestamp: timestampIso,
       created_at: timestampIso,
+      ...audioMeta,
     });
 
     if (unifiedErr) {
@@ -640,6 +656,26 @@ Deno.serve(async (req) => {
       }
     } else {
       console.log("[Webhook] ✓ Message saved to conversation_messages");
+
+      // Async: trigger media download if there's a media URL
+      if (mediaUrl && messageId) {
+        try {
+          const fnUrl = `${supabaseUrl}/functions/v1/media-downloader`;
+          fetch(fnUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              messageId,
+              sourceUrl: mediaUrl,
+              mediaType: msgType,
+              mimeType: audioMeta.media_mimetype || null,
+            }),
+          }).catch(e => console.warn("[Webhook] media-downloader fire-and-forget failed:", e?.message));
+        } catch { /* non-blocking */ }
+      }
     }
 
     // FALLBACK: legacy messages table
