@@ -54,10 +54,15 @@
       #boot-loader.hide{opacity:0;pointer-events:none}
       #boot-loader .ring{width:42px;height:42px;border:3px solid hsla(160,60%,50%,.2);border-top-color:hsl(160,60%,50%);border-radius:50%;animation:bl-spin .9s linear infinite}
       #boot-loader .txt{margin-top:18px;color:hsl(158,12%,70%);font-size:13px;letter-spacing:.18em;text-transform:uppercase}
-      @keyframes bl-spin{to{transform:rotate(360deg)}}
+       @keyframes bl-spin{to{transform:rotate(360deg)}}
     </style>
     <div id="boot-loader"><div class="ring"></div><div class="txt">NatLeva</div></div>
     <div id="root"></div>
+    <script>
+      // Safety net: if React fails to mount (e.g. chunk error), hide loader after 12s
+      // so the user isn't stuck on an infinite spinner.
+      setTimeout(function(){var el=document.getElementById('boot-loader');if(el){el.classList.add('hide');setTimeout(function(){el.remove()},400)}},12000);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
