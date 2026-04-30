@@ -44,13 +44,14 @@ function generateBars(id: string, count: number): number[] {
   return bars;
 }
 
-export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlayerProps>(function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData }, _ref) {
+export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlayerProps>(function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData, durationSec }, _ref) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(durationSec || 0);
   const [currentTime, setCurrentTime] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
+  const [useFallback, setUseFallback] = useState(false);
   const animFrameRef = useRef<number>();
   const bars = useRef(
     waveformData ? decodeWaveform(waveformData, 50) : generateBars(msgId, 50)
