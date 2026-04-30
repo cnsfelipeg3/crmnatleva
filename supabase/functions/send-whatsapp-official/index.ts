@@ -19,13 +19,23 @@ serve(async (req) => {
     );
 
     const { data: conn, error: fetchErr } = await supabase
-      .from("whatsapp_connections")
+      .from("whatsapp_cloud_config")
       .select("*")
       .eq("id", connection_id)
-      .eq("status", "active")
+      .eq("is_active", true)
       .single();
 
     if (fetchErr || !conn) throw new Error("Active connection not found");
+
+    // Decrypt the access token
+    const { data: decryptedToken, error: decryptErr } = await supabase.rpc(
+      "decrypt_whatsapp_secret",
+      { ciphertext: conn.access_token_encrypted }
+    );
+
+    if (decryptErr || !decryptedToken) {
+      throw new Error("Failed to decrypt access token");
+    }
 
     // Send message via WhatsApp API
     const sendUrl = `https://graph.facebook.com/v21.0/${conn.phone_number_id}/messages`;
@@ -46,7 +56,7 @@ serve(async (req) => {
     const sendRes = await fetch(sendUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${conn.access_token}`,
+        "Authorization": `Bearer ${decryptedToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify(sendBody),
@@ -62,7 +72,7 @@ serve(async (req) => {
     await supabase.from("whatsapp_official_messages").insert({
       connection_id,
       message_id: waMessageId,
-      from_number: conn.phone_number,
+      from_number: conn.phone_number_id,
       to_number: to,
       direction: "outbound",
       type,

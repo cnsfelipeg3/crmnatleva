@@ -19,14 +19,24 @@ serve(async (req) => {
     );
 
     const { data: conn, error: fetchErr } = await supabase
-      .from("whatsapp_connections")
+      .from("whatsapp_cloud_config")
       .select("*")
       .eq("id", connection_id)
       .single();
 
     if (fetchErr || !conn) throw new Error("Connection not found");
 
-    const phonesUrl = `https://graph.facebook.com/v21.0/${conn.waba_id}/phone_numbers?access_token=${conn.access_token}`;
+    // Decrypt the access token
+    const { data: decryptedToken, error: decryptErr } = await supabase.rpc(
+      "decrypt_whatsapp_secret",
+      { ciphertext: conn.access_token_encrypted }
+    );
+
+    if (decryptErr || !decryptedToken) {
+      throw new Error("Failed to decrypt access token");
+    }
+
+    const phonesUrl = `https://graph.facebook.com/v21.0/${conn.waba_id}/phone_numbers?access_token=${decryptedToken}`;
     const phonesRes = await fetch(phonesUrl);
     const phonesData = await phonesRes.json();
 
@@ -36,13 +46,9 @@ serve(async (req) => {
     const phone = phonesData.data[0];
 
     const { error: updateErr } = await supabase
-      .from("whatsapp_connections")
+      .from("whatsapp_cloud_config")
       .update({
         phone_number_id: phone.id,
-        phone_number: phone.display_phone_number || phone.phone_number || conn.phone_number,
-        display_name: phone.verified_name || conn.display_name,
-        quality_rating: phone.quality_rating || conn.quality_rating,
-        updated_at: new Date().toISOString(),
       })
       .eq("id", connection_id);
 

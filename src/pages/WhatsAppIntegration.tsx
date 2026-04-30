@@ -30,8 +30,8 @@ interface WhatsAppConfig {
   phone_number_id: string | null;
   waba_id: string | null;
   app_id: string | null;
-  app_secret: string | null;
-  access_token: string | null;
+  app_secret_encrypted: any | null;
+  access_token_encrypted: any | null;
   verify_token: string | null;
   webhook_url: string | null;
   status: string;
@@ -118,13 +118,14 @@ export default function WhatsAppIntegration() {
         setPhoneNumberId(c.phone_number_id || "");
         setWabaId(c.waba_id || "");
         setAppId(c.app_id || "");
-        setAppSecret(c.app_secret || "");
-        setAccessToken(c.access_token || "");
+        // Encrypted fields: show masked placeholder
+        setAppSecret(c.app_secret_encrypted ? "••••••••" : "");
+        setAccessToken(c.access_token_encrypted ? "••••••••" : "");
         setVerifyToken(c.verify_token || "");
         setWebhookUrl(c.webhook_url || defaultWebhookUrl);
         setEnvironment(c.environment || "teste");
         if (c.status === "connected") setStep(5);
-        else if (c.access_token) setStep(4);
+        else if (c.access_token_encrypted) setStep(4);
         else setStep(1);
       } else {
         const vt = generateVerifyToken();
@@ -150,18 +151,26 @@ export default function WhatsAppIntegration() {
   }
 
   async function handleSave() {
-    if (!phoneNumberId.trim() || !accessToken.trim()) {
-      toast.error("Phone Number ID e Access Token são obrigatórios");
+    if (!phoneNumberId.trim()) {
+      toast.error("Phone Number ID é obrigatório");
       return;
     }
+    // If token is masked (not changed), skip token validation
+    const isNewToken = accessToken.trim() && accessToken !== "••••••••";
+    const isNewSecret = appSecret.trim() && appSecret !== "••••••••";
+
+    if (!config?.id && !isNewToken) {
+      toast.error("Access Token é obrigatório na primeira configuração");
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload = {
+      // Save non-sensitive fields directly
+      const payload: any = {
         phone_number_id: phoneNumberId.trim(),
         waba_id: wabaId.trim() || null,
         app_id: appId.trim() || null,
-        app_secret: appSecret.trim() || null,
-        access_token: accessToken.trim(),
         verify_token: verifyToken,
         webhook_url: webhookUrl || defaultWebhookUrl,
         environment,
@@ -172,8 +181,27 @@ export default function WhatsAppIntegration() {
       if (config?.id) {
         await supabase.from("whatsapp_config").update(payload).eq("id", config.id);
       } else {
-        await supabase.from("whatsapp_config").insert(payload);
+        const { data: inserted } = await supabase.from("whatsapp_config").insert(payload).select().single();
+        if (inserted) setConfig(inserted as any);
       }
+
+      const configId = config?.id || (config as any)?.id;
+
+      // Encrypt sensitive fields via edge function
+      if (isNewToken && configId) {
+        const { error } = await supabase.functions.invoke("update-whatsapp-token", {
+          body: { config_id: configId, field: "access_token", value: accessToken.trim() },
+        });
+        if (error) throw new Error("Erro ao encriptar token: " + error.message);
+      }
+
+      if (isNewSecret && configId) {
+        const { error } = await supabase.functions.invoke("update-whatsapp-token", {
+          body: { config_id: configId, field: "app_secret", value: appSecret.trim() },
+        });
+        if (error) throw new Error("Erro ao encriptar app secret: " + error.message);
+      }
+
       toast.success("Configuração salva com sucesso!");
       await loadConfig();
       setStep(3);
@@ -248,7 +276,7 @@ export default function WhatsAppIntegration() {
 
   const completedSteps = [
     Object.values(prereqs).filter(Boolean).length === PREREQUISITES.length,
-    !!config?.access_token,
+    !!config?.access_token_encrypted,
     !!config?.webhook_url && !!config?.verify_token,
     testResult === "success" || config?.status === "connected",
     config?.status === "connected",
