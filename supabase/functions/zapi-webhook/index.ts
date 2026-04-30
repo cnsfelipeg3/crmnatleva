@@ -364,6 +364,21 @@ async function handleExclude(supabase: any, cleanPhone: string, excludeMsg: stri
 // ═══ MAIN HANDLER ═════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════
 
+// ─── Constant-time string comparison ───
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) {
+    // Still iterate to avoid length-based timing leak
+    let dummy = 0;
+    for (let i = 0; i < a.length; i++) dummy |= a.charCodeAt(i);
+    return false;
+  }
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -372,6 +387,32 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // ═══════════════════════════════════════════════════════════
+  // AUTH: Validate X-NatLeva-Token header
+  // ═══════════════════════════════════════════════════════════
+  const sharedSecret = Deno.env.get("WEBHOOK_SHARED_SECRET") || "";
+  const headerToken = req.headers.get("X-NatLeva-Token") || "";
+  const allowUnauth = Deno.env.get("WEBHOOK_ALLOW_UNAUTH") === "true";
+
+  if (sharedSecret && !allowUnauth) {
+    const isValid = headerToken.length > 0 && timingSafeEqual(headerToken, sharedSecret);
+    if (!isValid) {
+      // Log failed attempt
+      try {
+        const sourceIp = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+        await supabase.from("webhook_audit_log").insert({
+          source_ip: sourceIp,
+          header_present: headerToken.length > 0,
+          success: false,
+        });
+      } catch { /* best effort */ }
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
 
   let rawEventId: string | null = null;
 
