@@ -1,15 +1,167 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MAX_IMAGES = 10;
+const MAX_TEXT_LENGTH = 50000;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB per image
+const MAX_REQUESTS_PER_HOUR = 30;
+const ALLOWED_IMAGE_PREFIXES = ["data:image/jpeg", "data:image/png", "data:image/webp", "data:application/pdf"];
+
+const INJECTION_PATTERNS = [
+  /ignore\s+(all\s+)?previous\s+instructions/i,
+  /ignore\s+(all\s+)?above/i,
+  /system\s*:/i,
+  /you\s+are\s+now\s+/i,
+  /do\s+not\s+follow/i,
+  /override\s+(the\s+)?(system|prompt)/i,
+  /act\s+as\s+(a\s+)?different/i,
+  /ignore\s+tudo\s+(acima|anterior)/i,
+  /ignore\s+instru[çc][õo]es\s+anteriores/i,
+  /voc[eê]\s+agora\s+[eé]\s+/i,
+  /desconsidere\s+(o\s+)?(prompt|sistema)/i,
+  /\[SYSTEM\]/i,
+  /\<\|im_start\|/i,
+  /\<\|endoftext\|/i,
+];
+
+function detectInjection(text: string): string | null {
+  for (const pattern of INJECTION_PATTERNS) {
+    if (pattern.test(text)) return pattern.source;
+  }
+  return null;
+}
+
+function stripHtml(text: string): string {
+  return text.replace(/<[^>]*>/g, "").replace(/&[a-z]+;/gi, " ");
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { images, text_input } = await req.json();
+    // --- AUTH ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // --- RATE LIMIT ---
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const serviceClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    const { count } = await serviceClient
+      .from("ai_extraction_rate_limit")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .gte("request_at", oneHourAgo);
+
+    if ((count ?? 0) >= MAX_REQUESTS_PER_HOUR) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Max 30 requests/hour." }), {
+        status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Record this request
+    await serviceClient.from("ai_extraction_rate_limit").insert({ user_id: user.id });
+
+    // --- PARSE & VALIDATE INPUT ---
+    const body = await req.json();
+    const { images, text_input } = body;
+
+    // Validate images
+    if (images !== undefined && images !== null) {
+      if (!Array.isArray(images)) {
+        return new Response(JSON.stringify({ error: "images must be an array" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (images.length > MAX_IMAGES) {
+        return new Response(JSON.stringify({ error: `Maximum ${MAX_IMAGES} images allowed` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      for (const img of images) {
+        if (typeof img !== "string") {
+          return new Response(JSON.stringify({ error: "Each image must be a string" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // Validate format
+        const validPrefix = ALLOWED_IMAGE_PREFIXES.some((p) => img.startsWith(p));
+        if (!validPrefix) {
+          return new Response(JSON.stringify({ error: "Invalid image format. Allowed: JPEG, PNG, WebP, PDF" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        // Validate size (base64 is ~4/3 of original)
+        const base64Size = (img.length * 3) / 4;
+        if (base64Size > MAX_IMAGE_SIZE_BYTES) {
+          return new Response(JSON.stringify({ error: "Image exceeds 5MB limit" }), {
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
+    }
+
+    // Validate text_input
+    if (text_input !== undefined && text_input !== null) {
+      if (typeof text_input !== "string") {
+        return new Response(JSON.stringify({ error: "text_input must be a string" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (text_input.length > MAX_TEXT_LENGTH) {
+        return new Response(JSON.stringify({ error: `Text exceeds ${MAX_TEXT_LENGTH} character limit` }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    if (!images?.length && !text_input) {
+      return new Response(
+        JSON.stringify({ error: "Forneça pelo menos uma imagem ou texto" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- PROMPT INJECTION DETECTION ---
+    const sanitizedText = text_input ? stripHtml(text_input) : "";
+    if (sanitizedText) {
+      const injectionMatch = detectInjection(sanitizedText);
+      if (injectionMatch) {
+        // Log suspicious attempt
+        await serviceClient.from("ai_security_log").insert({
+          user_id: user.id,
+          reason: `prompt_injection_detected: ${injectionMatch}`,
+          raw_input_preview: sanitizedText.slice(0, 500),
+        });
+        return new Response(JSON.stringify({ error: "Input contains prohibited patterns" }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // --- BUILD AI REQUEST ---
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -113,8 +265,8 @@ REGRAS:
       { type: "text", text: systemPrompt },
     ];
 
-    if (text_input) {
-      content.push({ type: "text", text: `\n\nTexto adicional fornecido pelo usuário:\n${text_input}` });
+    if (sanitizedText) {
+      content.push({ type: "text", text: `\n\nTexto adicional fornecido pelo usuário:\n${sanitizedText}` });
     }
 
     if (images && images.length > 0) {
@@ -124,13 +276,6 @@ REGRAS:
           image_url: { url: img },
         });
       }
-    }
-
-    if (!images?.length && !text_input) {
-      return new Response(
-        JSON.stringify({ error: "Forneça pelo menos uma imagem ou texto" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

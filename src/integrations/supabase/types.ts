@@ -504,6 +504,24 @@ export type Database = {
           },
         ]
       }
+      ai_extraction_rate_limit: {
+        Row: {
+          id: string
+          request_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          request_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          request_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_integrations: {
         Row: {
           api_key_encrypted: string | null
@@ -798,6 +816,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_security_log: {
+        Row: {
+          created_at: string
+          id: string
+          raw_input_preview: string | null
+          reason: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          raw_input_preview?: string | null
+          reason: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          raw_input_preview?: string | null
+          reason?: string
+          user_id?: string | null
+        }
+        Relationships: []
       }
       ai_strategy_knowledge: {
         Row: {
@@ -7785,7 +7827,8 @@ export type Database = {
       }
       whatsapp_cloud_config: {
         Row: {
-          access_token: string | null
+          access_token_encrypted: string | null
+          access_token_legacy_plaintext: string | null
           connected_at: string | null
           created_at: string
           id: string
@@ -7795,7 +7838,8 @@ export type Database = {
           waba_id: string | null
         }
         Insert: {
-          access_token?: string | null
+          access_token_encrypted?: string | null
+          access_token_legacy_plaintext?: string | null
           connected_at?: string | null
           created_at?: string
           id?: string
@@ -7805,7 +7849,8 @@ export type Database = {
           waba_id?: string | null
         }
         Update: {
-          access_token?: string | null
+          access_token_encrypted?: string | null
+          access_token_legacy_plaintext?: string | null
           connected_at?: string | null
           created_at?: string
           id?: string
@@ -7818,9 +7863,11 @@ export type Database = {
       }
       whatsapp_config: {
         Row: {
-          access_token: string | null
+          access_token_encrypted: string | null
+          access_token_legacy_plaintext: string | null
           app_id: string | null
-          app_secret: string | null
+          app_secret_encrypted: string | null
+          app_secret_legacy_plaintext: string | null
           configured_by: string | null
           connection_status: string | null
           environment: string
@@ -7835,9 +7882,11 @@ export type Database = {
           webhook_url: string | null
         }
         Insert: {
-          access_token?: string | null
+          access_token_encrypted?: string | null
+          access_token_legacy_plaintext?: string | null
           app_id?: string | null
-          app_secret?: string | null
+          app_secret_encrypted?: string | null
+          app_secret_legacy_plaintext?: string | null
           configured_by?: string | null
           connection_status?: string | null
           environment?: string
@@ -7852,9 +7901,11 @@ export type Database = {
           webhook_url?: string | null
         }
         Update: {
-          access_token?: string | null
+          access_token_encrypted?: string | null
+          access_token_legacy_plaintext?: string | null
           app_id?: string | null
-          app_secret?: string | null
+          app_secret_encrypted?: string | null
+          app_secret_legacy_plaintext?: string | null
           configured_by?: string | null
           connection_status?: string | null
           environment?: string
@@ -8128,8 +8179,10 @@ export type Database = {
         }
         Returns: Json
       }
+      decrypt_whatsapp_secret: { Args: { ciphertext: string }; Returns: string }
       deduplicate_passengers: { Args: never; Returns: Json }
       deduplicate_sales: { Args: never; Returns: Json }
+      encrypt_whatsapp_secret: { Args: { plaintext: string }; Returns: string }
       extract_person_name: { Args: { raw_name: string }; Returns: string }
       get_portal_client_id: { Args: { _user_id: string }; Returns: string }
       has_menu_permission: {
