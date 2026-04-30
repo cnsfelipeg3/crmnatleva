@@ -6,6 +6,7 @@ interface AudioWaveformPlayerProps {
   isOutgoing?: boolean;
   msgId: string;
   waveformData?: string;
+  durationSec?: number;
 }
 
 const SPEEDS = [1, 1.5, 2];
@@ -43,13 +44,14 @@ function generateBars(id: string, count: number): number[] {
   return bars;
 }
 
-export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlayerProps>(function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData }, _ref) {
+export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlayerProps>(function AudioWaveformPlayer({ src, isOutgoing = false, msgId, waveformData, durationSec }, _ref) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [duration, setDuration] = useState(durationSec || 0);
   const [currentTime, setCurrentTime] = useState(0);
   const [speedIdx, setSpeedIdx] = useState(0);
+  const [useFallback, setUseFallback] = useState(false);
   const animFrameRef = useRef<number>();
   const bars = useRef(
     waveformData ? decodeWaveform(waveformData, 50) : generateBars(msgId, 50)
@@ -90,8 +92,14 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (audio.paused) audio.play().catch(() => {});
-    else audio.pause();
+    if (audio.paused) {
+      audio.play().catch(() => {
+        // If play fails (e.g. Safari can't decode ogg), show fallback
+        setUseFallback(true);
+      });
+    } else {
+      audio.pause();
+    }
   };
 
   const cycleSpeed = () => {
@@ -119,6 +127,18 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
 
   const displayTime = isPlaying || currentTime > 0 ? currentTime : duration;
   const speed = SPEEDS[speedIdx];
+
+  // Fallback: if browser can't play, show native audio controls
+  if (useFallback) {
+    return (
+      <div className="flex flex-col gap-1 min-w-[220px] py-1">
+        <audio controls src={src} preload="metadata" className="w-full h-8" />
+        <span className={`text-[9px] ${isOutgoing ? "text-primary-foreground/50" : "text-muted-foreground"}`}>
+          Formato incompatível · player nativo
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center gap-2.5 min-w-[260px] py-1">

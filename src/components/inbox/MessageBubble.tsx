@@ -101,13 +101,24 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
               {/* Audio */}
               {msg.message_type === "audio" && (
                 <div className="min-w-[220px]">
-                  {msg.media_url ? (
+                  {(msg.media_storage_url || msg.media_url) ? (
                     <>
-                      <AudioWaveformPlayer src={msg.media_url} isOutgoing={msg.sender_type === "atendente"} msgId={msg.id} />
+                      <AudioWaveformPlayer
+                        src={msg.media_storage_url || msg.media_url!}
+                        isOutgoing={msg.sender_type === "atendente"}
+                        msgId={msg.id}
+                        durationSec={msg.audio_duration_sec}
+                      />
                       <div className="flex items-center gap-1 mt-1">
-                        <a href={msg.media_url} download={`audio_${msg.id}.ogg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                        {msg.is_voice_note === false && (
+                          <span className="text-[9px] opacity-50 mr-1">♫</span>
+                        )}
+                        <a href={msg.media_storage_url || msg.media_url} download={`audio_${msg.id}.ogg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
                           <File className="h-2.5 w-2.5" /> Baixar
                         </a>
+                        {msg.media_status === "failed" && (
+                          <span className="text-[9px] text-destructive ml-1">⚠ mídia pode expirar</span>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -183,9 +194,10 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.msg.status === next.msg.status &&
     prev.msg.edited === next.msg.edited &&
     prev.msg.media_url === next.msg.media_url &&
+    prev.msg.media_storage_url === next.msg.media_storage_url &&
+    prev.msg.media_status === next.msg.media_status &&
     prev.index === next.index &&
     prev.contactName === next.contactName &&
-    // Check if date separator would change (only if messages array ref changes)
     prev.messages === next.messages
   );
 });

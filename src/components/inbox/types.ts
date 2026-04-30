@@ -33,6 +33,12 @@ export interface Message {
   message_type: MsgType;
   text: string;
   media_url?: string;
+  media_storage_url?: string;
+  media_original_url?: string;
+  media_status?: string;
+  media_mimetype?: string;
+  audio_duration_sec?: number;
+  is_voice_note?: boolean;
   status: MsgStatus;
   created_at: string;
   external_message_id?: string;
