@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { WhatsAppAvatar } from "@/components/inbox/WhatsAppAvatar";
 import {
   X, User, Phone, Mail, MapPin, Star, Clock, Plane, CreditCard,
   FileText, MessageSquare, ChevronDown, ChevronUp, DollarSign,
