@@ -18,14 +18,21 @@ interface Attachment {
 }
 
 const CATEGORY_MAP: Record<string, string> = {
-  voucher:        "Vouchers",
-  prints_emissao: "Prints de Emissão",
-  comprovante:    "Comprovantes",
-  nota_fiscal:    "Notas Fiscais",
-  aereo:          getProductLabel("aereo"),
-  hotel:          getProductLabel("hospedagem"),
-  seguro:         getProductLabel("seguro-viagem"),
-  outros:         getProductLabel("outros"),
+  // Novas categorias setorizadas (NewSale wizard)
+  prints_emissao:     "Prints para Emissão",
+  voucher_aereo:      "Voucher Aéreo",
+  voucher_hospedagem: "Voucher Hospedagem",
+  voucher_transfer:   "Voucher Transfer",
+  voucher_pacote:     "Voucher Pacote",
+  ingressos:          "Ingressos",
+  comprovante:        "Comprovante de Pagamento",
+  nota_fiscal:        "Nota Fiscal",
+  outros:             "Outros",
+  // Legado · vendas antigas continuam renderizando com seus labels originais
+  voucher:            "Vouchers",
+  aereo:              getProductLabel("aereo"),
+  hotel:              getProductLabel("hospedagem"),
+  seguro:             getProductLabel("seguro-viagem"),
 };
 
 function getFileIcon(fileName: string) {
