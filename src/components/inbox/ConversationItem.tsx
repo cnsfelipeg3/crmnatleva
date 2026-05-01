@@ -52,6 +52,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, onSelect, onToggl
           <WhatsAppAvatar
             src={profilePic}
             name={contactName}
+            phone={conv.phone}
             className="h-10 w-10"
             textClassName="text-xs"
           />

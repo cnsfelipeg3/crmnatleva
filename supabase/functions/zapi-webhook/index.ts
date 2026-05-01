@@ -18,7 +18,35 @@ function isAgencyOrGenericName(name: string | null | undefined): boolean {
   if (t === "atendente" || t === "operador" || t === "agencia" || t === "agência") return true;
   if (t === "novo contato" || t === "desconhecido" || t === "contato sem nome") return true;
   if (/^\+?\d[\d\s\-()]{6,}$/.test(t)) return true;
+  // LID puro (15+ dígitos com ou sem @lid) não é nome
+  if (/^\d{15,}(@lid)?$/.test(t)) return true;
   return false;
+}
+
+// ─── Helper: format BR phone for display ───
+function formatPhoneDisplay(rawPhone: string): string {
+  const digits = String(rawPhone || "").replace(/\D/g, "");
+  if (/^55\d{10,11}$/.test(digits)) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    if (rest.length === 9) return `+55 ${ddd} ${rest.slice(0, 5)}-${rest.slice(5)}`;
+    if (rest.length === 8) return `+55 ${ddd} ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  }
+  return digits ? `+${digits}` : rawPhone;
+}
+
+/**
+ * Sanitiza um nome vindo do Z-API: se for LID puro (ex: "276136550478042@lid"
+ * ou só dígitos longos), devolve o telefone formatado em vez do LID.
+ * Evita gravar lixo tipo "276136550478042@lid" no contact_name.
+ */
+function sanitizeContactName(rawName: string | null | undefined, phone: string | null): string | null {
+  const name = (rawName || "").trim();
+  if (!name) return phone ? formatPhoneDisplay(phone) : null;
+  if (/^\d{15,}(@lid)?$/.test(name) || name.endsWith("@lid")) {
+    return phone ? formatPhoneDisplay(phone) : null;
+  }
+  return name;
 }
 
 // ─── Helper: normalize phone to digits only ───
@@ -529,13 +557,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Sanitiza contactName depois que o phone real foi resolvido
+    // (impede que LID puro vire o nome de exibição da conversa)
+    const safeContactName = sanitizeContactName(contactName, phone) || contactName;
+
     // Store LID↔phone mapping for inbound messages
     if (!fromMe && phone && chatLid) {
       const lid = chatLid.replace("@lid", "");
       await supabase.from("zapi_contacts").upsert({
         phone: normalizePhone(phone),
         lid,
-        name: body.chatName || body.senderName || null,
+        name: sanitizeContactName(body.chatName || body.senderName, phone),
         profile_picture_url: body.senderPhoto || body.photo || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "phone" });
@@ -591,7 +623,7 @@ Deno.serve(async (req) => {
       from_me: fromMe,
       text: textContent || null,
       type: msgType,
-      sender_name: fromMe ? (body.senderName || "Atendente") : contactName,
+      sender_name: fromMe ? (body.senderName || "Atendente") : safeContactName,
       sender_photo: body.senderPhoto || null,
       status: rawMsgStatus,
       timestamp: timestampEpoch,
@@ -602,7 +634,7 @@ Deno.serve(async (req) => {
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
     const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
-    const conversationId = await upsertConversation(supabase, cleanPhone, contactName, preview, timestampIso, fromMe);
+    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe);
 
     if (!conversationId) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_conversation" }).eq("id", rawEventId);
@@ -771,7 +803,7 @@ async function saveContact(supabase: any, phone: string, body: any, chatLid: str
   const incomingPhoto = !body.fromMe ? (body.senderPhoto || body.photo || null) : null;
   const upsertData: Record<string, unknown> = {
     phone: contactPhone,
-    name: body.chatName || null,
+    name: sanitizeContactName(body.chatName, phone),
     updated_at: new Date().toISOString(),
   };
   if (incomingPhoto) upsertData.profile_picture_url = incomingPhoto;
