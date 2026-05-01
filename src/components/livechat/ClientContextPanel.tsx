@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { WhatsAppAvatar } from "@/components/inbox/WhatsAppAvatar";
 import {
   X, User, Phone, Mail, MapPin, Star, Clock, Plane, CreditCard,
   FileText, MessageSquare, ChevronDown, ChevronUp, DollarSign,
@@ -740,13 +741,12 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                 className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105"
                 aria-label="Ver foto de perfil"
               >
-                {profilePic ? (
-                  <img src={profilePic} alt="" className="h-12 w-12 rounded-full object-cover ring-2 ring-border/30" />
-                ) : (
-                  <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-sm font-bold text-primary ring-2 ring-border/30">
-                    {initials}
-                  </div>
-                )}
+                <WhatsAppAvatar
+                  src={profilePic}
+                  name={clientData?.display_name || conversation.contact_name || ""}
+                  className="h-12 w-12 ring-2 ring-border/30"
+                  textClassName="text-sm"
+                />
                 {conversation.is_vip && (
                   <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center ring-2 ring-card">
                     <Star className="h-2.5 w-2.5 text-white fill-white" />

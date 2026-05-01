@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { motion } from "framer-motion";
+import { WhatsAppAvatar } from "@/components/inbox/WhatsAppAvatar";
 
 interface ContactProfilePanelProps {
   contact: {
@@ -87,17 +88,13 @@ export function ContactProfilePanel({ contact, profilePic, onClose }: ContactPro
                 onClick={() => profilePic && setShowFullPhoto(true)}
                 className={`relative group ${profilePic ? 'cursor-pointer' : 'cursor-default'}`}
               >
-                {profilePic ? (
-                  <img
-                    src={profilePic}
-                    alt={contact.contact_name}
-                    className="h-20 w-20 rounded-full object-cover ring-2 ring-border group-hover:ring-primary/50 transition-all"
-                  />
-                ) : (
-                  <div className="h-20 w-20 rounded-full bg-secondary flex items-center justify-center text-xl font-bold text-foreground">
-                    {initials}
-                  </div>
-                )}
+                <WhatsAppAvatar
+                  src={profilePic}
+                  name={contact.contact_name}
+                  alt={contact.contact_name}
+                  className="h-20 w-20 ring-2 ring-border group-hover:ring-primary/50 transition-all"
+                  textClassName="text-xl"
+                />
                 {profilePic && (
                   <div className="absolute inset-0 rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <ExternalLink className="h-5 w-5 text-white" />
