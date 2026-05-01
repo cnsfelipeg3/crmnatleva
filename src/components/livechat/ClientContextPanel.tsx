@@ -744,6 +744,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                 <WhatsAppAvatar
                   src={profilePic}
                   name={clientData?.display_name || conversation.contact_name || ""}
+                  phone={conversation.phone}
                   className="h-12 w-12 ring-2 ring-border/30"
                   textClassName="text-sm"
                 />

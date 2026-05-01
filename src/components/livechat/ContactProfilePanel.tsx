@@ -91,6 +91,7 @@ export function ContactProfilePanel({ contact, profilePic, onClose }: ContactPro
                 <WhatsAppAvatar
                   src={profilePic}
                   name={contact.contact_name}
+                  phone={contact.phone}
                   alt={contact.contact_name}
                   className="h-20 w-20 ring-2 ring-border group-hover:ring-primary/50 transition-all"
                   textClassName="text-xl"
