@@ -557,13 +557,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Sanitiza contactName depois que o phone real foi resolvido
+    // (impede que LID puro vire o nome de exibição da conversa)
+    const safeContactName = sanitizeContactName(contactName, phone) || contactName;
+
     // Store LID↔phone mapping for inbound messages
     if (!fromMe && phone && chatLid) {
       const lid = chatLid.replace("@lid", "");
       await supabase.from("zapi_contacts").upsert({
         phone: normalizePhone(phone),
         lid,
-        name: body.chatName || body.senderName || null,
+        name: sanitizeContactName(body.chatName || body.senderName, phone),
         profile_picture_url: body.senderPhoto || body.photo || null,
         updated_at: new Date().toISOString(),
       }, { onConflict: "phone" });
