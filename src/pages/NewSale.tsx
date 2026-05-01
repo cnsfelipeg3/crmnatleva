@@ -359,21 +359,31 @@ export default function NewSale() {
 
   const updateForm = (field: string, value: any) => setForm(f => ({ ...f, [field]: value }));
 
-  const handleFiles = (newFiles: FileList | null) => {
-    if (!newFiles) return;
-    setFiles(prev => [...prev, ...Array.from(newFiles)]);
+  const handleFilesForCategory = (cat: SaleAttachmentCategory, newFiles: FileList | null) => {
+    if (!newFiles || !newFiles.length) return;
+    setFilesByCategory(prev => ({
+      ...prev,
+      [cat]: [...prev[cat], ...Array.from(newFiles)],
+    }));
+  };
+
+  const removeFileFromCategory = (cat: SaleAttachmentCategory, idx: number) => {
+    setFilesByCategory(prev => ({
+      ...prev,
+      [cat]: prev[cat].filter((_, j) => j !== idx),
+    }));
   };
 
   // ─── Extraction ─────────────────────────────────────
   const handleExtract = async () => {
-    if (!files.length && !textInput.trim()) {
+    if (!allFiles.length && !textInput.trim()) {
       toast({ title: "Forneça arquivos ou texto para extrair", variant: "destructive" });
       return;
     }
     setExtracting(true);
     try {
       const images: string[] = [];
-      for (const file of files) {
+      for (const { file } of allFiles) {
         const reader = new FileReader();
         const base64 = await new Promise<string>((resolve) => {
           reader.onload = () => resolve(reader.result as string);
