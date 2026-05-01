@@ -623,7 +623,7 @@ Deno.serve(async (req) => {
       from_me: fromMe,
       text: textContent || null,
       type: msgType,
-      sender_name: fromMe ? (body.senderName || "Atendente") : contactName,
+      sender_name: fromMe ? (body.senderName || "Atendente") : safeContactName,
       sender_photo: body.senderPhoto || null,
       status: rawMsgStatus,
       timestamp: timestampEpoch,
@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
     const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
-    const conversationId = await upsertConversation(supabase, cleanPhone, contactName, preview, timestampIso, fromMe);
+    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe);
 
     if (!conversationId) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_conversation" }).eq("id", rawEventId);
