@@ -18,7 +18,35 @@ function isAgencyOrGenericName(name: string | null | undefined): boolean {
   if (t === "atendente" || t === "operador" || t === "agencia" || t === "agência") return true;
   if (t === "novo contato" || t === "desconhecido" || t === "contato sem nome") return true;
   if (/^\+?\d[\d\s\-()]{6,}$/.test(t)) return true;
+  // LID puro (15+ dígitos com ou sem @lid) não é nome
+  if (/^\d{15,}(@lid)?$/.test(t)) return true;
   return false;
+}
+
+// ─── Helper: format BR phone for display ───
+function formatPhoneDisplay(rawPhone: string): string {
+  const digits = String(rawPhone || "").replace(/\D/g, "");
+  if (/^55\d{10,11}$/.test(digits)) {
+    const ddd = digits.slice(2, 4);
+    const rest = digits.slice(4);
+    if (rest.length === 9) return `+55 ${ddd} ${rest.slice(0, 5)}-${rest.slice(5)}`;
+    if (rest.length === 8) return `+55 ${ddd} ${rest.slice(0, 4)}-${rest.slice(4)}`;
+  }
+  return digits ? `+${digits}` : rawPhone;
+}
+
+/**
+ * Sanitiza um nome vindo do Z-API: se for LID puro (ex: "276136550478042@lid"
+ * ou só dígitos longos), devolve o telefone formatado em vez do LID.
+ * Evita gravar lixo tipo "276136550478042@lid" no contact_name.
+ */
+function sanitizeContactName(rawName: string | null | undefined, phone: string | null): string | null {
+  const name = (rawName || "").trim();
+  if (!name) return phone ? formatPhoneDisplay(phone) : null;
+  if (/^\d{15,}(@lid)?$/.test(name) || name.endsWith("@lid")) {
+    return phone ? formatPhoneDisplay(phone) : null;
+  }
+  return name;
 }
 
 // ─── Helper: normalize phone to digits only ───
