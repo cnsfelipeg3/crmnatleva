@@ -35,6 +35,11 @@ import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/comp
 import { useQuery } from "@tanstack/react-query";
 import { getProductSlug, inferProductSlugsFromSale } from "@/lib/productTypes";
 import { validateTripLengthFromSegments } from "@/lib/tripLengthValidation";
+import {
+  SALE_ATTACHMENT_CATEGORIES,
+  EMPTY_FILES_BY_CATEGORY,
+  type SaleAttachmentCategory,
+} from "@/lib/saleAttachmentCategories";
 
 /* ─── Types ────────────────────────────────────────────── */
 
@@ -104,8 +109,15 @@ export default function NewSale() {
   });
 
   // Upload & extraction
-  const [dragOver, setDragOver] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
+  const [dragOverCat, setDragOverCat] = useState<SaleAttachmentCategory | null>(null);
+  const [filesByCategory, setFilesByCategory] = useState<Record<SaleAttachmentCategory, File[]>>(
+    () => ({ ...EMPTY_FILES_BY_CATEGORY })
+  );
+  // Lista achatada · usada pela IA e pela contagem de "any file?"
+  const allFiles = useMemo(
+    () => SALE_ATTACHMENT_CATEGORIES.flatMap(c => filesByCategory[c.key].map(f => ({ file: f, category: c.key }))),
+    [filesByCategory]
+  );
   const [textInput, setTextInput] = useState("");
   const [extracting, setExtracting] = useState(false);
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
