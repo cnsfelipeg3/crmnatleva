@@ -879,12 +879,12 @@ export default function NewSale() {
       // ═══ Upload de anexos para o Storage + tabela attachments ═══
       // Os arquivos da aba "Anexos / IA" precisam ser persistidos para aparecerem
       // depois em SaleDetail (que lê de public.attachments).
-      if (files.length > 0) {
+      if (allFiles.length > 0) {
         const failedUploads: string[] = [];
-        for (const file of files) {
+        for (const { file, category } of allFiles) {
           try {
             const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-            const path = `sales/${saleId}/${Date.now()}_${safeName}`;
+            const path = `sales/${saleId}/${category}/${Date.now()}_${safeName}`;
             const { error: upErr } = await supabase.storage
               .from("sale-attachments")
               .upload(path, file, { upsert: false, contentType: file.type || undefined });
@@ -895,7 +895,7 @@ export default function NewSale() {
               file_name: file.name,
               file_type: file.type || null,
               file_url: urlData.publicUrl,
-              category: "outros",
+              category,
               uploaded_by: user?.id || null,
             });
             if (insErr) throw insErr;
@@ -907,11 +907,11 @@ export default function NewSale() {
         if (failedUploads.length > 0) {
           toast({
             title: "Alguns anexos não foram salvos",
-            description: `Falhou: ${failedUploads.join(", ")}. A venda foi salva — você pode reenviar pela tela da venda.`,
+            description: `Falhou: ${failedUploads.join(", ")}. A venda foi salva · você pode reenviar pela tela da venda.`,
             variant: "destructive",
           });
         } else {
-          setFiles([]);
+          setFilesByCategory({ ...EMPTY_FILES_BY_CATEGORY });
         }
       }
 
