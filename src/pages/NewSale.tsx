@@ -1414,43 +1414,101 @@ export default function NewSale() {
           <Card className="p-6">
             <SectionTitle icon={Sparkles} title="Anexos e Extração com IA" subtitle="Envie comprovantes e deixe a IA preencher automaticamente" />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div
-                  className={cn("border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer", dragOver ? "border-primary bg-primary/5" : "border-border")}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
-                  onClick={() => document.getElementById("file-upload-new")?.click()}
-                >
-                  <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm font-medium text-foreground mb-1">Anexar espelho da emissão</p>
-                  <p className="text-xs text-muted-foreground">PDF, imagens, prints de emissão, WhatsApp, comprovantes</p>
-                  <input type="file" accept="image/*,.pdf,.csv,.xlsx" multiple onChange={(e) => handleFiles(e.target.files)} className="hidden" id="file-upload-new" />
-                </div>
-
-                <Button variant="outline" className="w-full" onClick={() => document.getElementById("camera-capture")?.click()}>
-                  <Camera className="w-4 h-4 mr-2" /> Abrir Câmera
-                </Button>
-                <input type="file" accept="image/*" capture="environment" onChange={(e) => handleFiles(e.target.files)} className="hidden" id="camera-capture" />
-
-                {files.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {files.map((f, i) => (
-                      <Badge key={i} variant="secondary" className="flex items-center gap-1 py-1">
-                        <Paperclip className="w-3 h-3" />
-                        {f.name.slice(0, 25)}
-                        <button onClick={() => setFiles(prev => prev.filter((_, j) => j !== i))} className="ml-1 hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
+            <div className="space-y-4">
+              {/* Grade setorizada · 9 categorias em 2 colunas */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {SALE_ATTACHMENT_CATEGORIES.map(({ key, label, icon: Icon, hint }) => {
+                  const list = filesByCategory[key];
+                  const isOver = dragOverCat === key;
+                  const inputId = `file-upload-${key}`;
+                  return (
+                    <div
+                      key={key}
+                      className={cn(
+                        "border-2 border-dashed rounded-xl p-3 transition-colors cursor-pointer bg-card/40",
+                        isOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                      )}
+                      onDragOver={(e) => { e.preventDefault(); setDragOverCat(key); }}
+                      onDragLeave={() => setDragOverCat(null)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setDragOverCat(null);
+                        handleFilesForCategory(key, e.dataTransfer.files);
+                      }}
+                      onClick={() => document.getElementById(inputId)?.click()}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="w-3.5 h-3.5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-semibold text-foreground truncate">{label}</p>
+                          <p className="text-[10px] text-muted-foreground truncate">{hint}</p>
+                        </div>
+                        {list.length > 0 && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0">{list.length}</Badge>
+                        )}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*,.pdf,.csv,.xlsx"
+                        multiple
+                        onChange={(e) => handleFilesForCategory(key, e.target.files)}
+                        className="hidden"
+                        id={inputId}
+                      />
+                      {list.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {list.map((f, i) => (
+                            <Badge key={i} variant="outline" className="flex items-center gap-1 py-0.5 text-[10px] font-normal">
+                              <Paperclip className="w-2.5 h-2.5" />
+                              <span className="max-w-[120px] truncate">{f.name}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); removeFileFromCategory(key, i); }}
+                                className="ml-0.5 hover:text-destructive"
+                              >
+                                <Trash2 className="w-2.5 h-2.5" />
+                              </button>
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="space-y-4">
+              {/* Câmera + Texto complementar lado a lado */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Texto complementar</Label>
-                  <Textarea placeholder="Cole informações: conversa do WhatsApp, dados do cliente, detalhes da reserva..." value={textInput} onChange={(e) => setTextInput(e.target.value)} rows={6} />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    type="button"
+                    onClick={() => document.getElementById("camera-capture")?.click()}
+                  >
+                    <Camera className="w-4 h-4 mr-2" /> Abrir Câmera
+                  </Button>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={(e) => handleFilesForCategory("prints_emissao", e.target.files)}
+                    className="hidden"
+                    id="camera-capture"
+                  />
+                  <p className="text-[10px] text-muted-foreground text-center">Fotos da câmera vão para "Prints para Emissão"</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs">Texto complementar</Label>
+                  <Textarea
+                    placeholder="Cole informações: conversa do WhatsApp, dados do cliente, detalhes da reserva..."
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    rows={3}
+                  />
                 </div>
               </div>
             </div>
