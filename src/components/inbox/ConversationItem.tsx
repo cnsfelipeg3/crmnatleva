@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Conversation, Stage } from "./types";
 import { formatTimestamp, formatPhoneDisplay, getStageInfo, stripQuotes } from "./helpers";
+import { WhatsAppAvatar } from "./WhatsAppAvatar";
 
 interface ConversationItemProps {
   conv: Conversation;
@@ -48,13 +49,12 @@ function ConversationItemInner({ conv, isSelected, profilePic, onSelect, onToggl
       <div className="flex gap-2.5">
         {/* Avatar */}
         <div className="relative shrink-0">
-          {profilePic ? (
-            <img src={profilePic} alt="" className="h-10 w-10 rounded-full object-cover" />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center text-xs font-bold">
-              {contactName.split(" ").map(w => w[0]).join("").slice(0, 2)}
-            </div>
-          )}
+          <WhatsAppAvatar
+            src={profilePic}
+            name={contactName}
+            className="h-10 w-10"
+            textClassName="text-xs"
+          />
           {conv.is_vip && (
             <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center shadow-sm">
               <Star className="h-2.5 w-2.5 text-white" />
