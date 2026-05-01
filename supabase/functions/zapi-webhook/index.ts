@@ -803,7 +803,7 @@ async function saveContact(supabase: any, phone: string, body: any, chatLid: str
   const incomingPhoto = !body.fromMe ? (body.senderPhoto || body.photo || null) : null;
   const upsertData: Record<string, unknown> = {
     phone: contactPhone,
-    name: body.chatName || null,
+    name: sanitizeContactName(body.chatName, phone),
     updated_at: new Date().toISOString(),
   };
   if (incomingPhoto) upsertData.profile_picture_url = incomingPhoto;
