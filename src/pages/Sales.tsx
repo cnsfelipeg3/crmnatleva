@@ -111,6 +111,8 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
 
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `sale:${sale.id}`, data: { saleId: sale.id, emitted: isEmitted(sale) } });
+
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
         .split(/\s+/)
@@ -124,7 +126,23 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
     : null;
 
   return (
-    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onNavigate(sale.id)}>
+    <tr
+      ref={setNodeRef}
+      className={cn("border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", isDragging && "opacity-30")}
+      onClick={() => onNavigate(sale.id)}
+    >
+      <td className="px-1 py-3 w-6">
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
+          title="Arrastar para mover"
+          aria-label="Arrastar venda"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      </td>
       <td className="px-3 py-3">
         <p className="font-medium text-foreground truncate">{sale.name}</p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
