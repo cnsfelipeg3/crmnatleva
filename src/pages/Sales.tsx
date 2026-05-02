@@ -248,7 +248,7 @@ export default function Sales() {
   const { filtered: smartFiltered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
 
   // Local table column sorting
-  type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
+  type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status" | "seller";
   // Default: ordena por Data da Venda (close_date) decrescente — mais recentes primeiro
   const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>({ key: "close_date", dir: "desc" });
 
@@ -263,9 +263,26 @@ export default function Sales() {
   };
 
   const filtered = useMemo(() => {
-    if (!colSort) return smartFiltered;
+    // 1. Filtro de vendedor (post-processing após SmartFilters)
+    let base = smartFiltered;
+    if (filterSeller !== "all") {
+      base = filterSeller === "none"
+        ? base.filter(s => !s.seller_id)
+        : base.filter(s => s.seller_id === filterSeller);
+    }
+
+    if (!colSort) return base;
     const { key, dir } = colSort;
-    return [...smartFiltered].sort((a, b) => {
+    return [...base].sort((a, b) => {
+      // Sort especial por vendedor (resolve nome via Map)
+      if (key === "seller") {
+        const aName = a.seller_id ? sellersMap.get(a.seller_id)?.full_name || "" : "";
+        const bName = b.seller_id ? sellersMap.get(b.seller_id)?.full_name || "" : "";
+        if (!aName && !bName) return 0;
+        if (!aName) return 1;
+        if (!bName) return -1;
+        return dir === "asc" ? aName.localeCompare(bName, "pt-BR") : bName.localeCompare(aName, "pt-BR");
+      }
       const av = (a as any)[key];
       const bv = (b as any)[key];
       if (av == null && bv == null) return 0;
@@ -274,7 +291,7 @@ export default function Sales() {
       const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
       return dir === "asc" ? cmp : -cmp;
     });
-  }, [smartFiltered, colSort]);
+  }, [smartFiltered, colSort, filterSeller, sellersMap]);
 
   const totals = useMemo(() => {
     const t = (list: SaleRow[]) => {
