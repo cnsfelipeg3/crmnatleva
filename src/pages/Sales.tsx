@@ -235,10 +235,17 @@ export default function Sales() {
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
   const [filterSeller, setFilterSeller] = useState<string>("all");
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
+  const { sellers: externalSellers, reload: reloadExternal } = useExternalSellers();
+  const externalMap = useMemo(() => {
+    const m = new Map<string, ExternalSeller>();
+    for (const s of externalSellers) m.set(s.id, s);
+    return m;
+  }, [externalSellers]);
 
   // Fetch sellers (profiles) once on mount · small dataset, O(1) lookup via Map
   useEffect(() => {
@@ -258,7 +265,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -289,12 +296,16 @@ export default function Sales() {
   };
 
   const filtered = useMemo(() => {
-    // 1. Filtro de vendedor (post-processing após SmartFilters)
     let base = smartFiltered;
     if (filterSeller !== "all") {
-      base = filterSeller === "none"
-        ? base.filter(s => !s.seller_id)
-        : base.filter(s => s.seller_id === filterSeller);
+      if (filterSeller === "none") {
+        base = base.filter(s => !s.seller_id && !s.external_seller_id);
+      } else if (filterSeller.startsWith("ext:")) {
+        const extId = filterSeller.slice(4);
+        base = base.filter(s => s.external_seller_id === extId);
+      } else {
+        base = base.filter(s => s.seller_id === filterSeller);
+      }
     }
 
     if (!colSort) return base;
@@ -426,13 +437,19 @@ export default function Sales() {
         {sellersMap.size > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Vendedor:</span>
-            <Select value={filterSeller} onValueChange={setFilterSeller}>
-              <SelectTrigger className="w-[200px] h-9 text-xs">
+            <Select value={filterSeller} onValueChange={(v) => {
+              if (v === "__manage__") { setExternalDialogOpen(true); return; }
+              setFilterSeller(v);
+            }}>
+              <SelectTrigger className="w-[220px] h-9 text-xs">
                 <SelectValue placeholder="Todos vendedores" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos vendedores</SelectItem>
                 <SelectItem value="none">Sem vendedor</SelectItem>
+                <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Equipe atual
+                </div>
                 {Array.from(sellersMap.values())
                   .sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || "", "pt-BR"))
                   .map(s => (
@@ -440,6 +457,25 @@ export default function Sales() {
                       {s.full_name || s.email}
                     </SelectItem>
                   ))}
+                {externalSellers.length > 0 && (
+                  <>
+                    <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Externos / Histórico
+                    </div>
+                    {externalSellers.map(s => (
+                      <SelectItem key={`ext:${s.id}`} value={`ext:${s.id}`}>
+                        <span className="text-amber-700 dark:text-amber-400">
+                          {s.name}{!s.active && " (inativo)"}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                <div className="border-t border-border/20 mt-1 pt-1">
+                  <SelectItem value="__manage__" className="text-muted-foreground italic">
+                    + Gerenciar externos
+                  </SelectItem>
+                </div>
               </SelectContent>
             </Select>
             {filterSeller !== "all" && (
@@ -449,6 +485,12 @@ export default function Sales() {
             )}
           </div>
         )}
+
+        <ExternalSellersDialog
+          open={externalDialogOpen}
+          onOpenChange={setExternalDialogOpen}
+          onChanged={reloadExternal}
+        />
 
         {loading ? (
           <ListPageSkeleton rows={8} />
