@@ -377,6 +377,41 @@ export default function Sales() {
   const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
   const handleDeleted = useCallback((id: string) => setSales((prev) => prev.filter((s) => s.id !== id)), []);
 
+  // ===== Pipeline vertical (Aguardando Emissão / Emissão Concluída) =====
+  const [groupOpen, setGroupOpen] = useState<{ pending: boolean; emitted: boolean }>({ pending: true, emitted: true });
+
+  const grouped = useMemo(() => {
+    const pending: SaleRow[] = [];
+    const emitted: SaleRow[] = [];
+    for (const s of filtered) (isEmitted(s) ? emitted : pending).push(s);
+    return { pending, emitted };
+  }, [filtered]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const saleId = (active.data.current as any)?.saleId as string | undefined;
+    const fromEmitted = (active.data.current as any)?.emitted as boolean;
+    const targetGroup = over.id as string; // "group:emitted" | "group:pending"
+    if (!saleId) return;
+    const goingToEmitted = targetGroup === "group:emitted";
+    if (goingToEmitted === fromEmitted) return; // dropped in same group
+    const newStatus = goingToEmitted ? "Emitido" : "Pendente";
+    // Optimistic update
+    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
+    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
+    if (error) {
+      // revert
+      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
+      toast.error("Não consegui mover a venda. Tenta de novo.");
+    } else {
+      toast.success(goingToEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
+    }
+  }, []);
+
+
   const handleExport = async () => {
     setExportProgress(0);
     // Pequenas etapas para a barra dar feedback mesmo em volumes pequenos
