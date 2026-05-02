@@ -749,28 +749,26 @@ export default function Sales() {
                         </td>
                       </tr>
                     </tbody>
-                    {groupOpen.emitted && (
-                      <DroppableGroupBody id="group:emitted">
-                        {grouped.emitted.length === 0 ? (
-                          <tr>
-                            <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                              Nenhuma venda emitida ainda.
-                            </td>
-                          </tr>
-                        ) : grouped.emitted.map((sale) => (
-                          <SaleRowComponent
-                            key={sale.id}
-                            sale={sale}
-                            seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                            externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                            productCatalog={productCatalog}
-                            onNavigate={handleNavigateSale}
-                            onNavigateClient={handleNavigateClient}
-                            onDeleted={handleDeleted}
-                          />
-                        ))}
-                      </DroppableGroupBody>
-                    )}
+                    <DroppableGroupBody id="group:emitted" hidden={!groupOpen.emitted}>
+                      {grouped.emitted.length === 0 ? (
+                        <tr>
+                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                            Nenhuma venda emitida ainda.
+                          </td>
+                        </tr>
+                      ) : grouped.emitted.map((sale) => (
+                        <SaleRowComponent
+                          key={sale.id}
+                          sale={sale}
+                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                          productCatalog={productCatalog}
+                          onNavigate={handleNavigateSale}
+                          onNavigateClient={handleNavigateClient}
+                          onDeleted={handleDeleted}
+                        />
+                      ))}
+                    </DroppableGroupBody>
                   </table>
                 </div>
               </DndContext>
