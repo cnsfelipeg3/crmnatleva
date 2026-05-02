@@ -92,13 +92,14 @@ type SellerProfile = {
 interface SaleRowProps {
   sale: SaleRow;
   seller: SellerProfile | null;
+  externalSeller: ExternalSeller | null;
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
@@ -175,12 +176,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
       <td className="px-2 py-3 text-xs">
-        {!seller ? (
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
-            <span className="text-[11px]">Sem vendedor</span>
-          </span>
-        ) : (
+        {seller ? (
           <span className="inline-flex items-center gap-1.5" title={seller.email || seller.full_name || ""}>
             {seller.avatar_url ? (
               <img
@@ -195,6 +191,29 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
               </div>
             )}
             <span className="truncate max-w-[100px]">{sellerFirstName}</span>
+          </span>
+        ) : externalSeller ? (
+          (() => {
+            const initials = externalSeller.name
+              .split(/\s+/).filter(Boolean).slice(0, 2)
+              .map((w) => w[0]?.toUpperCase()).join("");
+            const firstName = externalSeller.name.split(" ")[0];
+            return (
+              <span
+                className="inline-flex items-center gap-1.5"
+                title={`${externalSeller.name}${externalSeller.active ? "" : " (inativo)"}`}
+              >
+                <div className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center text-[9px] font-semibold shrink-0">
+                  {initials}
+                </div>
+                <span className="truncate max-w-[100px] italic text-amber-700 dark:text-amber-400">{firstName}</span>
+              </span>
+            );
+          })()
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
+            <span className="text-[11px]">Sem vendedor</span>
           </span>
         )}
       </td>
