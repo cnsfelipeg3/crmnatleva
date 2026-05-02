@@ -7921,6 +7921,36 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_connection_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          id: string
+          instance_id: string | null
+          raw_payload: Json | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          id?: string
+          instance_id?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          instance_id?: string | null
+          raw_payload?: Json | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       whatsapp_dispatch_logs: {
         Row: {
           client_id: string | null
@@ -8165,7 +8195,16 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      whatsapp_connection_current: {
+        Row: {
+          error_message: string | null
+          last_event: string | null
+          last_event_at: string | null
+          raw_payload: Json | null
+          seconds_since: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       cleanup_booking_rapidapi_cache: { Args: never; Returns: number }
