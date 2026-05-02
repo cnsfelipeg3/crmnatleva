@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
-import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
@@ -17,7 +16,7 @@ import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
+import { useProductTypes, getProductMeta, normalizeProductsToSlugs } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
@@ -104,16 +103,15 @@ interface SaleRowProps {
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
+  onDragStart: (saleId: string, emitted: boolean) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
-
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `sale:${sale.id}`, data: { saleId: sale.id, emitted: isEmitted(sale) } });
 
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
@@ -129,14 +127,17 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 
   return (
     <tr
-      ref={setNodeRef}
-      className={cn("border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", isDragging && "opacity-30")}
+      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
       onClick={() => onNavigate(sale.id)}
     >
       <td className="px-1 py-3 w-6">
         <button
-          {...attributes}
-          {...listeners}
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = "move";
+            onDragStart(sale.id, isEmitted(sale));
+          }}
           onClick={(e) => e.stopPropagation()}
           className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
           title="Arrastar para mover"
@@ -296,6 +297,8 @@ interface VirtualEmissionGroupProps {
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
+  onDragStart: (saleId: string, emitted: boolean) => void;
+  onDropToGroup: (variant: "pending" | "emitted") => void;
 }
 
 function VirtualEmissionGroup({
@@ -313,9 +316,10 @@ function VirtualEmissionGroup({
   onNavigate,
   onNavigateClient,
   onDeleted,
+  onDragStart,
+  onDropToGroup,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { setNodeRef, isOver } = useDroppable({ id });
   const rowVirtualizer = useVirtualizer({
     count: sales.length,
     getScrollElement: () => scrollRef.current,
@@ -334,11 +338,14 @@ function VirtualEmissionGroup({
   const badgeTone = isPending
     ? "bg-warning/15 text-warning-foreground border-warning/30"
     : "bg-success/15 text-success border-success/30";
-  const overTone = isPending ? "bg-warning/5 ring-2 ring-warning/40 ring-inset" : "bg-success/5 ring-2 ring-success/40 ring-inset";
   const StatusIcon = isPending ? Clock : CheckCircle2;
 
   return (
-    <div ref={setNodeRef} className={cn("transition-colors", isOver && overTone)}>
+    <div
+      className="transition-colors"
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+      onDrop={(e) => { e.preventDefault(); onDropToGroup(variant); }}
+    >
       <table className="w-full text-sm min-w-[1310px]">
         <SalesTableColGroup />
         <tbody>
@@ -359,7 +366,11 @@ function VirtualEmissionGroup({
       </table>
 
       {open && (
-        <div ref={scrollRef} className="max-h-[640px] overflow-y-auto overscroll-contain">
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto overflow-x-hidden overscroll-contain"
+          style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
+        >
           <table className="w-full text-sm min-w-[1310px]">
             <SalesTableColGroup />
             <tbody>
@@ -389,6 +400,7 @@ function VirtualEmissionGroup({
                         onNavigate={onNavigate}
                         onNavigateClient={onNavigateClient}
                         onDeleted={onDeleted}
+                        onDragStart={onDragStart}
                       />
                     );
                   })}
@@ -543,16 +555,19 @@ export default function Sales() {
     return { pending, emitted };
   }, [filtered]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const draggedSaleRef = useRef<{ saleId: string; emitted: boolean } | null>(null);
 
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-    const saleId = (active.data.current as any)?.saleId as string | undefined;
-    const fromEmitted = (active.data.current as any)?.emitted as boolean;
-    const targetGroup = over.id as string; // "group:emitted" | "group:pending"
+  const handleNativeDragStart = useCallback((saleId: string, emitted: boolean) => {
+    draggedSaleRef.current = { saleId, emitted };
+  }, []);
+
+  const handleDropToGroup = useCallback(async (targetVariant: "pending" | "emitted") => {
+    const dragged = draggedSaleRef.current;
+    draggedSaleRef.current = null;
+    const saleId = dragged?.saleId;
+    const fromEmitted = dragged?.emitted;
     if (!saleId) return;
-    const goingToEmitted = targetGroup === "group:emitted";
+    const goingToEmitted = targetVariant === "emitted";
     if (goingToEmitted === fromEmitted) return; // dropped in same group
     const newStatus = goingToEmitted ? "Emitido" : "Pendente";
     // Optimistic update
@@ -764,8 +779,7 @@ export default function Sales() {
 
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
-              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-                <div className="overflow-x-auto">
+              <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[1310px]">
                     <SalesTableColGroup />
                     <thead>
@@ -826,6 +840,8 @@ export default function Sales() {
                     onNavigate={handleNavigateSale}
                     onNavigateClient={handleNavigateClient}
                     onDeleted={handleDeleted}
+                    onDragStart={handleNativeDragStart}
+                    onDropToGroup={handleDropToGroup}
                   />
                   <VirtualEmissionGroup
                     id="group:emitted"
@@ -842,9 +858,10 @@ export default function Sales() {
                     onNavigate={handleNavigateSale}
                     onNavigateClient={handleNavigateClient}
                     onDeleted={handleDeleted}
+                    onDragStart={handleNativeDragStart}
+                    onDropToGroup={handleDropToGroup}
                   />
                 </div>
-              </DndContext>
             </Card>}
             {/* Summary footer */}
             <Card className="glass-card p-4">
