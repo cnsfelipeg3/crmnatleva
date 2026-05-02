@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo, useCallback } from "react";
+import type { ReactNode } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
+import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
 import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
@@ -47,7 +50,8 @@ function fmtShortDate(dateStr: string | null): string | null {
 
 interface SaleRow {
   id: string; display_id: string; name: string; close_date: string | null;
-  status: string; origin_iata: string | null; destination_iata: string | null;
+  status: string; emission_status: string | null;
+  origin_iata: string | null; destination_iata: string | null;
   origin_city: string | null; destination_city: string | null;
   departure_date: string | null; return_date: string | null;
   adults: number; children: number;
@@ -57,6 +61,8 @@ interface SaleRow {
   created_at: string; client_id: string | null; lead_type: string;
   hotel_name: string | null;
 }
+
+const isEmitted = (s: { emission_status: string | null }) => s.emission_status === "Emitido";
 
 const SALES_FILTER_CONFIG: SmartFilterConfig = {
   sortOptions: [
@@ -106,6 +112,8 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
 
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `sale:${sale.id}`, data: { saleId: sale.id, emitted: isEmitted(sale) } });
+
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
         .split(/\s+/)
@@ -119,7 +127,23 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
     : null;
 
   return (
-    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onNavigate(sale.id)}>
+    <tr
+      ref={setNodeRef}
+      className={cn("border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", isDragging && "opacity-30")}
+      onClick={() => onNavigate(sale.id)}
+    >
+      <td className="px-1 py-3 w-6">
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
+          title="Arrastar para mover"
+          aria-label="Arrastar venda"
+        >
+          <GripVertical className="w-3.5 h-3.5" />
+        </button>
+      </td>
       <td className="px-3 py-3">
         <p className="font-medium text-foreground truncate">{sale.name}</p>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
@@ -230,6 +254,23 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   );
 });
 
+// Droppable tbody for each emission group
+function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <tbody
+      ref={setNodeRef}
+      className={cn(
+        "transition-colors",
+        isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
+      )}
+    >
+      {children}
+    </tbody>
+  );
+}
+
+
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
@@ -265,7 +306,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -353,6 +394,41 @@ export default function Sales() {
   const handleNavigateSale = useCallback((id: string) => navigate(`/sales/${id}`), [navigate]);
   const handleNavigateClient = useCallback((id: string) => navigate(`/clients/${id}`), [navigate]);
   const handleDeleted = useCallback((id: string) => setSales((prev) => prev.filter((s) => s.id !== id)), []);
+
+  // ===== Pipeline vertical (Aguardando Emissão / Emissão Concluída) =====
+  const [groupOpen, setGroupOpen] = useState<{ pending: boolean; emitted: boolean }>({ pending: true, emitted: true });
+
+  const grouped = useMemo(() => {
+    const pending: SaleRow[] = [];
+    const emitted: SaleRow[] = [];
+    for (const s of filtered) (isEmitted(s) ? emitted : pending).push(s);
+    return { pending, emitted };
+  }, [filtered]);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+    const saleId = (active.data.current as any)?.saleId as string | undefined;
+    const fromEmitted = (active.data.current as any)?.emitted as boolean;
+    const targetGroup = over.id as string; // "group:emitted" | "group:pending"
+    if (!saleId) return;
+    const goingToEmitted = targetGroup === "group:emitted";
+    if (goingToEmitted === fromEmitted) return; // dropped in same group
+    const newStatus = goingToEmitted ? "Emitido" : "Pendente";
+    // Optimistic update
+    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
+    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
+    if (error) {
+      // revert
+      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
+      toast.error("Não consegui mover a venda. Tenta de novo.");
+    } else {
+      toast.success(goingToEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
+    }
+  }, []);
+
 
   const handleExport = async () => {
     setExportProgress(0);
@@ -548,84 +624,158 @@ export default function Sales() {
               ))}
             </div>
 
-            {/* Desktop table view */}
+            {/* Desktop table view · pipeline vertical (Aguardando / Emitido) */}
             <Card className="glass-card overflow-hidden hidden sm:block">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[1280px]">
-                  <colgroup>
-                    <col style={{ minWidth: "200px" }} />
-                    <col style={{ minWidth: "100px" }} />
-                    <col style={{ minWidth: "85px" }} />
-                    <col style={{ minWidth: "85px" }} />
-                    <col style={{ minWidth: "110px" }} />
-                    <col style={{ minWidth: "50px" }} />
-                    <col style={{ minWidth: "80px" }} />
-                    <col style={{ minWidth: "110px" }} />
-                    <col style={{ minWidth: "110px" }} />
-                    <col style={{ minWidth: "110px" }} />
-                    <col style={{ minWidth: "70px" }} />
-                    <col style={{ minWidth: "85px" }} />
-                    <col style={{ minWidth: "130px" }} />
-                    <col style={{ minWidth: "100px" }} />
-                    <col style={{ minWidth: "90px" }} />
-                  </colgroup>
-                  <thead>
-                    <tr className="border-b border-border bg-muted/50">
-                      {([
-                        { key: "name", label: "Venda", align: "text-left", px: "px-3" },
-                        { key: "close_date", label: "Data da Venda", align: "text-left", px: "px-2" },
-                        { key: "departure_date", label: "Ida", align: "text-left", px: "px-2" },
-                        { key: "return_date", label: "Volta", align: "text-left", px: "px-2" },
-                        { key: null, label: "Rota", align: "text-left", px: "px-2" },
-                        { key: null, label: "PAX", align: "text-center", px: "px-1" },
-                        { key: null, label: "Produtos", align: "text-left", px: "px-1" },
-                        { key: "received_value", label: "Valor", align: "text-right", px: "px-2" },
-                        { key: "total_cost", label: "Custo", align: "text-right", px: "px-2" },
-                        { key: "profit", label: "Lucro", align: "text-right", px: "px-2" },
-                        { key: "margin", label: "Margem", align: "text-right", px: "px-1" },
-                        { key: null, label: "Lead", align: "text-center", px: "px-1" },
-                        { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
-                        { key: "status", label: "Status", align: "text-left", px: "px-1" },
-                      ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
-                        <th
-                          key={col.label}
-                          className={cn(
-                            col.align, col.px, "py-3 font-semibold text-muted-foreground text-xs",
-                            col.key && "cursor-pointer select-none hover:text-foreground transition-colors"
-                          )}
-                          onClick={col.key ? () => toggleColSort(col.key!) : undefined}
-                        >
-                          <span className="inline-flex items-center gap-1">
-                            {col.label}
-                            {col.key && (
-                              colSort?.key === col.key
-                                ? colSort.dir === "asc"
-                                  ? <ArrowUp className="w-3 h-3" />
-                                  : <ArrowDown className="w-3 h-3" />
-                                : <ArrowUpDown className="w-3 h-3 opacity-30" />
+              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm min-w-[1310px]">
+                    <colgroup>
+                      <col style={{ width: "28px" }} />
+                      <col style={{ minWidth: "200px" }} />
+                      <col style={{ minWidth: "100px" }} />
+                      <col style={{ minWidth: "85px" }} />
+                      <col style={{ minWidth: "85px" }} />
+                      <col style={{ minWidth: "110px" }} />
+                      <col style={{ minWidth: "50px" }} />
+                      <col style={{ minWidth: "80px" }} />
+                      <col style={{ minWidth: "110px" }} />
+                      <col style={{ minWidth: "110px" }} />
+                      <col style={{ minWidth: "110px" }} />
+                      <col style={{ minWidth: "70px" }} />
+                      <col style={{ minWidth: "85px" }} />
+                      <col style={{ minWidth: "130px" }} />
+                      <col style={{ minWidth: "100px" }} />
+                      <col style={{ minWidth: "90px" }} />
+                    </colgroup>
+                    <thead>
+                      <tr className="border-b border-border bg-muted/50">
+                        <th className="px-1 py-3"></th>
+                        {([
+                          { key: "name", label: "Venda", align: "text-left", px: "px-3" },
+                          { key: "close_date", label: "Data da Venda", align: "text-left", px: "px-2" },
+                          { key: "departure_date", label: "Ida", align: "text-left", px: "px-2" },
+                          { key: "return_date", label: "Volta", align: "text-left", px: "px-2" },
+                          { key: null, label: "Rota", align: "text-left", px: "px-2" },
+                          { key: null, label: "PAX", align: "text-center", px: "px-1" },
+                          { key: null, label: "Produtos", align: "text-left", px: "px-1" },
+                          { key: "received_value", label: "Valor", align: "text-right", px: "px-2" },
+                          { key: "total_cost", label: "Custo", align: "text-right", px: "px-2" },
+                          { key: "profit", label: "Lucro", align: "text-right", px: "px-2" },
+                          { key: "margin", label: "Margem", align: "text-right", px: "px-1" },
+                          { key: null, label: "Lead", align: "text-center", px: "px-1" },
+                          { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
+                          { key: "status", label: "Status", align: "text-left", px: "px-1" },
+                        ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
+                          <th
+                            key={col.label}
+                            className={cn(
+                              col.align, col.px, "py-3 font-semibold text-muted-foreground text-xs",
+                              col.key && "cursor-pointer select-none hover:text-foreground transition-colors"
                             )}
-                          </span>
-                        </th>
-                      ))}
-                      <th className="px-2 py-3 text-center font-semibold text-muted-foreground text-xs">Ações</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((sale) => (
-                      <SaleRowComponent
-                        key={sale.id}
-                        sale={sale}
-                        seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                        externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                        productCatalog={productCatalog}
-                        onNavigate={handleNavigateSale}
-                        onNavigateClient={handleNavigateClient}
-                        onDeleted={handleDeleted}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                            onClick={col.key ? () => toggleColSort(col.key!) : undefined}
+                          >
+                            <span className="inline-flex items-center gap-1">
+                              {col.label}
+                              {col.key && (
+                                colSort?.key === col.key
+                                  ? colSort.dir === "asc"
+                                    ? <ArrowUp className="w-3 h-3" />
+                                    : <ArrowDown className="w-3 h-3" />
+                                  : <ArrowUpDown className="w-3 h-3 opacity-30" />
+                              )}
+                            </span>
+                          </th>
+                        ))}
+                        <th className="px-2 py-3 text-center font-semibold text-muted-foreground text-xs">Ações</th>
+                      </tr>
+                    </thead>
+
+                    {/* Grupo 1 · Aguardando Emissão */}
+                    <tbody>
+                      <tr
+                        className="bg-warning/10 hover:bg-warning/15 cursor-pointer border-y border-warning/30 transition-colors"
+                        onClick={() => setGroupOpen((g) => ({ ...g, pending: !g.pending }))}
+                      >
+                        <td colSpan={16} className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {groupOpen.pending ? <ChevronDown className="w-4 h-4 text-warning-foreground" /> : <ChevronRight className="w-4 h-4 text-warning-foreground" />}
+                            <Clock className="w-4 h-4 text-warning-foreground" />
+                            <span className="text-sm font-semibold text-warning-foreground">Aguardando Emissão</span>
+                            <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/30">
+                              {grouped.pending.length}
+                            </Badge>
+                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste uma linha para "Emissão Concluída" para emitir</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                    {groupOpen.pending && (
+                      <DroppableGroupBody id="group:pending">
+                        {grouped.pending.length === 0 ? (
+                          <tr>
+                            <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                              Nenhuma venda aguardando emissão.
+                            </td>
+                          </tr>
+                        ) : grouped.pending.map((sale) => (
+                          <SaleRowComponent
+                            key={sale.id}
+                            sale={sale}
+                            seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                            externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                            productCatalog={productCatalog}
+                            onNavigate={handleNavigateSale}
+                            onNavigateClient={handleNavigateClient}
+                            onDeleted={handleDeleted}
+                          />
+                        ))}
+                      </DroppableGroupBody>
+                    )}
+
+                    {/* Grupo 2 · Emissão Concluída */}
+                    <tbody>
+                      <tr
+                        className="bg-success/10 hover:bg-success/15 cursor-pointer border-y border-success/30 transition-colors"
+                        onClick={() => setGroupOpen((g) => ({ ...g, emitted: !g.emitted }))}
+                      >
+                        <td colSpan={16} className="px-3 py-2.5">
+                          <div className="flex items-center gap-2">
+                            {groupOpen.emitted ? <ChevronDown className="w-4 h-4 text-success" /> : <ChevronRight className="w-4 h-4 text-success" />}
+                            <CheckCircle2 className="w-4 h-4 text-success" />
+                            <span className="text-sm font-semibold text-success">Emissão Concluída</span>
+                            <Badge variant="outline" className="text-[10px] bg-success/15 text-success border-success/30">
+                              {grouped.emitted.length}
+                            </Badge>
+                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste de volta para reabrir como pendente</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                    {groupOpen.emitted && (
+                      <DroppableGroupBody id="group:emitted">
+                        {grouped.emitted.length === 0 ? (
+                          <tr>
+                            <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                              Nenhuma venda emitida ainda.
+                            </td>
+                          </tr>
+                        ) : grouped.emitted.map((sale) => (
+                          <SaleRowComponent
+                            key={sale.id}
+                            sale={sale}
+                            seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                            externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                            productCatalog={productCatalog}
+                            onNavigate={handleNavigateSale}
+                            onNavigateClient={handleNavigateClient}
+                            onDeleted={handleDeleted}
+                          />
+                        ))}
+                      </DroppableGroupBody>
+                    )}
+                  </table>
+                </div>
+              </DndContext>
             </Card>
             {/* Summary footer */}
             <Card className="glass-card p-4">
