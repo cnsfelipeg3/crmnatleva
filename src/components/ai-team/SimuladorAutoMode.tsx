@@ -235,7 +235,6 @@ export default function SimuladorAutoMode() {
 
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
-  const runSimulation = useCallback(async () => {
     // BLOQUEIO Z-API: simulações Camaleão consomem capacidade do WhatsApp
     if (!waConnection.isConnected) {
       toast({
