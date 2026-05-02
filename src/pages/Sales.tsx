@@ -22,6 +22,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
 import { ExternalSellersDialog } from "@/components/sales/ExternalSellersDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -416,6 +417,7 @@ export default function Sales() {
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { catalog: productCatalog } = useProductTypes();
   const { sellers: externalSellers, reload: reloadExternal } = useExternalSellers();
   const externalMap = useMemo(() => {
@@ -713,7 +715,7 @@ export default function Sales() {
         ) : (
           <>
             {/* Mobile card view */}
-            <div className="sm:hidden space-y-3">
+            {isMobile && <div className="sm:hidden space-y-3">
               {filtered.map((sale) => (
                 <Card key={sale.id} className="p-4 glass-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/sales/${sale.id}`)}>
                   <div className="flex items-start justify-between gap-2">
@@ -758,10 +760,10 @@ export default function Sales() {
                   </div>
                 </Card>
               ))}
-            </div>
+            </div>}
 
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
-            <Card className="glass-card overflow-hidden hidden sm:block">
+            {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[1310px]">
@@ -843,7 +845,7 @@ export default function Sales() {
                   />
                 </div>
               </DndContext>
-            </Card>
+            </Card>}
             {/* Summary footer */}
             <Card className="glass-card p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
