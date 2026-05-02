@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo, memo, useCallback } from "react";
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -254,6 +255,32 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   );
 });
 
+const TABLE_COLUMN_COUNT = 16;
+const ESTIMATED_ROW_HEIGHT = 54;
+
+function SalesTableColGroup() {
+  return (
+    <colgroup>
+      <col style={{ width: "28px" }} />
+      <col style={{ minWidth: "200px" }} />
+      <col style={{ minWidth: "100px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "50px" }} />
+      <col style={{ minWidth: "80px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "70px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "130px" }} />
+      <col style={{ minWidth: "100px" }} />
+      <col style={{ minWidth: "90px" }} />
+    </colgroup>
+  );
+}
+
 // Droppable tbody for each emission group
 function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; children: ReactNode; hidden?: boolean; isOver?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -267,6 +294,132 @@ function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; c
     >
       {children}
     </tbody>
+  );
+}
+
+interface VirtualEmissionGroupProps {
+  id: "group:pending" | "group:emitted";
+  variant: "pending" | "emitted";
+  open: boolean;
+  title: string;
+  helper: string;
+  emptyText: string;
+  sales: SaleRow[];
+  sellersMap: Map<string, SellerProfile>;
+  externalMap: Map<string, ExternalSeller>;
+  productCatalog: ReturnType<typeof useProductTypes>["catalog"];
+  onToggle: () => void;
+  onNavigate: (id: string) => void;
+  onNavigateClient: (clientId: string) => void;
+  onDeleted: (id: string) => void;
+}
+
+function VirtualEmissionGroup({
+  id,
+  variant,
+  open,
+  title,
+  helper,
+  emptyText,
+  sales,
+  sellersMap,
+  externalMap,
+  productCatalog,
+  onToggle,
+  onNavigate,
+  onNavigateClient,
+  onDeleted,
+}: VirtualEmissionGroupProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const rowVirtualizer = useVirtualizer({
+    count: sales.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 8,
+    getItemKey: (index) => sales[index]?.id ?? index,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length > 0 ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0;
+  const isPending = variant === "pending";
+  const groupTone = isPending
+    ? "bg-warning/10 hover:bg-warning/15 border-warning/30"
+    : "bg-success/10 hover:bg-success/15 border-success/30";
+  const textTone = isPending ? "text-warning-foreground" : "text-success";
+  const badgeTone = isPending
+    ? "bg-warning/15 text-warning-foreground border-warning/30"
+    : "bg-success/15 text-success border-success/30";
+  const overTone = isPending ? "bg-warning/5 ring-2 ring-warning/40 ring-inset" : "bg-success/5 ring-2 ring-success/40 ring-inset";
+  const StatusIcon = isPending ? Clock : CheckCircle2;
+
+  return (
+    <div ref={setNodeRef} className={cn("transition-colors", isOver && overTone)}>
+      <table className="w-full text-sm min-w-[1310px]">
+        <SalesTableColGroup />
+        <tbody>
+          <tr className={cn("cursor-pointer border-y transition-colors", groupTone)} onClick={onToggle}>
+            <td colSpan={TABLE_COLUMN_COUNT} className="px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                {open ? <ChevronDown className={cn("w-4 h-4", textTone)} /> : <ChevronRight className={cn("w-4 h-4", textTone)} />}
+                <StatusIcon className={cn("w-4 h-4", textTone)} />
+                <span className={cn("text-sm font-semibold", textTone)}>{title}</span>
+                <Badge variant="outline" className={cn("text-[10px]", badgeTone)}>
+                  {sales.length}
+                </Badge>
+                <span className="ml-auto text-[10px] text-muted-foreground italic">{helper}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {open && (
+        <div ref={scrollRef} className="max-h-[640px] overflow-y-auto overscroll-contain">
+          <table className="w-full text-sm min-w-[1310px]">
+            <SalesTableColGroup />
+            <tbody>
+              {sales.length === 0 ? (
+                <tr>
+                  <td colSpan={TABLE_COLUMN_COUNT} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                    {emptyText}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {paddingTop > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={TABLE_COLUMN_COUNT} style={{ height: paddingTop, padding: 0, border: 0 }} />
+                    </tr>
+                  )}
+                  {virtualRows.map((virtualRow) => {
+                    const sale = sales[virtualRow.index];
+                    if (!sale) return null;
+                    return (
+                      <SaleRowComponent
+                        key={sale.id}
+                        sale={sale}
+                        seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                        externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                        productCatalog={productCatalog}
+                        onNavigate={onNavigate}
+                        onNavigateClient={onNavigateClient}
+                        onDeleted={onDeleted}
+                      />
+                    );
+                  })}
+                  {paddingBottom > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={TABLE_COLUMN_COUNT} style={{ height: paddingBottom, padding: 0, border: 0 }} />
+                    </tr>
+                  )}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
