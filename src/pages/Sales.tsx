@@ -548,12 +548,15 @@ export default function Sales() {
   // ===== Pipeline vertical (Aguardando Emissão / Emissão Concluída) =====
   const [groupOpen, setGroupOpen] = useState<{ pending: boolean; emitted: boolean }>({ pending: true, emitted: true });
 
+  // Defer the heavy list so typing/sorting/filter UI stay snappy (React 18 concurrent)
+  const deferredFiltered = useDeferredValue(filtered);
+
   const grouped = useMemo(() => {
     const pending: SaleRow[] = [];
     const emitted: SaleRow[] = [];
-    for (const s of filtered) (isEmitted(s) ? emitted : pending).push(s);
+    for (const s of deferredFiltered) (isEmitted(s) ? emitted : pending).push(s);
     return { pending, emitted };
-  }, [filtered]);
+  }, [deferredFiltered]);
 
   const draggedSaleRef = useRef<{ saleId: string; emitted: boolean } | null>(null);
 
