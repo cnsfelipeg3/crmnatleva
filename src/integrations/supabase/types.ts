@@ -3130,6 +3130,39 @@ export type Database = {
           },
         ]
       }
+      external_sellers: {
+        Row: {
+          active: boolean
+          archived_at: string | null
+          created_at: string
+          created_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+        }
+        Insert: {
+          active?: boolean
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+        }
+        Update: {
+          active?: boolean
+          archived_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+        }
+        Relationships: []
+      }
       extraction_runs: {
         Row: {
           confidence: number | null
@@ -6438,6 +6471,7 @@ export type Database = {
           emission_date: string | null
           emission_source: string | null
           emission_status: string | null
+          external_seller_id: string | null
           flight_class: string | null
           hotel_address: string | null
           hotel_checkin_date: string | null
@@ -6495,6 +6529,7 @@ export type Database = {
           emission_date?: string | null
           emission_source?: string | null
           emission_status?: string | null
+          external_seller_id?: string | null
           flight_class?: string | null
           hotel_address?: string | null
           hotel_checkin_date?: string | null
@@ -6552,6 +6587,7 @@ export type Database = {
           emission_date?: string | null
           emission_source?: string | null
           emission_status?: string | null
+          external_seller_id?: string | null
           flight_class?: string | null
           hotel_address?: string | null
           hotel_checkin_date?: string | null
@@ -6596,6 +6632,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_external_seller_id_fkey"
+            columns: ["external_seller_id"]
+            isOneToOne: false
+            referencedRelation: "external_sellers"
             referencedColumns: ["id"]
           },
           {
