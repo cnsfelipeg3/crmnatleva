@@ -47,6 +47,7 @@ const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIn
 const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
 const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
@@ -338,6 +339,7 @@ export default function LiveChat() {
   const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
 
   const selected = conversations.find(c => c.id === selectedId);
+  const waConnection = useWhatsAppConnection();
   const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
   const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
@@ -2378,6 +2380,14 @@ export default function LiveChat() {
                       </Select>
                     </div>
                   </div>
+
+                  {/* Z-API offline gap warning */}
+                  {!waConnection.isConnected && waConnection.lastEvent === "disconnected" && (
+                    <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>WhatsApp offline · mensagens novas podem não estar aparecendo aqui. Cheque no celular pra confirmar.</span>
+                    </div>
+                  )}
 
                   {/* Messages */}
                   <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden px-4">

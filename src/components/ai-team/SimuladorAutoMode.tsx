@@ -11,6 +11,7 @@ import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
 import { buildActiveContext, shouldChunk, createChunkSummary, type SimEvent, type ChunkData, CHUNK_SIZE, createMetricsSnapshot, buildLeadContextSummary } from "./simulationEngine";
 import {
@@ -147,6 +148,7 @@ export default function SimuladorAutoMode() {
   const abortRef = useRef(false);
   const simAtivaRef = useRef(false);
   const { toast } = useToast();
+  const waConnection = useWhatsAppConnection();
   const simPersistence = useSimulationPersistence();
   const chunksRef = useRef<Map<string, ChunkData[]>>(new Map());
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
@@ -233,6 +235,23 @@ export default function SimuladorAutoMode() {
 
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
+    // BLOQUEIO Z-API: simulações Camaleão consomem capacidade do WhatsApp
+    if (!waConnection.isConnected) {
+      toast({
+        title: "WhatsApp desconectado",
+        description: "Não é possível iniciar simulações enquanto a Z-API estiver offline. Reconecte lendo o QR primeiro.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+    if (waConnection.isStale) {
+      const proceed = window.confirm(
+        "A conexão Z-API não foi confirmada nos últimos 10 minutos. Pode estar caída sem aviso. Deseja continuar mesmo assim?"
+      );
+      if (!proceed) return;
+    }
+
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
     chunksRef.current = new Map();
@@ -765,7 +784,7 @@ REGRA: Você JÁ SABE o destino ("${lead.destino}"). NÃO pergunte "qual destino
     });
 
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence, waConnection]);
 
   const stopSimulation = () => stopSimulationRef.current();
 

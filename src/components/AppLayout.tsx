@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import AppSidebar from "./AppSidebar";
 import PermissionGuard from "./PermissionGuard";
 
@@ -10,14 +10,60 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Menu, Maximize, Minimize } from "lucide-react";
+import { Menu, Maximize, Minimize, WifiOff, AlertCircle } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.webp";
+import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConnection";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
 const AIPageSummaryButton = lazy(() => import("./AIPageSummaryButton"));
+
+function WhatsAppStatusBanner() {
+  const wa = useWhatsAppConnection();
+  const navigate = useNavigate();
+
+  if (!wa.lastEvent) return null;
+
+  if (!wa.isConnected) {
+    return (
+      <div className="flex items-center justify-between gap-3 px-4 py-2 bg-destructive/10 border-b border-destructive/30 text-destructive text-sm shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <WifiOff className="w-4 h-4 shrink-0" />
+          <span className="truncate">
+            <strong>WhatsApp desconectado</strong>
+            {" — "}
+            {wa.lastEvent === "disconnected"
+              ? `caiu ${formatTimeSince(wa.secondsSince)}`
+              : `sem resposta ${formatTimeSince(wa.secondsSince)}`}
+            {wa.errorMessage ? ` · ${wa.errorMessage}` : ""}
+            . Mensagens novas não chegam ao CRM até reconectar.
+          </span>
+        </div>
+        <button
+          onClick={() => navigate("/whatsapp")}
+          className="text-xs font-semibold underline hover:no-underline shrink-0"
+        >
+          Ler QR
+        </button>
+      </div>
+    );
+  }
+
+  if (wa.isStale) {
+    return (
+      <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300 text-sm shrink-0">
+        <AlertCircle className="w-4 h-4 shrink-0" />
+        <span className="truncate">
+          Sem confirmação de conexão Z-API {formatTimeSince(wa.secondsSince)}. Pode ter caído sem aviso.
+        </span>
+      </div>
+    );
+  }
+
+  return null;
+}
 
 export default function AppLayout() {
   const isMobile = useIsMobile();
@@ -84,6 +130,8 @@ export default function AppLayout() {
           </SheetContent>
         </Sheet>
 
+        <WhatsAppStatusBanner />
+
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:text-sm"
@@ -149,6 +197,7 @@ export default function AppLayout() {
             </div>
           </header>
         )}
+        <WhatsAppStatusBanner />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:text-sm"

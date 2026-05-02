@@ -452,6 +452,44 @@ Deno.serve(async (req) => {
     const eventType = classifyEvent(body);
 
     // ═══════════════════════════════════════════════════════════
+    // FAST-PATH: Eventos de conexão Z-API (disconnect/connect)
+    // ═══════════════════════════════════════════════════════════
+    if (body?.type === "DisconnectedCallback" || body?.connected === false) {
+      try {
+        await supabase.from("whatsapp_connection_events").insert({
+          event_type: "disconnected",
+          instance_id: String(body?.instanceId || Deno.env.get("ZAPI_INSTANCE_ID") || ""),
+          status: "disconnected",
+          error_message: body?.error || body?.reason || null,
+          raw_payload: body,
+        });
+        console.warn("[Webhook] Z-API DISCONNECTED:", body?.error || body?.reason);
+      } catch (e: any) {
+        console.error("[Webhook] disconnected event insert failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "disconnected" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (body?.type === "ConnectedCallback" || (body?.connected === true && !body?.phone)) {
+      try {
+        await supabase.from("whatsapp_connection_events").insert({
+          event_type: "connected",
+          instance_id: String(body?.instanceId || Deno.env.get("ZAPI_INSTANCE_ID") || ""),
+          status: "connected",
+          raw_payload: body,
+        });
+        console.log("[Webhook] Z-API CONNECTED");
+      } catch (e: any) {
+        console.error("[Webhook] connected event insert failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "connected" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ═══════════════════════════════════════════════════════════
     // FAST-PATH: PresenceChatCallback (cliente digitando/gravando)
     // Alta frequência · não salvamos em whatsapp_events_raw pra
     // não inflar a tabela. Só upsert em chat_presence + retorna.

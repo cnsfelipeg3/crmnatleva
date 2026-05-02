@@ -193,3 +193,7 @@ verify_jwt = false  # Portal cliente · resolve nome de lugar via Google Places 
 
 [functions.backfill-profile-pics]
 verify_jwt = false  # Script admin manual de backfill
+
+[functions.zapi-heartbeat]
+verify_jwt = false  # Chamado por pg_cron interno · sem JWT
+
