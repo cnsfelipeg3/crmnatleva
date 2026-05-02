@@ -194,6 +194,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
             <span className="truncate max-w-[100px]">{sellerFirstName}</span>
           </span>
         )}
+      </td>
       <td className="px-2 py-3">
         <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
