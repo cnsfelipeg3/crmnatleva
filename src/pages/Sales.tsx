@@ -775,8 +775,7 @@ export default function Sales() {
 
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
-              <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-                <div className="overflow-x-auto">
+              <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[1310px]">
                     <SalesTableColGroup />
                     <thead>
@@ -837,6 +836,8 @@ export default function Sales() {
                     onNavigate={handleNavigateSale}
                     onNavigateClient={handleNavigateClient}
                     onDeleted={handleDeleted}
+                    onDragStart={handleNativeDragStart}
+                    onDropToGroup={handleDropToGroup}
                   />
                   <VirtualEmissionGroup
                     id="group:emitted"
@@ -853,9 +854,10 @@ export default function Sales() {
                     onNavigate={handleNavigateSale}
                     onNavigateClient={handleNavigateClient}
                     onDeleted={handleDeleted}
+                    onDragStart={handleNativeDragStart}
+                    onDropToGroup={handleDropToGroup}
                   />
                 </div>
-              </DndContext>
             </Card>}
             {/* Summary footer */}
             <Card className="glass-card p-4">
