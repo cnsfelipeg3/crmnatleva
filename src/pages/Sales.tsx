@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, memo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, memo, useCallback, useRef, startTransition } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
-import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
@@ -104,16 +103,15 @@ interface SaleRowProps {
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
+  onDragStart: (saleId: string, emitted: boolean) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
-
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `sale:${sale.id}`, data: { saleId: sale.id, emitted: isEmitted(sale) } });
 
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
@@ -129,14 +127,17 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 
   return (
     <tr
-      ref={setNodeRef}
-      className={cn("border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", isDragging && "opacity-30")}
+      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
       onClick={() => onNavigate(sale.id)}
     >
       <td className="px-1 py-3 w-6">
         <button
-          {...attributes}
-          {...listeners}
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.effectAllowed = "move";
+            onDragStart(sale.id, isEmitted(sale));
+          }}
           onClick={(e) => e.stopPropagation()}
           className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
           title="Arrastar para mover"
