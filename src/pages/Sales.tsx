@@ -13,6 +13,7 @@ import { routeCode } from "@/lib/cityExtract";
 import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
@@ -78,20 +79,40 @@ const SALES_FILTER_CONFIG: SmartFilterConfig = {
 };
 
 // Memoized row — re-renders only when sale data actually changes (not on sort/filter reorder)
+type SellerProfile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
+
 interface SaleRowProps {
   sale: SaleRow;
+  seller: SellerProfile | null;
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
+
+  const sellerInitials = seller
+    ? (seller.full_name || seller.email || "?")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase())
+        .join("")
+    : "";
+  const sellerFirstName = seller
+    ? (seller.full_name?.split(" ")[0] || seller.email?.split("@")[0] || "—")
+    : null;
 
   return (
     <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onNavigate(sale.id)}>
@@ -150,6 +171,30 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
           ? <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
+      <td className="px-2 py-3 text-xs">
+        {!seller ? (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
+            <span className="text-[11px]">Sem vendedor</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5" title={seller.email || seller.full_name || ""}>
+            {seller.avatar_url ? (
+              <img
+                src={seller.avatar_url}
+                alt={seller.full_name || ""}
+                className="w-5 h-5 rounded-full object-cover shrink-0"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[9px] font-semibold shrink-0">
+                {sellerInitials}
+              </div>
+            )}
+            <span className="truncate max-w-[100px]">{sellerFirstName}</span>
+          </span>
+        )}
+      </td>
       <td className="px-2 py-3">
         <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
@@ -166,10 +211,27 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, 
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
+  const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
+  const [filterSeller, setFilterSeller] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
+
+  // Fetch sellers (profiles) once on mount · small dataset, O(1) lookup via Map
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url");
+      if (cancelled || error || !data) return;
+      const map = new Map<string, SellerProfile>();
+      for (const p of data) map.set(p.id, p as SellerProfile);
+      setSellersMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
 
   useEffect(() => {
@@ -186,7 +248,7 @@ export default function Sales() {
   const { filtered: smartFiltered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
 
   // Local table column sorting
-  type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status";
+  type ColSortKey = "name" | "close_date" | "departure_date" | "return_date" | "received_value" | "total_cost" | "profit" | "margin" | "status" | "seller";
   // Default: ordena por Data da Venda (close_date) decrescente — mais recentes primeiro
   const [colSort, setColSort] = useState<{ key: ColSortKey; dir: "asc" | "desc" } | null>({ key: "close_date", dir: "desc" });
 
@@ -201,9 +263,26 @@ export default function Sales() {
   };
 
   const filtered = useMemo(() => {
-    if (!colSort) return smartFiltered;
+    // 1. Filtro de vendedor (post-processing após SmartFilters)
+    let base = smartFiltered;
+    if (filterSeller !== "all") {
+      base = filterSeller === "none"
+        ? base.filter(s => !s.seller_id)
+        : base.filter(s => s.seller_id === filterSeller);
+    }
+
+    if (!colSort) return base;
     const { key, dir } = colSort;
-    return [...smartFiltered].sort((a, b) => {
+    return [...base].sort((a, b) => {
+      // Sort especial por vendedor (resolve nome via Map)
+      if (key === "seller") {
+        const aName = a.seller_id ? sellersMap.get(a.seller_id)?.full_name || "" : "";
+        const bName = b.seller_id ? sellersMap.get(b.seller_id)?.full_name || "" : "";
+        if (!aName && !bName) return 0;
+        if (!aName) return 1;
+        if (!bName) return -1;
+        return dir === "asc" ? aName.localeCompare(bName, "pt-BR") : bName.localeCompare(aName, "pt-BR");
+      }
       const av = (a as any)[key];
       const bv = (b as any)[key];
       if (av == null && bv == null) return 0;
@@ -212,7 +291,7 @@ export default function Sales() {
       const cmp = typeof av === "number" ? av - bv : String(av).localeCompare(String(bv));
       return dir === "asc" ? cmp : -cmp;
     });
-  }, [smartFiltered, colSort]);
+  }, [smartFiltered, colSort, filterSeller, sellersMap]);
 
   const totals = useMemo(() => {
     const t = (list: SaleRow[]) => {
@@ -318,6 +397,33 @@ export default function Sales() {
           dynamicOptions={{ status: statuses, airline: airlines }}
         />
 
+        {sellersMap.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Vendedor:</span>
+            <Select value={filterSeller} onValueChange={setFilterSeller}>
+              <SelectTrigger className="w-[200px] h-9 text-xs">
+                <SelectValue placeholder="Todos vendedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos vendedores</SelectItem>
+                <SelectItem value="none">Sem vendedor</SelectItem>
+                {Array.from(sellersMap.values())
+                  .sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || "", "pt-BR"))
+                  .map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.full_name || s.email}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            {filterSeller !== "all" && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterSeller("all")}>
+                <X className="w-3 h-3 mr-1" /> Limpar
+              </Button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <ListPageSkeleton rows={8} />
         ) : filtered.length === 0 ? (
@@ -391,6 +497,7 @@ export default function Sales() {
                     <col style={{ minWidth: "110px" }} />
                     <col style={{ minWidth: "70px" }} />
                     <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "130px" }} />
                     <col style={{ minWidth: "100px" }} />
                     <col style={{ minWidth: "90px" }} />
                   </colgroup>
@@ -409,6 +516,7 @@ export default function Sales() {
                         { key: "profit", label: "Lucro", align: "text-right", px: "px-2" },
                         { key: "margin", label: "Margem", align: "text-right", px: "px-1" },
                         { key: null, label: "Lead", align: "text-center", px: "px-1" },
+                        { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
                         { key: "status", label: "Status", align: "text-left", px: "px-1" },
                       ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
                         <th
@@ -439,6 +547,7 @@ export default function Sales() {
                       <SaleRowComponent
                         key={sale.id}
                         sale={sale}
+                        seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
