@@ -2381,6 +2381,14 @@ export default function LiveChat() {
                     </div>
                   </div>
 
+                  {/* Z-API offline gap warning */}
+                  {!waConnection.isConnected && waConnection.lastEvent === "disconnected" && (
+                    <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center gap-2">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>WhatsApp offline · mensagens novas podem não estar aparecendo aqui. Cheque no celular pra confirmar.</span>
+                    </div>
+                  )}
+
                   {/* Messages */}
                   <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden px-4">
                     <div className="py-4 space-y-3">
