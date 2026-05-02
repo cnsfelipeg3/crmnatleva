@@ -784,7 +784,7 @@ REGRA: Você JÁ SABE o destino ("${lead.destino}"). NÃO pergunte "qual destino
     });
 
     toast({ title: wasTimeout ? "Simulação encerrada por tempo!" : "Simulação concluída!", description: `${allLeads.length} leads processados em ${formatTime(elapsed)}` });
-  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence]);
+  }, [numLeads, msgsPerLead, intervalSec, duration, parallelLeads, dispatchMode, selectedProfiles, profileMode, selectedDestinos, selectedBudgets, selectedCanais, selectedGrupos, conversionOverride, objectionDensity, speed, funnelMode, customFunnelAgents, enableEvaluation, enableMultiMsg, enableTransfers, emotionalVolatility, agentResponseLength, enableLossNarrative, evalFrequency, initialPatience, leadPatienceCurve, abandonmentSensitivity, leadToneFormality, leadTypingStyle, leadFollowUpPressure, infoRevealSpeed, enableLeadTypos, enableLeadEmojis, enableLeadAudioRef, leadConversationGoal, maxConversationMinutes, leadReengagementChance, leadCustomInstructions, toast, simPersistence, waConnection]);
 
   const stopSimulation = () => stopSimulationRef.current();
 
