@@ -148,6 +148,7 @@ export default function SimuladorAutoMode() {
   const abortRef = useRef(false);
   const simAtivaRef = useRef(false);
   const { toast } = useToast();
+  const waConnection = useWhatsAppConnection();
   const simPersistence = useSimulationPersistence();
   const chunksRef = useRef<Map<string, ChunkData[]>>(new Map());
   const selectedLead = leads.find(l => l.id === selectedLeadId) || null;
@@ -234,6 +235,24 @@ export default function SimuladorAutoMode() {
 
   // ===== SIMULATION ENGINE =====
   const runSimulation = useCallback(async () => {
+  const runSimulation = useCallback(async () => {
+    // BLOQUEIO Z-API: simulações Camaleão consomem capacidade do WhatsApp
+    if (!waConnection.isConnected) {
+      toast({
+        title: "WhatsApp desconectado",
+        description: "Não é possível iniciar simulações enquanto a Z-API estiver offline. Reconecte lendo o QR primeiro.",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return;
+    }
+    if (waConnection.isStale) {
+      const proceed = window.confirm(
+        "A conexão Z-API não foi confirmada nos últimos 10 minutos. Pode estar caída sem aviso. Deseja continuar mesmo assim?"
+      );
+      if (!proceed) return;
+    }
+
     setPhase("running"); setRunning(true); setLeads([]); setEvents([]); setElapsedSeconds(0);
     setSelectedLeadId(null); setDebrief(null); abortRef.current = false; simAtivaRef.current = true;
     chunksRef.current = new Map();
