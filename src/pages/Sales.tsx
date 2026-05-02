@@ -211,10 +211,27 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
+  const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
+  const [filterSeller, setFilterSeller] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
+
+  // Fetch sellers (profiles) once on mount · small dataset, O(1) lookup via Map
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url");
+      if (cancelled || error || !data) return;
+      const map = new Map<string, SellerProfile>();
+      for (const p of data) map.set(p.id, p as SellerProfile);
+      setSellersMap(map);
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
 
   useEffect(() => {
