@@ -47,6 +47,7 @@ const LiveChatIntegrations = lazy(() => import("@/components/livechat/LiveChatIn
 const LiveChatSimulator = lazy(() => import("@/components/livechat/LiveChatSimulator").then(m => ({ default: m.LiveChatSimulator })));
 const LiveChatLogs = lazy(() => import("@/components/livechat/LiveChatLogs").then(m => ({ default: m.LiveChatLogs })));
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
@@ -338,6 +339,7 @@ export default function LiveChat() {
   const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
 
   const selected = conversations.find(c => c.id === selectedId);
+  const waConnection = useWhatsAppConnection();
   const selectedDisplayName = selected ? getSafeContactName(selected.contact_name, selected.phone) : "Contato sem nome";
   const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
