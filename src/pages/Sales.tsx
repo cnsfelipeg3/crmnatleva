@@ -297,6 +297,8 @@ interface VirtualEmissionGroupProps {
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
+  onDragStart: (saleId: string, emitted: boolean) => void;
+  onDropToGroup: (variant: "pending" | "emitted") => void;
 }
 
 function VirtualEmissionGroup({
@@ -314,9 +316,10 @@ function VirtualEmissionGroup({
   onNavigate,
   onNavigateClient,
   onDeleted,
+  onDragStart,
+  onDropToGroup,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { setNodeRef, isOver } = useDroppable({ id });
   const rowVirtualizer = useVirtualizer({
     count: sales.length,
     getScrollElement: () => scrollRef.current,
@@ -335,11 +338,14 @@ function VirtualEmissionGroup({
   const badgeTone = isPending
     ? "bg-warning/15 text-warning-foreground border-warning/30"
     : "bg-success/15 text-success border-success/30";
-  const overTone = isPending ? "bg-warning/5 ring-2 ring-warning/40 ring-inset" : "bg-success/5 ring-2 ring-success/40 ring-inset";
   const StatusIcon = isPending ? Clock : CheckCircle2;
 
   return (
-    <div ref={setNodeRef} className={cn("transition-colors", isOver && overTone)}>
+    <div
+      className="transition-colors"
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
+      onDrop={(e) => { e.preventDefault(); onDropToGroup(variant); }}
+    >
       <table className="w-full text-sm min-w-[1310px]">
         <SalesTableColGroup />
         <tbody>
@@ -390,6 +396,7 @@ function VirtualEmissionGroup({
                         onNavigate={onNavigate}
                         onNavigateClient={onNavigateClient}
                         onDeleted={onDeleted}
+                        onDragStart={onDragStart}
                       />
                     );
                   })}
