@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, memo, useCallback } from "react";
+import type { ReactNode } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -254,7 +255,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 });
 
 // Droppable tbody for each emission group
-function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: React.ReactNode; isOver?: boolean }) {
+function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: ReactNode; isOver?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <tbody
