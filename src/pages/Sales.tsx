@@ -242,7 +242,11 @@ export default function Sales() {
     }).catch(err => { console.error(err); setLoading(false); });
   }, [authLoading]);
 
-  const statuses = useMemo(() => [...new Set(sales.map(s => s.status))].sort(), [sales]);
+  const statuses = useMemo(() => {
+    const ALWAYS_SHOW = ["Aguardando Emissão"];
+    const fromData = sales.map(s => s.status).filter(Boolean);
+    return [...new Set([...fromData, ...ALWAYS_SHOW])].sort();
+  }, [sales]);
   const airlines = useMemo(() => [...new Set(sales.map(s => s.airline).filter(Boolean))].sort() as string[], [sales]);
 
   const { filtered: smartFiltered, state: filterState, setState: setFilterState, activeFilterCount, clearAll: clearFilters } = useSmartFilters(sales, SALES_FILTER_CONFIG);
