@@ -49,7 +49,8 @@ function fmtShortDate(dateStr: string | null): string | null {
 
 interface SaleRow {
   id: string; display_id: string; name: string; close_date: string | null;
-  status: string; origin_iata: string | null; destination_iata: string | null;
+  status: string; emission_status: string | null;
+  origin_iata: string | null; destination_iata: string | null;
   origin_city: string | null; destination_city: string | null;
   departure_date: string | null; return_date: string | null;
   adults: number; children: number;
@@ -59,6 +60,8 @@ interface SaleRow {
   created_at: string; client_id: string | null; lead_type: string;
   hotel_name: string | null;
 }
+
+const isEmitted = (s: { emission_status: string | null }) => s.emission_status === "Emitido";
 
 const SALES_FILTER_CONFIG: SmartFilterConfig = {
   sortOptions: [
