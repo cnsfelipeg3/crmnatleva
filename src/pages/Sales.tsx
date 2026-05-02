@@ -255,13 +255,13 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 });
 
 // Droppable tbody for each emission group
-function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: ReactNode; isOver?: boolean }) {
+function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; children: ReactNode; hidden?: boolean; isOver?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <tbody
       ref={setNodeRef}
       className={cn(
-        "transition-colors",
+        hidden && "hidden",
         isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
       )}
     >
@@ -709,28 +709,26 @@ export default function Sales() {
                         </td>
                       </tr>
                     </tbody>
-                    {groupOpen.pending && (
-                      <DroppableGroupBody id="group:pending">
-                        {grouped.pending.length === 0 ? (
-                          <tr>
-                            <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                              Nenhuma venda aguardando emissão.
-                            </td>
-                          </tr>
-                        ) : grouped.pending.map((sale) => (
-                          <SaleRowComponent
-                            key={sale.id}
-                            sale={sale}
-                            seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                            externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                            productCatalog={productCatalog}
-                            onNavigate={handleNavigateSale}
-                            onNavigateClient={handleNavigateClient}
-                            onDeleted={handleDeleted}
-                          />
-                        ))}
-                      </DroppableGroupBody>
-                    )}
+                    <DroppableGroupBody id="group:pending" hidden={!groupOpen.pending}>
+                      {grouped.pending.length === 0 ? (
+                        <tr>
+                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                            Nenhuma venda aguardando emissão.
+                          </td>
+                        </tr>
+                      ) : grouped.pending.map((sale) => (
+                        <SaleRowComponent
+                          key={sale.id}
+                          sale={sale}
+                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                          productCatalog={productCatalog}
+                          onNavigate={handleNavigateSale}
+                          onNavigateClient={handleNavigateClient}
+                          onDeleted={handleDeleted}
+                        />
+                      ))}
+                    </DroppableGroupBody>
 
                     {/* Grupo 2 · Emissão Concluída */}
                     <tbody>
@@ -751,28 +749,26 @@ export default function Sales() {
                         </td>
                       </tr>
                     </tbody>
-                    {groupOpen.emitted && (
-                      <DroppableGroupBody id="group:emitted">
-                        {grouped.emitted.length === 0 ? (
-                          <tr>
-                            <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                              Nenhuma venda emitida ainda.
-                            </td>
-                          </tr>
-                        ) : grouped.emitted.map((sale) => (
-                          <SaleRowComponent
-                            key={sale.id}
-                            sale={sale}
-                            seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                            externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                            productCatalog={productCatalog}
-                            onNavigate={handleNavigateSale}
-                            onNavigateClient={handleNavigateClient}
-                            onDeleted={handleDeleted}
-                          />
-                        ))}
-                      </DroppableGroupBody>
-                    )}
+                    <DroppableGroupBody id="group:emitted" hidden={!groupOpen.emitted}>
+                      {grouped.emitted.length === 0 ? (
+                        <tr>
+                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                            Nenhuma venda emitida ainda.
+                          </td>
+                        </tr>
+                      ) : grouped.emitted.map((sale) => (
+                        <SaleRowComponent
+                          key={sale.id}
+                          sale={sale}
+                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                          productCatalog={productCatalog}
+                          onNavigate={handleNavigateSale}
+                          onNavigateClient={handleNavigateClient}
+                          onDeleted={handleDeleted}
+                        />
+                      ))}
+                    </DroppableGroupBody>
                   </table>
                 </div>
               </DndContext>
