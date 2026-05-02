@@ -777,29 +777,12 @@ export default function Sales() {
               ))}
             </div>
 
-            {/* Desktop table view · pipeline vertical (Aguardando / Emitido) */}
+            {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             <Card className="glass-card overflow-hidden hidden sm:block">
               <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[1310px]">
-                    <colgroup>
-                      <col style={{ width: "28px" }} />
-                      <col style={{ minWidth: "200px" }} />
-                      <col style={{ minWidth: "100px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "50px" }} />
-                      <col style={{ minWidth: "80px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "70px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "130px" }} />
-                      <col style={{ minWidth: "100px" }} />
-                      <col style={{ minWidth: "90px" }} />
-                    </colgroup>
+                    <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
                         <th className="px-1 py-3"></th>
@@ -842,87 +825,39 @@ export default function Sales() {
                         <th className="px-2 py-3 text-center font-semibold text-muted-foreground text-xs">Ações</th>
                       </tr>
                     </thead>
-
-                    {/* Grupo 1 · Aguardando Emissão */}
-                    <tbody>
-                      <tr
-                        className="bg-warning/10 hover:bg-warning/15 cursor-pointer border-y border-warning/30 transition-colors"
-                        onClick={() => setGroupOpen((g) => ({ ...g, pending: !g.pending }))}
-                      >
-                        <td colSpan={16} className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            {groupOpen.pending ? <ChevronDown className="w-4 h-4 text-warning-foreground" /> : <ChevronRight className="w-4 h-4 text-warning-foreground" />}
-                            <Clock className="w-4 h-4 text-warning-foreground" />
-                            <span className="text-sm font-semibold text-warning-foreground">Aguardando Emissão</span>
-                            <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/30">
-                              {grouped.pending.length}
-                            </Badge>
-                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste uma linha para "Emissão Concluída" para emitir</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <DroppableGroupBody id="group:pending" hidden={!groupOpen.pending}>
-                      {grouped.pending.length === 0 ? (
-                        <tr>
-                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                            Nenhuma venda aguardando emissão.
-                          </td>
-                        </tr>
-                      ) : grouped.pending.map((sale) => (
-                        <SaleRowComponent
-                          key={sale.id}
-                          sale={sale}
-                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                          productCatalog={productCatalog}
-                          onNavigate={handleNavigateSale}
-                          onNavigateClient={handleNavigateClient}
-                          onDeleted={handleDeleted}
-                        />
-                      ))}
-                    </DroppableGroupBody>
-
-                    {/* Grupo 2 · Emissão Concluída */}
-                    <tbody>
-                      <tr
-                        className="bg-success/10 hover:bg-success/15 cursor-pointer border-y border-success/30 transition-colors"
-                        onClick={() => setGroupOpen((g) => ({ ...g, emitted: !g.emitted }))}
-                      >
-                        <td colSpan={16} className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            {groupOpen.emitted ? <ChevronDown className="w-4 h-4 text-success" /> : <ChevronRight className="w-4 h-4 text-success" />}
-                            <CheckCircle2 className="w-4 h-4 text-success" />
-                            <span className="text-sm font-semibold text-success">Emissão Concluída</span>
-                            <Badge variant="outline" className="text-[10px] bg-success/15 text-success border-success/30">
-                              {grouped.emitted.length}
-                            </Badge>
-                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste de volta para reabrir como pendente</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <DroppableGroupBody id="group:emitted" hidden={!groupOpen.emitted}>
-                      {grouped.emitted.length === 0 ? (
-                        <tr>
-                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                            Nenhuma venda emitida ainda.
-                          </td>
-                        </tr>
-                      ) : grouped.emitted.map((sale) => (
-                        <SaleRowComponent
-                          key={sale.id}
-                          sale={sale}
-                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                          productCatalog={productCatalog}
-                          onNavigate={handleNavigateSale}
-                          onNavigateClient={handleNavigateClient}
-                          onDeleted={handleDeleted}
-                        />
-                      ))}
-                    </DroppableGroupBody>
                   </table>
+                  <VirtualEmissionGroup
+                    id="group:pending"
+                    variant="pending"
+                    open={groupOpen.pending}
+                    title="Aguardando Emissão"
+                    helper="Arraste uma linha para Emissão Concluída para emitir"
+                    emptyText="Nenhuma venda aguardando emissão."
+                    sales={grouped.pending}
+                    sellersMap={sellersMap}
+                    externalMap={externalMap}
+                    productCatalog={productCatalog}
+                    onToggle={() => setGroupOpen((g) => ({ ...g, pending: !g.pending }))}
+                    onNavigate={handleNavigateSale}
+                    onNavigateClient={handleNavigateClient}
+                    onDeleted={handleDeleted}
+                  />
+                  <VirtualEmissionGroup
+                    id="group:emitted"
+                    variant="emitted"
+                    open={groupOpen.emitted}
+                    title="Emissão Concluída"
+                    helper="Arraste de volta para reabrir como pendente"
+                    emptyText="Nenhuma venda emitida ainda."
+                    sales={grouped.emitted}
+                    sellersMap={sellersMap}
+                    externalMap={externalMap}
+                    productCatalog={productCatalog}
+                    onToggle={() => setGroupOpen((g) => ({ ...g, emitted: !g.emitted }))}
+                    onNavigate={handleNavigateSale}
+                    onNavigateClient={handleNavigateClient}
+                    onDeleted={handleDeleted}
+                  />
                 </div>
               </DndContext>
             </Card>
