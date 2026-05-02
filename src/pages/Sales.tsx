@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo, memo, useCallback } from "react";
-import type { ReactNode } from "react";
+import { useState, useEffect, useMemo, memo, useCallback, useRef } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
 import { ExternalSellersDialog } from "@/components/sales/ExternalSellersDialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -254,19 +255,155 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   );
 });
 
-// Droppable tbody for each emission group
-function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; children: ReactNode; hidden?: boolean; isOver?: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
+const TABLE_COLUMN_COUNT = 16;
+const ESTIMATED_ROW_HEIGHT = 54;
+
+function SalesTableColGroup() {
   return (
-    <tbody
-      ref={setNodeRef}
-      className={cn(
-        hidden && "hidden",
-        isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
+    <colgroup>
+      <col style={{ width: "28px" }} />
+      <col style={{ minWidth: "200px" }} />
+      <col style={{ minWidth: "100px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "50px" }} />
+      <col style={{ minWidth: "80px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "110px" }} />
+      <col style={{ minWidth: "70px" }} />
+      <col style={{ minWidth: "85px" }} />
+      <col style={{ minWidth: "130px" }} />
+      <col style={{ minWidth: "100px" }} />
+      <col style={{ minWidth: "90px" }} />
+    </colgroup>
+  );
+}
+
+interface VirtualEmissionGroupProps {
+  id: "group:pending" | "group:emitted";
+  variant: "pending" | "emitted";
+  open: boolean;
+  title: string;
+  helper: string;
+  emptyText: string;
+  sales: SaleRow[];
+  sellersMap: Map<string, SellerProfile>;
+  externalMap: Map<string, ExternalSeller>;
+  productCatalog: ReturnType<typeof useProductTypes>["catalog"];
+  onToggle: () => void;
+  onNavigate: (id: string) => void;
+  onNavigateClient: (clientId: string) => void;
+  onDeleted: (id: string) => void;
+}
+
+function VirtualEmissionGroup({
+  id,
+  variant,
+  open,
+  title,
+  helper,
+  emptyText,
+  sales,
+  sellersMap,
+  externalMap,
+  productCatalog,
+  onToggle,
+  onNavigate,
+  onNavigateClient,
+  onDeleted,
+}: VirtualEmissionGroupProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const { setNodeRef, isOver } = useDroppable({ id });
+  const rowVirtualizer = useVirtualizer({
+    count: sales.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => ESTIMATED_ROW_HEIGHT,
+    overscan: 8,
+    getItemKey: (index) => sales[index]?.id ?? index,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+  const paddingTop = virtualRows.length > 0 ? virtualRows[0].start : 0;
+  const paddingBottom = virtualRows.length > 0 ? rowVirtualizer.getTotalSize() - virtualRows[virtualRows.length - 1].end : 0;
+  const isPending = variant === "pending";
+  const groupTone = isPending
+    ? "bg-warning/10 hover:bg-warning/15 border-warning/30"
+    : "bg-success/10 hover:bg-success/15 border-success/30";
+  const textTone = isPending ? "text-warning-foreground" : "text-success";
+  const badgeTone = isPending
+    ? "bg-warning/15 text-warning-foreground border-warning/30"
+    : "bg-success/15 text-success border-success/30";
+  const overTone = isPending ? "bg-warning/5 ring-2 ring-warning/40 ring-inset" : "bg-success/5 ring-2 ring-success/40 ring-inset";
+  const StatusIcon = isPending ? Clock : CheckCircle2;
+
+  return (
+    <div ref={setNodeRef} className={cn("transition-colors", isOver && overTone)}>
+      <table className="w-full text-sm min-w-[1310px]">
+        <SalesTableColGroup />
+        <tbody>
+          <tr className={cn("cursor-pointer border-y transition-colors", groupTone)} onClick={onToggle}>
+            <td colSpan={TABLE_COLUMN_COUNT} className="px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                {open ? <ChevronDown className={cn("w-4 h-4", textTone)} /> : <ChevronRight className={cn("w-4 h-4", textTone)} />}
+                <StatusIcon className={cn("w-4 h-4", textTone)} />
+                <span className={cn("text-sm font-semibold", textTone)}>{title}</span>
+                <Badge variant="outline" className={cn("text-[10px]", badgeTone)}>
+                  {sales.length}
+                </Badge>
+                <span className="ml-auto text-[10px] text-muted-foreground italic">{helper}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {open && (
+        <div ref={scrollRef} className="max-h-[640px] overflow-y-auto overscroll-contain">
+          <table className="w-full text-sm min-w-[1310px]">
+            <SalesTableColGroup />
+            <tbody>
+              {sales.length === 0 ? (
+                <tr>
+                  <td colSpan={TABLE_COLUMN_COUNT} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
+                    {emptyText}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {paddingTop > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={TABLE_COLUMN_COUNT} style={{ height: paddingTop, padding: 0, border: 0 }} />
+                    </tr>
+                  )}
+                  {virtualRows.map((virtualRow) => {
+                    const sale = sales[virtualRow.index];
+                    if (!sale) return null;
+                    return (
+                      <SaleRowComponent
+                        key={sale.id}
+                        sale={sale}
+                        seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                        externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
+                        productCatalog={productCatalog}
+                        onNavigate={onNavigate}
+                        onNavigateClient={onNavigateClient}
+                        onDeleted={onDeleted}
+                      />
+                    );
+                  })}
+                  {paddingBottom > 0 && (
+                    <tr aria-hidden="true">
+                      <td colSpan={TABLE_COLUMN_COUNT} style={{ height: paddingBottom, padding: 0, border: 0 }} />
+                    </tr>
+                  )}
+                </>
+              )}
+            </tbody>
+          </table>
+        </div>
       )}
-    >
-      {children}
-    </tbody>
+    </div>
   );
 }
 
@@ -280,6 +417,7 @@ export default function Sales() {
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { catalog: productCatalog } = useProductTypes();
   const { sellers: externalSellers, reload: reloadExternal } = useExternalSellers();
   const externalMap = useMemo(() => {
@@ -577,7 +715,7 @@ export default function Sales() {
         ) : (
           <>
             {/* Mobile card view */}
-            <div className="sm:hidden space-y-3">
+            {isMobile && <div className="sm:hidden space-y-3">
               {filtered.map((sale) => (
                 <Card key={sale.id} className="p-4 glass-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/sales/${sale.id}`)}>
                   <div className="flex items-start justify-between gap-2">
@@ -622,31 +760,14 @@ export default function Sales() {
                   </div>
                 </Card>
               ))}
-            </div>
+            </div>}
 
-            {/* Desktop table view · pipeline vertical (Aguardando / Emitido) */}
-            <Card className="glass-card overflow-hidden hidden sm:block">
+            {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
+            {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm min-w-[1310px]">
-                    <colgroup>
-                      <col style={{ width: "28px" }} />
-                      <col style={{ minWidth: "200px" }} />
-                      <col style={{ minWidth: "100px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "50px" }} />
-                      <col style={{ minWidth: "80px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "110px" }} />
-                      <col style={{ minWidth: "70px" }} />
-                      <col style={{ minWidth: "85px" }} />
-                      <col style={{ minWidth: "130px" }} />
-                      <col style={{ minWidth: "100px" }} />
-                      <col style={{ minWidth: "90px" }} />
-                    </colgroup>
+                    <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
                         <th className="px-1 py-3"></th>
@@ -689,90 +810,42 @@ export default function Sales() {
                         <th className="px-2 py-3 text-center font-semibold text-muted-foreground text-xs">Ações</th>
                       </tr>
                     </thead>
-
-                    {/* Grupo 1 · Aguardando Emissão */}
-                    <tbody>
-                      <tr
-                        className="bg-warning/10 hover:bg-warning/15 cursor-pointer border-y border-warning/30 transition-colors"
-                        onClick={() => setGroupOpen((g) => ({ ...g, pending: !g.pending }))}
-                      >
-                        <td colSpan={16} className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            {groupOpen.pending ? <ChevronDown className="w-4 h-4 text-warning-foreground" /> : <ChevronRight className="w-4 h-4 text-warning-foreground" />}
-                            <Clock className="w-4 h-4 text-warning-foreground" />
-                            <span className="text-sm font-semibold text-warning-foreground">Aguardando Emissão</span>
-                            <Badge variant="outline" className="text-[10px] bg-warning/15 text-warning-foreground border-warning/30">
-                              {grouped.pending.length}
-                            </Badge>
-                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste uma linha para "Emissão Concluída" para emitir</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <DroppableGroupBody id="group:pending" hidden={!groupOpen.pending}>
-                      {grouped.pending.length === 0 ? (
-                        <tr>
-                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                            Nenhuma venda aguardando emissão.
-                          </td>
-                        </tr>
-                      ) : grouped.pending.map((sale) => (
-                        <SaleRowComponent
-                          key={sale.id}
-                          sale={sale}
-                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                          productCatalog={productCatalog}
-                          onNavigate={handleNavigateSale}
-                          onNavigateClient={handleNavigateClient}
-                          onDeleted={handleDeleted}
-                        />
-                      ))}
-                    </DroppableGroupBody>
-
-                    {/* Grupo 2 · Emissão Concluída */}
-                    <tbody>
-                      <tr
-                        className="bg-success/10 hover:bg-success/15 cursor-pointer border-y border-success/30 transition-colors"
-                        onClick={() => setGroupOpen((g) => ({ ...g, emitted: !g.emitted }))}
-                      >
-                        <td colSpan={16} className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            {groupOpen.emitted ? <ChevronDown className="w-4 h-4 text-success" /> : <ChevronRight className="w-4 h-4 text-success" />}
-                            <CheckCircle2 className="w-4 h-4 text-success" />
-                            <span className="text-sm font-semibold text-success">Emissão Concluída</span>
-                            <Badge variant="outline" className="text-[10px] bg-success/15 text-success border-success/30">
-                              {grouped.emitted.length}
-                            </Badge>
-                            <span className="ml-auto text-[10px] text-muted-foreground italic">Arraste de volta para reabrir como pendente</span>
-                          </div>
-                        </td>
-                      </tr>
-                    </tbody>
-                    <DroppableGroupBody id="group:emitted" hidden={!groupOpen.emitted}>
-                      {grouped.emitted.length === 0 ? (
-                        <tr>
-                          <td colSpan={16} className="px-3 py-6 text-center text-xs text-muted-foreground italic">
-                            Nenhuma venda emitida ainda.
-                          </td>
-                        </tr>
-                      ) : grouped.emitted.map((sale) => (
-                        <SaleRowComponent
-                          key={sale.id}
-                          sale={sale}
-                          seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
-                          externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
-                          productCatalog={productCatalog}
-                          onNavigate={handleNavigateSale}
-                          onNavigateClient={handleNavigateClient}
-                          onDeleted={handleDeleted}
-                        />
-                      ))}
-                    </DroppableGroupBody>
                   </table>
+                  <VirtualEmissionGroup
+                    id="group:pending"
+                    variant="pending"
+                    open={groupOpen.pending}
+                    title="Aguardando Emissão"
+                    helper="Arraste uma linha para Emissão Concluída para emitir"
+                    emptyText="Nenhuma venda aguardando emissão."
+                    sales={grouped.pending}
+                    sellersMap={sellersMap}
+                    externalMap={externalMap}
+                    productCatalog={productCatalog}
+                    onToggle={() => setGroupOpen((g) => ({ ...g, pending: !g.pending }))}
+                    onNavigate={handleNavigateSale}
+                    onNavigateClient={handleNavigateClient}
+                    onDeleted={handleDeleted}
+                  />
+                  <VirtualEmissionGroup
+                    id="group:emitted"
+                    variant="emitted"
+                    open={groupOpen.emitted}
+                    title="Emissão Concluída"
+                    helper="Arraste de volta para reabrir como pendente"
+                    emptyText="Nenhuma venda emitida ainda."
+                    sales={grouped.emitted}
+                    sellersMap={sellersMap}
+                    externalMap={externalMap}
+                    productCatalog={productCatalog}
+                    onToggle={() => setGroupOpen((g) => ({ ...g, emitted: !g.emitted }))}
+                    onNavigate={handleNavigateSale}
+                    onNavigateClient={handleNavigateClient}
+                    onDeleted={handleDeleted}
+                  />
                 </div>
               </DndContext>
-            </Card>
+            </Card>}
             {/* Summary footer */}
             <Card className="glass-card p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
