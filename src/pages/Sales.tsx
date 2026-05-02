@@ -497,6 +497,7 @@ export default function Sales() {
                     <col style={{ minWidth: "110px" }} />
                     <col style={{ minWidth: "70px" }} />
                     <col style={{ minWidth: "85px" }} />
+                    <col style={{ minWidth: "130px" }} />
                     <col style={{ minWidth: "100px" }} />
                     <col style={{ minWidth: "90px" }} />
                   </colgroup>
@@ -515,6 +516,7 @@ export default function Sales() {
                         { key: "profit", label: "Lucro", align: "text-right", px: "px-2" },
                         { key: "margin", label: "Margem", align: "text-right", px: "px-1" },
                         { key: null, label: "Lead", align: "text-center", px: "px-1" },
+                        { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
                         { key: "status", label: "Status", align: "text-left", px: "px-1" },
                       ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
                         <th
@@ -545,6 +547,7 @@ export default function Sales() {
                       <SaleRowComponent
                         key={sale.id}
                         sale={sale}
+                        seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
