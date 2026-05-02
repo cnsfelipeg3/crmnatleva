@@ -79,20 +79,40 @@ const SALES_FILTER_CONFIG: SmartFilterConfig = {
 };
 
 // Memoized row — re-renders only when sale data actually changes (not on sort/filter reorder)
+type SellerProfile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+};
+
 interface SaleRowProps {
   sale: SaleRow;
+  seller: SellerProfile | null;
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
+
+  const sellerInitials = seller
+    ? (seller.full_name || seller.email || "?")
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase())
+        .join("")
+    : "";
+  const sellerFirstName = seller
+    ? (seller.full_name?.split(" ")[0] || seller.email?.split("@")[0] || "—")
+    : null;
 
   return (
     <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => onNavigate(sale.id)}>
