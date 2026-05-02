@@ -99,12 +99,15 @@ export default function Proposals() {
     },
   });
 
-  const filtered = proposals?.filter(
-    (p: any) =>
-      !search ||
-      p.title?.toLowerCase().includes(search.toLowerCase()) ||
-      p.client_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const q = deferredSearch.toLowerCase();
+    return proposals?.filter(
+      (p: any) =>
+        !q ||
+        p.title?.toLowerCase().includes(q) ||
+        p.client_name?.toLowerCase().includes(q)
+    );
+  }, [proposals, deferredSearch]);
 
   const copyLink = (slug: string) => {
     const url = getPublicProposalUrl(slug);
