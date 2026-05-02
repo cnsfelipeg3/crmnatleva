@@ -397,6 +397,33 @@ export default function Sales() {
           dynamicOptions={{ status: statuses, airline: airlines }}
         />
 
+        {sellersMap.size > 0 && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Vendedor:</span>
+            <Select value={filterSeller} onValueChange={setFilterSeller}>
+              <SelectTrigger className="w-[200px] h-9 text-xs">
+                <SelectValue placeholder="Todos vendedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos vendedores</SelectItem>
+                <SelectItem value="none">Sem vendedor</SelectItem>
+                {Array.from(sellersMap.values())
+                  .sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || "", "pt-BR"))
+                  .map(s => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.full_name || s.email}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            {filterSeller !== "all" && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterSeller("all")}>
+                <X className="w-3 h-3 mr-1" /> Limpar
+              </Button>
+            )}
+          </div>
+        )}
+
         {loading ? (
           <ListPageSkeleton rows={8} />
         ) : filtered.length === 0 ? (
