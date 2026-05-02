@@ -171,6 +171,29 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
           ? <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
+      <td className="px-2 py-3 text-xs">
+        {!seller ? (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
+            <span className="text-[11px]">Sem vendedor</span>
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5" title={seller.email || seller.full_name || ""}>
+            {seller.avatar_url ? (
+              <img
+                src={seller.avatar_url}
+                alt={seller.full_name || ""}
+                className="w-5 h-5 rounded-full object-cover shrink-0"
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-[9px] font-semibold shrink-0">
+                {sellerInitials}
+              </div>
+            )}
+            <span className="truncate max-w-[100px]">{sellerFirstName}</span>
+          </span>
+        )}
       <td className="px-2 py-3">
         <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
