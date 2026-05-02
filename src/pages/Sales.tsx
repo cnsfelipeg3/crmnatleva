@@ -288,7 +288,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
