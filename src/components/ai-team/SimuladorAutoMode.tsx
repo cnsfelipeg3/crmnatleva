@@ -11,6 +11,7 @@ import { AGENTS_V4, SQUADS } from "@/components/ai-team/agentsV4Data";
 import { useGlobalRules, buildGlobalRulesBlock, type GlobalRule } from "@/hooks/useGlobalRules";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useWhatsAppConnection } from "@/hooks/useWhatsAppConnection";
 import { useSimulationPersistence } from "@/hooks/useSimulationPersistence";
 import { buildActiveContext, shouldChunk, createChunkSummary, type SimEvent, type ChunkData, CHUNK_SIZE, createMetricsSnapshot, buildLeadContextSummary } from "./simulationEngine";
 import {
