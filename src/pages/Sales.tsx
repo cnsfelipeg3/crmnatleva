@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
-import { DndContext, useDraggable, useDroppable, DragOverlay, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, useDraggable, useDroppable, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
