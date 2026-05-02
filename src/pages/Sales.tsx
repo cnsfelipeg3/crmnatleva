@@ -253,6 +253,23 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   );
 });
 
+// Droppable tbody for each emission group
+function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: React.ReactNode; isOver?: boolean }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <tbody
+      ref={setNodeRef}
+      className={cn(
+        "transition-colors",
+        isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
+      )}
+    >
+      {children}
+    </tbody>
+  );
+}
+
+
 export default function Sales() {
   const { user, isLoading: authLoading } = useAuth();
   const [sales, setSales] = useState<SaleRow[]>([]);
