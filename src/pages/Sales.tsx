@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, memo, useCallback, useRef } from "react";
-import type { ReactNode } from "react";
 import { formatDateBR } from "@/lib/dateFormat";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -278,22 +277,6 @@ function SalesTableColGroup() {
       <col style={{ minWidth: "100px" }} />
       <col style={{ minWidth: "90px" }} />
     </colgroup>
-  );
-}
-
-// Droppable tbody for each emission group
-function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; children: ReactNode; hidden?: boolean; isOver?: boolean }) {
-  const { setNodeRef, isOver } = useDroppable({ id });
-  return (
-    <tbody
-      ref={setNodeRef}
-      className={cn(
-        hidden && "hidden",
-        isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
-      )}
-    >
-      {children}
-    </tbody>
   );
 }
 
