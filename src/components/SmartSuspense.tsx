@@ -11,7 +11,7 @@ import { RouteAwareSkeleton } from "./skeletons/PageSkeletons";
  *
  * Fail-safe: even if Suspense never resolves cleanly, we hard-show content after MAX_HOLD_MS.
  */
-const MAX_HOLD_MS = 1200;
+const MAX_HOLD_MS = 600;
 
 export default function SmartSuspense({ children }: { children: ReactNode }) {
   const location = useLocation();
