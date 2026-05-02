@@ -366,7 +366,11 @@ function VirtualEmissionGroup({
       </table>
 
       {open && (
-        <div ref={scrollRef} className="max-h-[640px] overflow-y-auto overscroll-contain">
+        <div
+          ref={scrollRef}
+          className="overflow-y-auto overflow-x-hidden overscroll-contain"
+          style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
+        >
           <table className="w-full text-sm min-w-[1310px]">
             <SalesTableColGroup />
             <tbody>
