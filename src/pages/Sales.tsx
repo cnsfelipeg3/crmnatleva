@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
+import { ExternalSellersDialog } from "@/components/sales/ExternalSellersDialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -51,6 +53,7 @@ interface SaleRow {
   adults: number; children: number;
   products: string[]; received_value: number; total_cost: number; profit: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
+  external_seller_id: string | null;
   created_at: string; client_id: string | null; lead_type: string;
   hotel_name: string | null;
 }
@@ -89,13 +92,14 @@ type SellerProfile = {
 interface SaleRowProps {
   sale: SaleRow;
   seller: SellerProfile | null;
+  externalSeller: ExternalSeller | null;
   productCatalog: ReturnType<typeof useProductTypes>["catalog"];
   onNavigate: (id: string) => void;
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
@@ -172,12 +176,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
       <td className="px-2 py-3 text-xs">
-        {!seller ? (
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
-            <span className="text-[11px]">Sem vendedor</span>
-          </span>
-        ) : (
+        {seller ? (
           <span className="inline-flex items-center gap-1.5" title={seller.email || seller.full_name || ""}>
             {seller.avatar_url ? (
               <img
@@ -192,6 +191,29 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, productC
               </div>
             )}
             <span className="truncate max-w-[100px]">{sellerFirstName}</span>
+          </span>
+        ) : externalSeller ? (
+          (() => {
+            const initials = externalSeller.name
+              .split(/\s+/).filter(Boolean).slice(0, 2)
+              .map((w) => w[0]?.toUpperCase()).join("");
+            const firstName = externalSeller.name.split(" ")[0];
+            return (
+              <span
+                className="inline-flex items-center gap-1.5"
+                title={`${externalSeller.name}${externalSeller.active ? "" : " (inativo)"}`}
+              >
+                <div className="w-5 h-5 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-400 flex items-center justify-center text-[9px] font-semibold shrink-0">
+                  {initials}
+                </div>
+                <span className="truncate max-w-[100px] italic text-amber-700 dark:text-amber-400">{firstName}</span>
+              </span>
+            );
+          })()
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            <div className="w-5 h-5 rounded-full bg-muted/40 flex items-center justify-center text-[9px]">—</div>
+            <span className="text-[11px]">Sem vendedor</span>
           </span>
         )}
       </td>
@@ -213,10 +235,17 @@ export default function Sales() {
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
   const [filterSeller, setFilterSeller] = useState<string>("all");
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const navigate = useNavigate();
   const { catalog: productCatalog } = useProductTypes();
+  const { sellers: externalSellers, reload: reloadExternal } = useExternalSellers();
+  const externalMap = useMemo(() => {
+    const m = new Map<string, ExternalSeller>();
+    for (const s of externalSellers) m.set(s.id, s);
+    return m;
+  }, [externalSellers]);
 
   // Fetch sellers (profiles) once on mount · small dataset, O(1) lookup via Map
   useEffect(() => {
@@ -236,7 +265,7 @@ export default function Sales() {
 
   useEffect(() => {
     if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
+    fetchAllRows("sales", "id, display_id, name, close_date, status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
@@ -267,12 +296,16 @@ export default function Sales() {
   };
 
   const filtered = useMemo(() => {
-    // 1. Filtro de vendedor (post-processing após SmartFilters)
     let base = smartFiltered;
     if (filterSeller !== "all") {
-      base = filterSeller === "none"
-        ? base.filter(s => !s.seller_id)
-        : base.filter(s => s.seller_id === filterSeller);
+      if (filterSeller === "none") {
+        base = base.filter(s => !s.seller_id && !s.external_seller_id);
+      } else if (filterSeller.startsWith("ext:")) {
+        const extId = filterSeller.slice(4);
+        base = base.filter(s => s.external_seller_id === extId);
+      } else {
+        base = base.filter(s => s.seller_id === filterSeller);
+      }
     }
 
     if (!colSort) return base;
@@ -404,13 +437,19 @@ export default function Sales() {
         {sellersMap.size > 0 && (
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Vendedor:</span>
-            <Select value={filterSeller} onValueChange={setFilterSeller}>
-              <SelectTrigger className="w-[200px] h-9 text-xs">
+            <Select value={filterSeller} onValueChange={(v) => {
+              if (v === "__manage__") { setExternalDialogOpen(true); return; }
+              setFilterSeller(v);
+            }}>
+              <SelectTrigger className="w-[220px] h-9 text-xs">
                 <SelectValue placeholder="Todos vendedores" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos vendedores</SelectItem>
                 <SelectItem value="none">Sem vendedor</SelectItem>
+                <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Equipe atual
+                </div>
                 {Array.from(sellersMap.values())
                   .sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || "", "pt-BR"))
                   .map(s => (
@@ -418,6 +457,25 @@ export default function Sales() {
                       {s.full_name || s.email}
                     </SelectItem>
                   ))}
+                {externalSellers.length > 0 && (
+                  <>
+                    <div className="px-2 pt-2 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                      Externos / Histórico
+                    </div>
+                    {externalSellers.map(s => (
+                      <SelectItem key={`ext:${s.id}`} value={`ext:${s.id}`}>
+                        <span className="text-amber-700 dark:text-amber-400">
+                          {s.name}{!s.active && " (inativo)"}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+                <div className="border-t border-border/20 mt-1 pt-1">
+                  <SelectItem value="__manage__" className="text-muted-foreground italic">
+                    + Gerenciar externos
+                  </SelectItem>
+                </div>
               </SelectContent>
             </Select>
             {filterSeller !== "all" && (
@@ -427,6 +485,12 @@ export default function Sales() {
             )}
           </div>
         )}
+
+        <ExternalSellersDialog
+          open={externalDialogOpen}
+          onOpenChange={setExternalDialogOpen}
+          onChanged={reloadExternal}
+        />
 
         {loading ? (
           <ListPageSkeleton rows={8} />
@@ -552,6 +616,7 @@ export default function Sales() {
                         key={sale.id}
                         sale={sale}
                         seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                        externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
