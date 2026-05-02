@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useDeferredValue, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -85,6 +85,7 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 export default function Proposals() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
 
   const { data: proposals, isLoading } = useQuery({
     queryKey: ["proposals"],
@@ -98,12 +99,15 @@ export default function Proposals() {
     },
   });
 
-  const filtered = proposals?.filter(
-    (p: any) =>
-      !search ||
-      p.title?.toLowerCase().includes(search.toLowerCase()) ||
-      p.client_name?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = useMemo(() => {
+    const q = deferredSearch.toLowerCase();
+    return proposals?.filter(
+      (p: any) =>
+        !q ||
+        p.title?.toLowerCase().includes(q) ||
+        p.client_name?.toLowerCase().includes(q)
+    );
+  }, [proposals, deferredSearch]);
 
   const copyLink = (slug: string) => {
     const url = getPublicProposalUrl(slug);

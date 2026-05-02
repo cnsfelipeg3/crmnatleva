@@ -51,7 +51,7 @@ export default function SmartFilters({
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       setState({ search: value });
-    }, 200);
+    }, 350);
   }, [setState]);
 
   const setDatePreset = useCallback((preset: DatePreset) => {

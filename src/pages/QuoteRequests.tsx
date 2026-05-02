@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useDeferredValue, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -118,10 +118,11 @@ export default function QuoteRequests() {
     }
   };
 
-  const filtered = quotes.filter((q) => {
+  const deferredSearch = useDeferredValue(search);
+  const filtered = useMemo(() => quotes.filter((q) => {
     if (statusFilter !== "all" && q.status !== statusFilter) return false;
-    if (search) {
-      const s = search.toLowerCase();
+    if (deferredSearch) {
+      const s = deferredSearch.toLowerCase();
       return (
         q.destination_city?.toLowerCase().includes(s) ||
         q.origin_city?.toLowerCase().includes(s) ||
@@ -129,7 +130,7 @@ export default function QuoteRequests() {
       );
     }
     return true;
-  });
+  }), [quotes, statusFilter, deferredSearch]);
 
   return (
     <div className="space-y-6">
