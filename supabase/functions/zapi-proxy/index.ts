@@ -446,7 +446,9 @@ serve(async (req) => {
       );
     }
 
-    const { action, payload } = await req.json();
+    const reqBody = await req.json().catch(() => ({}));
+    const action = reqBody?.action;
+    const payload = reqBody?.payload ?? {};
 
     if (action === "rebuild-history") {
       const result = await rebuildHistory(payload);
