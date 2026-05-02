@@ -551,16 +551,19 @@ export default function Sales() {
     return { pending, emitted };
   }, [filtered]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const draggedSaleRef = useRef<{ saleId: string; emitted: boolean } | null>(null);
 
-  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over) return;
-    const saleId = (active.data.current as any)?.saleId as string | undefined;
-    const fromEmitted = (active.data.current as any)?.emitted as boolean;
-    const targetGroup = over.id as string; // "group:emitted" | "group:pending"
+  const handleNativeDragStart = useCallback((saleId: string, emitted: boolean) => {
+    draggedSaleRef.current = { saleId, emitted };
+  }, []);
+
+  const handleDropToGroup = useCallback(async (targetVariant: "pending" | "emitted") => {
+    const dragged = draggedSaleRef.current;
+    draggedSaleRef.current = null;
+    const saleId = dragged?.saleId;
+    const fromEmitted = dragged?.emitted;
     if (!saleId) return;
-    const goingToEmitted = targetGroup === "group:emitted";
+    const goingToEmitted = targetVariant === "emitted";
     if (goingToEmitted === fromEmitted) return; // dropped in same group
     const newStatus = goingToEmitted ? "Emitido" : "Pendente";
     // Optimistic update
