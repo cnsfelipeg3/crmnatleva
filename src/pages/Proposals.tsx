@@ -85,6 +85,7 @@ const statusMap: Record<string, { label: string; variant: "default" | "secondary
 export default function Proposals() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
 
   const { data: proposals, isLoading } = useQuery({
     queryKey: ["proposals"],
