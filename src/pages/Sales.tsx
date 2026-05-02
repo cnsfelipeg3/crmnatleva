@@ -616,6 +616,7 @@ export default function Sales() {
                         key={sale.id}
                         sale={sale}
                         seller={sale.seller_id ? sellersMap.get(sale.seller_id) || null : null}
+                        externalSeller={sale.external_seller_id ? externalMap.get(sale.external_seller_id) || null : null}
                         productCatalog={productCatalog}
                         onNavigate={handleNavigateSale}
                         onNavigateClient={handleNavigateClient}
