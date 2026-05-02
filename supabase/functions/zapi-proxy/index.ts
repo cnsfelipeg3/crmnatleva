@@ -597,10 +597,18 @@ serve(async (req) => {
         method = "GET";
         break;
 
-      case "get-profile-picture":
-        url = `${BASE_URL}/profile-picture?phone=${encodeURIComponent(payload.phone)}`;
+      case "get-profile-picture": {
+        const rawPhone = payload?.phone ? normalizePhone(String(payload.phone)) : "";
+        if (!rawPhone) {
+          return new Response(
+            JSON.stringify({ error: "missing_phone", link: null }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        url = `${BASE_URL}/profile-picture?phone=${encodeURIComponent(rawPhone)}`;
         method = "GET";
         break;
+      }
 
       case "check-number":
         url = `${BASE_URL}/phone-exists/${payload.phone}`;
