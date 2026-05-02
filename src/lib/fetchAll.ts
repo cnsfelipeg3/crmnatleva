@@ -11,9 +11,9 @@ interface FetchAllOptions {
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
 const resultCache = new Map<string, { rows: any[]; expiresAt: number }>();
-// Aumentado de 15s -> 60s. Reduz drasticamente queries duplicadas quando o
-// usuário troca de aba/volta pra mesma tela em poucos minutos.
-const DEFAULT_CACHE_MS = 60_000;
+// Aumentado de 60s -> 120s. Voltar pra mesma tela em até 2min vira instantâneo
+// (sem requisição de rede), e chamadas com cacheMs explícito não são afetadas.
+const DEFAULT_CACHE_MS = 120_000;
 const MAX_CACHE_ENTRIES = 80;
 const MAX_PAGE_FETCHES = 500;
 
