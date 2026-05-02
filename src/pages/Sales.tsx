@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs, hasProduct } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
+import { ExternalSellersDialog } from "@/components/sales/ExternalSellersDialog";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -51,6 +53,7 @@ interface SaleRow {
   adults: number; children: number;
   products: string[]; received_value: number; total_cost: number; profit: number; margin: number; score: number;
   airline: string | null; locators: string[]; seller_id: string | null;
+  external_seller_id: string | null;
   created_at: string; client_id: string | null; lead_type: string;
   hotel_name: string | null;
 }
