@@ -204,17 +204,17 @@ function AppRoutes() {
     location.pathname.startsWith("/portal/") ||
     location.pathname === "/cadastro-fornecedor";
 
-  // Prefetch mínimo e tardio. O boot precisa abrir a rota atual primeiro;
-  // chunks secundários só entram quando o navegador estiver ocioso.
+  // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
+  // Pula em conexão lenta/saveData. Faz navegação entre menus quase instantânea.
   useEffect(() => {
     if (!isAuthenticated || isLoading || typeof window === "undefined" || (window as any).__natlevaCorePrefetched) return;
     (window as any).__natlevaCorePrefetched = true;
-    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 4500));
+    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 3000));
     const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
-    const handle = idle(() => {
-      import("@/pages/Sales");
-      import("@/pages/LiveChat");
-    }, { timeout: 9000 });
+    const handle = idle(async () => {
+      const { prefetchAllRoutes } = await import("@/lib/routePrefetch");
+      prefetchAllRoutes();
+    }, { timeout: 6000 });
     return () => cancelIdle(handle as number);
   }, [isAuthenticated, isLoading]);
 
