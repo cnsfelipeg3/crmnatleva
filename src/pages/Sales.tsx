@@ -255,13 +255,13 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 });
 
 // Droppable tbody for each emission group
-function DroppableGroupBody({ id, children, isOver: _ }: { id: string; children: ReactNode; isOver?: boolean }) {
+function DroppableGroupBody({ id, children, hidden, isOver: _ }: { id: string; children: ReactNode; hidden?: boolean; isOver?: boolean }) {
   const { setNodeRef, isOver } = useDroppable({ id });
   return (
     <tbody
       ref={setNodeRef}
       className={cn(
-        "transition-colors",
+        hidden && "hidden",
         isOver && (id === "group:emitted" ? "bg-success/5 ring-2 ring-success/40 ring-inset" : "bg-warning/5 ring-2 ring-warning/40 ring-inset")
       )}
     >
