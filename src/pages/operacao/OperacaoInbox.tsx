@@ -96,33 +96,11 @@ async function callZapiProxy(action: string, payload?: any) {
   return data;
 }
 
-// Failure taxonomy (espelhada de supabase/functions/zapi-proxy/index.ts)
-export const FAILURE_REASONS = {
-  TEMPORARY: "temporary",
-  INVALID_NUMBER: "invalid_number",
-  WHATSAPP_DISCONNECTED: "whatsapp_disconnected",
-  MEDIA_EXPIRED: "media_expired",
-  SILENT_TIMEOUT: "silent_timeout",
-  UNKNOWN: "unknown",
-} as const;
+// Failure taxonomy + classifier (compartilhado com LiveChat e whatsappAutoDispatch)
+import { FAILURE_REASONS, classifySendOutcome, humanizeFailureReason } from "@/lib/zapiFailureClassifier";
+export { FAILURE_REASONS };
 
-// Classifica erro/resposta do supabase.functions.invoke + body retornado.
-// Sucesso quando data existe E não tem error/success=false.
-function classifySendOutcome(invokeError: any, data: any): { ok: boolean; reason: string | null; detail?: string } {
-  if (!invokeError && data && (data.success !== false) && !data.error) {
-    return { ok: true, reason: null };
-  }
-  const detail = String(invokeError?.message || data?.error || data?.message || "unknown").toLowerCase();
-  if (/disconnect|not.connected|instance.*off|instancia.*desconect/i.test(detail)) {
-    return { ok: false, reason: FAILURE_REASONS.WHATSAPP_DISCONNECTED, detail };
-  }
-  if (/not.*exist|invalid.*number|nao.*existe|number.*not.*found|phone.*not.*registered/i.test(detail)) {
-    return { ok: false, reason: FAILURE_REASONS.INVALID_NUMBER, detail };
-  }
-  return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail };
-}
-
-// Wrapper unificado: envia via zapi-proxy E retorna outcome classificado + raw data
+// Wrapper local (mantém assinatura usada nos sites de envio).
 async function sendViaZapi(action: string, payload: any): Promise<{ ok: boolean; reason: string | null; detail?: string; data: any }> {
   try {
     const { data, error } = await supabase.functions.invoke("zapi-proxy", {
