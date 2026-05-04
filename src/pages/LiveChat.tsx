@@ -315,6 +315,8 @@ export default function LiveChat() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [unreadDuringScroll, setUnreadDuringScroll] = useState(0);
 
   // ─── Presence (digitando/gravando) via realtime chat_presence ───
   const [presenceByPhone, setPresenceByPhone] = useState<Record<string, { status: string; updated_at: string }>>({});
