@@ -75,6 +75,7 @@ interface Conversation {
   payment_method?: string;
   lead_id?: string;
   is_pinned?: boolean;
+  manually_marked_unread?: boolean;
 }
 
 interface Message {
