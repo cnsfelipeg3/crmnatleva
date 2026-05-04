@@ -8,6 +8,7 @@ export interface Conversation {
   id: string;
   db_id?: string;
   phone: string;
+  zapi_phone?: string;
   contact_name: string;
   stage: Stage;
   tags: string[];
