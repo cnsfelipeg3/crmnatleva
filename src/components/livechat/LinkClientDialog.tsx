@@ -50,18 +50,36 @@ export function LinkClientDialog({
     if (!open) return;
     setSearch("");
     setConfirmReplace(null);
-    loadClients();
     if (currentClientId) loadCurrentClient();
     else setCurrentClient(null);
   }, [open, currentClientId]);
 
-  const loadClients = async () => {
+  // Debounced server-side search (handles full client base, not just top 500)
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => loadClients(search), search ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [open, search]);
+
+  const loadClients = async (q: string) => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("clients")
       .select("id, display_name, phone, email, client_type, city, state, tags")
       .order("display_name")
-      .limit(500);
+      .limit(200);
+    const term = q.trim();
+    if (term) {
+      const digits = term.replace(/\D/g, "");
+      const ors = [
+        `display_name.ilike.%${term}%`,
+        `email.ilike.%${term}%`,
+        `city.ilike.%${term}%`,
+      ];
+      if (digits.length >= 3) ors.push(`phone.ilike.%${digits}%`);
+      query = query.or(ors.join(","));
+    }
+    const { data } = await query;
     setClients(data || []);
     setLoading(false);
   };
