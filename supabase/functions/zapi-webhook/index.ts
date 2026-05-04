@@ -75,8 +75,8 @@ function extractMediaUrl(body: any): string | null {
 
 // ─── Helper: extract message type ───
 function extractMsgType(body: any): string {
+  if (body.sticker) return "sticker";
   if (body.image) return "image";
-  if (body.sticker) return "image"; // sticker → image
   if (body.audio) return "audio"; // includes ptt
   if (body.video) return "video";
   if (body.document) return "document";
