@@ -31,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import LayerDivider from "@/components/LayerDivider";
 import { toast } from "@/hooks/use-toast";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
+import { TypingIndicator } from "@/components/livechat/TypingIndicator";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -192,9 +193,9 @@ function getStageInfo(stage: Stage) {
 }
 
 function getStatusIcon(status: MsgStatus) {
-  if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
-  if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
-  return <Check className="h-3 w-3 text-white" />;
+  if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb] transition-colors duration-300" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
+  if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white transition-colors duration-300" />;
+  return <Check className="h-3 w-3 text-white transition-colors duration-300" />;
 }
 
 function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): MsgStatus {
@@ -315,6 +316,8 @@ export default function LiveChat() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isUserScrolledUpRef = useRef(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [unreadDuringScroll, setUnreadDuringScroll] = useState(0);
 
   // ─── Presence (digitando/gravando) via realtime chat_presence ───
   const [presenceByPhone, setPresenceByPhone] = useState<Record<string, { status: string; updated_at: string }>>({});
@@ -338,7 +341,25 @@ export default function LiveChat() {
     };
   }, []);
 
-  // ─── Send-location dialog ───
+  // ─── Limpeza periódica de presence stale (>30s) ───
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPresenceByPhone(prev => {
+        const now = Date.now();
+        let changed = false;
+        const next: typeof prev = {};
+        for (const [phone, entry] of Object.entries(prev)) {
+          if (now - new Date(entry.updated_at).getTime() < 30_000) {
+            next[phone] = entry;
+          } else {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
 
@@ -349,7 +370,7 @@ export default function LiveChat() {
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   // Helper · label de presença ativa (válida apenas se < 30s atrás)
-  const presenceLabel = useMemo(() => {
+  const activePresenceStatus = useMemo<"composing" | "recording" | null>(() => {
     const phone = selected?.phone;
     if (!phone) return null;
     const cleanPhone = String(phone).replace(/\D/g, "");
@@ -357,10 +378,16 @@ export default function LiveChat() {
     if (!entry) return null;
     const age = Date.now() - new Date(entry.updated_at).getTime();
     if (age > 30_000) return null;
-    if (entry.status === "composing") return "digitando…";
-    if (entry.status === "recording") return "gravando áudio…";
+    if (entry.status === "composing") return "composing";
+    if (entry.status === "recording") return "recording";
     return null;
   }, [selected?.phone, presenceByPhone]);
+
+  const presenceLabel = useMemo(() => {
+    if (activePresenceStatus === "composing") return "digitando…";
+    if (activePresenceStatus === "recording") return "gravando áudio…";
+    return null;
+  }, [activePresenceStatus]);
 
   // Handler · enviar localização via Z-API
   const handleSendLocation = useCallback(async () => {
@@ -453,6 +480,8 @@ export default function LiveChat() {
     // Conversa mudou: reseta estado de scroll e vai instantaneamente pro fim
     if (previousSelectedIdRef.current !== selectedId) {
       isUserScrolledUpRef.current = false;
+      setIsScrolledUp(false);
+      setUnreadDuringScroll(0);
       previousSelectedIdRef.current = selectedId;
       scrollToBottom("auto" as ScrollBehavior);
       return;
@@ -460,6 +489,8 @@ export default function LiveChat() {
     // Mesma conversa, nova mensagem: só rola suavemente se o usuário não subiu
     if (!isUserScrolledUpRef.current) {
       scrollToBottom("smooth");
+    } else {
+      setUnreadDuringScroll(c => c + 1);
     }
   }, [selectedId, currentMessages.length, lastMessageId, scrollToBottom]);
 
@@ -468,7 +499,12 @@ export default function LiveChat() {
     if (!viewport) return;
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = viewport;
-      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+      const next = scrollHeight - scrollTop - clientHeight > 100;
+      if (isUserScrolledUpRef.current !== next) {
+        isUserScrolledUpRef.current = next;
+        setIsScrolledUp(next);
+        if (!next) setUnreadDuringScroll(0);
+      }
     };
     viewport.addEventListener("scroll", handleScroll);
     return () => viewport.removeEventListener("scroll", handleScroll);
@@ -994,6 +1030,27 @@ export default function LiveChat() {
           const updated = [...existing];
           updated[idx] = { ...updated[idx], status: newStatus };
           return { ...prev, [waKey]: updated };
+        });
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_messages' }, (payload) => {
+        // Status updates (delivery / read receipts) vindos do canal oficial
+        const n = payload.new as any;
+        if (!n?.id) return;
+        const newStatus = (n.status || "sent") as MsgStatus;
+        const extId = n.external_message_id || null;
+        setMessages(prev => {
+          let mutated = false;
+          const next: typeof prev = {};
+          for (const [convKey, list] of Object.entries(prev)) {
+            const idx = list.findIndex(m => m.id === n.id || (extId && m.id === extId) || (extId && (m as any).external_message_id === extId));
+            if (idx < 0) { next[convKey] = list; continue; }
+            if (list[idx].status === newStatus) { next[convKey] = list; continue; }
+            const copy = [...list];
+            copy[idx] = { ...copy[idx], status: newStatus };
+            next[convKey] = copy;
+            mutated = true;
+          }
+          return mutated ? next : prev;
         });
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
@@ -2402,7 +2459,8 @@ export default function LiveChat() {
                   )}
 
                   {/* Messages */}
-                  <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0 overflow-hidden px-4">
+                  <div className="relative flex-1 min-h-0">
+                  <ScrollArea ref={scrollAreaRef} className="h-full overflow-hidden px-4">
                     <div className="py-4 space-y-3">
                       {currentMessages.map((msg, idx) => (
                         <Fragment key={msg.id}>
@@ -2641,9 +2699,33 @@ export default function LiveChat() {
                           </motion.div>
                         </div>
                       )}
+                      {activePresenceStatus && (
+                        <TypingIndicator status={activePresenceStatus} />
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
+
+                  {/* Botão flutuante: scroll para o fim */}
+                  {isScrolledUp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnreadDuringScroll(0);
+                        scrollToBottom("smooth");
+                      }}
+                      className="absolute bottom-4 right-4 z-20 h-10 w-10 rounded-full bg-card border border-border shadow-lg hover:bg-accent flex items-center justify-center transition-all animate-fade-in"
+                      aria-label="Ir para o final da conversa"
+                    >
+                      <ChevronDown className="h-5 w-5 text-foreground" />
+                      {unreadDuringScroll > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                          {unreadDuringScroll > 99 ? "99+" : unreadDuringScroll}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  </div>
 
                   {/* Media pending preview */}
                   {mediaPendingFile && (
