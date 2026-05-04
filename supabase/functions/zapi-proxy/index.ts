@@ -35,6 +35,21 @@ function normalizePhone(raw: string): string {
     .trim();
 }
 
+// Formata telefone para envio Z-API: anexa @g.us para IDs de grupo (15+ dígitos).
+// Idempotente: respeita @g.us existente; remove sufixos individuais (@c.us, @s.whatsapp.net).
+function formatPhoneForSending(raw: string): string {
+  const original = String(raw || "");
+  if (/@(g\.us|c\.us|s\.whatsapp\.net)/i.test(original)) {
+    if (/@g\.us/i.test(original)) {
+      const digits = original.replace(/\D/g, "");
+      return `${digits}@g.us`;
+    }
+    return original.replace(/@c\.us|@s\.whatsapp\.net/gi, "").replace(/\D/g, "");
+  }
+  const digits = original.replace(/\D/g, "");
+  return digits.length >= 15 ? `${digits}@g.us` : digits;
+}
+
 function parseTimestampSeconds(msg: any): number {
   const raw = msg?.momment ?? msg?.moment ?? msg?.timestamp ?? msg?.messageTimestamp ?? msg?.time;
   const num = Number(raw);
@@ -493,7 +508,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-text`;
         method = "POST";
         const textBody: any = {
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.message,
         };
         if (payload.messageId) textBody.messageId = payload.messageId;
@@ -504,7 +519,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-image`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           image: payload.image,
           caption: payload.caption || "",
         });
@@ -514,7 +529,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-audio`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           audio: payload.audio,
           encoding: true,
           waveform: true,
@@ -525,7 +540,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-video`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           video: payload.video,
           caption: payload.caption || "",
         });
@@ -535,7 +550,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-document/${payload.extension || "pdf"}`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           document: payload.document,
           fileName: payload.fileName || "document",
         });
@@ -545,7 +560,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-sticker`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           sticker: payload.sticker,
         });
         break;
@@ -554,7 +569,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           reaction: payload.reaction,
         });
@@ -564,7 +579,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-text`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.text,
           editMessageId: payload.messageId,
         });
@@ -651,7 +666,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           reaction: payload.value || payload.reaction,
         });
@@ -662,7 +677,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-remove-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
         });
         break;
@@ -672,7 +687,7 @@ serve(async (req) => {
         url = `${BASE_URL}/pin-message`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           messageAction: payload.pin === false ? "unpin" : "pin",
           pinMessageDuration: payload.pinDuration || "30D",
@@ -684,7 +699,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-location`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           title: payload.title || "Localização",
           address: payload.address || "",
           latitude: payload.latitude,
@@ -697,7 +712,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-link`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.message,
           image: payload.image || "",
           linkUrl: payload.linkUrl || payload.url,
@@ -710,7 +725,7 @@ serve(async (req) => {
       case "send-button-list":
         url = `${BASE_URL}/send-button-list`;
         method = "POST";
-        body = JSON.stringify(payload);
+        body = JSON.stringify({ ...payload, phone: formatPhoneForSending(payload.phone) });
         break;
 
       // Marca mensagem como lida via API (não só localmente)
@@ -718,7 +733,7 @@ serve(async (req) => {
         url = `${BASE_URL}/read-message`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
         });
         break;
