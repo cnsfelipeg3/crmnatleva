@@ -56,14 +56,13 @@ export function useFailedMessagesWatcher() {
         const first = items[0];
         toast.error(`${items.length} mensagens não enviadas`, {
           description: "Toque em Ver para abrir a primeira conversa afetada.",
-          duration: Infinity,
+          duration: 10000,
           action: first.conversation_id
             ? {
                 label: "Ver",
-                onClick: () => {
-                  navigate(
-                    `/operacao/inbox?conversation=${first.conversation_id}&highlight=${first.id}`,
-                  );
+                onClick: async () => {
+                  const key = await resolveConversationKey(first.conversation_id!);
+                  navigate(`/operacao/inbox?conversation=${key}&highlight=${first.id}`);
                 },
               }
             : undefined,
@@ -73,14 +72,13 @@ export function useFailedMessagesWatcher() {
           const reason = humanizeFailureReason(row.failure_reason);
           toast.error("Mensagem não enviada", {
             description: `${reason}\nToque em Ver para abrir a conversa.`,
-            duration: Infinity,
+            duration: 10000,
             action: row.conversation_id
               ? {
                   label: "Ver",
-                  onClick: () => {
-                    navigate(
-                      `/operacao/inbox?conversation=${row.conversation_id}&highlight=${row.id}`,
-                    );
+                  onClick: async () => {
+                    const key = await resolveConversationKey(row.conversation_id!);
+                    navigate(`/operacao/inbox?conversation=${key}&highlight=${row.id}`);
                   },
                 }
               : undefined,
