@@ -25,9 +25,9 @@ export async function initPersistence() {
     }
   }
 
-  // Load existing persisted message external IDs
+  // Load existing persisted message external IDs (única tabela canônica)
   const { data: msgs } = await supabase
-    .from("messages")
+    .from("conversation_messages")
     .select("external_message_id")
     .not("external_message_id", "is", null)
     .limit(1000);
@@ -59,7 +59,6 @@ export async function persistConversation(conv: {
         last_message_at: conv.last_message_at,
         unread_count: conv.unread_count,
       };
-      // Only update preview if we have a non-empty value — never overwrite with empty
       if (conv.last_message_preview && conv.last_message_preview.trim() !== "") {
         updateData.last_message_preview = conv.last_message_preview;
       }
@@ -100,7 +99,6 @@ export async function persistMessages(msgs: Array<{
     try {
       let mediaUrl: string | null = null;
 
-      // Upload base64 media to storage
       if (msg.media_url && msg.media_url.startsWith("data:")) {
         const uploaded = await uploadMediaToStorage(msg.media_url, msg.id);
         mediaUrl = uploaded;
@@ -108,16 +106,20 @@ export async function persistMessages(msgs: Array<{
         mediaUrl = msg.media_url;
       }
 
-      const { error } = await supabase.from("messages").insert({
+      const direction = msg.sender_type === "cliente" ? "incoming" : "outgoing";
+      const { error } = await supabase.from("conversation_messages").insert({
         conversation_id: dbConvId,
         external_message_id: msg.id,
+        direction,
         sender_type: msg.sender_type as any,
         message_type: msg.message_type as any,
-        text: msg.text || null,
+        content: msg.text || null,
         media_url: mediaUrl,
+        media_storage_url: mediaUrl,
         status: msg.status as any,
         created_at: msg.created_at,
-      });
+        timestamp: msg.created_at,
+      } as any);
 
       if (!error) {
         persistedMsgIds.add(msg.id);
@@ -165,19 +167,19 @@ export async function loadPersistedMessages(waConvId: string): Promise<Array<{
   const dbConvId = waToDbId.get(waConvId);
   if (!dbConvId) return [];
 
-  const { data } = await supabase.from("messages")
+  const { data } = await supabase.from("conversation_messages")
     .select("*")
     .eq("conversation_id", dbConvId)
     .order("created_at")
     .limit(200);
 
-  return (data || []).map(m => ({
+  return (data || []).map((m: any) => ({
     id: m.external_message_id || m.id,
     conversation_id: waConvId,
     sender_type: m.sender_type,
     message_type: m.message_type,
-    text: m.text || "",
-    media_url: m.media_url || undefined,
+    text: m.content || m.text || "",
+    media_url: m.media_storage_url || m.media_url || undefined,
     status: m.status,
     created_at: m.created_at,
   }));

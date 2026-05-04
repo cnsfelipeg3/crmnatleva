@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, Fragment, useMemo } from "react";
 import { debugLog, debugWarn } from "@/lib/debugMode";
 import { InboxPipelineView } from "@/components/inbox/InboxPipelineView";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Search, Send, Paperclip, Smile, Sparkles,
@@ -41,6 +41,8 @@ import { ConversationSummaryDialog } from "@/components/livechat/ConversationSum
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
+import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
+import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
@@ -127,6 +129,7 @@ function OperacaoInboxInner() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [highlightMsgId, setHighlightMsgId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
@@ -2007,6 +2010,15 @@ function OperacaoInboxInner() {
                     />
                   )}
                   <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                    {selectedId && currentMessages.length > 0 && (
+                      <div className="pt-3">
+                        <BuyingMomentAlert
+                          messages={currentMessages.map(m => ({ text: m.text || "", sender_type: m.sender_type as any, created_at: m.created_at }))}
+                          onGenerateProposal={() => navigate(`/proposal-builder?conversationId=${selectedId}`)}
+                          onDismiss={() => { /* dismiss interno via state do componente */ }}
+                        />
+                      </div>
+                    )}
                     <div className="py-4 space-y-3">
                     {/* Load older messages button */}
                     {hasOlderMessages[selectedId!] && (
@@ -2190,6 +2202,9 @@ function OperacaoInboxInner() {
                           <span className="text-[10px] text-muted-foreground">Pensando...</span>
                         </motion.div>
                       </div>
+                    )}
+                    {selected?.phone && (presenceByPhone[selected.phone]?.status === "composing" || presenceByPhone[selected.phone]?.status === "recording") && (
+                      <TypingIndicator status={presenceByPhone[selected.phone].status as "composing" | "recording"} />
                     )}
                     <div ref={messagesEndRef} />
                   </div>

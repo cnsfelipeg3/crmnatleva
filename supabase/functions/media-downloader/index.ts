@@ -45,14 +45,9 @@ async function downloadWithRetry(url: string): Promise<{ res: Response; attempts
 }
 
 async function markFailure(supabase: any, messageId: string, reason: string) {
-  await Promise.allSettled([
-    supabase.from("conversation_messages")
-      .update({ media_status: "failed", media_failure_reason: reason })
-      .eq("external_message_id", messageId),
-    supabase.from("messages")
-      .update({ media_status: "failed", media_failure_reason: reason })
-      .eq("external_message_id", messageId),
-  ]);
+  await supabase.from("conversation_messages")
+    .update({ media_status: "failed", media_failure_reason: reason })
+    .eq("external_message_id", messageId);
 }
 
 Deno.serve(async (req) => {
@@ -78,9 +73,6 @@ Deno.serve(async (req) => {
 
     // Mark as 'downloading' at start (UI distinguishes from 'pending')
     await supabase.from("conversation_messages")
-      .update({ media_status: "downloading" })
-      .eq("external_message_id", messageId);
-    await supabase.from("messages")
       .update({ media_status: "downloading" })
       .eq("external_message_id", messageId);
 
@@ -120,22 +112,13 @@ Deno.serve(async (req) => {
     const storageUrl = publicUrlData?.publicUrl || "";
 
     // Parity update on both tables
-    await Promise.allSettled([
-      supabase.from("conversation_messages").update({
-        media_url: storageUrl,
-        media_storage_url: storageUrl,
-        media_status: "downloaded",
-        media_size_bytes: buffer.length,
-        media_failure_reason: null,
-      }).eq("external_message_id", messageId),
-      supabase.from("messages").update({
-        media_url: storageUrl,
-        media_storage_url: storageUrl,
-        media_status: "downloaded",
-        media_size_bytes: buffer.length,
-        media_failure_reason: null,
-      }).eq("external_message_id", messageId),
-    ]);
+    await supabase.from("conversation_messages").update({
+      media_url: storageUrl,
+      media_storage_url: storageUrl,
+      media_status: "downloaded",
+      media_size_bytes: buffer.length,
+      media_failure_reason: null,
+    }).eq("external_message_id", messageId);
 
     console.log(`[media-downloader] ✓ ${mediaType} stored in ${dlResult.attempts} attempt(s): ${path} (${buffer.length} bytes)`);
 

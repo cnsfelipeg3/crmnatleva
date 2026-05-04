@@ -58,20 +58,14 @@ export function useFailedMessagesBadge() {
     };
 
     (async () => {
-      const [a, b] = await Promise.all([
-        fetchTable("conversation_messages"),
-        fetchTable("messages"),
-      ]);
+      const a = await fetchTable("conversation_messages");
       if (cancelled) return;
       setMap(() => {
         const next = new Map<string, FailedMsgRow>();
-        // ordem decrescente já vem do select; insere
-        [...a, ...b]
-          .sort(
-            (x, y) =>
-              new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
-          )
-          .forEach((r) => next.set(r.id, r));
+        a.sort(
+          (x, y) =>
+            new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
+        ).forEach((r) => next.set(r.id, r));
         return next;
       });
     })();
@@ -128,27 +122,18 @@ export function useFailedMessagesBadge() {
     const snapshot = Array.from(map.values());
     if (snapshot.length === 0) return;
     setMap(new Map());
-    const byTable = {
-      conversation_messages: snapshot
-        .filter((r) => r.source_table === "conversation_messages")
-        .map((r) => r.id),
-      messages: snapshot
-        .filter((r) => r.source_table === "messages")
-        .map((r) => r.id),
-    };
+    const ids = snapshot
+      .filter((r) => r.source_table === "conversation_messages")
+      .map((r) => r.id);
+    if (ids.length === 0) return;
     const nowIso = new Date().toISOString();
-    await Promise.all(
-      (Object.keys(byTable) as Array<keyof typeof byTable>).map(async (t) => {
-        if (byTable[t].length === 0) return;
-        const { error } = await supabase
-          .from(t)
-          .update({ failure_acknowledged_at: nowIso })
-          .in("id", byTable[t]);
-        if (error) {
-          console.error(`[useFailedMessagesBadge] acknowledgeAll ${t}:`, error);
-        }
-      }),
-    );
+    const { error } = await supabase
+      .from("conversation_messages")
+      .update({ failure_acknowledged_at: nowIso })
+      .in("id", ids);
+    if (error) {
+      console.error("[useFailedMessagesBadge] acknowledgeAll:", error);
+    }
   }, [map]);
 
   return { count, items, acknowledgeOne, acknowledgeAll };

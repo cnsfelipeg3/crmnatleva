@@ -803,21 +803,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // FALLBACK: legacy messages table
-    await supabase.from("messages").insert({
-      conversation_id: conversationId,
-      sender_type: senderType,
-      message_type: msgType,
-      text: textContent || null,
-      media_url: mediaUrl,
-      media_mimetype: audioMeta.media_mimetype || null,
-      media_filename: audioMeta.media_filename || null,
-      media_size_bytes: audioMeta.media_size_bytes || null,
-      media_status: mediaUrl ? "pending" : null,
-      status: msgStatusFinal,
-      external_message_id: messageId,
-      created_at: timestampIso,
-    });
+    // (Removido: legacy messages dual-write · canônico agora é conversation_messages)
 
     // ═══════════════════════════════════════════════════════════
     // STEP 8: Mark raw event as processed
