@@ -11,6 +11,7 @@ interface ConversationItemProps {
   conv: Conversation;
   isSelected: boolean;
   profilePic?: string;
+  presence?: "composing" | "recording" | null;
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
 }
@@ -29,7 +30,17 @@ function getPreviewContent(raw: string) {
   return { icon: null, text: raw, italic: false };
 }
 
-function ConversationItemInner({ conv, isSelected, profilePic, onSelect, onTogglePin }: ConversationItemProps) {
+function TypingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5 ml-1">
+      <span className="h-1 w-1 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "0ms" }} />
+      <span className="h-1 w-1 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "150ms" }} />
+      <span className="h-1 w-1 rounded-full bg-emerald-500 animate-bounce" style={{ animationDelay: "300ms" }} />
+    </span>
+  );
+}
+
+function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin }: ConversationItemProps) {
   const stageInfo = getStageInfo(conv.stage);
   const previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
   const contactName = conv.contact_name || "Sem nome";
@@ -82,10 +93,26 @@ function ConversationItemInner({ conv, isSelected, profilePic, onSelect, onToggl
             </div>
           </div>
 
-          <div className={`flex items-center gap-1.5 text-[11px] ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
-            {preview.icon}
-            <span className={`truncate ${preview.italic ? "italic opacity-50" : ""}`}>{preview.text}</span>
-          </div>
+          {presence === "composing" || presence === "recording" ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium italic">
+              {presence === "recording" ? (
+                <>
+                  <Mic className="h-3 w-3 shrink-0 animate-pulse" />
+                  <span className="truncate">gravando áudio…</span>
+                </>
+              ) : (
+                <>
+                  <span className="truncate">digitando</span>
+                  <TypingDots />
+                </>
+              )}
+            </div>
+          ) : (
+            <div className={`flex items-center gap-1.5 text-[11px] ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+              {preview.icon}
+              <span className={`truncate ${preview.italic ? "italic opacity-50" : ""}`}>{preview.text}</span>
+            </div>
+          )}
 
           {/* Bottom row: stage + tags */}
           <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -125,6 +152,7 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.is_pinned === next.conv.is_pinned &&
     prev.conv.is_vip === next.conv.is_vip &&
     prev.conv.contact_name === next.conv.contact_name &&
-    prev.profilePic === next.profilePic
+    prev.profilePic === next.profilePic &&
+    prev.presence === next.presence
   );
 });
