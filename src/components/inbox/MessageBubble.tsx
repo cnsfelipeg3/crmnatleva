@@ -177,6 +177,13 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                     <RotateCcw className="h-2.5 w-2.5" /> Reenviar
                   </button>
                 )}
+                {msg.status === "failed" && !onRetry && (
+                  <span className="text-[9px] text-destructive italic mr-1 flex items-center gap-0.5">
+                    <AlertCircle className="h-2.5 w-2.5" /> falha no envio
+                  </span>
+                )}
+                {msg.status === "retrying" && <span className="text-[8px] opacity-70 italic mr-1">reenviando…</span>}
+                {msg.status === "pending" && <span className="text-[8px] opacity-60 italic mr-1">enviando…</span>}
                 {msg.status === "queued" && <span className="text-[8px] text-muted-foreground italic mr-1">na fila</span>}
                 <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                 {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
