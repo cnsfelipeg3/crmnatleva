@@ -1565,6 +1565,26 @@ function OperacaoInboxInner() {
     if (cleanPhone) await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
   }, [conversations]);
 
+  const handleToggleUnread = useCallback(async (conv: Conversation) => {
+    const next = !conv.manually_marked_unread;
+    const dbId = conv.db_id;
+    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: next } : c));
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id || null;
+      if (dbId) {
+        await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("id", dbId);
+      } else {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("phone", cleanPhone);
+      }
+      toast({ title: next ? "Marcada como não lida" : "Marcada como lida" });
+    } catch (err: any) {
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: !next } : c));
+      toast({ title: "Erro", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, []);
+
   const handleSelectConversation = (id: string) => {
     setSelectedId(id); setShowAIPanel(false);
     const target = conversations.find(c => c.id === id);
