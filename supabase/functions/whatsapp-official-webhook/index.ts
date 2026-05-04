@@ -121,12 +121,14 @@ serve(async (req) => {
             }).select("id").single();
 
             if (newConv) {
-              await supabase.from("messages").insert({
+              await supabase.from("conversation_messages").insert({
                 conversation_id: newConv.id,
+                direction: "incoming",
                 sender_type: "cliente",
                 message_type: msg.type === "text" ? "text" : msg.type as any,
-                text: content.body || `[${msg.type}]`,
+                content: content.body || `[${msg.type}]`,
                 media_url: content.image?.link || content.document?.link || null,
+                media_storage_url: content.image?.link || content.document?.link || null,
                 status: "delivered",
               });
             }
