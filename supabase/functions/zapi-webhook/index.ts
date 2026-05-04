@@ -779,7 +779,7 @@ Deno.serve(async (req) => {
     } else {
       console.log("[Webhook] ✓ Message saved to conversation_messages");
 
-      // Async: trigger media download if there's a media URL
+      // Async: trigger media download if there's a media URL (fire-and-forget robusto)
       if (mediaUrl && messageId) {
         try {
           const fnUrl = `${supabaseUrl}/functions/v1/media-downloader`;
@@ -788,6 +788,7 @@ Deno.serve(async (req) => {
             headers: {
               "Content-Type": "application/json",
               "Authorization": `Bearer ${supabaseKey}`,
+              "x-attempt": "1",
             },
             body: JSON.stringify({
               messageId,
