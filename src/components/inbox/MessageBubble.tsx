@@ -153,74 +153,126 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                   <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                 </div>
               )}
-              {/* Audio */}
-              {msg.message_type === "audio" && (
-                <div className="min-w-[220px]">
-                  {(msg.media_storage_url || msg.media_url) ? (
-                    <>
-                      <AudioWaveformPlayer
-                        src={msg.media_storage_url || msg.media_url!}
-                        isOutgoing={msg.sender_type === "atendente"}
-                        msgId={msg.id}
-                        durationSec={msg.audio_duration_sec}
-                      />
-                      <div className="flex items-center gap-1 mt-1">
-                        {msg.is_voice_note === false && (
-                          <span className="text-[9px] opacity-50 mr-1">♫</span>
-                        )}
-                        <a href={msg.media_storage_url || msg.media_url} download={`audio_${msg.id}.ogg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
-                          <File className="h-2.5 w-2.5" /> Baixar
-                        </a>
-                        {msg.media_status === "failed" && (
-                          <span className="text-[9px] text-destructive ml-1">⚠ mídia pode expirar</span>
-                        )}
+              {/* ─── Media block (audio/image/video/document/sticker) ─── */}
+              {(msg.message_type === "audio" || msg.message_type === "image" || msg.message_type === "video" || msg.message_type === "document" || msg.message_type === "sticker") && (() => {
+                const status = msg.media_status;
+                const bestUrl = msg.media_storage_url || msg.media_url;
+                // Show downloading placeholder only when there's no URL yet
+                if ((status === "pending" || status === "downloading") && !bestUrl) {
+                  return <DownloadingPlaceholder type={msg.message_type} filename={msg.media_filename} />;
+                }
+                // Failed and no URL fallback → show error card
+                if (status === "failed" && !bestUrl) {
+                  return <FailedMediaCard reason={msg.media_failure_reason} type={msg.message_type} filename={msg.media_filename} />;
+                }
+                // Otherwise render the media (legacy NULL status falls here too)
+                if (msg.message_type === "audio") {
+                  return (
+                    <div className="min-w-[220px]">
+                      {bestUrl ? (
+                        <>
+                          <AudioWaveformPlayer
+                            src={bestUrl}
+                            isOutgoing={msg.sender_type === "atendente"}
+                            msgId={msg.id}
+                            durationSec={msg.audio_duration_sec}
+                          />
+                          <div className="flex items-center gap-1 mt-1">
+                            {msg.is_voice_note === false && <span className="text-[9px] opacity-50 mr-1">♫</span>}
+                            <a href={bestUrl} download={msg.media_filename || `audio_${msg.id}.ogg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                              <File className="h-2.5 w-2.5" /> Baixar
+                            </a>
+                            {status === "failed" && (
+                              <span className="text-[9px] text-destructive ml-1">⚠ link pode expirar</span>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs opacity-60 py-2"><Mic className="h-4 w-4" /><span>🎵 Áudio indisponível</span></div>
+                      )}
+                    </div>
+                  );
+                }
+                if (msg.message_type === "sticker") {
+                  return (
+                    <div>
+                      {bestUrl ? (
+                        <img
+                          src={bestUrl}
+                          alt="Figurinha"
+                          className="w-32 h-32 object-contain cursor-pointer"
+                          onClick={() => onLightbox(bestUrl)}
+                        />
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Image className="h-4 w-4" /><span>Figurinha indisponível</span></div>
+                      )}
+                    </div>
+                  );
+                }
+                if (msg.message_type === "image") {
+                  return (
+                    <div>
+                      {bestUrl ? (
+                        <>
+                          <img src={bestUrl} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => onLightbox(bestUrl)} />
+                          <div className="flex items-center gap-2 mt-1">
+                            <a href={bestUrl} download={msg.media_filename || `imagem_${msg.id}.jpg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
+                              <File className="h-2.5 w-2.5" /> Baixar
+                            </a>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Image className="h-4 w-4" /><span>📷 Imagem indisponível</span></div>
+                      )}
+                      {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
+                    </div>
+                  );
+                }
+                if (msg.message_type === "video") {
+                  return (
+                    <div>
+                      {bestUrl ? (
+                        <video controls className="rounded-lg max-w-[250px] max-h-[300px] mb-1"><source src={bestUrl} /></video>
+                      ) : (
+                        <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Video className="h-4 w-4" /><span>🎬 Vídeo indisponível</span></div>
+                      )}
+                      {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
+                    </div>
+                  );
+                }
+                // document
+                {
+                  const DocIcon = getDocIcon(msg.media_mimetype, msg.media_filename);
+                  const filename = msg.media_filename || msg.text || "Documento";
+                  const sizeLabel = formatBytes(msg.media_size_bytes);
+                  const isOutgoing = msg.sender_type === "atendente";
+                  return (
+                    <div className={`flex items-center gap-3 py-2 px-2 rounded-lg min-w-[220px] max-w-[300px] ${isOutgoing ? "bg-primary-foreground/10" : "bg-foreground/5"}`}>
+                      <DocIcon className="h-8 w-8 shrink-0 opacity-80" />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate" title={filename}>{filename}</span>
+                        <div className="flex items-center gap-2 text-[10px] opacity-70">
+                          {sizeLabel && <span>{sizeLabel}</span>}
+                          {msg.media_mimetype && <span className="truncate">{msg.media_mimetype.split("/")[1]?.toUpperCase()}</span>}
+                        </div>
                       </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs opacity-60 py-2"><Mic className="h-4 w-4" /><span>🎵 Áudio indisponível</span></div>
-                  )}
-                </div>
-              )}
-              {/* Image */}
-              {msg.message_type === "image" && (
-                <div>
-                  {msg.media_url ? (
-                    <>
-                      <img src={msg.media_url} alt="Imagem" className="rounded-lg max-w-[250px] max-h-[300px] object-cover cursor-pointer mb-1" onClick={() => onLightbox(msg.media_url!)} />
-                      <div className="flex items-center gap-2 mt-1">
-                        <a href={msg.media_url} download={`imagem_${msg.id}.jpg`} className="text-[9px] opacity-60 hover:opacity-100 flex items-center gap-0.5" onClick={e => e.stopPropagation()}>
-                          <File className="h-2.5 w-2.5" /> Baixar
+                      {bestUrl && (
+                        <a
+                          href={bestUrl}
+                          download={msg.media_filename || `documento_${msg.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="shrink-0 h-8 w-8 rounded-full flex items-center justify-center hover:bg-foreground/10"
+                          title="Baixar documento"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Download className="h-4 w-4" />
                         </a>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Image className="h-4 w-4" /><span>📷 Imagem indisponível</span></div>
-                  )}
-                  {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
-                </div>
-              )}
-              {/* Video */}
-              {msg.message_type === "video" && (
-                <div>
-                  {msg.media_url ? (
-                    <video controls className="rounded-lg max-w-[250px] max-h-[300px] mb-1"><source src={msg.media_url} /></video>
-                  ) : (
-                    <div className="flex items-center gap-2 text-xs opacity-60 py-4 px-2"><Video className="h-4 w-4" /><span>🎬 Vídeo indisponível</span></div>
-                  )}
-                  {msg.text && <p className="text-sm leading-relaxed mt-1"><Linkify text={stripQuotes(msg.text)} /></p>}
-                </div>
-              )}
-              {/* Document */}
-              {msg.message_type === "document" && (
-                <div className="flex items-center gap-2 py-1">
-                  <FileText className="h-5 w-5 shrink-0" />
-                  {msg.media_url ? (
-                    <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">{msg.text || "Documento"}</a>
-                  ) : (
-                    <span className="text-sm">{msg.text || "Documento"}</span>
-                  )}
-                </div>
-              )}
+                      )}
+                    </div>
+                  );
+                }
+              })()}
               {/* Text */}
               {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(displayText)} /></p>}
               <div className="flex items-center justify-end gap-1 mt-1">
