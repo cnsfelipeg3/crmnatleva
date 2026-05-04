@@ -246,16 +246,32 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
           </div>
         </ScrollArea>
 
-        <DialogFooter className="p-3 border-t flex-row sm:justify-between gap-2 items-center">
-          <span className="text-xs text-muted-foreground">
-            {sending ? `Enviando ${progress.done}/${progress.total}…` : `${selectedPhones.size} selecionado${selectedPhones.size === 1 ? "" : "s"}`}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={sending}>Cancelar</Button>
-            <Button size="sm" onClick={handleConfirm} disabled={sending || selectedPhones.size === 0} className="gap-1.5">
-              {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Forward className="h-3.5 w-3.5" />}
-              Encaminhar
-            </Button>
+        <DialogFooter className="p-3 border-t flex-col gap-2 items-stretch">
+          {(sending || finished) && progress.total > 0 && (
+            <div className="flex flex-col gap-1">
+              <Progress value={(progress.done / Math.max(progress.total, 1)) * 100} className="h-1.5" />
+              <span className="text-[10px] text-muted-foreground">
+                {sending ? `Enviando ${progress.done}/${progress.total}…` : `Concluído ${progress.done}/${progress.total}`}
+              </span>
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs text-muted-foreground">
+              {sending || finished ? "" : `${selectedPhones.size} selecionado${selectedPhones.size === 1 ? "" : "s"}`}
+            </span>
+            <div className="flex gap-2">
+              {finished ? (
+                <Button size="sm" onClick={() => onOpenChange(false)}>Fechar</Button>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)} disabled={sending}>Cancelar</Button>
+                  <Button size="sm" onClick={handleConfirm} disabled={sending || selectedPhones.size === 0} className="gap-1.5">
+                    {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Forward className="h-3.5 w-3.5" />}
+                    Encaminhar
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>
