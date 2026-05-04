@@ -238,13 +238,13 @@ async function processStatusUpdate(supabase: any, body: any) {
     const updateRow: Record<string, any> = { status: mappedStatus.toLowerCase() };
     if (failureReason) updateRow.failure_reason = failureReason;
 
-    // Filtro defensivo: status updates só fazem sentido para mensagens outgoing (from_me=true).
-    // Se conversation_messages não tem from_me=true, simplesmente não casa nada (no-op seguro).
+    // Filtro defensivo: status updates só fazem sentido para mensagens outgoing.
+    // Se conversation_messages não tem direction='outgoing', simplesmente não casa nada (no-op seguro).
     await supabase
       .from("conversation_messages")
       .update(updateRow)
       .eq("external_message_id", sid)
-      .eq("from_me", true);
+      .eq("direction", "outgoing");
   }
 }
 
