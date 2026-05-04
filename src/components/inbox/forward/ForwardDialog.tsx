@@ -1,15 +1,16 @@
 // ─── Dialog: escolher destinatários e (opcional) caption ao encaminhar ───
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, Forward, Loader2, Check } from "lucide-react";
+import { Search, X, Forward, Loader2, Check, AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import type { Message } from "../types";
-import { forwardMessages, summarizeMessageForPreview, type ForwardTarget } from "./forwardLogic";
+import { forwardMessages, summarizeMessageForPreview, type ForwardTarget, type JobState, jobKey } from "./forwardLogic";
 
 export interface ForwardCandidate extends ForwardTarget {
   avatarUrl?: string;
