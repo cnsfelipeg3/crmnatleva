@@ -1025,6 +1025,27 @@ export default function LiveChat() {
           return { ...prev, [waKey]: updated };
         });
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_messages' }, (payload) => {
+        // Status updates (delivery / read receipts) vindos do canal oficial
+        const n = payload.new as any;
+        if (!n?.id) return;
+        const newStatus = (n.status || "sent") as MsgStatus;
+        const extId = n.external_message_id || null;
+        setMessages(prev => {
+          let mutated = false;
+          const next: typeof prev = {};
+          for (const [convKey, list] of Object.entries(prev)) {
+            const idx = list.findIndex(m => m.id === n.id || (extId && m.id === extId) || (extId && (m as any).external_message_id === extId));
+            if (idx < 0) { next[convKey] = list; continue; }
+            if (list[idx].status === newStatus) { next[convKey] = list; continue; }
+            const copy = [...list];
+            copy[idx] = { ...copy[idx], status: newStatus };
+            next[convKey] = copy;
+            mutated = true;
+          }
+          return mutated ? next : prev;
+        });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
         // Handle DELETE events — remove conversation from local state completely
         if (payload.eventType === 'DELETE') {
