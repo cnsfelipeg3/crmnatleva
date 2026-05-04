@@ -89,9 +89,6 @@ function getStatusIcon(status: MsgStatus) {
 
 // Z-API helper
 async function callZapiProxy(action: string, payload?: any) {
-  if (action === "send-text") {
-    console.info("[ZAPI_SEND_DEBUG]", { action, phone: payload?.phone, messageLength: String(payload?.message || "").length });
-  }
   const { data, error } = await supabase.functions.invoke("zapi-proxy", {
     body: { action, payload },
   });
