@@ -57,17 +57,17 @@ const TRIP_EMOJIS: Record<string, string> = {
   intercâmbio: "🎓", cruzeiro: "🚢", "apenas aéreo": "✈️", "pacote completo": "📦",
 };
 
-function FieldRow({ icon: Icon, label, value, editable, editValue, onEdit, onSave, onCancel, editing }: {
+const FieldRow = forwardRef<HTMLDivElement, {
   icon: any; label: string; value: string | null | undefined;
   editable?: boolean; editValue?: string; onEdit?: () => void; onSave?: (v: string) => void; onCancel?: () => void; editing?: boolean;
-}) {
+}>(function FieldRow({ icon: Icon, label, value, editable, editValue, onEdit, onSave, onCancel, editing }, ref) {
   const [localVal, setLocalVal] = useState(editValue || value || "");
 
   useEffect(() => { setLocalVal(editValue || value || ""); }, [editValue, value]);
 
   if (editing) {
     return (
-      <div className="flex items-center gap-1.5 py-1">
+      <div ref={ref} className="flex items-center gap-1.5 py-1">
         <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
         <Input
           value={localVal}
@@ -86,7 +86,7 @@ function FieldRow({ icon: Icon, label, value, editable, editValue, onEdit, onSav
   }
 
   return (
-    <div className="flex items-start gap-1.5 py-1 group">
+    <div ref={ref} className="flex items-start gap-1.5 py-1 group">
       <Icon className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0">
         <span className="text-[10px] text-muted-foreground">{label}</span>
@@ -101,7 +101,7 @@ function FieldRow({ icon: Icon, label, value, editable, editValue, onEdit, onSav
       )}
     </div>
   );
-}
+});
 
 export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
   const [quote, setQuote] = useState<QuoteData | null>(null);
