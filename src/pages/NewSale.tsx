@@ -344,6 +344,40 @@ export default function NewSale() {
     })();
   }, [editId]);
 
+  // ─── Autosave incremental (campos simples da venda) ──────────
+  // Salva automaticamente UPDATE parcial em `sales` 1.2s após o usuário
+  // parar de digitar. Não toca em listas (cost_items, segments, payments,
+  // passengers, tariffs) · essas continuam pelo botão Salvar (com diff).
+  const autosavePatch = useMemo(() => ({
+    name: form.name ? smartCapitalizeName(form.name) : null,
+    close_date: form.close_date || null,
+    observations: form.observations || null,
+    link_chat: form.link_chat || null,
+    origin_iata: form.origin_iata || null,
+    destination_iata: form.destination_iata || null,
+    departure_date: form.departure_date || null,
+    return_date: form.return_date || null,
+    airline: form.airline || null,
+    flight_class: form.flight_class || null,
+    miles_program: form.miles_program || null,
+    emission_source: form.emission_source || null,
+    adults: form.adults,
+    children: form.children,
+    children_ages: form.children_ages
+      ? form.children_ages.split(",").map(a => parseInt(a.trim())).filter(Boolean)
+      : [],
+    lead_type: form.lead_type,
+    seller_id: (isAdmin && form.seller_id) ? form.seller_id : undefined,
+  }), [form, isAdmin]);
+
+  const autosave = useSaleAutosave({
+    saleId: editId,
+    enabled: isEditMode,
+    ready: isEditMode && !editLoading,
+    patch: autosavePatch,
+    delay: 1200,
+  });
+
   const getSupplierPrograms = (supplierId: string) => {
     const programs = allMilesPrograms.filter((p: any) => p.supplier_id === supplierId);
     return [...new Set(programs.map((p: any) => p.program_name))];
