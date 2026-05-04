@@ -622,6 +622,7 @@ export default function LiveChat() {
             price_range: c.price_range || undefined,
             payment_method: c.payment_method || undefined,
             is_pinned: (c as any).is_pinned || false,
+            manually_marked_unread: !!(c as any).manually_marked_unread,
           };
         });
         setConversations(prev => {
