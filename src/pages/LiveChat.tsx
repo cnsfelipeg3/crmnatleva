@@ -37,6 +37,7 @@ import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
+import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
@@ -319,47 +320,9 @@ export default function LiveChat() {
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [unreadDuringScroll, setUnreadDuringScroll] = useState(0);
 
-  // ─── Presence (digitando/gravando) via realtime chat_presence ───
-  const [presenceByPhone, setPresenceByPhone] = useState<Record<string, { status: string; updated_at: string }>>({});
+  // ─── Presence (digitando/gravando) via hook compartilhado ───
+  const presenceByPhone = usePresenceByPhone();
 
-  useEffect(() => {
-    const channel = supabase
-      .channel('chat-presence-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'chat_presence' }, (payload) => {
-        const n: any = payload.new;
-        if (!n?.phone) return;
-        setPresenceByPhone(prev => ({
-          ...prev,
-          [n.phone]: { status: n.status, updated_at: n.updated_at },
-        }));
-      })
-      .subscribe();
-    return () => {
-      channel.unsubscribe().finally(() => {
-        supabase.removeChannel(channel);
-      });
-    };
-  }, []);
-
-  // ─── Limpeza periódica de presence stale (>30s) ───
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setPresenceByPhone(prev => {
-        const now = Date.now();
-        let changed = false;
-        const next: typeof prev = {};
-        for (const [phone, entry] of Object.entries(prev)) {
-          if (now - new Date(entry.updated_at).getTime() < 30_000) {
-            next[phone] = entry;
-          } else {
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
 

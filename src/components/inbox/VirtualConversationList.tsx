@@ -3,11 +3,13 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2, MessageSquare } from "lucide-react";
 import type { Conversation } from "./types";
 import { ConversationItem } from "./ConversationItem";
+import { getActivePresence, type PresenceMap } from "@/hooks/usePresenceByPhone";
 
 interface VirtualConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
   profilePics: Map<string, string>;
+  presenceByPhone?: PresenceMap;
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   isLoading: boolean;
@@ -18,6 +20,7 @@ export function VirtualConversationList({
   conversations,
   selectedId,
   profilePics,
+  presenceByPhone,
   onSelect,
   onTogglePin,
   isLoading,
@@ -87,6 +90,7 @@ export function VirtualConversationList({
                 conv={conv}
                 isSelected={conv.id === selectedId}
                 profilePic={profilePics.get(conv.id)}
+                presence={presenceByPhone ? getActivePresence(presenceByPhone, conv.phone) : null}
                 onSelect={onSelect}
                 onTogglePin={onTogglePin}
               />
