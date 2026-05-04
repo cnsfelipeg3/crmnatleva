@@ -305,7 +305,7 @@ async function upsertConversation(
   const { data: newConv, error: convError } = await supabase
     .from("conversations")
     .insert({
-      phone: cleanPhone,
+      phone: phoneE164,
       contact_name: contactName,
       source: "whatsapp_api",
       stage: "novo_lead",
