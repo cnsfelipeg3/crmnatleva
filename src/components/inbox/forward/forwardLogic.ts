@@ -45,7 +45,7 @@ async function sendOneForward(
       const body = finalCaption ? `${finalCaption}\n\n${msg.text}` : msg.text;
       const payload = { phone, message: body };
       const data = await callZapiProxy("send-text", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-text", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-text", sentPayload: payload };
     }
 
     const mediaUrl = msg.media_storage_url || msg.media_url;
@@ -55,30 +55,30 @@ async function sendOneForward(
       const payload: any = { phone, image: mediaUrl };
       if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
       const data = await callZapiProxy("send-image", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-image", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-image", sentPayload: payload };
     }
     if (msg.message_type === "video") {
       const payload: any = { phone, video: mediaUrl };
       if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
       const data = await callZapiProxy("send-video", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-video", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-video", sentPayload: payload };
     }
     if (msg.message_type === "audio") {
       const payload = { phone, audio: mediaUrl };
       const data = await callZapiProxy("send-audio", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-audio", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-audio", sentPayload: payload };
     }
     if (msg.message_type === "document") {
       const ext = (msg.media_filename?.split(".").pop() || "pdf").toLowerCase();
       const payload: any = { phone, document: mediaUrl, extension: ext, fileName: msg.media_filename || "documento" };
       if (finalCaption) payload.caption = finalCaption;
       const data = await callZapiProxy("send-document", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-document", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-document", sentPayload: payload };
     }
     if (msg.message_type === "sticker") {
       const payload = { phone, image: mediaUrl };
       const data = await callZapiProxy("send-image", payload);
-      return { ok: true, externalMessageId: data?.zaapId || data?.messageId, sentAction: "send-image", sentPayload: payload };
+      return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-image", sentPayload: payload };
     }
     return { ok: false, error: `Tipo não suportado: ${msg.message_type}` };
   } catch (err: any) {
