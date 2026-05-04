@@ -2395,6 +2395,7 @@ export type Database = {
           created_at: string
           direction: string
           external_message_id: string | null
+          failure_detail: string | null
           failure_reason: string | null
           id: string
           is_voice_note: boolean | null
@@ -2420,6 +2421,7 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_detail?: string | null
           failure_reason?: string | null
           id?: string
           is_voice_note?: boolean | null
@@ -2445,6 +2447,7 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_detail?: string | null
           failure_reason?: string | null
           id?: string
           is_voice_note?: boolean | null
