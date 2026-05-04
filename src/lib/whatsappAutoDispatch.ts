@@ -87,12 +87,16 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
     const cleanPhone = clientPhone.replace(/\D/g, "");
 
     const sendMsg = async () => {
+      let outcome: ReturnType<typeof classifySendOutcome> = { ok: true, reason: null };
       try {
-        await supabase.functions.invoke("zapi-proxy", {
+        const { data, error } = await supabase.functions.invoke("zapi-proxy", {
           body: { action: "send-text", payload: { phone: cleanPhone, message: msg } },
         });
+        outcome = classifySendOutcome(error, data);
+        if (!outcome.ok) {
+          throw new Error(outcome.detail || error?.message || "send failed");
+        }
         debugLog(`[WhatsApp Auto] Mensagem "${triggerEvent}" enviada para ${cleanPhone}`);
-        // Log dispatch
         await supabase.from("whatsapp_dispatch_logs" as any).insert({
           template_id: template.id,
           template_name: template.name,
@@ -108,7 +112,9 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
         });
         return true;
       } catch (sendErr: any) {
-        console.error(`[WhatsApp Auto] Erro ao enviar "${triggerEvent}":`, sendErr.message);
+        // Se outcome ainda não foi classificado (exceção do invoke), classifica agora
+        if (outcome.ok) outcome = { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail: sendErr?.message || "exception" };
+        console.error(`[WhatsApp Auto] Erro ao enviar "${triggerEvent}":`, sendErr.message, "reason=", outcome.reason);
         await supabase.from("whatsapp_dispatch_logs" as any).insert({
           template_id: template.id,
           template_name: template.name,
@@ -121,6 +127,8 @@ export async function dispatchWhatsAppTemplate(params: DispatchParams): Promise<
           message_sent: msg,
           status: "erro",
           error_message: sendErr.message,
+          failure_reason: outcome.reason,
+          failure_detail: outcome.detail || null,
           dispatched_by: dispatchedBy,
         });
         return false;
