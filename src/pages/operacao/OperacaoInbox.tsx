@@ -2066,7 +2066,7 @@ function OperacaoInboxInner() {
                 onClose={() => setShowProfileViewer(false)}
                 name={selected.contact_name || formatPhoneDisplay(selected.phone || "") || "Sem nome"}
                 phone={selected.phone}
-                phoneDisplay={formatPhoneDisplay(selected.phone || "")}
+                phoneDisplay={formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}
                 pictureUrl={profilePicsRef.current.get(selected.id)}
                 initials={(selected.contact_name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                 isVip={selected.is_vip}
