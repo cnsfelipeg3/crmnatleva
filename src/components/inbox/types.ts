@@ -1,7 +1,7 @@
 // ─── Shared Inbox Types & Constants ───
 
 export type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
-export type MsgType = "text" | "image" | "audio" | "video" | "document";
+export type MsgType = "text" | "image" | "audio" | "video" | "document" | "sticker";
 export type MsgStatus = "queued" | "pending" | "sending" | "retrying" | "sent" | "delivered" | "read" | "failed";
 
 export interface Conversation {
@@ -38,6 +38,9 @@ export interface Message {
   media_original_url?: string;
   media_status?: string;
   media_mimetype?: string;
+  media_filename?: string;
+  media_size_bytes?: number;
+  media_failure_reason?: string;
   audio_duration_sec?: number;
   is_voice_note?: boolean;
   status: MsgStatus;
