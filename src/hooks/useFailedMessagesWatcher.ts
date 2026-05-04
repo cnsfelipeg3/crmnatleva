@@ -8,11 +8,29 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { humanizeFailureReason } from "@/lib/zapiFailureClassifier";
 import {
   subscribeFailedStream,
   type FailedMsgRow,
 } from "./failedMessages/failedMessagesStream";
+
+// Resolve um conversation_id (UUID) para a chave esperada pelo OperacaoInbox (`wa_<phone>`),
+// caindo no UUID como fallback caso o lookup falhe.
+async function resolveConversationKey(conversationId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from("conversations")
+      .select("phone")
+      .eq("id", conversationId)
+      .maybeSingle();
+    if (data?.phone) {
+      const digits = String(data.phone).replace(/\D/g, "");
+      if (digits) return `wa_${digits}`;
+    }
+  } catch { /* noop */ }
+  return conversationId;
+}
 
 const FLUSH_DELAY_MS = 2500;
 const FLUSH_CAP = 20;
