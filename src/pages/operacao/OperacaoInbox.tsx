@@ -1980,7 +1980,27 @@ function OperacaoInboxInner() {
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
                         )}
-                        <div className={`flex ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}>
+                        <div
+                          className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
+                          onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
+                          onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}
+                          onPointerDown={(e) => {
+                            if (selectionMode || msg.sender_type === "sistema") return;
+                            if ((e.pointerType === "mouse" && e.button !== 0) || (e.target as HTMLElement).closest("a,button,video,audio,input,textarea")) return;
+                            longPressTimer.current && clearTimeout(longPressTimer.current);
+                            longPressTimer.current = setTimeout(() => enterSelectionWith(msg), 500);
+                          }}
+                          onPointerUp={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                          onPointerLeave={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                        >
+                          {selectionMode && msg.sender_type !== "sistema" && (
+                            <Checkbox
+                              checked={selectedMsgIds.has(msg.id)}
+                              onCheckedChange={() => toggleMsgSelected(msg.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="shrink-0"
+                            />
+                          )}
                           {msg.sender_type === "sistema" ? (
                             <div className="max-w-[85%] rounded-xl px-4 py-2.5 bg-muted/50 border border-border">
                               <div className="flex items-center gap-1.5 mb-1">
@@ -1992,12 +2012,15 @@ function OperacaoInboxInner() {
                             </div>
                           ) : (
                             <div className="group relative max-w-[70%]">
-                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[72px]" : "-right-[72px]"}`}>
-                                <button onClick={() => setReplyingTo(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
+                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
+                                <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
                                 </button>
+                                <button onClick={(e) => { e.stopPropagation(); setForwardSeed([msg]); setForwardOpen(true); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Encaminhar">
+                                  <Forward className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
                                 {msg.sender_type === "atendente" && msg.message_type === "text" && new Date(msg.created_at).getTime() > Date.now() - 3600000 && (
-                                  <button onClick={() => handleStartEdit(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
+                                  <button onClick={(e) => { e.stopPropagation(); handleStartEdit(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
                                     <Pencil className="h-3 w-3 text-muted-foreground" />
                                   </button>
                                 )}
