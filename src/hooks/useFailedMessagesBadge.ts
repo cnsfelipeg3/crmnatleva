@@ -58,20 +58,14 @@ export function useFailedMessagesBadge() {
     };
 
     (async () => {
-      const [a, b] = await Promise.all([
-        fetchTable("conversation_messages"),
-        fetchTable("messages"),
-      ]);
+      const a = await fetchTable("conversation_messages");
       if (cancelled) return;
       setMap(() => {
         const next = new Map<string, FailedMsgRow>();
-        // ordem decrescente já vem do select; insere
-        [...a, ...b]
-          .sort(
-            (x, y) =>
-              new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
-          )
-          .forEach((r) => next.set(r.id, r));
+        a.sort(
+          (x, y) =>
+            new Date(y.created_at).getTime() - new Date(x.created_at).getTime(),
+        ).forEach((r) => next.set(r.id, r));
         return next;
       });
     })();
