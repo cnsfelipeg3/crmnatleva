@@ -44,6 +44,10 @@ interface MessageBubbleProps {
   onEdit: (msg: Message) => void;
   onLightbox: (url: string) => void;
   onRetry?: (msg: Message) => void;
+  onForward?: (msg: Message) => void;
+  selectionMode?: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: (msg: Message) => void;
 }
 
 function stripInternalTags(text: string): string {
