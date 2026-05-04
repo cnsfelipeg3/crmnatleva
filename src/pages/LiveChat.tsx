@@ -340,7 +340,25 @@ export default function LiveChat() {
     };
   }, []);
 
-  // ─── Send-location dialog ───
+  // ─── Limpeza periódica de presence stale (>30s) ───
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPresenceByPhone(prev => {
+        const now = Date.now();
+        let changed = false;
+        const next: typeof prev = {};
+        for (const [phone, entry] of Object.entries(prev)) {
+          if (now - new Date(entry.updated_at).getTime() < 30_000) {
+            next[phone] = entry;
+          } else {
+            changed = true;
+          }
+        }
+        return changed ? next : prev;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [locationInput, setLocationInput] = useState({ name: "", address: "", lat: "", lng: "" });
 
