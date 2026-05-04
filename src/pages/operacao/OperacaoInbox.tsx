@@ -759,6 +759,7 @@ function OperacaoInboxInner() {
               tags: existing.tags?.length ? existing.tags : c.tags,
               stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
               unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)),
+              manually_marked_unread: !!c.manually_marked_unread,
             };
           });
           const freshIds = new Set(merged.map(c => c.id));
