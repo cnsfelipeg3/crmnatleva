@@ -9,8 +9,9 @@ import {
   Target, TrendingUp, Shield, Zap, Hash, Globe, ChevronRight, Bot,
   Circle, CheckCheck, Ban, Link2, Clipboard, Calendar, BarChart3,
   Workflow, Link, Brain, TestTube, ScrollText, Cog, Loader2, StopCircle,
-  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download, MapPin,
+  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download, MapPin, MailX, MailOpen,
 } from "lucide-react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -1905,6 +1906,21 @@ export default function LiveChat() {
     }
   };
 
+  const handleToggleUnread = useCallback(async (conv: Conversation) => {
+    const dbId = conv.id.length > 10 ? conv.id : null;
+    if (!dbId) return;
+    const next = !conv.manually_marked_unread;
+    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: next } : c));
+    const { error } = await supabase
+      .from("conversations")
+      .update({ manually_marked_unread: next, marked_unread_by: next ? (await supabase.auth.getUser()).data.user?.id ?? null : null })
+      .eq("id", dbId);
+    if (error) {
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: !next } : c));
+      toast({ title: "Erro", description: "Não foi possível alterar status", variant: "destructive" });
+    }
+  }, []);
+
   const handleClearConversations = useCallback(() => {
     setConversations([]);
     setMessages({});
@@ -2152,17 +2168,19 @@ export default function LiveChat() {
                     const contactInitials = getContactInitials(conv.contact_name, conv.phone);
                     const _previewRaw = (conv.last_message_preview || "").replace(/\n/g, " ").trim();
                     const _previewTruncated = _previewRaw.length > 35 ? _previewRaw.slice(0, 35) + "…" : _previewRaw;
+                    const isUnreadVisual = conv.unread_count > 0 || !!conv.manually_marked_unread;
                     return (
-                      <motion.div
-                        key={conv.id}
-                        onClick={() => handleSelectConversation(conv.id)}
-                        className={`group p-3 rounded-lg cursor-pointer mb-1 transition-all border ${
-                          isSelected
-                            ? "bg-primary/5 border-primary/20"
-                            : "border-transparent hover:bg-secondary/50"
-                        }`}
-                        whileTap={{ scale: 0.98 }}
-                      >
+                      <ContextMenu key={conv.id}>
+                        <ContextMenuTrigger asChild>
+                          <motion.div
+                            onClick={() => handleSelectConversation(conv.id)}
+                            className={`group p-3 rounded-lg cursor-pointer mb-1 transition-all border ${
+                              isSelected
+                                ? "bg-primary/5 border-primary/20"
+                                : "border-transparent hover:bg-secondary/50"
+                            }`}
+                            whileTap={{ scale: 0.98 }}
+                          >
                         <div className="flex items-start gap-3">
                           <div className="relative shrink-0">
                             {profilePicsRef.current.get(conv.id) ? (
@@ -2180,7 +2198,7 @@ export default function LiveChat() {
                           <div className="flex-1 min-w-0 pr-1">
                             {/* Row 1: Name + Time — WhatsApp style using CSS Grid */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: '4px' }}>
-                              <span className={`text-sm truncate ${conv.unread_count > 0 ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
+                              <span className={`text-sm truncate ${isUnreadVisual ? "font-bold text-foreground" : "font-medium text-foreground"}`}>
                                 {displayName}
                               </span>
                               <span className="text-[11px] text-foreground whitespace-nowrap">
@@ -2207,7 +2225,7 @@ export default function LiveChat() {
                             </div>
                             {/* Row 2: Preview + badges */}
                             <div className="flex items-center gap-2 mt-0.5">
-                              <p className={`text-xs truncate flex-1 min-w-0 ${conv.unread_count > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                              <p className={`text-xs truncate flex-1 min-w-0 ${isUnreadVisual ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                                 {(() => {
                                   if (!_previewRaw) return <span className="text-muted-foreground/50 italic">Sem mensagens</span>;
                                   const isAudio = _previewRaw === "📎 audio" || _previewRaw.toLowerCase().includes("mensagem de voz") || _previewRaw.toLowerCase() === "audio" || _previewRaw === "🎤 Áudio";
@@ -2223,6 +2241,11 @@ export default function LiveChat() {
                               </p>
                               <div className="flex items-center gap-1 shrink-0">
                                 {conv.is_pinned && <Pin className="h-3 w-3 text-muted-foreground rotate-45" />}
+                                {conv.manually_marked_unread && conv.unread_count === 0 && (
+                                  <span className="h-5 min-w-[20px] rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-primary-foreground px-1.5">
+                                    Não lido
+                                  </span>
+                                )}
                                 {conv.unread_count > 0 && (
                                   <span className="h-5 min-w-[20px] rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-primary-foreground px-1.5">
                                     {conv.unread_count > 99 ? "99+" : conv.unread_count}
@@ -2243,7 +2266,18 @@ export default function LiveChat() {
                             </div>
                           </div>
                         </div>
-                      </motion.div>
+                          </motion.div>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent>
+                          <ContextMenuItem onClick={() => handleToggleUnread(conv)}>
+                            {conv.manually_marked_unread ? (
+                              <><MailOpen className="h-4 w-4 mr-2" /> Marcar como lida</>
+                            ) : (
+                              <><MailX className="h-4 w-4 mr-2" /> Marcar como não lida</>
+                            )}
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     );
                   })}
                   {filteredConversations.length === 0 && (
