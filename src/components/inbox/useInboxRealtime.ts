@@ -159,26 +159,40 @@ export function useInboxRealtime(
             const isOpen = target.id === selectedIdRef.current || waKey === selectedIdRef.current;
             const existingTime = new Date(target.last_message_at).getTime();
             const incomingTime = new Date(u.last_message_at || 0).getTime();
-            const bestTime = incomingTime > existingTime ? u.last_message_at : target.last_message_at;
-            const bestPreview = (incomingTime > existingTime && u.last_message_preview) ? u.last_message_preview : (target.last_message_preview || u.last_message_preview);
-            const updated = prev.map(c => (c.id === target.id) ? {
-              ...c,
+            const isNewer = incomingTime > existingTime;
+            const bestTime = isNewer ? u.last_message_at : target.last_message_at;
+            const bestPreview = (isNewer && u.last_message_preview) ? u.last_message_preview : (target.last_message_preview || u.last_message_preview);
+            const merged = {
+              ...target,
               id: waKey,
-              db_id: c.db_id || u.id,
-              phone: cleanPhone || c.phone,
+              db_id: target.db_id || u.id,
+              phone: cleanPhone || target.phone,
               last_message_preview: bestPreview,
               last_message_at: bestTime,
-              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(c.unread_count), safeUnreadCount(u.unread_count)),
-              stage: (u.stage as Stage) || c.stage,
-              tags: u.tags || c.tags,
-              contact_name: c.contact_name || u.contact_name,
-              source: u.source || c.source,
-              manually_marked_unread: typeof u.manually_marked_unread === "boolean" ? u.manually_marked_unread : c.manually_marked_unread,
-            } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
-            return updated.sort((a, b) => {
+              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(target.unread_count), safeUnreadCount(u.unread_count)),
+              stage: (u.stage as Stage) || target.stage,
+              tags: u.tags || target.tags,
+              contact_name: target.contact_name || u.contact_name,
+              source: u.source || target.source,
+              manually_marked_unread: typeof u.manually_marked_unread === "boolean" ? u.manually_marked_unread : target.manually_marked_unread,
+            };
+            // Dedupe + remove target da posição atual
+            const rest = prev.filter(c => c.id !== target.id && c.id !== waKey);
+            // Single-shift: se mensagem nova chegou, vai pro topo (respeitando pinned).
+            // Senão, mantém ordem por last_message_at desc.
+            if (isNewer) {
+              const pinned = rest.filter(c => c.is_pinned);
+              const unpinned = rest.filter(c => !c.is_pinned);
+              return merged.is_pinned
+                ? [merged, ...pinned, ...unpinned]
+                : [...pinned, merged, ...unpinned];
+            }
+            // Reposicionar mantendo ordem desc estável
+            const all = [...rest, merged];
+            return all.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
               if (!a.is_pinned && b.is_pinned) return 1;
-              return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+              return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
             });
           }
           return [{
