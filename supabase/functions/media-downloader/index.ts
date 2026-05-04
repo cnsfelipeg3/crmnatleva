@@ -75,9 +75,6 @@ Deno.serve(async (req) => {
     await supabase.from("conversation_messages")
       .update({ media_status: "downloading" })
       .eq("external_message_id", messageId);
-    await supabase.from("messages")
-      .update({ media_status: "downloading" })
-      .eq("external_message_id", messageId);
 
     const ext = extFromMime(mimeType, mediaType || "document");
     const now = new Date();
