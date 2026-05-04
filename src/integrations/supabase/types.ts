@@ -7817,6 +7817,36 @@ export type Database = {
           },
         ]
       }
+      watchdog_runs: {
+        Row: {
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          marked_count_conversation_messages: number | null
+          marked_count_messages: number | null
+          started_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          marked_count_conversation_messages?: number | null
+          marked_count_messages?: number | null
+          started_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          marked_count_conversation_messages?: number | null
+          marked_count_messages?: number | null
+          started_at?: string
+        }
+        Relationships: []
+      }
       webhook_audit_log: {
         Row: {
           created_at: string | null
@@ -8314,6 +8344,10 @@ export type Database = {
       reindex_conversation: { Args: { conv_id: string }; Returns: undefined }
       smart_capitalize_name: { Args: { input_name: string }; Returns: string }
       soft_delete_sale: { Args: { _sale_id: string }; Returns: undefined }
+      watchdog_mark_silent_timeouts: {
+        Args: { p_table: string }
+        Returns: number
+      }
     }
     Enums: {
       app_role:
