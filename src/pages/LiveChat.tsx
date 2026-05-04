@@ -1906,6 +1906,21 @@ export default function LiveChat() {
     }
   };
 
+  const handleToggleUnread = useCallback(async (conv: Conversation) => {
+    const dbId = conv.id.length > 10 ? conv.id : null;
+    if (!dbId) return;
+    const next = !conv.manually_marked_unread;
+    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: next } : c));
+    const { error } = await supabase
+      .from("conversations")
+      .update({ manually_marked_unread: next, marked_unread_by: next ? (await supabase.auth.getUser()).data.user?.id ?? null : null })
+      .eq("id", dbId);
+    if (error) {
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: !next } : c));
+      toast({ title: "Erro", description: "Não foi possível alterar status", variant: "destructive" });
+    }
+  }, []);
+
   const handleClearConversations = useCallback(() => {
     setConversations([]);
     setMessages({});
