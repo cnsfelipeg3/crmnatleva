@@ -15,6 +15,42 @@ const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
+// ─── Failure reason taxonomy (exported for frontend reference) ───
+export const FAILURE_REASONS = {
+  TEMPORARY: "temporary",                 // rede / timeout / Z-API 5xx · retry vale a pena
+  INVALID_NUMBER: "invalid_number",       // número não tem WhatsApp · retry inútil
+  WHATSAPP_DISCONNECTED: "whatsapp_disconnected", // instância desconectada
+  MEDIA_EXPIRED: "media_expired",         // URL temporária da mídia expirou
+  SILENT_TIMEOUT: "silent_timeout",       // watchdog: nunca recebeu confirmação
+  UNKNOWN: "unknown",
+} as const;
+
+export type FailureReason = typeof FAILURE_REASONS[keyof typeof FAILURE_REASONS];
+
+// Classifica resposta da Z-API em uma FailureReason. Puro · sem efeito colateral.
+// Frontend usa esse mesmo helper via cópia local (não importa direto · edge ≠ browser).
+export function classifyZapiResponse(httpStatus: number, body: any): { ok: boolean; reason: FailureReason | null; detail?: string } {
+  // Sucesso: 2xx + (success !== false)
+  if (httpStatus >= 200 && httpStatus < 300) {
+    if (body && typeof body === "object" && body.success === false) {
+      return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail: String(body.error || body.message || "success=false") };
+    }
+    return { ok: true, reason: null };
+  }
+
+  const detailRaw = body && typeof body === "object" ? (body.error || body.message || JSON.stringify(body)) : String(body || "");
+  const detail = String(detailRaw).toLowerCase();
+
+  if (httpStatus >= 500) return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail };
+  if (/disconnect|not.connected|instance.*off|instancia.*desconect/i.test(detail)) {
+    return { ok: false, reason: FAILURE_REASONS.WHATSAPP_DISCONNECTED, detail };
+  }
+  if (/not.*exist|invalid.*number|nao.*existe|number.*not.*found|phone.*not.*registered/i.test(detail)) {
+    return { ok: false, reason: FAILURE_REASONS.INVALID_NUMBER, detail };
+  }
+  return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail };
+}
+
 function parseJsonSafely(text: string) {
   if (!text) return {};
   try {
