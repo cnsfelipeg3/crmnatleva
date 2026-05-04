@@ -238,6 +238,9 @@ function OperacaoInboxInner() {
     mediaUrl?: string;
     externalMessageId?: string;
     createdAt?: string;
+    status?: "pending" | "sent" | "failed";
+    originalPayload?: { action: string; payload: any } | null;
+    failureReason?: string | null;
   }): Promise<string | null> => {
     const dbConvId = await resolveDbConversationId(payload.conversationId);
     if (!dbConvId) {
@@ -247,12 +250,13 @@ function OperacaoInboxInner() {
 
     const createdAt = payload.createdAt || new Date().toISOString();
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const initialStatus = payload.status || "pending";
     let persistedId: string | null = null;
     let persistedTable: string | null = null;
 
     // ── PRIMARY: conversation_messages (unified table) ──
     try {
-      const unifiedRow = {
+      const unifiedRow: Record<string, any> = {
         conversation_id: dbConvId,
         external_message_id: externalId,
         direction: "outgoing",
@@ -260,10 +264,12 @@ function OperacaoInboxInner() {
         content: payload.text || "",
         message_type: payload.messageType,
         media_url: payload.mediaUrl || null,
-        status: "sent",
+        status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
       };
+      if (payload.originalPayload !== undefined) unifiedRow.original_payload = payload.originalPayload;
+      if (payload.failureReason !== undefined) unifiedRow.failure_reason = payload.failureReason;
 
       const { data: inserted, error } = await (supabase
         .from("conversation_messages" as any)
@@ -274,7 +280,7 @@ function OperacaoInboxInner() {
       if (!error && inserted?.id) {
         persistedId = inserted.id;
         persistedTable = "conversation_messages";
-        debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
+        debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId} (status=${initialStatus})`);
       } else {
         debugWarn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
       }
@@ -292,7 +298,7 @@ function OperacaoInboxInner() {
           message_type: payload.messageType,
           content: payload.text || "",
           media_url: payload.mediaUrl || null,
-          read_status: "sent",
+          read_status: initialStatus === "pending" ? "sending" : initialStatus,
         };
         const { data: legacyInserted, error: legacyErr } = await supabase
           .from("chat_messages")
