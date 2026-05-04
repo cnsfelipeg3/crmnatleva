@@ -124,6 +124,25 @@ function OperacaoInboxInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+
+  // ─── Deep-link from failed-messages watcher: ?conversation=<id>&highlight=<msgId> ───
+  useEffect(() => {
+    const convParam = searchParams.get("conversation");
+    const highlightParam = searchParams.get("highlight");
+    if (!convParam && !highlightParam) return;
+    if (convParam) setSelectedId(convParam);
+    if (highlightParam) {
+      setHighlightMsgId(highlightParam);
+      const t = setTimeout(() => setHighlightMsgId(null), 2200);
+      return () => clearTimeout(t);
+    }
+    // limpa params para não re-triggerar no remount
+    const next = new URLSearchParams(searchParams);
+    next.delete("conversation");
+    next.delete("highlight");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
