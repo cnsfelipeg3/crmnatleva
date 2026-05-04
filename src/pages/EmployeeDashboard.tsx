@@ -85,7 +85,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     menuKey: "cotacoes",
-    title: "Cotações & Propostas",
+    title: "Cotações",
     description: "Acompanhar pipeline comercial.",
     path: "/cotacoes",
     icon: FileText,

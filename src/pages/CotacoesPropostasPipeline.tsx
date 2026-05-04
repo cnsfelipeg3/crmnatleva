@@ -330,7 +330,7 @@ export default function CotacoesPropostasPipeline() {
         <div>
           <h1 className="text-xl sm:text-2xl font-serif text-foreground flex items-center gap-2">
             <PlaneTakeoff className="w-6 h-6 text-accent" />
-            Central de Cotações & Propostas
+            Central de Cotações
           </h1>
           <p className="text-sm text-muted-foreground mt-1 flex items-center gap-2">
             Pipeline por etapa

@@ -25,7 +25,7 @@ const navItems = [
   { to: "/sales/new", icon: Plus, label: "Nova Venda" },
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações & Propostas" },
+  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
