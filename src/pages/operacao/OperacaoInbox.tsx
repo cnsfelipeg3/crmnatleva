@@ -236,6 +236,11 @@ function OperacaoInboxInner() {
     messageType: MsgType;
     text: string;
     mediaUrl?: string;
+    mediaStorageUrl?: string;
+    mediaMimetype?: string;
+    mediaFilename?: string;
+    mediaSizeBytes?: number;
+    mediaStatus?: string;
     externalMessageId?: string;
     createdAt?: string;
     status?: "pending" | "sent" | "failed";
@@ -264,6 +269,11 @@ function OperacaoInboxInner() {
         content: payload.text || "",
         message_type: payload.messageType,
         media_url: payload.mediaUrl || null,
+        media_storage_url: payload.mediaStorageUrl || payload.mediaUrl || null,
+        media_mimetype: payload.mediaMimetype || null,
+        media_filename: payload.mediaFilename || null,
+        media_size_bytes: payload.mediaSizeBytes ?? null,
+        media_status: payload.mediaStatus || (payload.messageType !== "text" ? "downloaded" : null),
         status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
