@@ -641,20 +641,45 @@ export default function NewSale() {
 
       let saleId: string;
 
+      // ═══════════════════════════════════════════════════════════════
+      // SALVAMENTO INTELIGENTE (DIFF-BASED)
+      // ═══════════════════════════════════════════════════════════════
+      // Em modo edição NÃO apagamos mais tudo para reinserir.
+      // Para cada lista (cost_items, flight_segments, sale_passengers,
+      // sale_payments, tariff_conditions) fazemos diff por ID:
+      //   • Linhas com id existente → UPDATE
+      //   • Linhas sem id → INSERT
+      //   • Linhas que existiam no banco e não estão mais no estado → DELETE
+      // Isso garante que dados pré-existentes nunca são perdidos por
+      // engano quando o usuário só edita um campo simples.
+      // ═══════════════════════════════════════════════════════════════
+
+      // UUIDs originais (carregados do banco) por tabela — usados para detectar deleções
+      let originalCostIds: string[] = [];
+      let originalSegmentIds: string[] = [];
+      let originalPassengerIds: string[] = [];
+      let originalPaymentIds: string[] = [];
+      let originalTariffIds: string[] = [];
+
       if (isEditMode && editId) {
         // UPDATE existing sale
         const { error: updateError } = await supabase.from("sales").update(salePayload).eq("id", editId);
         if (updateError) throw updateError;
         saleId = editId;
 
-        // Delete old related data to re-insert
-        await Promise.all([
-          supabase.from("cost_items").delete().eq("sale_id", saleId),
-          supabase.from("flight_segments").delete().eq("sale_id", saleId),
-          supabase.from("sale_passengers").delete().eq("sale_id", saleId),
-          supabase.from("sale_payments").delete().eq("sale_id", saleId),
-          supabase.from("tariff_conditions").delete().eq("sale_id", saleId),
+        // Snapshot dos IDs atuais no banco (NÃO apagamos · usamos para diff)
+        const [c, s, p, pay, t] = await Promise.all([
+          supabase.from("cost_items").select("id").eq("sale_id", saleId),
+          supabase.from("flight_segments").select("id").eq("sale_id", saleId),
+          supabase.from("sale_passengers").select("id, passenger_id").eq("sale_id", saleId),
+          supabase.from("sale_payments").select("id").eq("sale_id", saleId),
+          supabase.from("tariff_conditions").select("id, product_type").eq("sale_id", saleId),
         ]);
+        originalCostIds = (c.data || []).map((r: any) => r.id);
+        originalSegmentIds = (s.data || []).map((r: any) => r.id);
+        originalPassengerIds = (p.data || []).map((r: any) => r.passenger_id);
+        originalPaymentIds = (pay.data || []).map((r: any) => r.id);
+        originalTariffIds = (t.data || []).map((r: any) => r.id);
       } else {
         // INSERT new sale
         const { data: saleData, error: saleError } = await supabase.from("sales").insert({
@@ -665,8 +690,10 @@ export default function NewSale() {
         saleId = (saleData as any).id;
       }
 
-      // Cost items — one per air cost block + one per hotel + others
-      const costItems: any[] = [];
+      // ─── Cost items ─────────────────────────────────────────────
+      // Constrói payloads carregando o id original quando existir
+      // (vem do load: airCostBlocks[].id, hotelEntries[].id, otherProducts[].id)
+      const costItems: { id?: string; payload: any }[] = [];
       
       for (const block of airCostBlocks) {
         const cost = calcBlockCost(block);
@@ -680,20 +707,23 @@ export default function NewSale() {
             .join(", ");
           
           costItems.push({
-            sale_id: saleId,
-            category: "aereo",
-            description: `Aéreo: ${block.label}${segmentLabels ? ` (${segmentLabels})` : ""}`,
-            cash_value: block.emission_type === "pagante" ? parseFloat(block.cash_value) || 0 : 0,
-            miles_quantity: parseInt(block.miles_qty) || 0,
-            miles_price_per_thousand: parseFloat(block.miles_price) || 0,
-            taxes: parseFloat(block.taxes) || 0,
-            taxes_included_in_cash: false,
-            emission_source: block.emission_source || null,
-            miles_program: block.miles_program || null,
-            miles_cost_brl: block.emission_type === "milhas" ? cost : 0,
-            total_item_cost: cost,
-            supplier_id: block.supplier_id || null,
-            reservation_code: block.reservation_code || null,
+            id: originalCostIds.includes(block.id) ? block.id : undefined,
+            payload: {
+              sale_id: saleId,
+              category: "aereo",
+              description: `Aéreo: ${block.label}${segmentLabels ? ` (${segmentLabels})` : ""}`,
+              cash_value: block.emission_type === "pagante" ? parseFloat(block.cash_value) || 0 : 0,
+              miles_quantity: parseInt(block.miles_qty) || 0,
+              miles_price_per_thousand: parseFloat(block.miles_price) || 0,
+              taxes: parseFloat(block.taxes) || 0,
+              taxes_included_in_cash: false,
+              emission_source: block.emission_source || null,
+              miles_program: block.miles_program || null,
+              miles_cost_brl: block.emission_type === "milhas" ? cost : 0,
+              total_item_cost: cost,
+              supplier_id: block.supplier_id || null,
+              reservation_code: block.reservation_code || null,
+            },
           });
         }
       }
@@ -702,20 +732,23 @@ export default function NewSale() {
         const cost = calcHotelCost(hotel);
         if (cost > 0 || hotel.hotel_name) {
           costItems.push({
-            sale_id: saleId,
-            category: "hotel",
-            description: `Hotel: ${hotel.hotel_name || "Sem nome"}${hotel.hotel_city ? ` (${hotel.hotel_city})` : ""}`,
-            cash_value: hotel.emission_type === "pagante" ? parseFloat(hotel.cash_value) || 0 : 0,
-            miles_quantity: parseInt(hotel.miles_qty) || 0,
-            miles_price_per_thousand: parseFloat(hotel.miles_price) || 0,
-            taxes: parseFloat(hotel.taxes) || 0,
-            taxes_included_in_cash: false,
-            emission_source: hotel.emission_source || null,
-            miles_program: hotel.miles_program || null,
-            miles_cost_brl: hotel.emission_type === "milhas" ? cost : 0,
-            total_item_cost: cost,
-            supplier_id: hotel.supplier_id || null,
-            reservation_code: hotel.hotel_reservation_code || null,
+            id: originalCostIds.includes(hotel.id) ? hotel.id : undefined,
+            payload: {
+              sale_id: saleId,
+              category: "hotel",
+              description: `Hotel: ${hotel.hotel_name || "Sem nome"}${hotel.hotel_city ? ` (${hotel.hotel_city})` : ""}`,
+              cash_value: hotel.emission_type === "pagante" ? parseFloat(hotel.cash_value) || 0 : 0,
+              miles_quantity: parseInt(hotel.miles_qty) || 0,
+              miles_price_per_thousand: parseFloat(hotel.miles_price) || 0,
+              taxes: parseFloat(hotel.taxes) || 0,
+              taxes_included_in_cash: false,
+              emission_source: hotel.emission_source || null,
+              miles_program: hotel.miles_program || null,
+              miles_cost_brl: hotel.emission_type === "milhas" ? cost : 0,
+              total_item_cost: cost,
+              supplier_id: hotel.supplier_id || null,
+              reservation_code: hotel.hotel_reservation_code || null,
+            },
           });
         }
       }
@@ -724,52 +757,101 @@ export default function NewSale() {
         const cost = p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : parseFloat(p.miles_tax) || 0;
         if (cost > 0 || p.description || p.reservation_code) {
           costItems.push({
-            sale_id: saleId, category: "outros",
-            product_type: p.type,
-            description: `${PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type} - ${p.description}`,
-            cash_value: p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : 0,
-            miles_quantity: parseInt(p.miles_qty) || 0,
-            taxes: parseFloat(p.miles_tax) || 0,
-            total_item_cost: cost,
-            reservation_code: p.reservation_code || null,
-            supplier_id: p.supplier_id || null,
+            id: originalCostIds.includes(p.id) ? p.id : undefined,
+            payload: {
+              sale_id: saleId, category: "outros",
+              product_type: p.type,
+              description: `${PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type} - ${p.description}`,
+              cash_value: p.emission_type === "pagante" ? parseFloat(p.cash_value) || 0 : 0,
+              miles_quantity: parseInt(p.miles_qty) || 0,
+              taxes: parseFloat(p.miles_tax) || 0,
+              total_item_cost: cost,
+              reservation_code: p.reservation_code || null,
+              supplier_id: p.supplier_id || null,
+            },
           });
         }
       }
-      if (costItems.length > 0) await supabase.from("cost_items").insert(costItems);
 
-      // Tariff conditions
-      const tariffConditions: any[] = [];
+      // Aplica diff para cost_items
+      const keptCostIds = costItems.filter(c => c.id).map(c => c.id!);
+      const toDeleteCosts = originalCostIds.filter(id => !keptCostIds.includes(id));
+      const toUpdateCosts = costItems.filter(c => c.id);
+      const toInsertCosts = costItems.filter(c => !c.id).map(c => c.payload);
+
+      if (toDeleteCosts.length > 0) {
+        await supabase.from("cost_items").delete().in("id", toDeleteCosts);
+      }
+      for (const c of toUpdateCosts) {
+        await supabase.from("cost_items").update(c.payload).eq("id", c.id!);
+      }
+      if (toInsertCosts.length > 0) {
+        await supabase.from("cost_items").insert(toInsertCosts);
+      }
+
+      // ─── Tariff conditions (diff por product_type) ──────────────
+      const tariffPayloads: { product_type: string; payload: any }[] = [];
       if (airTariff.fare_name) {
-        tariffConditions.push({ sale_id: saleId, product_type: "aereo", product_label: getProductLabel("aereo"), ...airTariff });
+        tariffPayloads.push({
+          product_type: "aereo",
+          payload: { sale_id: saleId, product_type: "aereo", product_label: getProductLabel("aereo"), ...airTariff },
+        });
       }
       if (hotelTariff.fare_name) {
-        tariffConditions.push({ sale_id: saleId, product_type: "hotel", product_label: getProductLabel("hospedagem"), ...hotelTariff });
+        tariffPayloads.push({
+          product_type: "hotel",
+          payload: { sale_id: saleId, product_type: "hotel", product_label: getProductLabel("hospedagem"), ...hotelTariff },
+        });
       }
-      // Product-level tariffs
       for (const p of otherProducts) {
         if (p.tariff.fare_name) {
           const label = PRODUCT_TYPES.find(t => t.value === p.type)?.label || p.type;
-          tariffConditions.push({ sale_id: saleId, product_type: p.type, product_label: `${label} — ${p.description || ""}`.trim(), ...p.tariff });
+          tariffPayloads.push({
+            product_type: p.type,
+            payload: { sale_id: saleId, product_type: p.type, product_label: `${label} — ${p.description || ""}`.trim(), ...p.tariff },
+          });
         }
       }
-      if (tariffConditions.length > 0) await supabase.from("tariff_conditions").insert(tariffConditions);
+      // Apenas substitui as tarifas dos product_types presentes no estado.
+      // Se o estado não tem tarifa de algum product_type, NÃO removemos do banco
+      // (evita perder dados de seções não visitadas pelo usuário).
+      if (tariffPayloads.length > 0) {
+        const productTypesPresent = tariffPayloads.map(t => t.product_type);
+        await supabase.from("tariff_conditions")
+          .delete()
+          .eq("sale_id", saleId)
+          .in("product_type", productTypesPresent);
+        await supabase.from("tariff_conditions").insert(tariffPayloads.map(t => t.payload));
+      }
 
-      // Flight segments
+      // ─── Flight segments (diff) ─────────────────────────────────
       const validSegments = segments.filter(s => s.origin_iata && s.destination_iata);
-      if (validSegments.length > 0) {
-        await supabase.from("flight_segments").insert(
-          validSegments.map(s => ({
-            sale_id: saleId, direction: s.direction, segment_order: s.segment_order,
-            airline: s.airline || null, flight_number: s.flight_number || null,
-            origin_iata: s.origin_iata, destination_iata: s.destination_iata,
-            departure_date: s.departure_date || null, departure_time: s.departure_time || null,
-            arrival_time: s.arrival_time || null, duration_minutes: s.duration_minutes || null,
-            flight_class: s.flight_class || null, cabin_type: s.cabin_type || null,
-            operated_by: s.operated_by || null, connection_time_minutes: s.connection_time_minutes || null,
-            terminal: s.terminal || null,
-          }))
-        );
+      const segPayloads = validSegments.map(s => ({
+        id: (s as any).id && originalSegmentIds.includes((s as any).id) ? (s as any).id : undefined,
+        payload: {
+          sale_id: saleId, direction: s.direction, segment_order: s.segment_order,
+          airline: s.airline || null, flight_number: s.flight_number || null,
+          origin_iata: s.origin_iata, destination_iata: s.destination_iata,
+          departure_date: s.departure_date || null, departure_time: s.departure_time || null,
+          arrival_time: s.arrival_time || null, duration_minutes: s.duration_minutes || null,
+          flight_class: s.flight_class || null, cabin_type: s.cabin_type || null,
+          operated_by: s.operated_by || null, connection_time_minutes: s.connection_time_minutes || null,
+          terminal: s.terminal || null,
+        },
+      }));
+      const keptSegIds = segPayloads.filter(s => s.id).map(s => s.id!);
+      const toDeleteSegs = originalSegmentIds.filter(id => !keptSegIds.includes(id));
+      const toUpdateSegs = segPayloads.filter(s => s.id);
+      const toInsertSegs = segPayloads.filter(s => !s.id).map(s => s.payload);
+
+      if (toDeleteSegs.length > 0) {
+        await supabase.from("flight_segments").delete().in("id", toDeleteSegs);
+      }
+      for (const s of toUpdateSegs) {
+        await supabase.from("flight_segments").update(s.payload).eq("id", s.id!);
+      }
+      if (toInsertSegs.length > 0) {
+        await supabase.from("flight_segments").insert(toInsertSegs);
       }
 
       // Extraction log
@@ -825,17 +907,35 @@ export default function NewSale() {
         }
       }
 
-      // Link manually selected passengers
+      // ─── Sale passengers (diff) ─────────────────────────────────
+      // Só remove vínculos se o usuário tiver realmente carregado a aba
+      // de passageiros (selectedPassengers populado OU originalmente vazio).
+      // Heurística segura: só removemos vínculos que estavam no banco
+      // E não estão mais no estado. Não tocamos se o estado estiver vazio
+      // mas o banco tinha vínculos (provável aba não visitada).
+      const currentPaxIds = selectedPassengers.map(p => p.id);
+      if (isEditMode && currentPaxIds.length > 0) {
+        const toRemovePax = originalPassengerIds.filter(id => !currentPaxIds.includes(id));
+        if (toRemovePax.length > 0) {
+          await supabase.from("sale_passengers")
+            .delete()
+            .eq("sale_id", saleId)
+            .in("passenger_id", toRemovePax);
+        }
+      }
+      // Adiciona vínculos novos (idempotente · checa antes)
       for (const pax of selectedPassengers) {
         const { data: existingLink } = await supabase.from("sale_passengers").select("id").eq("sale_id", saleId).eq("passenger_id", pax.id).maybeSingle();
         if (!existingLink) await supabase.from("sale_passengers").insert({ sale_id: saleId, passenger_id: pax.id });
       }
 
-      // Save sale payments
-      if (salePayments.length > 0) {
+      // ─── Sale payments (diff) ───────────────────────────────────
+      if (salePayments.length > 0 || isEditMode) {
         const todayStr = new Date().toISOString().slice(0, 10);
-        await supabase.from("sale_payments").insert(
-          salePayments.map(p => ({
+        const payPayloads = salePayments.map(p => ({
+          id: (p as any).id && originalPaymentIds.includes((p as any).id) ? (p as any).id : undefined,
+          original: p,
+          payload: {
             sale_id: saleId,
             payment_method: p.payment_method,
             gateway: p.gateway || null,
@@ -850,10 +950,36 @@ export default function NewSale() {
             due_date: p.due_date || null,
             status: p.status || "pago",
             notes: p.notes || null,
-          }))
-        );
+          },
+        }));
+        const keptPayIds = payPayloads.filter(p => p.id).map(p => p.id!);
+        const toDeletePays = originalPaymentIds.filter(id => !keptPayIds.includes(id));
+        const toUpdatePays = payPayloads.filter(p => p.id);
+        const toInsertPays = payPayloads.filter(p => !p.id);
 
-        for (const p of salePayments) {
+        // Só apaga payments se o usuário visitou a aba (tem ao menos 1 no estado)
+        // OU se houve mudança real (insert/update). Caso estado vazio + originais
+        // existentes, NÃO apagamos (evita perda em aba não visitada).
+        if (toDeletePays.length > 0 && salePayments.length > 0) {
+          await supabase.from("sale_payments").delete().in("id", toDeletePays);
+          // Limpa accounts_receivable órfãos correspondentes
+          await supabase.from("accounts_receivable").delete().in("sale_payment_id", toDeletePays as any);
+        }
+        for (const p of toUpdatePays) {
+          await supabase.from("sale_payments").update(p.payload).eq("id", p.id!);
+        }
+        let insertedPayRows: any[] = [];
+        if (toInsertPays.length > 0) {
+          const { data: ins } = await supabase
+            .from("sale_payments")
+            .insert(toInsertPays.map(p => p.payload))
+            .select("id");
+          insertedPayRows = ins || [];
+        }
+
+        // Cria accounts_receivable APENAS para os payments novos (evita duplicação)
+        for (let i = 0; i < toInsertPays.length; i++) {
+          const p = toInsertPays[i].original;
           if (p.gross_value > 0) {
             const isPaid = p.status === "pago";
             await supabase.from("accounts_receivable").insert({
