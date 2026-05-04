@@ -493,11 +493,12 @@ Deno.serve(async (req) => {
           case current.node_type === "handoff_transfer": {
             shouldPause = true;
             const handoffMsg = interpolate(String(config.message || "Transferindo para atendente..."), context.variables);
-            await supabase.from("messages").insert({
+            await supabase.from("conversation_messages").insert({
               conversation_id,
+              direction: "outgoing",
               sender_type: "sistema",
               message_type: "text",
-              text: `🔄 ${handoffMsg}`,
+              content: `🔄 ${handoffMsg}`,
               status: "sent",
             });
             output.transferred = true;
