@@ -470,7 +470,12 @@ export default function LiveChat() {
     if (!viewport) return;
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = viewport;
-      isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
+      const next = scrollHeight - scrollTop - clientHeight > 100;
+      if (isUserScrolledUpRef.current !== next) {
+        isUserScrolledUpRef.current = next;
+        setIsScrolledUp(next);
+        if (!next) setUnreadDuringScroll(0);
+      }
     };
     viewport.addEventListener("scroll", handleScroll);
     return () => viewport.removeEventListener("scroll", handleScroll);
