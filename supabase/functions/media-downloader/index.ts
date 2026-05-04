@@ -45,14 +45,9 @@ async function downloadWithRetry(url: string): Promise<{ res: Response; attempts
 }
 
 async function markFailure(supabase: any, messageId: string, reason: string) {
-  await Promise.allSettled([
-    supabase.from("conversation_messages")
-      .update({ media_status: "failed", media_failure_reason: reason })
-      .eq("external_message_id", messageId),
-    supabase.from("messages")
-      .update({ media_status: "failed", media_failure_reason: reason })
-      .eq("external_message_id", messageId),
-  ]);
+  await supabase.from("conversation_messages")
+    .update({ media_status: "failed", media_failure_reason: reason })
+    .eq("external_message_id", messageId);
 }
 
 Deno.serve(async (req) => {
