@@ -129,14 +129,46 @@ function OperacaoInboxInner() {
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
   // ─── Deep-link from failed-messages watcher: ?conversation=<id>&highlight=<msgId> ───
+  // Aceita tanto `wa_<phone>` (formato canônico do inbox) quanto UUID puro do conversation_id
+  // (fallback caso o watcher não tenha conseguido resolver o phone).
   useEffect(() => {
     const convParam = searchParams.get("conversation");
     const highlightParam = searchParams.get("highlight");
     if (!convParam && !highlightParam) return;
-    if (convParam) setSelectedId(convParam);
+
+    const applyConv = async () => {
+      if (!convParam) return;
+      if (convParam.startsWith("wa_")) {
+        setSelectedId(convParam);
+        return;
+      }
+      // UUID puro → busca phone
+      const isUuid = /^[0-9a-f-]{36}$/i.test(convParam);
+      if (isUuid) {
+        try {
+          const { data } = await supabase
+            .from("conversations")
+            .select("phone")
+            .eq("id", convParam)
+            .maybeSingle();
+          const digits = String(data?.phone || "").replace(/\D/g, "");
+          setSelectedId(digits ? `wa_${digits}` : convParam);
+        } catch {
+          setSelectedId(convParam);
+        }
+      } else {
+        setSelectedId(convParam);
+      }
+    };
+    applyConv();
+
     if (highlightParam) {
       setHighlightMsgId(highlightParam);
       const t = setTimeout(() => setHighlightMsgId(null), 2200);
+      const next = new URLSearchParams(searchParams);
+      next.delete("conversation");
+      next.delete("highlight");
+      setSearchParams(next, { replace: true });
       return () => clearTimeout(t);
     }
     // limpa params para não re-triggerar no remount
