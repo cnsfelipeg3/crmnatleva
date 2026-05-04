@@ -106,6 +106,27 @@ function FailedMediaCard({ reason, type, filename }: { reason?: string; type: Ms
   );
 }
 
+// ─── Expired/legacy card (neutral, not an error) ───
+function ExpiredMediaCard({ type, filename }: { type: MsgType; filename?: string }) {
+  const typeLabel =
+    type === "audio" ? "áudio" :
+    type === "image" ? "imagem" :
+    type === "video" ? "vídeo" :
+    type === "document" ? "documento" :
+    type === "sticker" ? "figurinha" :
+    "mídia";
+  return (
+    <div className="flex items-start gap-2 py-2 px-2 min-w-[200px] text-xs rounded-lg bg-muted/40 border border-border">
+      <File className="h-4 w-4 opacity-50 shrink-0 mt-0.5" />
+      <div className="flex flex-col">
+        <span className="opacity-80">{typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1)} não disponível</span>
+        <span className="text-[10px] opacity-50 mt-0.5">Mídia legada não foi baixada</span>
+        {filename && <span className="text-[10px] opacity-50 truncate max-w-[200px] mt-0.5">{filename}</span>}
+      </div>
+    </div>
+  );
+}
+
 function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
 
@@ -164,6 +185,9 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                 // Failed and no URL fallback → show error card
                 if (status === "failed" && !bestUrl) {
                   return <FailedMediaCard reason={msg.media_failure_reason} type={msg.message_type} filename={msg.media_filename} />;
+                }
+                if (status === "expired" && !bestUrl) {
+                  return <ExpiredMediaCard type={msg.message_type} filename={msg.media_filename} />;
                 }
                 // Otherwise render the media (legacy NULL status falls here too)
                 if (msg.message_type === "audio") {
