@@ -9,8 +9,9 @@ import {
   Target, TrendingUp, Shield, Zap, Hash, Globe, ChevronRight, Bot,
   Circle, CheckCheck, Ban, Link2, Clipboard, Calendar, BarChart3,
   Workflow, Link, Brain, TestTube, ScrollText, Cog, Loader2, StopCircle,
-  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download, MapPin,
+  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2, Download, MapPin, MailX, MailOpen,
 } from "lucide-react";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { Menu } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
