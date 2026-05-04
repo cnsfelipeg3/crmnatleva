@@ -1,0 +1,5 @@
+ALTER TABLE public.conversation_messages
+  ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE public.messages
+  ADD COLUMN IF NOT EXISTS is_forwarded BOOLEAN NOT NULL DEFAULT FALSE;

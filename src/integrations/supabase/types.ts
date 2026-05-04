@@ -2399,6 +2399,7 @@ export type Database = {
           failure_detail: string | null
           failure_reason: string | null
           id: string
+          is_forwarded: boolean
           is_voice_note: boolean | null
           last_retry_at: string | null
           media_failure_reason: string | null
@@ -2428,6 +2429,7 @@ export type Database = {
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_forwarded?: boolean
           is_voice_note?: boolean | null
           last_retry_at?: string | null
           media_failure_reason?: string | null
@@ -2457,6 +2459,7 @@ export type Database = {
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_forwarded?: boolean
           is_voice_note?: boolean | null
           last_retry_at?: string | null
           media_failure_reason?: string | null
@@ -4258,6 +4261,7 @@ export type Database = {
           failure_detail: string | null
           failure_reason: string | null
           id: string
+          is_forwarded: boolean
           last_retry_at: string | null
           media_failure_reason: string | null
           media_filename: string | null
@@ -4281,6 +4285,7 @@ export type Database = {
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_forwarded?: boolean
           last_retry_at?: string | null
           media_failure_reason?: string | null
           media_filename?: string | null
@@ -4304,6 +4309,7 @@ export type Database = {
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_forwarded?: boolean
           last_retry_at?: string | null
           media_failure_reason?: string | null
           media_filename?: string | null

@@ -50,6 +50,7 @@ export interface Message {
   raw_message?: any;
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
+  is_forwarded?: boolean;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [
