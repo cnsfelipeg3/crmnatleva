@@ -1,4 +1,4 @@
-// build: realtime-debug-v2 (force rebuild to refresh prod bundle)
+// build forced 2026-05-04 23:00
 import { useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "./types";
