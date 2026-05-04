@@ -1091,18 +1091,26 @@ function OperacaoInboxInner() {
     setIsSending(false);
   }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, waConnected, scrollToBottom, persistOutgoingMessage, enqueue]);
 
-  // ─── Retry failed/queued message ───
-  const handleRetryMessage = useCallback((msg: Message) => {
+  // ─── Retry inline (Fase 3) · usa useMessageRetry quando há original_payload ───
+  const { handleRetry: handleRetryViaPayload } = useMessageRetry({
+    table: "conversation_messages",
+    onStatusChange: (msgId, status) => {
+      setMessages(prev => {
+        const next: typeof prev = { ...prev };
+        for (const convId of Object.keys(next)) {
+          next[convId] = next[convId].map(m => m.id === msgId ? { ...m, status: status as MsgStatus } : m);
+        }
+        return next;
+      });
+    },
+  });
+
+  const handleRetryMessage = useCallback(async (msg: Message) => {
     if (!msg.id) return;
-    retryMessage(msg.id);
-    setMessages(prev => ({
-      ...prev,
-      [msg.conversation_id]: (prev[msg.conversation_id] || []).map(m =>
-        m.id === msg.id ? { ...m, status: "queued" as MsgStatus } : m
-      ),
-    }));
-    toast({ title: "Mensagem reenfileirada", description: "Será enviada quando o WhatsApp conectar." });
-  }, [retryMessage, setMessages]);
+    // Tenta retry inline (com original_payload). Hook valida e mostra toast quando aplicável.
+    await handleRetryViaPayload(msg);
+  }, [handleRetryViaPayload]);
+
 
   // ─── Process queue when WhatsApp reconnects ───
   useEffect(() => {
