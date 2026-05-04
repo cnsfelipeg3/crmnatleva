@@ -325,12 +325,12 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           ]);
           if (items.length === 0) return null;
           return (<>
-            {renderGroupButton("Batalhão NatLeva", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
+            {renderGroupButton("Batalhão", Brain, aiTeamOpen, () => setAiTeamOpen(!aiTeamOpen))}
             {aiTeamOpen && !isCollapsed && renderSubGroup(items)}
           </>);
         })()}
 
-        {/* Operação Diária */}
+        {/* Operação */}
         {(() => {
           const items = filterItems([
             { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
@@ -341,7 +341,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           ]);
           if (items.length === 0) return null;
           return (<>
-            {renderGroupButton("Operação Diária", Zap, operacaoOpen, () => setOperacaoOpen(!operacaoOpen))}
+            {renderGroupButton("Operação", Zap, operacaoOpen, () => setOperacaoOpen(!operacaoOpen))}
             {operacaoOpen && !isCollapsed && renderSubGroup(items)}
           </>);
         })()}
