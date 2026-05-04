@@ -619,7 +619,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       initPersistence().catch(() => {});
-      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
         cacheMs: 30_000,
