@@ -110,7 +110,7 @@ export default function AppLayout() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <div className="relative h-5 flex items-center">
+              <div className="relative h-[17px] flex items-center">
                 <img
                   src={logoNatleva}
                   alt="NatLeva"
