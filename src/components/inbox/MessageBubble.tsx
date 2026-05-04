@@ -132,7 +132,7 @@ function ExpiredMediaCard({ type, filename }: { type: MsgType; filename?: string
   );
 }
 
-function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
+function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry, onForward, selectionMode, isSelected, onToggleSelect }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
 
   // Strip internal tags from displayed text
@@ -141,6 +141,10 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
   // If entire message is just an internal tag, don't render
   if (!displayText && msg.message_type === "text") return null;
 
+  const handleRowClick = () => {
+    if (selectionMode && onToggleSelect) onToggleSelect(msg);
+  };
+
   return (
     <Fragment>
       {showDate && (
@@ -148,7 +152,18 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
           <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
         </div>
       )}
-      <div className={`flex ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}>
+      <div
+        className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer px-2 -mx-2 rounded-md hover:bg-muted/40" : ""} ${isSelected ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
+        onClick={handleRowClick}
+      >
+        {selectionMode && msg.sender_type !== "sistema" && (
+          <Checkbox
+            checked={!!isSelected}
+            onCheckedChange={() => onToggleSelect?.(msg)}
+            onClick={(e) => e.stopPropagation()}
+            className="shrink-0"
+          />
+        )}
         {msg.sender_type === "sistema" ? (
           <div className="max-w-[85%] rounded-xl px-4 py-2.5 bg-muted/50 border border-border">
             <div className="flex items-center gap-1.5 mb-1">
@@ -160,17 +175,28 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
           </div>
         ) : (
           <div className="group relative max-w-[70%]">
-            <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[72px]" : "-right-[72px]"}`}>
-              <button onClick={() => onReply(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
+            <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
+              <button onClick={(e) => { e.stopPropagation(); onReply(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                 <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
               </button>
+              {onForward && (
+                <button onClick={(e) => { e.stopPropagation(); onForward(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Encaminhar">
+                  <Forward className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              )}
               {msg.sender_type === "atendente" && msg.message_type === "text" && new Date(msg.created_at).getTime() > Date.now() - 3600000 && (
-                <button onClick={() => onEdit(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
+                <button onClick={(e) => { e.stopPropagation(); onEdit(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
                   <Pencil className="h-3 w-3 text-muted-foreground" />
                 </button>
               )}
             </div>
             <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "pending" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-90 ring-1 ring-destructive/40 bg-destructive/10" : ""}`}>
+              {msg.is_forwarded && (
+                <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                  <Forward className="h-2.5 w-2.5" />
+                  <span>Encaminhada</span>
+                </div>
+              )}
               {msg.quoted_msg && (
                 <div className={`rounded-lg px-3 py-1.5 mb-2 border-l-2 ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/40" : "bg-foreground/5 border-primary/40"}`}>
                   <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
