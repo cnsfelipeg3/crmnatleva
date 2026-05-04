@@ -3,6 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "./types";
 import { toIsoTimestamp, stripQuotes, dedupeUiMessages, safeUnreadCount } from "./helpers";
 
+// Fix 1+2: cache phone-by-conversationId to resolve waKey when conv not in local state yet.
+// Avoid re-querying for the same UUID. Also throttles refetch dispatches.
+const phoneByConvIdCache = new Map<string, string>();
+const lastRefetchAt = new Map<string, number>();
+const REFETCH_THROTTLE_MS = 800;
+
 /**
  * Hook: manages a single stable Supabase realtime subscription for both
  * conversation_messages (INSERT) and conversations (INSERT/UPDATE/DELETE).
