@@ -197,3 +197,6 @@ verify_jwt = false  # Script admin manual de backfill
 [functions.zapi-heartbeat]
 verify_jwt = false  # Chamado por pg_cron interno · sem JWT
 
+[functions.message-watchdog]
+verify_jwt = false  # Chamado por pg_cron · protegido por X-Watchdog-Token shared secret
+
