@@ -37,6 +37,7 @@ import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
+import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
