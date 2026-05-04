@@ -478,11 +478,12 @@ Deno.serve(async (req) => {
             output.resume_on = config.resume_on;
             stepActions.push("automation_paused");
             
-            await supabase.from("messages").insert({
+            await supabase.from("conversation_messages").insert({
               conversation_id,
+              direction: "outgoing",
               sender_type: "sistema",
               message_type: "text",
-              text: `⏸️ Automação pausada: ${config.reason || "Handoff humano"}`,
+              content: `⏸️ Automação pausada: ${config.reason || "Handoff humano"}`,
               status: "sent",
             });
             break;
