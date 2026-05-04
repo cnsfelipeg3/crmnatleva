@@ -252,13 +252,13 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       {!mobile && (
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-[4.5rem] -right-0 z-50 w-5 h-10 rounded-l-md bg-card/80 border-r-0 border-border/30 text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100 flex items-center justify-end text-sm font-light border-0 shadow-sm"
-          style={{ opacity: 0.4 }}
+          className="absolute top-[4.5rem] -right-0 z-50 w-2.5 h-5 rounded-l-md bg-card/80 border-r-0 border-border/30 text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200 flex items-center justify-end font-light border-0 shadow-sm"
+          style={{ opacity: 0.3 }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.3')}
           title={collapsed ? "Expandir menu" : "Recolher menu"}
         >
-          {collapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+          {collapsed ? <ChevronRight className="w-2 h-2" /> : <ChevronLeft className="w-2 h-2" />}
         </button>
       )}
       {/* Logo area */}
