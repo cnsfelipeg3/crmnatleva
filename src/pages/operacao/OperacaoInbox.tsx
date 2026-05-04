@@ -1421,16 +1421,19 @@ function OperacaoInboxInner() {
       const fileName = `${fileInputMediaType}_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, folder, fileName);
       const tempMediaId = `temp_media_${Date.now()}`;
-      const label = fileInputMediaType === "video" ? "Vídeo" : `${file.name}`;
+      // text padronizado: vazio (sem "Vídeo"/filename) p/ não quebrar dedupe vs webhook
+      const text = "";
       const action = fileInputMediaType === "video" ? "send-video" : "send-document";
       const sendPayload = fileInputMediaType === "video"
         ? { phone, video: publicUrl, caption: "" }
         : { phone, document: publicUrl, fileName: file.name, extension: ext };
+      const mime = guessMimeFromExt(file.name, file.type);
 
       // UI otimística
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
         id: tempMediaId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: fileInputMediaType as MsgType, text: label, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
+        message_type: fileInputMediaType as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+        media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
       }] }));
 
       // 1. Persist pending
@@ -1439,8 +1442,13 @@ function OperacaoInboxInner() {
         messageDbId = await persistOutgoingMessage({
           conversationId: selectedId,
           messageType: fileInputMediaType as MsgType,
-          text: label,
+          text,
           mediaUrl: publicUrl,
+          mediaStorageUrl: publicUrl,
+          mediaMimetype: mime,
+          mediaFilename: file.name,
+          mediaSizeBytes: file.size,
+          mediaStatus: "downloaded",
           externalMessageId: tempMediaId,
           createdAt: new Date().toISOString(),
           status: "pending",
