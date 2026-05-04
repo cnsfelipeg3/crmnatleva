@@ -751,7 +751,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                 <h3 className="text-sm font-bold text-foreground truncate">{clientData?.display_name || conversation.contact_name}</h3>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Phone className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-[11px] text-muted-foreground">{formatPhoneDisplay(conversation.phone)}</span>
+                  <span className="text-[11px] text-muted-foreground">{formatPhoneDisplay(conversation.phone, { groupName: conversation.contact_name })}</span>
                 </div>
                 {clientData?.email && (
                   <div className="flex items-center gap-1.5 mt-0.5">
