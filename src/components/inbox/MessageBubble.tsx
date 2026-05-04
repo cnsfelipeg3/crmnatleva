@@ -55,6 +55,57 @@ function stripInternalTags(text: string): string {
     .trim();
 }
 
+// ─── Document icon by mimetype/filename ───
+function getDocIcon(mime?: string, filename?: string) {
+  const m = (mime || "").toLowerCase();
+  const f = (filename || "").toLowerCase();
+  if (m.includes("pdf") || f.endsWith(".pdf")) return FileText;
+  if (m.includes("sheet") || m.includes("excel") || m.includes("csv") || /\.(xlsx?|csv|numbers)$/.test(f)) return FileSpreadsheet;
+  if (m.includes("image") || /\.(png|jpe?g|gif|webp|heic)$/.test(f)) return FileImage;
+  return File;
+}
+
+// ─── Download placeholder while media_status pending/downloading ───
+function DownloadingPlaceholder({ type, filename }: { type: MsgType; filename?: string }) {
+  const label =
+    type === "audio" ? "Baixando áudio…" :
+    type === "image" ? "Baixando imagem…" :
+    type === "video" ? "Baixando vídeo…" :
+    type === "document" ? "Baixando documento…" :
+    type === "sticker" ? "Baixando figurinha…" :
+    "Baixando mídia…";
+  return (
+    <div className="flex items-center gap-2 py-3 px-2 min-w-[200px] text-xs opacity-80">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      <div className="flex flex-col">
+        <span>{label}</span>
+        {filename && <span className="text-[10px] opacity-60 truncate max-w-[200px]">{filename}</span>}
+      </div>
+    </div>
+  );
+}
+
+// ─── Failure card ───
+function FailedMediaCard({ reason, type, filename }: { reason?: string; type: MsgType; filename?: string }) {
+  const typeLabel =
+    type === "audio" ? "áudio" :
+    type === "image" ? "imagem" :
+    type === "video" ? "vídeo" :
+    type === "document" ? "documento" :
+    type === "sticker" ? "figurinha" :
+    "mídia";
+  return (
+    <div className="flex items-start gap-2 py-2 px-2 min-w-[220px] text-xs rounded-lg bg-destructive/10 border border-destructive/30">
+      <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+      <div className="flex flex-col">
+        <span className="font-medium">Não foi possível carregar {typeLabel}</span>
+        <span className="text-[10px] opacity-70 mt-0.5">{humanizeMediaFailure(reason)}</span>
+        {filename && <span className="text-[10px] opacity-60 truncate max-w-[220px] mt-0.5">{filename}</span>}
+      </div>
+    </div>
+  );
+}
+
 function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit, onLightbox, onRetry }: MessageBubbleProps) {
   const showDate = shouldShowDateSeparator(messages, index);
 
