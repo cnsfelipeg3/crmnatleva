@@ -1341,28 +1341,58 @@ function OperacaoInboxInner() {
       const folder = fileInputMediaType === "video" ? "videos" : "documents";
       const fileName = `${fileInputMediaType}_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, folder, fileName);
-      let sendResult: any;
-      if (fileInputMediaType === "video") sendResult = await callZapiProxy("send-video", { phone, video: publicUrl, caption: "" });
-      else sendResult = await callZapiProxy("send-document", { phone, document: publicUrl, fileName: file.name, extension: ext });
-      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
+      const tempMediaId = `temp_media_${Date.now()}`;
       const label = fileInputMediaType === "video" ? "Vídeo" : `${file.name}`;
-      lastMsgIdsRef.current.add(realId);
+      const action = fileInputMediaType === "video" ? "send-video" : "send-document";
+      const sendPayload = fileInputMediaType === "video"
+        ? { phone, video: publicUrl, caption: "" }
+        : { phone, document: publicUrl, fileName: file.name, extension: ext };
+
+      // UI otimística
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: fileInputMediaType as MsgType, text: label, status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
+        id: tempMediaId, conversation_id: selectedId, sender_type: "atendente" as const,
+        message_type: fileInputMediaType as MsgType, text: label, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
       }] }));
 
-      await persistOutgoingMessage({
-        conversationId: selectedId,
-        messageType: fileInputMediaType as MsgType,
-        text: label,
-        mediaUrl: publicUrl,
-        externalMessageId: realId,
-        createdAt: new Date().toISOString(),
-      });
+      // 1. Persist pending
+      let messageDbId: string | null = null;
+      try {
+        messageDbId = await persistOutgoingMessage({
+          conversationId: selectedId,
+          messageType: fileInputMediaType as MsgType,
+          text: label,
+          mediaUrl: publicUrl,
+          externalMessageId: tempMediaId,
+          createdAt: new Date().toISOString(),
+          status: "pending",
+          originalPayload: { action, payload: sendPayload },
+        });
+      } catch (persistErr: any) {
+        console.error(`[SEND-${action}] persist pending falhou:`, persistErr);
+      }
+
+      // 2. Z-API
+      const outcome = await sendViaZapi(action, sendPayload);
+      const realId = outcome.data?.messageId || outcome.data?.id || tempMediaId;
+
+      // 3. Finaliza
+      if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+      // 4. UI
+      if (outcome.ok) {
+        lastMsgIdsRef.current.add(realId);
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempMediaId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+        ) }));
+      } else {
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempMediaId ? { ...m, status: "failed" as MsgStatus } : m
+        ) }));
+        toast({ title: "Falha ao enviar mídia", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+      }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
-  }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage]);
+  }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
 
   // Send pending image with caption
   const handleSendPendingMedia = useCallback(async () => {
