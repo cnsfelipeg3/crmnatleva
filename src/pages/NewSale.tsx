@@ -962,8 +962,6 @@ export default function NewSale() {
         // existentes, NÃO apagamos (evita perda em aba não visitada).
         if (toDeletePays.length > 0 && salePayments.length > 0) {
           await supabase.from("sale_payments").delete().in("id", toDeletePays);
-          // Limpa accounts_receivable órfãos correspondentes
-          await supabase.from("accounts_receivable").delete().in("sale_payment_id", toDeletePays as any);
         }
         for (const p of toUpdatePays) {
           await supabase.from("sale_payments").update(p.payload).eq("id", p.id!);
