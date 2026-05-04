@@ -883,7 +883,7 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
 
     if (selectedId.startsWith("wa_")) {
-      const phone = selectedId.replace("wa_", "");
+      const phone = selected?.zapi_phone || selectedId.replace("wa_", "");
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       const msgCreatedAt = new Date().toISOString();
 
