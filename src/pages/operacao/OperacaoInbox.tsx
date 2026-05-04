@@ -2193,6 +2193,9 @@ function OperacaoInboxInner() {
                         </motion.div>
                       </div>
                     )}
+                    {selected?.phone && (presenceByPhone[selected.phone]?.status === "composing" || presenceByPhone[selected.phone]?.status === "recording") && (
+                      <TypingIndicator status={presenceByPhone[selected.phone].status as "composing" | "recording"} />
+                    )}
                     <div ref={messagesEndRef} />
                   </div>
                 </div>
