@@ -370,7 +370,7 @@ export default function LiveChat() {
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
   // Helper · label de presença ativa (válida apenas se < 30s atrás)
-  const presenceLabel = useMemo(() => {
+  const activePresenceStatus = useMemo<"composing" | "recording" | null>(() => {
     const phone = selected?.phone;
     if (!phone) return null;
     const cleanPhone = String(phone).replace(/\D/g, "");
@@ -378,10 +378,16 @@ export default function LiveChat() {
     if (!entry) return null;
     const age = Date.now() - new Date(entry.updated_at).getTime();
     if (age > 30_000) return null;
-    if (entry.status === "composing") return "digitando…";
-    if (entry.status === "recording") return "gravando áudio…";
+    if (entry.status === "composing") return "composing";
+    if (entry.status === "recording") return "recording";
     return null;
   }, [selected?.phone, presenceByPhone]);
+
+  const presenceLabel = useMemo(() => {
+    if (activePresenceStatus === "composing") return "digitando…";
+    if (activePresenceStatus === "recording") return "gravando áudio…";
+    return null;
+  }, [activePresenceStatus]);
 
   // Handler · enviar localização via Z-API
   const handleSendLocation = useCallback(async () => {
