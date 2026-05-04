@@ -80,7 +80,7 @@ export function useInboxMessages(
 
         const { data: unifiedRows, error } = await (supabase
           .from("conversation_messages" as any)
-          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
+          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id")
           .in("conversation_id", allConversationIds)
           .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
@@ -124,7 +124,7 @@ export function useInboxMessages(
 
     const { data: olderRows } = await (supabase
       .from("conversation_messages" as any)
-      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
+      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id")
       .in("conversation_id", allConversationIds)
       .lt("timestamp", cursor)
       .order("timestamp", { ascending: false, nullsFirst: false })
