@@ -189,10 +189,12 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
             ) : filtered.map(c => {
               const sel = selectedPhones.has(c.phone);
               const initials = (c.name || c.phone || "?").substring(0, 2).toUpperCase();
+              const st = statusByPhone.get(c.phone);
+              const showStatus = sending || finished;
               return (
                 <button
                   key={c.phone}
-                  onClick={() => togglePhone(c.phone)}
+                  onClick={() => !sending && togglePhone(c.phone)}
                   disabled={sending}
                   className={`w-full flex items-center gap-3 px-2 py-2 rounded-md text-left hover:bg-muted/60 transition ${sel ? "bg-primary/5" : ""}`}
                 >
@@ -204,17 +206,39 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
                         {initials}
                       </div>
                     )}
-                    {sel && (
+                    {sel && !showStatus && (
                       <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
                         <Check className="h-2.5 w-2.5" />
+                      </div>
+                    )}
+                    {showStatus && st && st.failed > 0 && (
+                      <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center">
+                        <AlertCircle className="h-2.5 w-2.5" />
+                      </div>
+                    )}
+                    {showStatus && st && st.failed === 0 && st.sent === st.total && (
+                      <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                        <Check className="h-2.5 w-2.5" />
+                      </div>
+                    )}
+                    {showStatus && st && st.sending > 0 && (
+                      <div className="absolute -bottom-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
                       </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{c.name || c.phone}</div>
-                    {c.lastPreview && (
+                    {showStatus && st ? (
+                      <div className="text-[11px] truncate flex items-center gap-1.5">
+                        {st.sending > 0 && <span className="text-primary">enviando {st.sent + st.sending}/{st.total}…</span>}
+                        {st.sending === 0 && st.failed === 0 && st.sent === st.total && <span className="text-emerald-600 dark:text-emerald-400">concluído</span>}
+                        {st.failed > 0 && <span className="text-destructive">{st.failed} falha{st.failed > 1 ? "s" : ""} · {st.sent}/{st.total}</span>}
+                        {st.sending === 0 && st.sent === 0 && st.failed === 0 && <span className="text-muted-foreground">aguardando…</span>}
+                      </div>
+                    ) : c.lastPreview ? (
                       <div className="text-[11px] text-muted-foreground truncate">{c.lastPreview}</div>
-                    )}
+                    ) : null}
                   </div>
                 </button>
               );
