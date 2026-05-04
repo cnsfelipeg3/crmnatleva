@@ -508,7 +508,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-text`;
         method = "POST";
         const textBody: any = {
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.message,
         };
         if (payload.messageId) textBody.messageId = payload.messageId;
@@ -519,7 +519,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-image`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           image: payload.image,
           caption: payload.caption || "",
         });
@@ -529,7 +529,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-audio`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           audio: payload.audio,
           encoding: true,
           waveform: true,
@@ -540,7 +540,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-video`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           video: payload.video,
           caption: payload.caption || "",
         });
@@ -550,7 +550,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-document/${payload.extension || "pdf"}`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           document: payload.document,
           fileName: payload.fileName || "document",
         });
@@ -560,7 +560,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-sticker`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           sticker: payload.sticker,
         });
         break;
@@ -569,7 +569,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           reaction: payload.reaction,
         });
@@ -579,7 +579,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-text`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.text,
           editMessageId: payload.messageId,
         });
