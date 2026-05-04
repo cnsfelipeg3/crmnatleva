@@ -331,7 +331,11 @@ export default function LiveChat() {
         }));
       })
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      channel.unsubscribe().finally(() => {
+        supabase.removeChannel(channel);
+      });
+    };
   }, []);
 
   // ─── Send-location dialog ───
