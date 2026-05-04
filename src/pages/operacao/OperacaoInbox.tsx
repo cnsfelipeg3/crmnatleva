@@ -1963,8 +1963,21 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4">
-                  <div className="py-4 space-y-3">
+                <div className="relative flex-1 min-h-0 flex flex-col">
+                  {selectionMode && (
+                    <SelectionToolbar
+                      count={selectedMsgIds.size}
+                      onCancel={cancelSelection}
+                      onForward={() => {
+                        const list = currentMessages.filter(m => selectedMsgIds.has(m.id));
+                        if (list.length === 0) return;
+                        setForwardSeed(list);
+                        setForwardOpen(true);
+                      }}
+                    />
+                  )}
+                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                    <div className="py-4 space-y-3">
                     {/* Load older messages button */}
                     {hasOlderMessages[selectedId!] && (
                       <div className="flex justify-center mb-4">
