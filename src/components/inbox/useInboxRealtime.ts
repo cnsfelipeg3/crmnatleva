@@ -55,7 +55,7 @@ export function useInboxRealtime(
           }
           waKey = phone ? `wa_${phone}` : n.conversation_id;
         }
-
+        console.log('[realtime] waKey resolvido', { waKey, conversation_found: !!conv });
         const msgId = n.id;
         if (lastMsgIdsRef.current.has(msgId)) return;
         if (n.external_message_id && lastMsgIdsRef.current.has(n.external_message_id)) return;
