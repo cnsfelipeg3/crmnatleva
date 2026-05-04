@@ -30,7 +30,7 @@ function WhatsAppStatusBanner() {
 
   if (!wa.isConnected) {
     return (
-      <div className="flex items-center justify-between gap-3 px-4 py-2 bg-destructive/10 border-b border-destructive/30 text-destructive text-sm shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 py-2 bg-destructive/15 border-b-2 border-destructive text-destructive text-sm shrink-0 animate-pulse">
         <div className="flex items-center gap-2 min-w-0">
           <WifiOff className="w-4 h-4 shrink-0" />
           <span className="truncate">
