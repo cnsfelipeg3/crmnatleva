@@ -31,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import LayerDivider from "@/components/LayerDivider";
 import { toast } from "@/hooks/use-toast";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
+import { TypingIndicator } from "@/components/livechat/TypingIndicator";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
