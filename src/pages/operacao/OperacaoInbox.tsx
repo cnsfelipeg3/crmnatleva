@@ -11,8 +11,11 @@ import {
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
-  AlertTriangle, Link2, LayoutGrid, List,
+  AlertTriangle, Link2, LayoutGrid, List, Forward,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
+import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
