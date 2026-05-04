@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +76,7 @@ export default function OperacaoTagsPipeline() {
                           <User className="w-3.5 h-3.5 text-primary" />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-medium truncate">{conv.contact_name || conv.display_name || conv.phone || "Sem nome"}</p>
+                          <p className="text-xs font-medium truncate">{conv.contact_name || conv.display_name || formatPhoneDisplay(conv.phone) || "Sem nome"}</p>
                           {conv.tags?.length > 0 && (
                             <div className="flex gap-1 mt-1 flex-wrap">
                               {conv.tags.slice(0, 3).map((t: string) => (

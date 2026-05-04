@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
@@ -499,7 +500,7 @@ export default function PassengerProfile() {
                   <DataField label="CPF" value={passenger.cpf} mono />
                   <DataField label="RG" value={passenger.rg} mono />
                   <DataField label="Data de Nascimento" value={passenger.birth_date ? formatDateBR(passenger.birth_date) : null} />
-                  <DataField label="Telefone" value={passenger.phone} />
+                  <DataField label="Telefone" value={formatPhoneDisplay(passenger.phone)} />
                   <DataField label="Passaporte" value={passenger.passport_number} mono />
                   <DataField label="Validade Passaporte" value={passenger.passport_expiry ? formatDateBR(passenger.passport_expiry) : null}
                     alert={isPassportExpiringSoon(passenger.passport_expiry)} />

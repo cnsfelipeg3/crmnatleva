@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -224,7 +225,7 @@ export default function SalePassengersManager({ saleId, payerPassengerId, onPaye
                     <div className="min-w-0">
                       <p className="text-sm font-medium truncate">{p.full_name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {[p.cpf, p.phone, p.passport_number].filter(Boolean).join(" · ") || "Sem documentos"}
+                        {[p.cpf, p.phone ? formatPhoneDisplay(p.phone) : null, p.passport_number].filter(Boolean).join(" · ") || "Sem documentos"}
                       </p>
                     </div>
                     {already && <Badge variant="secondary" className="text-[10px] shrink-0">Já vinculado</Badge>}

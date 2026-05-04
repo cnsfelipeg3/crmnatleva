@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -222,7 +223,7 @@ export default function Fornecedores() {
                   </TableCell>
                   <TableCell className="text-xs font-mono">{s.cnpj || '-'}</TableCell>
                   <TableCell className="text-xs">{s.contact_name || '-'}</TableCell>
-                  <TableCell className="text-xs">{s.phone || '-'}</TableCell>
+                  <TableCell className="text-xs">{s.phone ? formatPhoneDisplay(s.phone) : '-'}</TableCell>
                   <TableCell className="text-xs">{s.email || '-'}</TableCell>
                   <TableCell className="text-xs">{s.category || '-'}</TableCell>
                 </TableRow>

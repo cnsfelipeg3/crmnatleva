@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -81,10 +82,10 @@ export default function ConversasExcluidas() {
             <Card key={r.id} className="p-4 flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">
-                  {r.contact_name || r.display_name || r.phone || "Sem nome"}
+                  {r.contact_name || r.display_name || formatPhoneDisplay(r.phone) || "Sem nome"}
                 </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {r.phone} · Excluída em{" "}
+                  {formatPhoneDisplay(r.phone)} · Excluída em{" "}
                   {format(new Date(r.excluded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </div>
                 {r.excluded_reason && (

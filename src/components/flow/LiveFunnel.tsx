@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -634,7 +635,7 @@ function LeadDrawer({ stage, leads, onClose }: { stage: FunnelStage; leads: Lead
                 </Badge>
               </div>
               {lead.phone && (
-                <span className="text-[10px] text-muted-foreground font-mono mt-1 block">{lead.phone}</span>
+                <span className="text-[10px] text-muted-foreground font-mono mt-1 block">{formatPhoneDisplay(lead.phone)}</span>
               )}
               {lead.prevStage && (
                 <span className="text-[9px] text-muted-foreground mt-1 flex items-center gap-1">

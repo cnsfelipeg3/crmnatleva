@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -423,7 +424,7 @@ export default function TripDetail() {
               <div key={p.id} className="bg-muted/30 rounded-lg p-3 space-y-1">
                 <p className="text-sm font-medium">{p.full_name}</p>
                 {p.cpf && <p className="text-xs text-muted-foreground">CPF: {p.cpf}</p>}
-                {p.phone && <p className="text-xs text-muted-foreground">Tel: {p.phone}</p>}
+                {p.phone && <p className="text-xs text-muted-foreground">Tel: {formatPhoneDisplay(p.phone)}</p>}
                 {p.birth_date && <p className="text-xs text-muted-foreground">Nasc: {formatDateBR(p.birth_date)}</p>}
                 {p.passport_number && <p className="text-xs text-muted-foreground">Passaporte: {p.passport_number}</p>}
                 {p.role && <Badge variant="outline" className="text-[9px]">{p.role}</Badge>}
