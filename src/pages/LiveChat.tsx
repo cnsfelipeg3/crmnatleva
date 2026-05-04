@@ -1082,6 +1082,7 @@ export default function LiveChat() {
               stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
               contact_name: getSafeContactName(c.contact_name, c.phone) || getSafeContactName(u.contact_name, cleanPhone || u.phone),
               source: u.source || c.source,
+              manually_marked_unread: typeof u.manually_marked_unread === "boolean" ? u.manually_marked_unread : c.manually_marked_unread,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
@@ -1094,6 +1095,7 @@ export default function LiveChat() {
             last_message_at: u.last_message_at || new Date().toISOString(), last_message_preview: u.last_message_preview || "",
             unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
             assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
+            manually_marked_unread: !!u.manually_marked_unread,
           }, ...prev];
         });
       })
