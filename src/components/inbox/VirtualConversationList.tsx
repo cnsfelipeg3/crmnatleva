@@ -95,6 +95,7 @@ export function VirtualConversationList({
                 presence={presenceByPhone ? getActivePresence(presenceByPhone, conv.phone) : null}
                 onSelect={onSelect}
                 onTogglePin={onTogglePin}
+                onToggleUnread={onToggleUnread}
               />
             </div>
           );
