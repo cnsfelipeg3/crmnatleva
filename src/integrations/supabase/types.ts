@@ -7852,6 +7852,8 @@ export type Database = {
           id: string
           marked_count_conversation_messages: number | null
           marked_count_messages: number | null
+          marked_media_conversation_messages: number | null
+          marked_media_messages: number | null
           started_at: string
         }
         Insert: {
@@ -7861,6 +7863,8 @@ export type Database = {
           id?: string
           marked_count_conversation_messages?: number | null
           marked_count_messages?: number | null
+          marked_media_conversation_messages?: number | null
+          marked_media_messages?: number | null
           started_at?: string
         }
         Update: {
@@ -7870,6 +7874,8 @@ export type Database = {
           id?: string
           marked_count_conversation_messages?: number | null
           marked_count_messages?: number | null
+          marked_media_conversation_messages?: number | null
+          marked_media_messages?: number | null
           started_at?: string
         }
         Relationships: []
