@@ -1,5 +1,5 @@
 import { memo, Fragment } from "react";
-import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, Clock, AlertCircle, RotateCcw } from "lucide-react";
+import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, Clock, AlertCircle, RotateCcw, Loader2 } from "lucide-react";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import type { Message, MsgStatus } from "./types";
 import { formatMsgTime, formatDateSeparator, shouldShowDateSeparator, stripQuotes } from "./helpers";
