@@ -254,11 +254,13 @@ async function upsertConversation(
   preview: string, timestampIso: string, fromMe: boolean
 ): Promise<string | null> {
   const convExternalId = `wa_${cleanPhone}`;
+  const phoneE164 = `+${cleanPhone}`;
 
   const { data: existingConv } = await supabase
     .from("conversations")
     .select("id, unread_count, contact_name, excluded_at")
-    .or(`phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalId}`)
+    .or(`phone.eq.${phoneE164},phone.eq.${cleanPhone},external_conversation_id.eq.${convExternalId}`)
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
 
