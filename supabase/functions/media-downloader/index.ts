@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-attempt",
 };
 
 function extFromMime(mime: string | null, mediaType: string): string {
@@ -17,26 +17,42 @@ function extFromMime(mime: string | null, mediaType: string): string {
   const map: Record<string, string> = {
     "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac",
     "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
-    "video/mp4": "mp4", "video/3gpp": "3gp",
-    "application/pdf": "pdf", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "video/mp4": "mp4", "video/3gpp": "3gp", "video/quicktime": "mov", "video/webm": "webm",
+    "application/pdf": "pdf",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
   };
   return map[m] || m.split("/")[1]?.replace(/[^a-z0-9]/g, "") || "bin";
 }
 
-async function downloadWithRetry(url: string, retries = 3): Promise<Response> {
-  const delays = [1000, 3000, 9000];
+async function downloadWithRetry(url: string): Promise<{ res: Response; attempts: number }> {
+  const delays = [1000, 3000, 9000, 20000];
+  const retries = 4;
+  let lastErr: any = null;
+  let lastStatus: number | null = null;
   for (let i = 0; i < retries; i++) {
     try {
       const res = await fetch(url);
-      if (res.ok) return res;
+      if (res.ok) return { res, attempts: i + 1 };
+      lastStatus = res.status;
       if (i < retries - 1) await new Promise(r => setTimeout(r, delays[i]));
     } catch (e) {
-      if (i === retries - 1) throw e;
-      await new Promise(r => setTimeout(r, delays[i]));
+      lastErr = e;
+      if (i < retries - 1) await new Promise(r => setTimeout(r, delays[i]));
     }
   }
-  throw new Error(`Failed to download after ${retries} attempts`);
+  throw new Error(lastStatus ? `http_error_${lastStatus}` : (lastErr?.message || "download_failed"));
+}
+
+async function markFailure(supabase: any, messageId: string, reason: string) {
+  await Promise.allSettled([
+    supabase.from("conversation_messages")
+      .update({ media_status: "failed", media_failure_reason: reason })
+      .eq("external_message_id", messageId),
+    supabase.from("messages")
+      .update({ media_status: "failed", media_failure_reason: reason })
+      .eq("external_message_id", messageId),
+  ]);
 }
 
 Deno.serve(async (req) => {
@@ -48,8 +64,11 @@ Deno.serve(async (req) => {
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  let parsedBody: any = null;
   try {
-    const { messageId, sourceUrl, mediaType, mimeType } = await req.json();
+    parsedBody = await req.json();
+    const { messageId, sourceUrl, mediaType, mimeType } = parsedBody;
+    const attempt = req.headers.get("x-attempt") || "1";
 
     if (!messageId || !sourceUrl) {
       return new Response(JSON.stringify({ error: "missing messageId or sourceUrl" }), {
@@ -57,14 +76,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Mark as 'downloading' at start (UI distinguishes from 'pending')
+    await supabase.from("conversation_messages")
+      .update({ media_status: "downloading" })
+      .eq("external_message_id", messageId);
+    await supabase.from("messages")
+      .update({ media_status: "downloading" })
+      .eq("external_message_id", messageId);
+
     const ext = extFromMime(mimeType, mediaType || "document");
     const now = new Date();
     const path = `${mediaType || "other"}/${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, "0")}/${messageId}.${ext}`;
 
-    // Download
-    const dlRes = await downloadWithRetry(sourceUrl);
-    const buffer = new Uint8Array(await dlRes.arrayBuffer());
-    const contentType = dlRes.headers.get("content-type") || mimeType || "application/octet-stream";
+    // Download with 4 retries [1s, 3s, 9s, 20s]
+    let dlResult;
+    try {
+      dlResult = await downloadWithRetry(sourceUrl);
+    } catch (e: any) {
+      console.error(`[media-downloader] Download failed for ${messageId} (attempt header: ${attempt}):`, e.message);
+      await markFailure(supabase, messageId, e.message || "download_failed");
+      return new Response(JSON.stringify({ error: e.message }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const buffer = new Uint8Array(await dlResult.res.arrayBuffer());
+    const contentType = dlResult.res.headers.get("content-type") || mimeType || "application/octet-stream";
 
     // Upload to storage
     const { error: uploadErr } = await supabase.storage
@@ -73,50 +110,43 @@ Deno.serve(async (req) => {
 
     if (uploadErr) {
       console.error("[media-downloader] Upload failed:", uploadErr.message);
-      // Mark as failed
-      await supabase.from("conversation_messages")
-        .update({ media_status: "failed" })
-        .eq("external_message_id", messageId);
+      await markFailure(supabase, messageId, "upload_failed");
       return new Response(JSON.stringify({ error: uploadErr.message }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get public URL
     const { data: publicUrlData } = supabase.storage.from("whatsapp-media").getPublicUrl(path);
     const storageUrl = publicUrlData?.publicUrl || "";
 
-    // Update conversation_messages with storage URL
-    await supabase.from("conversation_messages").update({
-      media_url: storageUrl,
-      media_storage_url: storageUrl,
-      media_status: "downloaded",
-      media_size_bytes: buffer.length,
-    }).eq("external_message_id", messageId);
+    // Parity update on both tables
+    await Promise.allSettled([
+      supabase.from("conversation_messages").update({
+        media_url: storageUrl,
+        media_storage_url: storageUrl,
+        media_status: "downloaded",
+        media_size_bytes: buffer.length,
+        media_failure_reason: null,
+      }).eq("external_message_id", messageId),
+      supabase.from("messages").update({
+        media_url: storageUrl,
+        media_storage_url: storageUrl,
+        media_status: "downloaded",
+        media_size_bytes: buffer.length,
+        media_failure_reason: null,
+      }).eq("external_message_id", messageId),
+    ]);
 
-    // Also update legacy messages table
-    await supabase.from("messages").update({
-      media_url: storageUrl,
-    }).eq("external_message_id", messageId);
+    console.log(`[media-downloader] ✓ ${mediaType} stored in ${dlResult.attempts} attempt(s): ${path} (${buffer.length} bytes)`);
 
-    console.log(`[media-downloader] ✓ ${mediaType} stored: ${path} (${buffer.length} bytes)`);
-
-    return new Response(JSON.stringify({ success: true, url: storageUrl, path }), {
+    return new Response(JSON.stringify({ success: true, url: storageUrl, path, attempts: dlResult.attempts }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err: any) {
-    console.error("[media-downloader] Error:", err.message);
-
-    // Try to mark as failed
-    try {
-      const body = await req.clone().json().catch(() => null);
-      if (body?.messageId) {
-        await supabase.from("conversation_messages")
-          .update({ media_status: "failed" })
-          .eq("external_message_id", body.messageId);
-      }
-    } catch { /* best effort */ }
-
+    console.error("[media-downloader] Unexpected error:", err.message);
+    if (parsedBody?.messageId) {
+      await markFailure(supabase, parsedBody.messageId, "unexpected_error").catch(() => {});
+    }
     return new Response(JSON.stringify({ error: err.message }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
