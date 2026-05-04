@@ -40,8 +40,8 @@ import {
   EMPTY_FILES_BY_CATEGORY,
   type SaleAttachmentCategory,
 } from "@/lib/saleAttachmentCategories";
-import { useSaleAutosave, type AutosaveStatus } from "@/hooks/useSaleAutosave";
-import { Cloud, CloudOff, Loader2 as Loader2Icon, CheckCircle2 as CheckIcon } from "lucide-react";
+import { useSaleAutosave } from "@/hooks/useSaleAutosave";
+import { Cloud, CloudOff } from "lucide-react";
 
 /* ─── Types ────────────────────────────────────────────── */
 
