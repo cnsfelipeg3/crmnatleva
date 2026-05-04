@@ -2395,8 +2395,10 @@ export type Database = {
           created_at: string
           direction: string
           external_message_id: string | null
+          failure_reason: string | null
           id: string
           is_voice_note: boolean | null
+          last_retry_at: string | null
           media_mimetype: string | null
           media_original_url: string | null
           media_size_bytes: number | null
@@ -2405,6 +2407,8 @@ export type Database = {
           media_url: string | null
           message_type: string
           metadata: Json | null
+          original_payload: Json | null
+          retry_count: number
           sender_type: string
           status: string | null
           timestamp: string | null
@@ -2416,8 +2420,10 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_reason?: string | null
           id?: string
           is_voice_note?: boolean | null
+          last_retry_at?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
           media_size_bytes?: number | null
@@ -2426,6 +2432,8 @@ export type Database = {
           media_url?: string | null
           message_type?: string
           metadata?: Json | null
+          original_payload?: Json | null
+          retry_count?: number
           sender_type?: string
           status?: string | null
           timestamp?: string | null
@@ -2437,8 +2445,10 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_reason?: string | null
           id?: string
           is_voice_note?: boolean | null
+          last_retry_at?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
           media_size_bytes?: number | null
@@ -2447,6 +2457,8 @@ export type Database = {
           media_url?: string | null
           message_type?: string
           metadata?: Json | null
+          original_payload?: Json | null
+          retry_count?: number
           sender_type?: string
           status?: string | null
           timestamp?: string | null

@@ -206,19 +206,45 @@ async function resolveLidPhone(
 }
 
 // ─── Helper: process status update ───
+// Z-API status callbacks observed historically (UPPERCASE):
+//   SENT, RECEIVED, DELIVERY_ACK, READ, PLAYED, READ_BY_ME
+// Anything outside this whitelist is treated as a failure (defensive).
 async function processStatusUpdate(supabase: any, body: any) {
   const statusIds: string[] = body.ids || (body.messageId ? [body.messageId] : []);
+  const rawStatus = String(body.status || "").toUpperCase().trim();
+
   const statusMap: Record<string, string> = {
-    'SENT': 'SENT', 'RECEIVED': 'RECEIVED', 'DELIVERY_ACK': 'DELIVERED',
-    'READ': 'READ', 'PLAYED': 'READ', 'READ_BY_ME': 'READ_BY_ME',
+    'SENT': 'SENT',
+    'RECEIVED': 'RECEIVED',
+    'DELIVERY_ACK': 'DELIVERED',
+    'DELIVERED': 'DELIVERED',
+    'READ': 'READ',
+    'PLAYED': 'READ',
+    'READ_BY_ME': 'READ_BY_ME',
   };
-  const newStatus = statusMap[body.status] || body.status;
-  if (newStatus === 'READ_BY_ME') return;
+
+  // READ_BY_ME = NatLeva marcou msg do CLIENTE como lida. Nada a propagar para outgoing.
+  if (rawStatus === 'READ_BY_ME') return;
+
+  const isKnown = rawStatus in statusMap;
+  const mappedStatus = isKnown ? statusMap[rawStatus] : 'FAILED';
+  const failureReason = isKnown ? null : `zapi_unknown_status:${rawStatus || 'EMPTY'}`;
 
   for (const sid of statusIds) {
-    await supabase.from("zapi_messages").update({ status: newStatus }).eq("message_id", sid);
-    // Also update conversation_messages
-    await supabase.from("conversation_messages").update({ status: newStatus.toLowerCase() }).eq("external_message_id", sid);
+    if (!sid) continue;
+
+    await supabase.from("zapi_messages").update({ status: mappedStatus }).eq("message_id", sid);
+
+    const updateRow: Record<string, any> = { status: mappedStatus.toLowerCase() };
+    if (failureReason) updateRow.failure_reason = failureReason;
+
+    // Filtro defensivo: status updates só fazem sentido para mensagens outgoing.
+    // Se conversation_messages não tem direction='outgoing', simplesmente não casa nada (no-op seguro).
+    await supabase
+      .from("conversation_messages")
+      .update(updateRow)
+      .eq("external_message_id", sid)
+      .eq("direction", "outgoing");
   }
 }
 

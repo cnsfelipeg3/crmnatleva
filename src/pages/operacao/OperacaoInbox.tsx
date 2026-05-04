@@ -96,6 +96,45 @@ async function callZapiProxy(action: string, payload?: any) {
   return data;
 }
 
+// Failure taxonomy (espelhada de supabase/functions/zapi-proxy/index.ts)
+export const FAILURE_REASONS = {
+  TEMPORARY: "temporary",
+  INVALID_NUMBER: "invalid_number",
+  WHATSAPP_DISCONNECTED: "whatsapp_disconnected",
+  MEDIA_EXPIRED: "media_expired",
+  SILENT_TIMEOUT: "silent_timeout",
+  UNKNOWN: "unknown",
+} as const;
+
+// Classifica erro/resposta do supabase.functions.invoke + body retornado.
+// Sucesso quando data existe E não tem error/success=false.
+function classifySendOutcome(invokeError: any, data: any): { ok: boolean; reason: string | null; detail?: string } {
+  if (!invokeError && data && (data.success !== false) && !data.error) {
+    return { ok: true, reason: null };
+  }
+  const detail = String(invokeError?.message || data?.error || data?.message || "unknown").toLowerCase();
+  if (/disconnect|not.connected|instance.*off|instancia.*desconect/i.test(detail)) {
+    return { ok: false, reason: FAILURE_REASONS.WHATSAPP_DISCONNECTED, detail };
+  }
+  if (/not.*exist|invalid.*number|nao.*existe|number.*not.*found|phone.*not.*registered/i.test(detail)) {
+    return { ok: false, reason: FAILURE_REASONS.INVALID_NUMBER, detail };
+  }
+  return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail };
+}
+
+// Wrapper unificado: envia via zapi-proxy E retorna outcome classificado + raw data
+async function sendViaZapi(action: string, payload: any): Promise<{ ok: boolean; reason: string | null; detail?: string; data: any }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("zapi-proxy", {
+      body: { action, payload },
+    });
+    const outcome = classifySendOutcome(error, data);
+    return { ...outcome, data };
+  } catch (err: any) {
+    return { ok: false, reason: FAILURE_REASONS.TEMPORARY, detail: err?.message || "exception", data: null };
+  }
+}
+
 // ════════════════════════════════════════
 // MAIN COMPONENT
 // ════════════════════════════════════════
@@ -199,6 +238,9 @@ function OperacaoInboxInner() {
     mediaUrl?: string;
     externalMessageId?: string;
     createdAt?: string;
+    status?: "pending" | "sent" | "failed";
+    originalPayload?: { action: string; payload: any } | null;
+    failureReason?: string | null;
   }): Promise<string | null> => {
     const dbConvId = await resolveDbConversationId(payload.conversationId);
     if (!dbConvId) {
@@ -208,12 +250,13 @@ function OperacaoInboxInner() {
 
     const createdAt = payload.createdAt || new Date().toISOString();
     const externalId = payload.externalMessageId || `local_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const initialStatus = payload.status || "pending";
     let persistedId: string | null = null;
     let persistedTable: string | null = null;
 
     // ── PRIMARY: conversation_messages (unified table) ──
     try {
-      const unifiedRow = {
+      const unifiedRow: Record<string, any> = {
         conversation_id: dbConvId,
         external_message_id: externalId,
         direction: "outgoing",
@@ -221,10 +264,12 @@ function OperacaoInboxInner() {
         content: payload.text || "",
         message_type: payload.messageType,
         media_url: payload.mediaUrl || null,
-        status: "sent",
+        status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
       };
+      if (payload.originalPayload !== undefined) unifiedRow.original_payload = payload.originalPayload;
+      if (payload.failureReason !== undefined) unifiedRow.failure_reason = payload.failureReason;
 
       const { data: inserted, error } = await (supabase
         .from("conversation_messages" as any)
@@ -235,7 +280,7 @@ function OperacaoInboxInner() {
       if (!error && inserted?.id) {
         persistedId = inserted.id;
         persistedTable = "conversation_messages";
-        debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId}`);
+        debugLog(`[PERSIST✓] Mensagem gravada em conversation_messages: ${persistedId} (status=${initialStatus})`);
       } else {
         debugWarn(`[PERSIST] conversation_messages falhou: ${error?.message}. Tentando fallback...`);
       }
@@ -253,7 +298,7 @@ function OperacaoInboxInner() {
           message_type: payload.messageType,
           content: payload.text || "",
           media_url: payload.mediaUrl || null,
-          read_status: "sent",
+          read_status: initialStatus === "pending" ? "sending" : initialStatus,
         };
         const { data: legacyInserted, error: legacyErr } = await supabase
           .from("chat_messages")
@@ -289,6 +334,24 @@ function OperacaoInboxInner() {
 
     return persistedId;
   }, [resolveDbConversationId]);
+
+  // ─── Update message status after Z-API response (sent / failed) ───
+  const finalizeMessageStatus = useCallback(async (
+    messageDbId: string,
+    outcome: { ok: boolean; reason: string | null; detail?: string },
+    realExternalId?: string | null,
+  ) => {
+    const updateRow: Record<string, any> = {
+      status: outcome.ok ? "sent" : "failed",
+      failure_reason: outcome.ok ? null : (outcome.reason || "unknown"),
+    };
+    if (outcome.ok && realExternalId) updateRow.external_message_id = realExternalId;
+    try {
+      await (supabase.from("conversation_messages" as any).update(updateRow).eq("id", messageDbId) as any);
+    } catch (err) {
+      console.error("[FINALIZE] failed to update message status:", err);
+    }
+  }, []);
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
@@ -928,86 +991,67 @@ function OperacaoInboxInner() {
       isUserScrolledUpRef.current = false;
       scrollToBottom();
 
-      let sendSuccess = false;
-      let persistedExternalId = tempId;
+      // ─── 1. INSERT otimístico (status='pending', com original_payload) ───
+      const sendPayload: any = { phone, message: text };
+      if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
 
+      let messageDbId: string | null = null;
       try {
-        // 1. Send via WhatsApp
-        const sendPayload: any = { phone, message: text };
-        if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
-        const sendResult = await callZapiProxy("send-text", sendPayload);
-        const realId = sendResult?.messageId || sendResult?.id;
-        persistedExternalId = realId || tempId;
-        sendSuccess = true;
-
-        if (realId) {
-          lastMsgIdsRef.current.add(realId);
-          setMessages(prev => ({
-            ...prev,
-            [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
-              m.id === tempId ? { ...m, id: realId, external_message_id: realId, status: "sent" as MsgStatus } : m
-            )),
-          }));
-        } else {
-          // No realId but success - update to sent
-          setMessages(prev => ({
-            ...prev,
-            [selectedId]: (prev[selectedId] || []).map(m =>
-              m.id === tempId ? { ...m, status: "sent" as MsgStatus } : m
-            ),
-          }));
-        }
-      } catch (err: any) {
-        // Send failed - mark as failed, don't remove
+        messageDbId = await persistOutgoingMessage({
+          conversationId: selectedId,
+          messageType: "text",
+          text,
+          externalMessageId: tempId,
+          createdAt: msgCreatedAt,
+          status: "pending",
+          originalPayload: { action: "send-text", payload: sendPayload },
+        });
+      } catch (persistErr: any) {
+        console.error("[SEND] persist pending falhou:", persistErr);
         setMessages(prev => ({
           ...prev,
           [selectedId]: (prev[selectedId] || []).map(m =>
             m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
           ),
         }));
-
-        // Queue for retry
-        enqueue({
-          id: tempId,
-          conversationId: selectedId,
-          phone,
-          text,
-          messageType: "text",
-          createdAt: msgCreatedAt,
-          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
-        });
-
-        toast({ title: "Erro ao enviar", description: "Mensagem na fila — será reenviada ao reconectar.", variant: "destructive" });
+        toast({ title: "Erro ao salvar mensagem", description: persistErr?.message || "Falha ao gravar no banco.", variant: "destructive" });
         setIsSending(false);
         return;
       }
 
-      // 2. MANDATORY persistence - if this fails, mark message as failed
-      try {
-        await persistOutgoingMessage({
-          conversationId: selectedId,
-          messageType: "text",
-          text,
-          externalMessageId: persistedExternalId,
-          createdAt: msgCreatedAt,
-        });
-      } catch (persistErr: any) {
-        console.error("[SEND] Mensagem enviada mas NÃO persistida:", persistErr);
-        // Mark message in UI as failed (don't remove - it was sent via WhatsApp)
+      // ─── 2. Chama Z-API ───
+      const outcome = await sendViaZapi("send-text", sendPayload);
+      const realId = outcome.data?.messageId || outcome.data?.id || null;
+
+      // ─── 3. Finaliza status no banco (sent | failed) ───
+      if (messageDbId) {
+        await finalizeMessageStatus(messageDbId, outcome, realId);
+      }
+
+      // ─── 4. UI sync ───
+      if (outcome.ok) {
+        if (realId) lastMsgIdsRef.current.add(realId);
+        setMessages(prev => ({
+          ...prev,
+          [selectedId]: dedupeUiMessages((prev[selectedId] || []).map(m =>
+            m.id === tempId ? { ...m, id: realId || m.id, external_message_id: realId || m.external_message_id, status: "sent" as MsgStatus } : m
+          )),
+        }));
+      } else {
         setMessages(prev => ({
           ...prev,
           [selectedId]: (prev[selectedId] || []).map(m =>
-            m.id === persistedExternalId || m.id === tempId
-              ? { ...m, status: "sent" as MsgStatus, text: `⚠️ ${text}` }
-              : m
+            m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
           ),
         }));
-        toast({
-          title: "⚠️ Mensagem enviada mas NÃO salva",
-          description: "A mensagem foi entregue ao WhatsApp mas falhou ao salvar no banco. Ela pode não aparecer no histórico.",
-          variant: "destructive",
-        });
+        const reasonMsg = outcome.reason === FAILURE_REASONS.INVALID_NUMBER
+          ? "Número não tem WhatsApp."
+          : outcome.reason === FAILURE_REASONS.WHATSAPP_DISCONNECTED
+          ? "WhatsApp desconectado. Reconecte e tente novamente."
+          : "Falha temporária. Toque na mensagem para reenviar.";
+        toast({ title: "Mensagem não enviada", description: reasonMsg, variant: "destructive" });
       }
+
     } else if (selectedId.length > 10) {
       const nowIso = new Date().toISOString();
       // Dual-write: conversation_messages (primary) + chat_messages (legacy)
