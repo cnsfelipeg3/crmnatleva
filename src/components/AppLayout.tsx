@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConnection";
 import { useFailedMessagesWatcher } from "@/hooks/useFailedMessagesWatcher";
+import { FailedMessagesBadge } from "@/components/header/FailedMessagesBadge";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
@@ -88,6 +89,7 @@ export default function AppLayout() {
               </Suspense>
             </DeferredRender>
             <div className="flex items-center gap-2">
+              <FailedMessagesBadge />
               <DeferredRender>
                 <Suspense fallback={null}>
                   <AIPageSummaryButton />
@@ -172,6 +174,7 @@ export default function AppLayout() {
               </Suspense>
             </DeferredRender>
             <div className="flex items-center gap-3">
+              <FailedMessagesBadge />
               <DeferredRender>
                 <Suspense fallback={null}>
                   <AIPageSummaryButton />

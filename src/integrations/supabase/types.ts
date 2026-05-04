@@ -2395,6 +2395,7 @@ export type Database = {
           created_at: string
           direction: string
           external_message_id: string | null
+          failure_acknowledged_at: string | null
           failure_detail: string | null
           failure_reason: string | null
           id: string
@@ -2423,6 +2424,7 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
@@ -2451,6 +2453,7 @@ export type Database = {
           created_at?: string
           direction?: string
           external_message_id?: string | null
+          failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
@@ -4245,6 +4248,7 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           external_message_id: string | null
+          failure_acknowledged_at: string | null
           failure_detail: string | null
           failure_reason: string | null
           id: string
@@ -4267,6 +4271,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           external_message_id?: string | null
+          failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
@@ -4289,6 +4294,7 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           external_message_id?: string | null
+          failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
