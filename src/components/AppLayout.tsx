@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/comp
 import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConnection";
+import { useFailedMessagesWatcher } from "@/hooks/useFailedMessagesWatcher";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
@@ -71,6 +72,7 @@ export default function AppLayout() {
   const location = useLocation();
   const isImmersive = IMMERSIVE_ROUTES.includes(location.pathname);
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen();
+  useFailedMessagesWatcher();
 
   if (isMobile) {
     return (

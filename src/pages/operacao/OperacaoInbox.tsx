@@ -55,6 +55,7 @@ import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 import { useMessageQueue } from "@/hooks/useMessageQueue";
 import type { QueuedMessage } from "@/hooks/useMessageQueue";
+import { useMessageRetry } from "@/hooks/useMessageRetry";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
@@ -121,8 +122,29 @@ function OperacaoInboxInner() {
   // Inbox state
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [highlightMsgId, setHighlightMsgId] = useState<string | null>(null);
   const selectedIdRef = useRef<string | null>(null);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
+
+  // ─── Deep-link from failed-messages watcher: ?conversation=<id>&highlight=<msgId> ───
+  useEffect(() => {
+    const convParam = searchParams.get("conversation");
+    const highlightParam = searchParams.get("highlight");
+    if (!convParam && !highlightParam) return;
+    if (convParam) setSelectedId(convParam);
+    if (highlightParam) {
+      setHighlightMsgId(highlightParam);
+      const t = setTimeout(() => setHighlightMsgId(null), 2200);
+      return () => clearTimeout(t);
+    }
+    // limpa params para não re-triggerar no remount
+    const next = new URLSearchParams(searchParams);
+    next.delete("conversation");
+    next.delete("highlight");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
+
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("all");
@@ -1090,18 +1112,26 @@ function OperacaoInboxInner() {
     setIsSending(false);
   }, [inputText, selectedId, selected, replyingTo, editingMsg, isSending, waConnected, scrollToBottom, persistOutgoingMessage, enqueue]);
 
-  // ─── Retry failed/queued message ───
-  const handleRetryMessage = useCallback((msg: Message) => {
+  // ─── Retry inline (Fase 3) · usa useMessageRetry quando há original_payload ───
+  const { handleRetry: handleRetryViaPayload } = useMessageRetry({
+    table: "conversation_messages",
+    onStatusChange: (msgId, status) => {
+      setMessages(prev => {
+        const next: typeof prev = { ...prev };
+        for (const convId of Object.keys(next)) {
+          next[convId] = next[convId].map(m => m.id === msgId ? { ...m, status: status as MsgStatus } : m);
+        }
+        return next;
+      });
+    },
+  });
+
+  const handleRetryMessage = useCallback(async (msg: Message) => {
     if (!msg.id) return;
-    retryMessage(msg.id);
-    setMessages(prev => ({
-      ...prev,
-      [msg.conversation_id]: (prev[msg.conversation_id] || []).map(m =>
-        m.id === msg.id ? { ...m, status: "queued" as MsgStatus } : m
-      ),
-    }));
-    toast({ title: "Mensagem reenfileirada", description: "Será enviada quando o WhatsApp conectar." });
-  }, [retryMessage, setMessages]);
+    // Tenta retry inline (com original_payload). Hook valida e mostra toast quando aplicável.
+    await handleRetryViaPayload(msg);
+  }, [handleRetryViaPayload]);
+
 
   // ─── Process queue when WhatsApp reconnects ───
   useEffect(() => {
@@ -1825,7 +1855,7 @@ function OperacaoInboxInner() {
                                   </button>
                                 )}
                               </div>
-                              <div className={`rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""}`}>
+                              <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
                                 {msg.quoted_msg && (
                                   <div className={`rounded-lg px-3 py-1.5 mb-2 border-l-2 ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/40" : "bg-foreground/5 border-primary/40"}`}>
                                     <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
@@ -1901,6 +1931,7 @@ function OperacaoInboxInner() {
                                     </button>
                                   )}
                                   {msg.status === "queued" && <span className="text-[8px] text-primary-foreground/50 italic mr-1">na fila</span>}
+                                  {msg.status === "retrying" && <span className="text-[8px] opacity-70 italic mr-1">reenviando…</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>

@@ -4236,9 +4236,14 @@ export type Database = {
           conversation_id: string | null
           created_at: string
           external_message_id: string | null
+          failure_detail: string | null
+          failure_reason: string | null
           id: string
+          last_retry_at: string | null
           media_url: string | null
           message_type: string
+          original_payload: Json | null
+          retry_count: number
           sender_type: string
           status: string | null
           text: string | null
@@ -4247,9 +4252,14 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           external_message_id?: string | null
+          failure_detail?: string | null
+          failure_reason?: string | null
           id?: string
+          last_retry_at?: string | null
           media_url?: string | null
           message_type?: string
+          original_payload?: Json | null
+          retry_count?: number
           sender_type?: string
           status?: string | null
           text?: string | null
@@ -4258,9 +4268,14 @@ export type Database = {
           conversation_id?: string | null
           created_at?: string
           external_message_id?: string | null
+          failure_detail?: string | null
+          failure_reason?: string | null
           id?: string
+          last_retry_at?: string | null
           media_url?: string | null
           message_type?: string
+          original_payload?: Json | null
+          retry_count?: number
           sender_type?: string
           status?: string | null
           text?: string | null
