@@ -1,8 +1,10 @@
 import { memo, Fragment } from "react";
-import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, Clock, AlertCircle, RotateCcw, Loader2 } from "lucide-react";
+import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, FileSpreadsheet, FileImage, Clock, AlertCircle, RotateCcw, Loader2, Download } from "lucide-react";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
-import type { Message, MsgStatus } from "./types";
+import type { Message, MsgStatus, MsgType } from "./types";
 import { formatMsgTime, formatDateSeparator, shouldShowDateSeparator, stripQuotes } from "./helpers";
+import { formatBytes } from "@/lib/format";
+import { humanizeMediaFailure } from "@/lib/zapiFailureClassifier";
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 function Linkify({ text }: { text: string }) {
