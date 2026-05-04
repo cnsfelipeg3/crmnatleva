@@ -49,6 +49,7 @@ import {
   normalizeDbMessageType, normalizeDbStatus, safeUnreadCount,
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
+import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
@@ -129,6 +130,9 @@ function OperacaoInboxInner() {
 
   // ─── Message Queue for offline sends ───
   const { enqueue, getPendingCount, retryMessage, processQueue, queue } = useMessageQueue();
+
+  // ─── Realtime presence (digitando/gravando) ───
+  const presenceByPhone = usePresenceByPhone();
 
   const selected = conversations.find(c => c.id === selectedId);
 
@@ -1523,6 +1527,7 @@ function OperacaoInboxInner() {
               conversations={filteredConversations}
               selectedId={selectedId}
               profilePics={profilePicsRef.current}
+              presenceByPhone={presenceByPhone}
               onSelect={handleSelectConversation}
               onTogglePin={handleTogglePin}
               isLoading={!chatsLoadedRef.current}
