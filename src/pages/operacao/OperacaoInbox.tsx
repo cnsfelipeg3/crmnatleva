@@ -1961,6 +1961,23 @@ function OperacaoInboxInner() {
                       context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
                       variant="inline"
                     />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={selectionMode ? "secondary" : "ghost"}
+                          size="sm"
+                          className="h-7 gap-1.5 text-[11px] px-2.5"
+                          onClick={() => {
+                            if (selectionMode) cancelSelection();
+                            else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
+                          }}
+                        >
+                          <Forward className="h-3.5 w-3.5" />
+                          {!isMobile && (selectionMode ? "Cancelar" : "Encaminhar")}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent><p className="text-xs">Selecionar mensagens para encaminhar</p></TooltipContent>
+                    </Tooltip>
                     {!isMobile && (
                       <Tooltip>
                         <TooltipTrigger asChild>
