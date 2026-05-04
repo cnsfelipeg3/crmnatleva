@@ -619,7 +619,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       initPersistence().catch(() => {});
-      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
         cacheMs: 30_000,
@@ -647,6 +647,7 @@ function OperacaoInboxInner() {
             score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
+            manually_marked_unread: !!(c as any).manually_marked_unread,
           };
         };
 
@@ -669,6 +670,7 @@ function OperacaoInboxInner() {
                 unread_count: Math.max(safeUnreadCount(dc.unread_count), safeUnreadCount(existing.unread_count)),
                 last_message_at: incomingIsFresher ? dc.last_message_at : existing.last_message_at,
                 last_message_preview: incomingIsFresher ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
+                manually_marked_unread: dc.manually_marked_unread,
               });
             } else {
               byId.set(dc.id, dc);
@@ -693,7 +695,7 @@ function OperacaoInboxInner() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -738,6 +740,7 @@ function OperacaoInboxInner() {
             score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: !!c.is_pinned,
+            manually_marked_unread: !!c.manually_marked_unread,
             _hasReliableActivity: true,
           };
         });
@@ -756,6 +759,7 @@ function OperacaoInboxInner() {
               tags: existing.tags?.length ? existing.tags : c.tags,
               stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
               unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)),
+              manually_marked_unread: !!c.manually_marked_unread,
             };
           });
           const freshIds = new Set(merged.map(c => c.id));
@@ -1561,6 +1565,26 @@ function OperacaoInboxInner() {
     if (cleanPhone) await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
   }, [conversations]);
 
+  const handleToggleUnread = useCallback(async (conv: Conversation) => {
+    const next = !conv.manually_marked_unread;
+    const dbId = conv.db_id;
+    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: next } : c));
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id || null;
+      if (dbId) {
+        await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("id", dbId);
+      } else {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("phone", cleanPhone);
+      }
+      toast({ title: next ? "Marcada como não lida" : "Marcada como lida" });
+    } catch (err: any) {
+      setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: !next } : c));
+      toast({ title: "Erro", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, []);
+
   const handleSelectConversation = (id: string) => {
     setSelectedId(id); setShowAIPanel(false);
     const target = conversations.find(c => c.id === id);
@@ -1738,6 +1762,7 @@ function OperacaoInboxInner() {
               presenceByPhone={presenceByPhone}
               onSelect={handleSelectConversation}
               onTogglePin={handleTogglePin}
+              onToggleUnread={handleToggleUnread}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
             />

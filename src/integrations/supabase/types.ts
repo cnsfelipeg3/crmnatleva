@@ -2594,6 +2594,8 @@ export type Database = {
           last_message_preview: string | null
           last_response_at: string | null
           lead_id: string | null
+          manually_marked_unread: boolean
+          marked_unread_by: string | null
           payment_method: string | null
           phone: string | null
           price_range: string | null
@@ -2636,6 +2638,8 @@ export type Database = {
           last_message_preview?: string | null
           last_response_at?: string | null
           lead_id?: string | null
+          manually_marked_unread?: boolean
+          marked_unread_by?: string | null
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null
@@ -2678,6 +2682,8 @@ export type Database = {
           last_message_preview?: string | null
           last_response_at?: string | null
           lead_id?: string | null
+          manually_marked_unread?: boolean
+          marked_unread_by?: string | null
           payment_method?: string | null
           phone?: string | null
           price_range?: string | null

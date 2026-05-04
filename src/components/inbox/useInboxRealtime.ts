@@ -173,6 +173,7 @@ export function useInboxRealtime(
               tags: u.tags || c.tags,
               contact_name: c.contact_name || u.contact_name,
               source: u.source || c.source,
+              manually_marked_unread: typeof u.manually_marked_unread === "boolean" ? u.manually_marked_unread : c.manually_marked_unread,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;

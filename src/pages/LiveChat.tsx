@@ -75,6 +75,7 @@ interface Conversation {
   payment_method?: string;
   lead_id?: string;
   is_pinned?: boolean;
+  manually_marked_unread?: boolean;
 }
 
 interface Message {
@@ -621,6 +622,7 @@ export default function LiveChat() {
             price_range: c.price_range || undefined,
             payment_method: c.payment_method || undefined,
             is_pinned: (c as any).is_pinned || false,
+            manually_marked_unread: !!(c as any).manually_marked_unread,
           };
         });
         setConversations(prev => {
@@ -1080,6 +1082,7 @@ export default function LiveChat() {
               stage: (u.stage as Stage) || c.stage, tags: u.tags || c.tags,
               contact_name: getSafeContactName(c.contact_name, c.phone) || getSafeContactName(u.contact_name, cleanPhone || u.phone),
               source: u.source || c.source,
+              manually_marked_unread: typeof u.manually_marked_unread === "boolean" ? u.manually_marked_unread : c.manually_marked_unread,
             } : c).filter((c, i, arr) => arr.findIndex(x => x.id === c.id) === i);
             return updated.sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
@@ -1092,6 +1095,7 @@ export default function LiveChat() {
             last_message_at: u.last_message_at || new Date().toISOString(), last_message_preview: u.last_message_preview || "",
             unread_count: u.unread_count || 0, is_vip: u.is_vip || false,
             assigned_to: u.assigned_to || "", score_potential: u.score_potential || 0, score_risk: u.score_risk || 0,
+            manually_marked_unread: !!u.manually_marked_unread,
           }, ...prev];
         });
       })
@@ -1112,7 +1116,7 @@ export default function LiveChat() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })

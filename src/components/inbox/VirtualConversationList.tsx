@@ -12,6 +12,7 @@ interface VirtualConversationListProps {
   presenceByPhone?: PresenceMap;
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
+  onToggleUnread?: (conv: Conversation) => void;
   isLoading: boolean;
   searchQuery: string;
 }
@@ -23,6 +24,7 @@ export function VirtualConversationList({
   presenceByPhone,
   onSelect,
   onTogglePin,
+  onToggleUnread,
   isLoading,
   searchQuery,
 }: VirtualConversationListProps) {
@@ -93,6 +95,7 @@ export function VirtualConversationList({
                 presence={presenceByPhone ? getActivePresence(presenceByPhone, conv.phone) : null}
                 onSelect={onSelect}
                 onTogglePin={onTogglePin}
+                onToggleUnread={onToggleUnread}
               />
             </div>
           );
