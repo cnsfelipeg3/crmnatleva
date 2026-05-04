@@ -2344,7 +2344,7 @@ export default function LiveChat() {
                             </p>
                           ) : (
                             <p className="text-[10px] text-muted-foreground truncate">
-                              {formatPhoneDisplay(selected.phone)}
+                              {formatPhoneDisplay(selected.phone, { groupName: selected.contact_name })}
                             </p>
                           )}
                         </div>
