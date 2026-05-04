@@ -41,6 +41,8 @@ import { ConversationSummaryDialog } from "@/components/livechat/ConversationSum
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
+import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
+import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
