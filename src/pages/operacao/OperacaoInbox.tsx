@@ -1494,12 +1494,15 @@ function OperacaoInboxInner() {
       const publicUrl = await uploadToStorage(file, "images", fileName);
       const tempImgId = `temp_media_${Date.now()}`;
       const imgPayload = { phone, image: publicUrl, caption };
-      const text = caption || "📷 Imagem";
+      // text padronizado: caption (vazio se sem caption) p/ casar com webhook na dedupe
+      const text = caption;
+      const mime = guessMimeFromExt(file.name, file.type);
 
-      // UI otimística
+      // UI otimística (usa publicUrl direto, não blob, p/ sobreviver a F5)
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
         id: tempImgId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: "image" as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
+        message_type: "image" as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+        media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
       }] }));
 
       // 1. Persist pending
@@ -1510,6 +1513,11 @@ function OperacaoInboxInner() {
           messageType: "image",
           text,
           mediaUrl: publicUrl,
+          mediaStorageUrl: publicUrl,
+          mediaMimetype: mime,
+          mediaFilename: file.name,
+          mediaSizeBytes: file.size,
+          mediaStatus: "downloaded",
           externalMessageId: tempImgId,
           createdAt: new Date().toISOString(),
           status: "pending",
