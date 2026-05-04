@@ -2400,6 +2400,7 @@ export type Database = {
           id: string
           is_voice_note: boolean | null
           last_retry_at: string | null
+          media_failure_reason: string | null
           media_filename: string | null
           media_mimetype: string | null
           media_original_url: string | null
@@ -2427,6 +2428,7 @@ export type Database = {
           id?: string
           is_voice_note?: boolean | null
           last_retry_at?: string | null
+          media_failure_reason?: string | null
           media_filename?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
@@ -2454,6 +2456,7 @@ export type Database = {
           id?: string
           is_voice_note?: boolean | null
           last_retry_at?: string | null
+          media_failure_reason?: string | null
           media_filename?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
@@ -4246,6 +4249,7 @@ export type Database = {
           failure_reason: string | null
           id: string
           last_retry_at: string | null
+          media_failure_reason: string | null
           media_filename: string | null
           media_mimetype: string | null
           media_size_bytes: number | null
@@ -4267,6 +4271,7 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           last_retry_at?: string | null
+          media_failure_reason?: string | null
           media_filename?: string | null
           media_mimetype?: string | null
           media_size_bytes?: number | null
@@ -4288,6 +4293,7 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           last_retry_at?: string | null
+          media_failure_reason?: string | null
           media_filename?: string | null
           media_mimetype?: string | null
           media_size_bytes?: number | null
@@ -8369,6 +8375,7 @@ export type Database = {
         Args: { p_table: string }
         Returns: number
       }
+      watchdog_mark_stuck_media: { Args: { p_table: string }; Returns: number }
     }
     Enums: {
       app_role:
