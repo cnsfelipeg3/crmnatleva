@@ -716,17 +716,42 @@ Deno.serve(async (req) => {
     const msgStatusFinal = fromMe ? "sent" : "delivered";
 
     // PRIMARY: conversation_messages (with idempotency via unique external_message_id)
+    // Helper inline: extension por mimeType
+    const getExt = (mime?: string | null): string => {
+      if (!mime) return "";
+      const m = mime.toLowerCase().split(";")[0].trim();
+      const map: Record<string, string> = {
+        "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/png": ".png",
+        "image/webp": ".webp", "image/gif": ".gif",
+        "video/mp4": ".mp4", "video/quicktime": ".mov", "video/webm": ".webm",
+        "audio/ogg": ".ogg", "audio/opus": ".ogg", "audio/mpeg": ".mp3",
+        "audio/mp4": ".m4a", "audio/aac": ".aac", "audio/wav": ".wav",
+      };
+      return map[m] || "";
+    };
+
     const audioMeta: Record<string, any> = {};
     if (body.audio) {
       audioMeta.audio_duration_sec = body.audio.seconds || null;
       audioMeta.is_voice_note = body.audio.ptt ?? null;
       audioMeta.media_mimetype = body.audio.mimeType || null;
+      audioMeta.media_size_bytes = body.audio.fileSize || body.audio.sizeBytes || null;
+      audioMeta.media_filename = `audio-${messageId}${getExt(body.audio.mimeType) || ".ogg"}`;
     } else if (body.image) {
       audioMeta.media_mimetype = body.image.mimeType || null;
+      audioMeta.media_size_bytes = body.image.fileSize || body.image.sizeBytes || null;
+      audioMeta.media_filename = `imagem-${messageId}${getExt(body.image.mimeType) || ".jpg"}`;
     } else if (body.video) {
       audioMeta.media_mimetype = body.video.mimeType || null;
+      audioMeta.media_size_bytes = body.video.fileSize || body.video.sizeBytes || null;
+      audioMeta.media_filename = `video-${messageId}${getExt(body.video.mimeType) || ".mp4"}`;
     } else if (body.document) {
       audioMeta.media_mimetype = body.document.mimeType || null;
+      audioMeta.media_filename = body.document.fileName || body.document.title || `documento-${messageId}`;
+      audioMeta.media_size_bytes = body.document.fileSize || body.document.sizeBytes || null;
+    } else if (body.sticker) {
+      audioMeta.media_mimetype = body.sticker.mimeType || "image/webp";
+      audioMeta.media_filename = `sticker-${messageId}.webp`;
     }
 
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
@@ -782,6 +807,10 @@ Deno.serve(async (req) => {
       message_type: msgType,
       text: textContent || null,
       media_url: mediaUrl,
+      media_mimetype: audioMeta.media_mimetype || null,
+      media_filename: audioMeta.media_filename || null,
+      media_size_bytes: audioMeta.media_size_bytes || null,
+      media_status: mediaUrl ? "pending" : null,
       status: msgStatusFinal,
       external_message_id: messageId,
       created_at: timestampIso,
