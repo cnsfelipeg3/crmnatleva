@@ -37,6 +37,8 @@ Deno.serve(async (req) => {
   const startedAt = new Date().toISOString()
   let convCount = 0
   let msgCount = 0
+  let convMediaCount = 0
+  let msgMediaCount = 0
   let errorMsg: string | null = null
 
   try {
@@ -51,6 +53,18 @@ Deno.serve(async (req) => {
     })
     if (me) throw new Error(`messages: ${me.message}`)
     msgCount = (m as number) ?? 0
+
+    const { data: cm, error: cme } = await supabase.rpc('watchdog_mark_stuck_media', {
+      p_table: 'conversation_messages',
+    })
+    if (cme) throw new Error(`media conversation_messages: ${cme.message}`)
+    convMediaCount = (cm as number) ?? 0
+
+    const { data: mm, error: mme } = await supabase.rpc('watchdog_mark_stuck_media', {
+      p_table: 'messages',
+    })
+    if (mme) throw new Error(`media messages: ${mme.message}`)
+    msgMediaCount = (mm as number) ?? 0
   } catch (e) {
     errorMsg = e instanceof Error ? e.message : String(e)
   }
@@ -60,6 +74,8 @@ Deno.serve(async (req) => {
     finished_at: new Date().toISOString(),
     marked_count_conversation_messages: convCount,
     marked_count_messages: msgCount,
+    marked_media_conversation_messages: convMediaCount,
+    marked_media_messages: msgMediaCount,
     error: errorMsg,
   })
 
@@ -68,6 +84,8 @@ Deno.serve(async (req) => {
       ok: !errorMsg,
       marked_count_conversation_messages: convCount,
       marked_count_messages: msgCount,
+      marked_media_conversation_messages: convMediaCount,
+      marked_media_messages: msgMediaCount,
       error: errorMsg,
     }),
     {
