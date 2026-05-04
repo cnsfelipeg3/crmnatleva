@@ -666,7 +666,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           reaction: payload.value || payload.reaction,
         });
@@ -677,7 +677,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-remove-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
         });
         break;
@@ -687,7 +687,7 @@ serve(async (req) => {
         url = `${BASE_URL}/pin-message`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
           messageAction: payload.pin === false ? "unpin" : "pin",
           pinMessageDuration: payload.pinDuration || "30D",
@@ -699,7 +699,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-location`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           title: payload.title || "Localização",
           address: payload.address || "",
           latitude: payload.latitude,
@@ -712,7 +712,7 @@ serve(async (req) => {
         url = `${BASE_URL}/send-link`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           message: payload.message,
           image: payload.image || "",
           linkUrl: payload.linkUrl || payload.url,
@@ -725,7 +725,7 @@ serve(async (req) => {
       case "send-button-list":
         url = `${BASE_URL}/send-button-list`;
         method = "POST";
-        body = JSON.stringify(payload);
+        body = JSON.stringify({ ...payload, phone: formatPhoneForSending(payload.phone) });
         break;
 
       // Marca mensagem como lida via API (não só localmente)
@@ -733,7 +733,7 @@ serve(async (req) => {
         url = `${BASE_URL}/read-message`;
         method = "POST";
         body = JSON.stringify({
-          phone: payload.phone,
+          phone: formatPhoneForSending(payload.phone),
           messageId: payload.messageId,
         });
         break;
