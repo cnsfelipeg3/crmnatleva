@@ -34,6 +34,12 @@ export function useInboxMessages(
       message_type: normalizeDbMessageType(m.message_type),
       text: stripQuotes(m.content ?? ""),
       media_url: m.media_url || undefined,
+      media_storage_url: m.media_storage_url || undefined,
+      media_status: m.media_status || undefined,
+      media_mimetype: m.media_mimetype || undefined,
+      media_filename: m.media_filename || undefined,
+      media_size_bytes: typeof m.media_size_bytes === "number" ? m.media_size_bytes : (m.media_size_bytes ? Number(m.media_size_bytes) : undefined),
+      media_failure_reason: m.media_failure_reason || undefined,
       status: normalizeDbStatus(m.status),
       created_at: toIsoTimestamp(m.timestamp || m.created_at),
       external_message_id: m.external_message_id || undefined,
@@ -74,7 +80,7 @@ export function useInboxMessages(
 
         const { data: unifiedRows, error } = await (supabase
           .from("conversation_messages" as any)
-          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
+          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id")
           .in("conversation_id", allConversationIds)
           .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
@@ -118,7 +124,7 @@ export function useInboxMessages(
 
     const { data: olderRows } = await (supabase
       .from("conversation_messages" as any)
-      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, status, timestamp, created_at, external_message_id")
+      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id")
       .in("conversation_id", allConversationIds)
       .lt("timestamp", cursor)
       .order("timestamp", { ascending: false, nullsFirst: false })
