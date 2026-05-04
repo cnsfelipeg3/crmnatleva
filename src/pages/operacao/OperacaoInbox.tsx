@@ -1214,6 +1214,23 @@ function OperacaoInboxInner() {
     return urlData.publicUrl;
   }, []);
 
+  // Mime helper for outgoing media (fallback when file.type ausente)
+  const guessMimeFromExt = useCallback((filename: string, fallback?: string): string => {
+    if (fallback && fallback !== "application/octet-stream") return fallback;
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const map: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", heic: "image/heic",
+      mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm", mkv: "video/x-matroska",
+      mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4", opus: "audio/opus",
+      pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      txt: "text/plain", csv: "text/csv", zip: "application/zip", rar: "application/vnd.rar",
+    };
+    return map[ext] || fallback || "application/octet-stream";
+  }, []);
+
+
   // Audio recording
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
