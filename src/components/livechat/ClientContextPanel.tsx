@@ -64,15 +64,8 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 const fmtDateTime = (d: string) => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    if (rest.length === 9) return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-  }
-  return clean.length >= 10 ? `+${clean}` : number;
-}
+import { formatPhoneDisplay } from "@/lib/phone";
+
 
 // ─── Collapsible Section ───
 function Section({ title, icon: Icon, defaultOpen = true, badge, children }: {
