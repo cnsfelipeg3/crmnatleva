@@ -51,6 +51,7 @@ import {
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
+import { formatBytes } from "@/lib/format";
 import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 import { useMessageQueue } from "@/hooks/useMessageQueue";
