@@ -594,6 +594,19 @@ function OperacaoInboxInner() {
     setSelectionMode(true);
     setSelectedMsgIds(new Set([msg.id]));
   }, []);
+
+  // ─── Forward candidates derived from conversations list ───
+  const forwardCandidates = useMemo<ForwardCandidate[]>(() => {
+    return conversations
+      .filter(c => c.phone && (c.db_id || c.id))
+      .map(c => ({
+        conversationId: (c.db_id || c.id) as string,
+        phone: (c.phone || "").replace(/\D/g, ""),
+        name: c.contact_name || c.phone,
+        lastPreview: c.last_message_preview || undefined,
+      }))
+      .filter(c => c.phone);
+  }, [conversations]);
   const cancelSelection = useCallback(() => {
     setSelectionMode(false);
     setSelectedMsgIds(new Set());
