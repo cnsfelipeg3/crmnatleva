@@ -33,10 +33,14 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
   const [caption, setCaption] = useState("");
   const [sending, setSending] = useState(false);
   const [progress, setProgress] = useState({ done: 0, total: 0 });
+  const [jobs, setJobs] = useState<JobState[]>([]);
+  const [finished, setFinished] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      setQuery(""); setSelectedPhones(new Set()); setCaption(""); setSending(false); setProgress({ done: 0, total: 0 });
+      setQuery(""); setSelectedPhones(new Set()); setCaption("");
+      setSending(false); setProgress({ done: 0, total: 0 });
+      setJobs([]); setFinished(false);
     }
   }, [open]);
 
@@ -50,6 +54,18 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
       .slice(0, 200);
   }, [candidates, query, excludeSet]);
 
+  // Status agregado por destinatário
+  const statusByPhone = useMemo(() => {
+    const map = new Map<string, { sending: number; sent: number; failed: number; pending: number; total: number }>();
+    for (const j of jobs) {
+      const cur = map.get(j.phone) || { sending: 0, sent: 0, failed: 0, pending: 0, total: 0 };
+      cur.total++;
+      cur[j.status]++;
+      map.set(j.phone, cur);
+    }
+    return map;
+  }, [jobs]);
+
   const togglePhone = (phone: string) => {
     setSelectedPhones(prev => {
       const next = new Set(prev);
@@ -62,9 +78,14 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
     if (selectedPhones.size === 0 || messages.length === 0) return;
     const targets = candidates.filter(c => selectedPhones.has(c.phone));
     setSending(true);
+    setFinished(false);
     setProgress({ done: 0, total: targets.length * messages.length });
+    setJobs(targets.flatMap(t => messages.map(m => ({ msgId: m.id, phone: t.phone, status: "pending" as const }))));
 
-    const results = await forwardMessages(messages, targets, caption, (done, total) => setProgress({ done, total }));
+    const results = await forwardMessages(messages, targets, caption, (done, total, snapshot) => {
+      setProgress({ done, total });
+      if (snapshot) setJobs(snapshot);
+    });
 
     const failures = results.filter(r => !r.ok);
     if (failures.length === 0) {
@@ -87,8 +108,12 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
     }
 
     setSending(false);
-    onOpenChange(false);
+    setFinished(true);
     onSent?.();
+    // Auto-fecha apenas se 100% sucesso · senão deixa o usuário inspecionar
+    if (failures.length === 0) {
+      setTimeout(() => onOpenChange(false), 800);
+    }
   };
 
   return (
