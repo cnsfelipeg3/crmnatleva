@@ -1931,6 +1931,7 @@ function OperacaoInboxInner() {
                                     </button>
                                   )}
                                   {msg.status === "queued" && <span className="text-[8px] text-primary-foreground/50 italic mr-1">na fila</span>}
+                                  {msg.status === "retrying" && <span className="text-[8px] opacity-70 italic mr-1">reenviando…</span>}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>
