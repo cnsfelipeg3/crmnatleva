@@ -12,6 +12,7 @@ import {
   ChevronDown, ChevronUp, Phone, MapPin, Plane, Info,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatPhoneNational as formatPhoneShort } from "@/lib/phone";
 
 // ─── Stage Descriptions ───
 const STAGE_DESCRIPTIONS: Record<Stage, { title: string; desc: string; tip: string }> = {
