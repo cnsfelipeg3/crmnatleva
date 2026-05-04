@@ -1310,11 +1310,14 @@ function OperacaoInboxInner() {
           const localUrl = URL.createObjectURL(blob);
           const tempAudioId = `temp_audio_${Date.now()}`;
           const audioPayload = { phone, audio: audioUrl };
+          const audioMime = "audio/wav";
+          const audioSize = blob.size;
 
           // Otimístico na UI
           setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
             id: tempAudioId, conversation_id: selectedId, sender_type: "atendente" as const,
-            message_type: "audio" as MsgType, text: "", status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
+            message_type: "audio" as MsgType, text: "", status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+            media_url: audioUrl, media_storage_url: audioUrl, media_mimetype: audioMime, media_filename: fileName, media_size_bytes: audioSize, media_status: "downloaded",
           }] }));
 
           // 1. Persist pending
@@ -1325,6 +1328,11 @@ function OperacaoInboxInner() {
               messageType: "audio",
               text: "",
               mediaUrl: audioUrl,
+              mediaStorageUrl: audioUrl,
+              mediaMimetype: audioMime,
+              mediaFilename: fileName,
+              mediaSizeBytes: audioSize,
+              mediaStatus: "downloaded",
               externalMessageId: tempAudioId,
               createdAt: new Date().toISOString(),
               status: "pending",
@@ -1333,6 +1341,7 @@ function OperacaoInboxInner() {
           } catch (persistErr: any) {
             console.error("[SEND-AUDIO] persist pending falhou:", persistErr);
           }
+
 
           // 2. Z-API
           const outcome = await sendViaZapi("send-audio", audioPayload);
