@@ -79,16 +79,6 @@ function ensureChannel() {
       { event: "UPDATE", schema: "public", table: "conversation_messages" },
       (p) => emit(p.new, "conversation_messages", "UPDATE"),
     )
-    .on(
-      "postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages" },
-      (p) => emit(p.new, "messages", "INSERT"),
-    )
-    .on(
-      "postgres_changes",
-      { event: "UPDATE", schema: "public", table: "messages" },
-      (p) => emit(p.new, "messages", "UPDATE"),
-    )
     .subscribe();
 }
 
