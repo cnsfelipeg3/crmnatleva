@@ -455,6 +455,8 @@ export default function LiveChat() {
     // Conversa mudou: reseta estado de scroll e vai instantaneamente pro fim
     if (previousSelectedIdRef.current !== selectedId) {
       isUserScrolledUpRef.current = false;
+      setIsScrolledUp(false);
+      setUnreadDuringScroll(0);
       previousSelectedIdRef.current = selectedId;
       scrollToBottom("auto" as ScrollBehavior);
       return;
@@ -462,6 +464,8 @@ export default function LiveChat() {
     // Mesma conversa, nova mensagem: só rola suavemente se o usuário não subiu
     if (!isUserScrolledUpRef.current) {
       scrollToBottom("smooth");
+    } else {
+      setUnreadDuringScroll(c => c + 1);
     }
   }, [selectedId, currentMessages.length, lastMessageId, scrollToBottom]);
 
