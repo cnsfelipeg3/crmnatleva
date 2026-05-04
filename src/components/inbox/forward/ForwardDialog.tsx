@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/components/ui/use-toast";
 import type { Message } from "../types";
-import { forwardMessages, summarizeMessageForPreview, type ForwardTarget, type JobState, jobKey } from "./forwardLogic";
+import { forwardMessages, summarizeMessageForPreview, type ForwardTarget, type JobState } from "./forwardLogic";
 
 export interface ForwardCandidate extends ForwardTarget {
   avatarUrl?: string;
