@@ -190,11 +190,12 @@ Deno.serve(async (req) => {
               // Send via Z-API to WhatsApp
               await sendViaZapi(context.phone, "send-text", { message: msg });
 
-              await supabase.from("messages").insert({
+              await supabase.from("conversation_messages").insert({
+              direction: "outgoing",
                 conversation_id,
                 sender_type: "sistema",
                 message_type: "text",
-                text: msg,
+                content: msg,
                 status: "sent",
               });
               await supabase.from("conversations").update({
@@ -235,11 +236,12 @@ Deno.serve(async (req) => {
               }
             }
 
-            await supabase.from("messages").insert({
+            await supabase.from("conversation_messages").insert({
+              direction: "outgoing",
               conversation_id,
               sender_type: "sistema",
               message_type: mediaType,
-              text: caption || null,
+              content: caption || null,
               media_url: mediaUrl || null,
               status: "sent",
             });
@@ -255,11 +257,12 @@ Deno.serve(async (req) => {
             if (question) {
               // Send via Z-API
               await sendViaZapi(context.phone, "send-text", { message: question });
-              await supabase.from("messages").insert({
+              await supabase.from("conversation_messages").insert({
+              direction: "outgoing",
                 conversation_id,
                 sender_type: "sistema",
                 message_type: "text",
-                text: question,
+                content: question,
                 status: "sent",
               });
               await supabase.from("conversations").update({
@@ -440,11 +443,12 @@ Deno.serve(async (req) => {
 
                   // Send AI response via Z-API + DB
                   await sendViaZapi(context.phone, "send-text", { message: aiText });
-                  await supabase.from("messages").insert({
+                  await supabase.from("conversation_messages").insert({
+              direction: "outgoing",
                     conversation_id,
                     sender_type: "sistema",
                     message_type: "text",
-                    text: aiText,
+                    content: aiText,
                     status: "sent",
                   });
                   await supabase.from("conversations").update({
