@@ -1113,9 +1113,30 @@ export default function NewSale() {
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in max-w-5xl mx-auto relative">
       {extracting && <ProgressOverlay label="Extraindo dados com IA..." />}
-      <div>
-        <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Nova Venda"}</h1>
-        <p className="text-sm text-muted-foreground">{isEditMode ? "Edite os detalhes desta venda" : "Registre todos os detalhes da viagem de forma organizada"}</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Nova Venda"}</h1>
+          <p className="text-sm text-muted-foreground">{isEditMode ? "Edite os detalhes desta venda" : "Registre todos os detalhes da viagem de forma organizada"}</p>
+        </div>
+        {isEditMode && (
+          <div
+            className={cn(
+              "flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors",
+              autosave.status === "saving" && "border-info/30 bg-info/5 text-info",
+              autosave.status === "saved" && "border-success/30 bg-success/5 text-success",
+              autosave.status === "error" && "border-destructive/30 bg-destructive/5 text-destructive",
+              autosave.status === "idle" && "border-border/40 bg-muted/30 text-muted-foreground",
+            )}
+            title={autosave.error || "Autosave ativo · campos simples salvam sozinhos"}
+          >
+            {autosave.status === "saving" && <><Loader2 className="w-3 h-3 animate-spin" /> Salvando…</>}
+            {autosave.status === "saved" && (
+              <><Check className="w-3 h-3" /> Salvo {autosave.lastSavedAt ? `às ${autosave.lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}</>
+            )}
+            {autosave.status === "error" && <><CloudOff className="w-3 h-3" /> Erro ao salvar</>}
+            {autosave.status === "idle" && <><Cloud className="w-3 h-3" /> Autosave ativo</>}
+          </div>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
