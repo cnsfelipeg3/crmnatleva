@@ -98,6 +98,7 @@ export async function sendViaZapiProxy(
 export function humanizeMediaFailure(reason?: string | null): string {
   if (!reason) return "Não foi possível baixar a mídia";
   const r = reason.toLowerCase();
+  if (r.includes("legacy_unprocessed")) return "Mídia legada não foi baixada";
   if (r.includes("watchdog_stuck")) return "Mídia travou no download · marcada como falha";
   if (r.includes("http_error_404") || r.includes("not_found")) return "Mídia expirou no provedor (link 404)";
   if (r.includes("http_error_403") || r.includes("forbidden")) return "Acesso negado pelo provedor (403)";
