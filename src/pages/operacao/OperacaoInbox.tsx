@@ -2009,6 +2009,15 @@ function OperacaoInboxInner() {
                     />
                   )}
                   <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                    {selectedId && currentMessages.length > 0 && (
+                      <div className="pt-3">
+                        <BuyingMomentAlert
+                          messages={currentMessages.map(m => ({ text: m.text || "", sender_type: m.sender_type as any, created_at: m.created_at }))}
+                          onGenerateProposal={() => navigate(`/proposal-builder?conversationId=${selectedId}`)}
+                          onDismiss={() => { /* dismiss interno via state do componente */ }}
+                        />
+                      </div>
+                    )}
                     <div className="py-4 space-y-3">
                     {/* Load older messages button */}
                     {hasOlderMessages[selectedId!] && (
