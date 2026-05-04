@@ -647,6 +647,7 @@ function OperacaoInboxInner() {
             score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
+            manually_marked_unread: !!(c as any).manually_marked_unread,
           };
         };
 
