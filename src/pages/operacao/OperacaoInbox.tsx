@@ -622,7 +622,8 @@ function OperacaoInboxInner() {
         for (const chat of chats) {
           const phone = chat.phone || chat.id || "";
           if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
-          const cleanPhone = phone.replace(/\D/g, "");
+          const zapiPhone = String(phone || "").trim();
+          const cleanPhone = zapiPhone.replace(/\D/g, "");
           if (!cleanPhone) continue;
           const convId = `wa_${cleanPhone}`;
           const contactName = chat.name || chat.chatName || chat.contact?.name || formatPhoneDisplay(cleanPhone);
@@ -634,7 +635,7 @@ function OperacaoInboxInner() {
           const chatPhoto = chat.imgUrl || chat.image || chat.photo || "";
           const hasReliableActivity = Boolean(lastMsgTime || chat.lastMessage || chat.lastMessageText);
           newConvs.push({
-            id: convId, phone: cleanPhone, contact_name: contactName,
+            id: convId, phone: cleanPhone, zapi_phone: zapiPhone, contact_name: contactName,
             stage: "novo_lead" as Stage, tags: [], source: "whatsapp",
             last_message_at: lastMsgTime || "",
             last_message_preview: chat.lastMessage || chat.lastMessageText || "",
@@ -664,7 +665,7 @@ function OperacaoInboxInner() {
                 const existingTime = new Date(existing.last_message_at || 0).getTime();
                 const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
                 const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
-                return [{ ...c, db_id: existing.db_id || c.db_id, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
+                return [{ ...c, db_id: existing.db_id || c.db_id, zapi_phone: c.zapi_phone || existing.zapi_phone, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
               }
               if (!c._hasReliableActivity) return [];
               return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
