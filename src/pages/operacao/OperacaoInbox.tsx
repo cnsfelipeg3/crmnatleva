@@ -1405,25 +1405,55 @@ function OperacaoInboxInner() {
       const ext = file.name.split('.').pop() || "jpg";
       const fileName = `image_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, "images", fileName);
-      const sendResult = await callZapiProxy("send-image", { phone, image: publicUrl, caption });
-      const realId = sendResult?.messageId || sendResult?.id || `temp_media_${Date.now()}`;
-      lastMsgIdsRef.current.add(realId);
+      const tempImgId = `temp_media_${Date.now()}`;
+      const imgPayload = { phone, image: publicUrl, caption };
+      const text = caption || "📷 Imagem";
+
+      // UI otimística
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-        id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: "image" as MsgType, text: caption || "📷 Imagem", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
+        id: tempImgId, conversation_id: selectedId, sender_type: "atendente" as const,
+        message_type: "image" as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
       }] }));
 
-      await persistOutgoingMessage({
-        conversationId: selectedId,
-        messageType: "image",
-        text: caption || "📷 Imagem",
-        mediaUrl: publicUrl,
-        externalMessageId: realId,
-        createdAt: new Date().toISOString(),
-      });
+      // 1. Persist pending
+      let messageDbId: string | null = null;
+      try {
+        messageDbId = await persistOutgoingMessage({
+          conversationId: selectedId,
+          messageType: "image",
+          text,
+          mediaUrl: publicUrl,
+          externalMessageId: tempImgId,
+          createdAt: new Date().toISOString(),
+          status: "pending",
+          originalPayload: { action: "send-image", payload: imgPayload },
+        });
+      } catch (persistErr: any) {
+        console.error("[SEND-IMAGE] persist pending falhou:", persistErr);
+      }
+
+      // 2. Z-API
+      const outcome = await sendViaZapi("send-image", imgPayload);
+      const realId = outcome.data?.messageId || outcome.data?.id || tempImgId;
+
+      // 3. Finaliza
+      if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+      // 4. UI
+      if (outcome.ok) {
+        lastMsgIdsRef.current.add(realId);
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempImgId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+        ) }));
+      } else {
+        setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempImgId ? { ...m, status: "failed" as MsgStatus } : m
+        ) }));
+        toast({ title: "Falha ao enviar imagem", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+      }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
-  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage]);
+  }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage, finalizeMessageStatus]);
 
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
