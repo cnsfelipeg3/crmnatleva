@@ -8358,6 +8358,15 @@ export type Database = {
       }
     }
     Functions: {
+      audit_conversation_ordering: {
+        Args: never
+        Returns: {
+          conv_id: string
+          diff_seconds: number
+          last_message_at_atual: string
+          last_message_at_real: string
+        }[]
+      }
       cleanup_booking_rapidapi_cache: { Args: never; Returns: number }
       cleanup_client_names: { Args: never; Returns: Json }
       dashboard_kpis: {
