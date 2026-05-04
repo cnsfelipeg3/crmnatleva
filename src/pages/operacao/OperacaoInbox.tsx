@@ -1979,11 +1979,20 @@ function OperacaoInboxInner() {
                                 {msg.message_type === "document" && (
                                   <div className="flex items-center gap-2 py-1">
                                     <FileText className="h-5 w-5 shrink-0" />
-                                    {msg.media_url ? (
-                                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">{msg.text || "Documento"}</a>
-                                    ) : (
-                                      <span className="text-sm">{msg.text || "Documento"}</span>
-                                    )}
+                                    <div className="flex flex-col min-w-0">
+                                      {msg.media_url ? (
+                                        <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80 truncate max-w-[220px]">
+                                          {msg.media_filename || msg.text || "Documento"}
+                                        </a>
+                                      ) : (
+                                        <span className="text-sm truncate max-w-[220px]">{msg.media_filename || msg.text || "Documento"}</span>
+                                      )}
+                                      {(msg.media_size_bytes || msg.media_mimetype) && (
+                                        <span className="text-[10px] opacity-60">
+                                          {[msg.media_mimetype?.split("/").pop()?.toUpperCase(), msg.media_size_bytes ? formatBytes(msg.media_size_bytes) : null].filter(Boolean).join(" · ")}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                                 {/* Text */}
