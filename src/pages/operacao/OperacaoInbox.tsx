@@ -670,6 +670,7 @@ function OperacaoInboxInner() {
                 unread_count: Math.max(safeUnreadCount(dc.unread_count), safeUnreadCount(existing.unread_count)),
                 last_message_at: incomingIsFresher ? dc.last_message_at : existing.last_message_at,
                 last_message_preview: incomingIsFresher ? (dc.last_message_preview || existing.last_message_preview) : existing.last_message_preview,
+                manually_marked_unread: dc.manually_marked_unread,
               });
             } else {
               byId.set(dc.id, dc);
