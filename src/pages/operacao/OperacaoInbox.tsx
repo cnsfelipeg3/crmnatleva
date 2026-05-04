@@ -1238,22 +1238,51 @@ function OperacaoInboxInner() {
           const { data: urlData } = supabase.storage.from('audios').getPublicUrl(fileName);
           const audioUrl = urlData.publicUrl;
           const localUrl = URL.createObjectURL(blob);
-          const sendResult = await callZapiProxy("send-audio", { phone, audio: audioUrl });
-          const realId = sendResult?.messageId || sendResult?.id || `temp_audio_${Date.now()}`;
-          lastMsgIdsRef.current.add(realId);
+          const tempAudioId = `temp_audio_${Date.now()}`;
+          const audioPayload = { phone, audio: audioUrl };
+
+          // Otimístico na UI
           setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
-            id: realId, conversation_id: selectedId, sender_type: "atendente" as const,
-            message_type: "audio" as MsgType, text: "", status: "sent" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
+            id: tempAudioId, conversation_id: selectedId, sender_type: "atendente" as const,
+            message_type: "audio" as MsgType, text: "", status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
           }] }));
 
-          await persistOutgoingMessage({
-            conversationId: selectedId,
-            messageType: "audio",
-            text: "",
-            mediaUrl: audioUrl,
-            externalMessageId: realId,
-            createdAt: new Date().toISOString(),
-          });
+          // 1. Persist pending
+          let messageDbId: string | null = null;
+          try {
+            messageDbId = await persistOutgoingMessage({
+              conversationId: selectedId,
+              messageType: "audio",
+              text: "",
+              mediaUrl: audioUrl,
+              externalMessageId: tempAudioId,
+              createdAt: new Date().toISOString(),
+              status: "pending",
+              originalPayload: { action: "send-audio", payload: audioPayload },
+            });
+          } catch (persistErr: any) {
+            console.error("[SEND-AUDIO] persist pending falhou:", persistErr);
+          }
+
+          // 2. Z-API
+          const outcome = await sendViaZapi("send-audio", audioPayload);
+          const realId = outcome.data?.messageId || outcome.data?.id || tempAudioId;
+
+          // 3. Finaliza status
+          if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+          // 4. UI sync
+          if (outcome.ok) {
+            lastMsgIdsRef.current.add(realId);
+            setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+              m.id === tempAudioId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+            ) }));
+          } else {
+            setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+              m.id === tempAudioId ? { ...m, status: "failed" as MsgStatus } : m
+            ) }));
+            toast({ title: "Falha ao enviar áudio", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+          }
         } catch (err) { toast({ title: "Erro ao enviar áudio", description: String(err), variant: "destructive" }); }
       };
       mediaRecorder.start();
