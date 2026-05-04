@@ -1742,6 +1742,7 @@ function OperacaoInboxInner() {
               presenceByPhone={presenceByPhone}
               onSelect={handleSelectConversation}
               onTogglePin={handleTogglePin}
+              onToggleUnread={handleToggleUnread}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
             />
