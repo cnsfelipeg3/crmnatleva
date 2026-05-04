@@ -310,6 +310,9 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.msg.media_url === next.msg.media_url &&
     prev.msg.media_storage_url === next.msg.media_storage_url &&
     prev.msg.media_status === next.msg.media_status &&
+    prev.msg.media_failure_reason === next.msg.media_failure_reason &&
+    prev.msg.media_filename === next.msg.media_filename &&
+    prev.msg.media_size_bytes === next.msg.media_size_bytes &&
     prev.index === next.index &&
     prev.contactName === next.contactName &&
     prev.messages === next.messages
