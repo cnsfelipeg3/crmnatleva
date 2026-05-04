@@ -208,18 +208,8 @@ function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): 
 }
 
 // Helper: format Brazilian phone number for display
-function formatPhoneDisplay(number?: string | null): string {
-  const raw = typeof number === "string" ? number : "";
-  const clean = raw.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    if (rest.length === 9) return `+55 (${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-    if (rest.length === 8) return `+55 (${ddd}) ${rest.slice(0, 4)}-${rest.slice(4)}`;
-  }
-  if (clean.length >= 10) return `+${clean}`;
-  return raw || "Sem telefone";
-}
+import { formatPhoneDisplay } from "@/lib/phone";
+
 
 function getSafeContactName(contactName?: string | null, phone?: string | null): string {
   const trimmedName = (contactName || "").trim();
