@@ -82,7 +82,9 @@ export function getActivePresence(
   if (!entry) return null;
   const age = Date.now() - new Date(entry.updated_at).getTime();
   if (age > 30_000) return null;
-  if (entry.status === "composing") return "composing";
-  if (entry.status === "recording") return "recording";
+  // Z-API sends status in UPPERCASE (COMPOSING / RECORDING / AVAILABLE / PAUSED / UNAVAILABLE)
+  const s = String(entry.status || "").toLowerCase();
+  if (s === "composing") return "composing";
+  if (s === "recording") return "recording";
   return null;
 }

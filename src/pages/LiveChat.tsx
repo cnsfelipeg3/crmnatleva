@@ -37,7 +37,7 @@ import { BuyingMomentAlert } from "@/components/livechat/BuyingMomentAlert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
 import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
-import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
+import { usePresenceByPhone, getActivePresence } from "@/hooks/usePresenceByPhone";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
@@ -332,19 +332,11 @@ export default function LiveChat() {
   const selectedInitials = selected ? getContactInitials(selected.contact_name, selected.phone) : "CN";
   const currentMessages = selectedId ? (messages[selectedId] || []) : [];
 
-  // Helper · label de presença ativa (válida apenas se < 30s atrás)
-  const activePresenceStatus = useMemo<"composing" | "recording" | null>(() => {
-    const phone = selected?.phone;
-    if (!phone) return null;
-    const cleanPhone = String(phone).replace(/\D/g, "");
-    const entry = presenceByPhone[cleanPhone];
-    if (!entry) return null;
-    const age = Date.now() - new Date(entry.updated_at).getTime();
-    if (age > 30_000) return null;
-    if (entry.status === "composing") return "composing";
-    if (entry.status === "recording") return "recording";
-    return null;
-  }, [selected?.phone, presenceByPhone]);
+  // Helper · label de presença ativa (válida apenas se < 30s atrás · case-insensitive)
+  const activePresenceStatus = useMemo<"composing" | "recording" | null>(
+    () => getActivePresence(presenceByPhone, selected?.phone),
+    [selected?.phone, presenceByPhone]
+  );
 
   const presenceLabel = useMemo(() => {
     if (activePresenceStatus === "composing") return "digitando…";
