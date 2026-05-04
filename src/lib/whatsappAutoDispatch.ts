@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { debugLog, debugWarn } from "@/lib/debugMode";
+import { classifySendOutcome, FAILURE_REASONS } from "@/lib/zapiFailureClassifier";
 
 interface DispatchParams {
   triggerEvent: string;
