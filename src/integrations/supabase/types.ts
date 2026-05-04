@@ -2400,6 +2400,7 @@ export type Database = {
           id: string
           is_voice_note: boolean | null
           last_retry_at: string | null
+          media_filename: string | null
           media_mimetype: string | null
           media_original_url: string | null
           media_size_bytes: number | null
@@ -2426,6 +2427,7 @@ export type Database = {
           id?: string
           is_voice_note?: boolean | null
           last_retry_at?: string | null
+          media_filename?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
           media_size_bytes?: number | null
@@ -2452,6 +2454,7 @@ export type Database = {
           id?: string
           is_voice_note?: boolean | null
           last_retry_at?: string | null
+          media_filename?: string | null
           media_mimetype?: string | null
           media_original_url?: string | null
           media_size_bytes?: number | null
@@ -4243,6 +4246,11 @@ export type Database = {
           failure_reason: string | null
           id: string
           last_retry_at: string | null
+          media_filename: string | null
+          media_mimetype: string | null
+          media_size_bytes: number | null
+          media_status: string | null
+          media_storage_url: string | null
           media_url: string | null
           message_type: string
           original_payload: Json | null
@@ -4259,6 +4267,11 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           last_retry_at?: string | null
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_status?: string | null
+          media_storage_url?: string | null
           media_url?: string | null
           message_type?: string
           original_payload?: Json | null
@@ -4275,6 +4288,11 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           last_retry_at?: string | null
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_status?: string | null
+          media_storage_url?: string | null
           media_url?: string | null
           message_type?: string
           original_payload?: Json | null
