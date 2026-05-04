@@ -334,6 +334,24 @@ function OperacaoInboxInner() {
 
     return persistedId;
   }, [resolveDbConversationId]);
+
+  // ─── Update message status after Z-API response (sent / failed) ───
+  const finalizeMessageStatus = useCallback(async (
+    messageDbId: string,
+    outcome: { ok: boolean; reason: string | null; detail?: string },
+    realExternalId?: string | null,
+  ) => {
+    const updateRow: Record<string, any> = {
+      status: outcome.ok ? "sent" : "failed",
+      failure_reason: outcome.ok ? null : (outcome.reason || "unknown"),
+    };
+    if (outcome.ok && realExternalId) updateRow.external_message_id = realExternalId;
+    try {
+      await (supabase.from("conversation_messages" as any).update(updateRow).eq("id", messageDbId) as any);
+    } catch (err) {
+      console.error("[FINALIZE] failed to update message status:", err);
+    }
+  }, []);
   // Load active flow name for selected conversation
   useEffect(() => {
     if (!selectedId) { setActiveFlowName(null); return; }
