@@ -252,7 +252,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       {!mobile && (
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="absolute top-[4.5rem] -right-0 z-50 w-5 h-10 flex items-center justify-center rounded-l-md bg-card/80 border border-r-0 border-border/30 text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100"
+          className="absolute top-[4.5rem] -right-0 z-50 w-5 h-10 rounded-l-md bg-card/80 border-r-0 border-border/30 text-muted-foreground hover:text-foreground hover:bg-card transition-all duration-200 opacity-0 hover:opacity-100 group-hover:opacity-100 flex items-center justify-end text-sm font-light border-0 shadow-sm"
           style={{ opacity: 0.4 }}
           onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
           onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.4')}
