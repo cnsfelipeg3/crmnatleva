@@ -192,9 +192,9 @@ function getStageInfo(stage: Stage) {
 }
 
 function getStatusIcon(status: MsgStatus) {
-  if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb]" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
-  if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white" />;
-  return <Check className="h-3 w-3 text-white" />;
+  if (status === "read") return <CheckCheck className="h-3.5 w-3.5 text-[#53bdeb] transition-colors duration-300" style={{ filter: 'drop-shadow(0 0 1px rgba(83,189,235,0.5))' }} />;
+  if (status === "delivered") return <CheckCheck className="h-3 w-3 text-white transition-colors duration-300" />;
+  return <Check className="h-3 w-3 text-white transition-colors duration-300" />;
 }
 
 function mapZapiStatus(zapiStatus: string | null | undefined, fromMe: boolean): MsgStatus {
