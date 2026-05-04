@@ -174,6 +174,7 @@ export default function AppLayout() {
               </Suspense>
             </DeferredRender>
             <div className="flex items-center gap-3">
+              <FailedMessagesBadge />
               <DeferredRender>
                 <Suspense fallback={null}>
                   <AIPageSummaryButton />
