@@ -8014,6 +8014,8 @@ export type Database = {
           created_at: string
           dispatched_by: string | null
           error_message: string | null
+          failure_detail: string | null
+          failure_reason: string | null
           id: string
           message_sent: string | null
           status: string | null
@@ -8030,6 +8032,8 @@ export type Database = {
           created_at?: string
           dispatched_by?: string | null
           error_message?: string | null
+          failure_detail?: string | null
+          failure_reason?: string | null
           id?: string
           message_sent?: string | null
           status?: string | null
@@ -8046,6 +8050,8 @@ export type Database = {
           created_at?: string
           dispatched_by?: string | null
           error_message?: string | null
+          failure_detail?: string | null
+          failure_reason?: string | null
           id?: string
           message_sent?: string | null
           status?: string | null
