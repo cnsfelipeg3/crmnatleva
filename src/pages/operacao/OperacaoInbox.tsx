@@ -577,6 +577,27 @@ function OperacaoInboxInner() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  // ─── Selection mode (forward) ───
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardSeed, setForwardSeed] = useState<Message[] | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toggleMsgSelected = useCallback((id: string) => {
+    setSelectedMsgIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const enterSelectionWith = useCallback((msg: Message) => {
+    setSelectionMode(true);
+    setSelectedMsgIds(new Set([msg.id]));
+  }, []);
+  const cancelSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedMsgIds(new Set());
+  }, []);
   const [mediaPendingFile, setMediaPendingFile] = useState<{ file: File; previewUrl: string; mediaType: string } | null>(null);
   const [mediaCaption, setMediaCaption] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
