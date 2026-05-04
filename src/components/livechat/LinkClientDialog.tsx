@@ -274,13 +274,13 @@ export function LinkClientDialog({
         </div>
 
         {/* Client List */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[45vh]">
+        <div className="flex-1 min-h-0 max-h-[45vh] overflow-y-auto -mr-2 pr-2">
           {loading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : filtered.length === 0 ? (
             <p className="text-center text-xs text-muted-foreground py-8">Nenhum cliente encontrado</p>
           ) : (
-            <div className="space-y-0.5 pr-2">
+            <div className="space-y-0.5">
               {filtered.map(c => {
                 const isLinked = c.id === currentClientId;
                 return (
@@ -318,7 +318,7 @@ export function LinkClientDialog({
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
