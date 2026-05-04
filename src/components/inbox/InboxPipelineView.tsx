@@ -142,7 +142,6 @@ function formatCurrency(value: number): string {
   return `R$ ${value.toFixed(0)}`;
 }
 
-import { formatPhoneNational as formatPhoneShort } from "@/lib/phone";
 
 
 function getInitials(name: string): string {
