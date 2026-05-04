@@ -1034,7 +1034,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         onClose={() => setShowProfileViewer(false)}
         name={clientData?.display_name || conversation.contact_name || formatPhoneDisplay(conversation.phone)}
         phone={conversation.phone}
-        phoneDisplay={formatPhoneDisplay(conversation.phone)}
+        phoneDisplay={formatPhoneDisplay(conversation.phone, { groupName: conversation.contact_name })}
         email={clientData?.email}
         city={clientData?.city}
         state={clientData?.state}
