@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -154,7 +155,7 @@ export default function PassengerSelector({ selected, onChange }: Props) {
                   <div className="min-w-0">
                     <p className="text-sm font-medium truncate">{p.full_name}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {[p.cpf, p.phone, p.passport_number].filter(Boolean).join(" · ") || "Sem documentos"}
+                      {[p.cpf, p.phone ? formatPhoneDisplay(p.phone) : null, p.passport_number].filter(Boolean).join(" · ") || "Sem documentos"}
                     </p>
                   </div>
                   {alreadySelected && <Badge variant="secondary" className="text-[10px] shrink-0">Adicionado</Badge>}
@@ -179,7 +180,7 @@ export default function PassengerSelector({ selected, onChange }: Props) {
                   {p.cpf && <span className="text-[10px] text-muted-foreground font-mono">{p.cpf}</span>}
                   {p.birth_date && <span className="text-[10px] text-muted-foreground">{formatDateBR(p.birth_date)}</span>}
                   {p.passport_number && <Badge variant="outline" className="text-[10px]">🛂 {p.passport_number}</Badge>}
-                  {p.phone && <span className="text-[10px] text-muted-foreground">{p.phone}</span>}
+                  {p.phone && <span className="text-[10px] text-muted-foreground">{formatPhoneDisplay(p.phone)}</span>}
                   {isPassportExpiringSoon(p.passport_expiry) && (
                     <Badge variant="destructive" className="text-[10px]"><AlertTriangle className="w-3 h-3 mr-0.5" /> Passaporte vencendo</Badge>
                   )}

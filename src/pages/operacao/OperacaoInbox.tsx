@@ -1572,7 +1572,7 @@ function OperacaoInboxInner() {
                           <span className="text-sm font-semibold truncate">{/^\d{10,}$/.test(selected.contact_name || "") ? formatPhoneDisplay(selected.contact_name || "") : (selected.contact_name || "Sem nome")}</span>
                           {selected.is_vip && <Badge className="bg-amber-500/10 text-amber-500 text-[9px] px-1.5 py-0 shrink-0">VIP</Badge>}
                         </div>
-                        <p className="text-[11px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "")}</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
@@ -2066,7 +2066,7 @@ function OperacaoInboxInner() {
                 onClose={() => setShowProfileViewer(false)}
                 name={selected.contact_name || formatPhoneDisplay(selected.phone || "") || "Sem nome"}
                 phone={selected.phone}
-                phoneDisplay={formatPhoneDisplay(selected.phone || "")}
+                phoneDisplay={formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}
                 pictureUrl={profilePicsRef.current.get(selected.id)}
                 initials={(selected.contact_name || "?").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase()}
                 isVip={selected.is_vip}

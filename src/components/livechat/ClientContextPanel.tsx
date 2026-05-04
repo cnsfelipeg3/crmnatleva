@@ -64,15 +64,8 @@ const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", curren
 const fmtDate = (d: string) => new Date(d).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
 const fmtDateTime = (d: string) => new Date(d).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 
-function formatPhoneDisplay(number: string): string {
-  const clean = number.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    if (rest.length === 9) return `(${ddd}) ${rest.slice(0, 5)}-${rest.slice(5)}`;
-  }
-  return clean.length >= 10 ? `+${clean}` : number;
-}
+import { formatPhoneDisplay } from "@/lib/phone";
+
 
 // ─── Collapsible Section ───
 function Section({ title, icon: Icon, defaultOpen = true, badge, children }: {
@@ -758,7 +751,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                 <h3 className="text-sm font-bold text-foreground truncate">{clientData?.display_name || conversation.contact_name}</h3>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Phone className="h-3 w-3 text-muted-foreground" />
-                  <span className="text-[11px] text-muted-foreground">{formatPhoneDisplay(conversation.phone)}</span>
+                  <span className="text-[11px] text-muted-foreground">{formatPhoneDisplay(conversation.phone, { groupName: conversation.contact_name })}</span>
                 </div>
                 {clientData?.email && (
                   <div className="flex items-center gap-1.5 mt-0.5">
@@ -1041,7 +1034,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         onClose={() => setShowProfileViewer(false)}
         name={clientData?.display_name || conversation.contact_name || formatPhoneDisplay(conversation.phone)}
         phone={conversation.phone}
-        phoneDisplay={formatPhoneDisplay(conversation.phone)}
+        phoneDisplay={formatPhoneDisplay(conversation.phone, { groupName: conversation.contact_name })}
         email={clientData?.email}
         city={clientData?.city}
         state={clientData?.state}

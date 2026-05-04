@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -350,7 +351,7 @@ export function WhatsAppQRCard() {
               {connInfo.phone_number && (
                 <div className="text-xs">
                   <span className="text-muted-foreground">Número: </span>
-                  <span className="font-semibold">+{connInfo.phone_number}</span>
+                  <span className="font-semibold">{formatPhoneDisplay(connInfo.phone_number)}</span>
                 </div>
               )}
               {connInfo.profile_name && (

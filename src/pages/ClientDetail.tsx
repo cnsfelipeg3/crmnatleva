@@ -1,4 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -276,7 +277,7 @@ export default function ClientDetail() {
                 {client.client_type === "pessoa_fisica" ? "Pessoa Física" : client.client_type === "familia" ? "Família" : "Empresa"}
               </Badge>
               {client.city && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[client.city, client.state].filter(Boolean).join("/")}</span>}
-              {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{client.phone}</span>}
+              {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{formatPhoneDisplay(client.phone)}</span>}
               {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{client.email}</span>}
             </div>
             {client.tags?.length > 0 && (

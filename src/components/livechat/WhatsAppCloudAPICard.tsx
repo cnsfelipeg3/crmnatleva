@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -300,7 +301,7 @@ export function WhatsAppCloudAPICard() {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-xs font-semibold">{connection.phone_number || "—"}</p>
+                        <p className="text-xs font-semibold">{connection.phone_number ? formatPhoneDisplay(connection.phone_number) : "—"}</p>
                         <p className="text-[10px] text-muted-foreground">{connection.display_name || ""}</p>
                       </div>
                     </TableCell>

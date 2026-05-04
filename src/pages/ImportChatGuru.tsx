@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -486,7 +487,7 @@ export default function ImportChatGuru() {
                   <tr key={i} className="border-t">
                     <td className="px-2 py-1 whitespace-nowrap">{m.created.substring(0, 16)}</td>
                     <td className="px-2 py-1 max-w-[120px] truncate">{m.chat_name}</td>
-                    <td className="px-2 py-1 whitespace-nowrap">{m.phone}</td>
+                    <td className="px-2 py-1 whitespace-nowrap">{formatPhoneDisplay(m.phone)}</td>
                     <td className="px-2 py-1 max-w-[200px] truncate">{m.texto_mensagem || `[${m.type}]`}</td>
                     <td className="px-2 py-1"><Badge variant="secondary" className="text-[9px]">{m.type}</Badge></td>
                     <td className="px-2 py-1">

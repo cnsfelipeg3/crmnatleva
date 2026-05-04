@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -128,7 +129,7 @@ export function FlowCRMPipeline() {
                     <CardContent className="p-2.5">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold truncate">
-                          {lead.client?.display_name || lead.phone || "Desconhecido"}
+                          {lead.client?.display_name || formatPhoneDisplay(lead.phone) || "Desconhecido"}
                         </span>
                         <span className="text-[9px] text-muted-foreground">{timeSince(lead.last_message_at)}</span>
                       </div>

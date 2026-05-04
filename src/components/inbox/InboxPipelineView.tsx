@@ -12,6 +12,7 @@ import {
   ChevronDown, ChevronUp, Phone, MapPin, Plane, Info,
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { formatPhoneNational as formatPhoneShort } from "@/lib/phone";
 
 // ─── Stage Descriptions ───
 const STAGE_DESCRIPTIONS: Record<Stage, { title: string; desc: string; tip: string }> = {
@@ -141,15 +142,7 @@ function formatCurrency(value: number): string {
   return `R$ ${value.toFixed(0)}`;
 }
 
-function formatPhoneShort(phone: string): string {
-  const clean = phone.replace(/\D/g, "");
-  if (clean.startsWith("55") && clean.length >= 12) {
-    const ddd = clean.slice(2, 4);
-    const rest = clean.slice(4);
-    return `(${ddd}) ${rest.slice(-4)}`;
-  }
-  return phone.slice(-8);
-}
+
 
 function getInitials(name: string): string {
   return name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();

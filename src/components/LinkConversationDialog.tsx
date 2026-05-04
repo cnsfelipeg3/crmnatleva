@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -177,7 +178,7 @@ export function LinkConversationDialog({
               <CheckCircle2 className="h-4 w-4 text-primary" />
               <div>
                 <p className="text-xs font-semibold text-foreground">{linkedConv.contact_name || linkedConv.display_name || linkedConv.phone}</p>
-                <p className="text-[10px] text-muted-foreground">{linkedConv.phone}</p>
+                <p className="text-[10px] text-muted-foreground">{formatPhoneDisplay(linkedConv.phone)}</p>
               </div>
             </div>
             <Button variant="ghost" size="sm" className="h-7 text-[10px] text-destructive hover:text-destructive" onClick={handleUnlink} disabled={unlinking}>
@@ -205,7 +206,7 @@ export function LinkConversationDialog({
                   </div>
                   <div className="text-left">
                     <p className="text-xs font-semibold">{c.contact_name || c.display_name || c.phone}</p>
-                    <p className="text-[10px] text-muted-foreground">{c.phone}</p>
+                    <p className="text-[10px] text-muted-foreground">{formatPhoneDisplay(c.phone)}</p>
                   </div>
                 </div>
                 <Link2 className="h-3.5 w-3.5 text-amber-600" />
@@ -277,7 +278,7 @@ export function LinkConversationDialog({
                       <div className="text-left min-w-0">
                         <p className="text-xs font-semibold text-foreground truncate">{name}</p>
                         <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                          {c.phone && <span className="flex items-center gap-0.5"><Phone className="h-2.5 w-2.5" />{c.phone}</span>}
+                          {c.phone && <span className="flex items-center gap-0.5"><Phone className="h-2.5 w-2.5" />{formatPhoneDisplay(c.phone)}</span>}
                           {c.last_message_at && <span className="flex items-center gap-0.5"><Clock className="h-2.5 w-2.5" />{fmtDate(c.last_message_at)}</span>}
                         </div>
                         {preview && (

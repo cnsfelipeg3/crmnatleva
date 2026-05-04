@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronDown, Download, MapPin, Phone, Mail, Globe, Clock, Bed, UtensilsCrossed, Wifi, Car, Star, Info, ExternalLink, CalendarCheck } from "lucide-react";
 
@@ -161,7 +162,7 @@ export default function HotelCard({ hotel: h, index = 0 }: HotelCardProps) {
                 {h.room_type && <DetailItem label="Tipo de quarto" value={h.room_type} />}
                 {h.meal_plan && <DetailItem label="Refeições" value={h.meal_plan} />}
                 {h.address && <DetailItem label="Endereço" value={h.address} />}
-                {h.phone && <DetailItem label="Telefone" value={h.phone} />}
+                {h.phone && <DetailItem label="Telefone" value={formatPhoneDisplay(h.phone)} />}
                 {h.email && <DetailItem label="E-mail" value={h.email} />}
                 {h.cancellation_policy && <DetailItem label="Cancelamento" value={h.cancellation_policy} />}
                 {h.special_requests && <DetailItem label="Pedidos especiais" value={h.special_requests} />}

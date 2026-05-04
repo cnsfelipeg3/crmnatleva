@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { formatDateBR } from "@/lib/dateFormat";
@@ -496,7 +497,7 @@ export default function Passengers() {
                         </TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{p.cpf || "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{p.birth_date ? formatDateBR(p.birth_date) : "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{p.phone || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{p.phone ? formatPhoneDisplay(p.phone) : "—"}</TableCell>
                         <TableCell className="font-mono text-xs text-muted-foreground">{p.passport_number || "—"}</TableCell>
                         <TableCell className="text-sm">
                           {p.passport_expiry ? (
@@ -561,7 +562,7 @@ export default function Passengers() {
                 {detailPax.cpf && <><span className="text-muted-foreground">CPF</span><span className="font-mono">{detailPax.cpf}</span></>}
                 {detailPax.rg && <><span className="text-muted-foreground">RG</span><span className="font-mono">{detailPax.rg}</span></>}
                 {detailPax.birth_date && <><span className="text-muted-foreground">Nascimento</span><span>{formatDateBR(detailPax.birth_date)}</span></>}
-                {detailPax.phone && <><span className="text-muted-foreground">Telefone</span><span>{detailPax.phone}</span></>}
+                {detailPax.phone && <><span className="text-muted-foreground">Telefone</span><span>{formatPhoneDisplay(detailPax.phone)}</span></>}
                 {detailPax.passport_number && <><span className="text-muted-foreground">Passaporte</span><span className="font-mono">{detailPax.passport_number}</span></>}
                 {detailPax.passport_expiry && <><span className="text-muted-foreground">Validade</span><span>{formatDateBR(detailPax.passport_expiry)}</span></>}
                 {detailPax.address_city && <><span className="text-muted-foreground">Cidade</span><span>{detailPax.address_city}/{detailPax.address_state}</span></>}

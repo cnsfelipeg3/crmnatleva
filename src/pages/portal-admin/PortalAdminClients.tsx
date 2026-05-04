@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { formatPhoneDisplay } from "@/lib/phone";
 import { useNavigate } from "react-router-dom";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { useAuth } from "@/contexts/AuthContext";
@@ -128,7 +129,7 @@ export default function PortalAdminClients() {
                           {client.city && <p className="text-xs text-muted-foreground">{client.city}{client.state ? `, ${client.state}` : ""}</p>}
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{client.email || "—"}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{client.phone || "—"}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{client.phone ? formatPhoneDisplay(client.phone) : "—"}</td>
                         <td className="px-4 py-3">
                           <Badge variant="outline" className="text-[10px]">{stats?.tripCount || 0}</Badge>
                         </td>
