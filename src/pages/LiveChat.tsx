@@ -446,18 +446,22 @@ export default function LiveChat() {
     });
   }, []);
 
+  const previousSelectedIdRef = useRef<string | null>(null);
+  const lastMessageId = currentMessages[currentMessages.length - 1]?.id;
   useEffect(() => {
-    if (!isUserScrolledUpRef.current) {
-      scrollToBottom();
-    }
-  }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
-
-  useEffect(() => {
-    if (selectedId) {
+    if (!selectedId) return;
+    // Conversa mudou: reseta estado de scroll e vai instantaneamente pro fim
+    if (previousSelectedIdRef.current !== selectedId) {
       isUserScrolledUpRef.current = false;
-      scrollToBottom("instant" as ScrollBehavior);
+      previousSelectedIdRef.current = selectedId;
+      scrollToBottom("auto" as ScrollBehavior);
+      return;
     }
-  }, [selectedId, scrollToBottom]);
+    // Mesma conversa, nova mensagem: só rola suavemente se o usuário não subiu
+    if (!isUserScrolledUpRef.current) {
+      scrollToBottom("smooth");
+    }
+  }, [selectedId, currentMessages.length, lastMessageId, scrollToBottom]);
 
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector("[data-radix-scroll-area-viewport]");
