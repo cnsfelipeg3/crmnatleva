@@ -50,18 +50,36 @@ export function LinkClientDialog({
     if (!open) return;
     setSearch("");
     setConfirmReplace(null);
-    loadClients();
     if (currentClientId) loadCurrentClient();
     else setCurrentClient(null);
   }, [open, currentClientId]);
 
-  const loadClients = async () => {
+  // Debounced server-side search (handles full client base, not just top 500)
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(() => loadClients(search), search ? 250 : 0);
+    return () => clearTimeout(t);
+  }, [open, search]);
+
+  const loadClients = async (q: string) => {
     setLoading(true);
-    const { data } = await supabase
+    let query = supabase
       .from("clients")
       .select("id, display_name, phone, email, client_type, city, state, tags")
       .order("display_name")
-      .limit(500);
+      .limit(200);
+    const term = q.trim();
+    if (term) {
+      const digits = term.replace(/\D/g, "");
+      const ors = [
+        `display_name.ilike.%${term}%`,
+        `email.ilike.%${term}%`,
+        `city.ilike.%${term}%`,
+      ];
+      if (digits.length >= 3) ors.push(`phone.ilike.%${digits}%`);
+      query = query.or(ors.join(","));
+    }
+    const { data } = await query;
     setClients(data || []);
     setLoading(false);
   };
@@ -256,13 +274,13 @@ export function LinkClientDialog({
         </div>
 
         {/* Client List */}
-        <ScrollArea className="flex-1 min-h-0 max-h-[45vh]">
+        <div className="flex-1 min-h-0 max-h-[45vh] overflow-y-auto -mr-2 pr-2">
           {loading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : filtered.length === 0 ? (
             <p className="text-center text-xs text-muted-foreground py-8">Nenhum cliente encontrado</p>
           ) : (
-            <div className="space-y-0.5 pr-2">
+            <div className="space-y-0.5">
               {filtered.map(c => {
                 const isLinked = c.id === currentClientId;
                 return (
@@ -300,7 +318,7 @@ export function LinkClientDialog({
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
