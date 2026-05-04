@@ -186,6 +186,9 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                 if (status === "failed" && !bestUrl) {
                   return <FailedMediaCard reason={msg.media_failure_reason} type={msg.message_type} filename={msg.media_filename} />;
                 }
+                if (status === "expired" && !bestUrl) {
+                  return <ExpiredMediaCard type={msg.message_type} filename={msg.media_filename} />;
+                }
                 // Otherwise render the media (legacy NULL status falls here too)
                 if (msg.message_type === "audio") {
                   return (
