@@ -740,6 +740,7 @@ function OperacaoInboxInner() {
             score_potential: c.score_potential || 0,
             score_risk: c.score_risk || 0,
             is_pinned: !!c.is_pinned,
+            manually_marked_unread: !!c.manually_marked_unread,
             _hasReliableActivity: true,
           };
         });
