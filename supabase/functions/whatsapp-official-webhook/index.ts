@@ -96,13 +96,15 @@ serve(async (req) => {
               // If RPC doesn't exist, the update above set it to 1
             }
 
-            // Insert into messages table for Inbox
-            await supabase.from("messages").insert({
+            // Insert into conversation_messages (canonical)
+            await supabase.from("conversation_messages").insert({
               conversation_id: existingConv.id,
+              direction: "incoming",
               sender_type: "cliente",
               message_type: msg.type === "text" ? "text" : msg.type as any,
-              text: content.body || `[${msg.type}]`,
+              content: content.body || `[${msg.type}]`,
               media_url: content.image?.link || content.document?.link || null,
+              media_storage_url: content.image?.link || content.document?.link || null,
               status: "delivered",
             });
           } else {
