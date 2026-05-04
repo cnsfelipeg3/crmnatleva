@@ -245,12 +245,31 @@ function getContactInitials(contactName?: string | null, phone?: string | null):
   return initials || "CN";
 }
 
-// Z-API helper
+// Z-API helper · com safety net visual (toast humano em falha).
+// Tech debt: refactor pra persist otimístico (status pending → finalize) fica
+// pra rodada separada · aqui só damos feedback ao usuário sem mexer no banco.
+import { classifySendOutcome, humanizeFailureReason } from "@/lib/zapiFailureClassifier";
+
 async function callZapiProxy(action: string, payload?: any) {
   const { data, error } = await supabase.functions.invoke("zapi-proxy", {
     body: { action, payload },
   });
-  if (error) throw new Error(error.message || "Erro na chamada Z-API");
+  // Sends que falham silenciosamente (data.success === false ou data.error)
+  // também viram toast · não só erros do invoke.
+  const isSendAction = typeof action === "string" && action.startsWith("send-");
+  if (isSendAction) {
+    const outcome = classifySendOutcome(error, data);
+    if (!outcome.ok) {
+      toast({
+        title: "Mensagem não enviada",
+        description: humanizeFailureReason(outcome.reason),
+        variant: "destructive",
+      });
+      throw new Error(outcome.detail || error?.message || "Falha no envio Z-API");
+    }
+  } else if (error) {
+    throw new Error(error.message || "Erro na chamada Z-API");
+  }
   return data;
 }
 

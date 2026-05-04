@@ -15,7 +15,10 @@ const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
-// ─── Failure reason taxonomy (exported for frontend reference) ───
+// ─── Failure reason taxonomy ───
+// ⚠️ MANTER SINCRONIZADO COM: src/lib/zapiFailureClassifier.ts
+// (Deno e Vite têm runtimes separados · duplicação intencional. As CHAVES e
+//  os valores string DEVEM coincidir entre os dois arquivos.)
 export const FAILURE_REASONS = {
   TEMPORARY: "temporary",                 // rede / timeout / Z-API 5xx · retry vale a pena
   INVALID_NUMBER: "invalid_number",       // número não tem WhatsApp · retry inútil
