@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConnection";
 import { useFailedMessagesWatcher } from "@/hooks/useFailedMessagesWatcher";
+import { FailedMessagesBadge } from "@/components/header/FailedMessagesBadge";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
