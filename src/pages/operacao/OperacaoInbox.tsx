@@ -2164,6 +2164,7 @@ function OperacaoInboxInner() {
                     <div ref={messagesEndRef} />
                   </div>
                 </div>
+                </div>
 
                 {/* Media pending preview */}
                 {mediaPendingFile && (
