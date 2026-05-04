@@ -51,6 +51,7 @@ import {
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
 import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
+import { formatBytes } from "@/lib/format";
 import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 import { useMessageQueue } from "@/hooks/useMessageQueue";
@@ -236,6 +237,11 @@ function OperacaoInboxInner() {
     messageType: MsgType;
     text: string;
     mediaUrl?: string;
+    mediaStorageUrl?: string;
+    mediaMimetype?: string;
+    mediaFilename?: string;
+    mediaSizeBytes?: number;
+    mediaStatus?: string;
     externalMessageId?: string;
     createdAt?: string;
     status?: "pending" | "sent" | "failed";
@@ -264,6 +270,11 @@ function OperacaoInboxInner() {
         content: payload.text || "",
         message_type: payload.messageType,
         media_url: payload.mediaUrl || null,
+        media_storage_url: payload.mediaStorageUrl || payload.mediaUrl || null,
+        media_mimetype: payload.mediaMimetype || null,
+        media_filename: payload.mediaFilename || null,
+        media_size_bytes: payload.mediaSizeBytes ?? null,
+        media_status: payload.mediaStatus || (payload.messageType !== "text" ? "downloaded" : null),
         status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
@@ -1204,6 +1215,23 @@ function OperacaoInboxInner() {
     return urlData.publicUrl;
   }, []);
 
+  // Mime helper for outgoing media (fallback when file.type ausente)
+  const guessMimeFromExt = useCallback((filename: string, fallback?: string): string => {
+    if (fallback && fallback !== "application/octet-stream") return fallback;
+    const ext = (filename.split(".").pop() || "").toLowerCase();
+    const map: Record<string, string> = {
+      jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", gif: "image/gif", webp: "image/webp", heic: "image/heic",
+      mp4: "video/mp4", mov: "video/quicktime", webm: "video/webm", mkv: "video/x-matroska",
+      mp3: "audio/mpeg", wav: "audio/wav", ogg: "audio/ogg", m4a: "audio/mp4", opus: "audio/opus",
+      pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xls: "application/vnd.ms-excel", xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      ppt: "application/vnd.ms-powerpoint", pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      txt: "text/plain", csv: "text/csv", zip: "application/zip", rar: "application/vnd.rar",
+    };
+    return map[ext] || fallback || "application/octet-stream";
+  }, []);
+
+
   // Audio recording
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
@@ -1283,11 +1311,14 @@ function OperacaoInboxInner() {
           const localUrl = URL.createObjectURL(blob);
           const tempAudioId = `temp_audio_${Date.now()}`;
           const audioPayload = { phone, audio: audioUrl };
+          const audioMime = "audio/wav";
+          const audioSize = blob.size;
 
           // Otimístico na UI
           setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
             id: tempAudioId, conversation_id: selectedId, sender_type: "atendente" as const,
-            message_type: "audio" as MsgType, text: "", status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: localUrl,
+            message_type: "audio" as MsgType, text: "", status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+            media_url: audioUrl, media_storage_url: audioUrl, media_mimetype: audioMime, media_filename: fileName, media_size_bytes: audioSize, media_status: "downloaded",
           }] }));
 
           // 1. Persist pending
@@ -1298,6 +1329,11 @@ function OperacaoInboxInner() {
               messageType: "audio",
               text: "",
               mediaUrl: audioUrl,
+              mediaStorageUrl: audioUrl,
+              mediaMimetype: audioMime,
+              mediaFilename: fileName,
+              mediaSizeBytes: audioSize,
+              mediaStatus: "downloaded",
               externalMessageId: tempAudioId,
               createdAt: new Date().toISOString(),
               status: "pending",
@@ -1306,6 +1342,7 @@ function OperacaoInboxInner() {
           } catch (persistErr: any) {
             console.error("[SEND-AUDIO] persist pending falhou:", persistErr);
           }
+
 
           // 2. Z-API
           const outcome = await sendViaZapi("send-audio", audioPayload);
@@ -1385,16 +1422,19 @@ function OperacaoInboxInner() {
       const fileName = `${fileInputMediaType}_${Date.now()}.${ext}`;
       const publicUrl = await uploadToStorage(file, folder, fileName);
       const tempMediaId = `temp_media_${Date.now()}`;
-      const label = fileInputMediaType === "video" ? "Vídeo" : `${file.name}`;
+      // text padronizado: vazio (sem "Vídeo"/filename) p/ não quebrar dedupe vs webhook
+      const text = "";
       const action = fileInputMediaType === "video" ? "send-video" : "send-document";
       const sendPayload = fileInputMediaType === "video"
         ? { phone, video: publicUrl, caption: "" }
         : { phone, document: publicUrl, fileName: file.name, extension: ext };
+      const mime = guessMimeFromExt(file.name, file.type);
 
       // UI otimística
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
         id: tempMediaId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: fileInputMediaType as MsgType, text: label, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: publicUrl,
+        message_type: fileInputMediaType as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+        media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
       }] }));
 
       // 1. Persist pending
@@ -1403,8 +1443,13 @@ function OperacaoInboxInner() {
         messageDbId = await persistOutgoingMessage({
           conversationId: selectedId,
           messageType: fileInputMediaType as MsgType,
-          text: label,
+          text,
           mediaUrl: publicUrl,
+          mediaStorageUrl: publicUrl,
+          mediaMimetype: mime,
+          mediaFilename: file.name,
+          mediaSizeBytes: file.size,
+          mediaStatus: "downloaded",
           externalMessageId: tempMediaId,
           createdAt: new Date().toISOString(),
           status: "pending",
@@ -1450,12 +1495,15 @@ function OperacaoInboxInner() {
       const publicUrl = await uploadToStorage(file, "images", fileName);
       const tempImgId = `temp_media_${Date.now()}`;
       const imgPayload = { phone, image: publicUrl, caption };
-      const text = caption || "📷 Imagem";
+      // text padronizado: caption (vazio se sem caption) p/ casar com webhook na dedupe
+      const text = caption;
+      const mime = guessMimeFromExt(file.name, file.type);
 
-      // UI otimística
+      // UI otimística (usa publicUrl direto, não blob, p/ sobreviver a F5)
       setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
         id: tempImgId, conversation_id: selectedId, sender_type: "atendente" as const,
-        message_type: "image" as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(), media_url: previewUrl,
+        message_type: "image" as MsgType, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+        media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
       }] }));
 
       // 1. Persist pending
@@ -1466,6 +1514,11 @@ function OperacaoInboxInner() {
           messageType: "image",
           text,
           mediaUrl: publicUrl,
+          mediaStorageUrl: publicUrl,
+          mediaMimetype: mime,
+          mediaFilename: file.name,
+          mediaSizeBytes: file.size,
+          mediaStatus: "downloaded",
           externalMessageId: tempImgId,
           createdAt: new Date().toISOString(),
           status: "pending",
@@ -1927,11 +1980,20 @@ function OperacaoInboxInner() {
                                 {msg.message_type === "document" && (
                                   <div className="flex items-center gap-2 py-1">
                                     <FileText className="h-5 w-5 shrink-0" />
-                                    {msg.media_url ? (
-                                      <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80">{msg.text || "Documento"}</a>
-                                    ) : (
-                                      <span className="text-sm">{msg.text || "Documento"}</span>
-                                    )}
+                                    <div className="flex flex-col min-w-0">
+                                      {msg.media_url ? (
+                                        <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80 truncate max-w-[220px]">
+                                          {msg.media_filename || msg.text || "Documento"}
+                                        </a>
+                                      ) : (
+                                        <span className="text-sm truncate max-w-[220px]">{msg.media_filename || msg.text || "Documento"}</span>
+                                      )}
+                                      {(msg.media_size_bytes || msg.media_mimetype) && (
+                                        <span className="text-[10px] opacity-60">
+                                          {[msg.media_mimetype?.split("/").pop()?.toUpperCase(), msg.media_size_bytes ? formatBytes(msg.media_size_bytes) : null].filter(Boolean).join(" · ")}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                                 {/* Text */}
