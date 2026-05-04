@@ -2699,9 +2699,33 @@ export default function LiveChat() {
                           </motion.div>
                         </div>
                       )}
+                      {activePresenceStatus && (
+                        <TypingIndicator status={activePresenceStatus} />
+                      )}
                       <div ref={messagesEndRef} />
                     </div>
                   </ScrollArea>
+
+                  {/* Botão flutuante: scroll para o fim */}
+                  {isScrolledUp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUnreadDuringScroll(0);
+                        scrollToBottom("smooth");
+                      }}
+                      className="absolute bottom-4 right-4 z-20 h-10 w-10 rounded-full bg-card border border-border shadow-lg hover:bg-accent flex items-center justify-center transition-all animate-fade-in"
+                      aria-label="Ir para o final da conversa"
+                    >
+                      <ChevronDown className="h-5 w-5 text-foreground" />
+                      {unreadDuringScroll > 0 && (
+                        <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                          {unreadDuringScroll > 99 ? "99+" : unreadDuringScroll}
+                        </span>
+                      )}
+                    </button>
+                  )}
+                  </div>
 
                   {/* Media pending preview */}
                   {mediaPendingFile && (
