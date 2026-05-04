@@ -35,19 +35,28 @@ function normalizePhone(raw: string): string {
     .trim();
 }
 
-// Formata telefone para envio Z-API: anexa @g.us para IDs de grupo (15+ dígitos).
-// Idempotente: respeita @g.us existente; remove sufixos individuais (@c.us, @s.whatsapp.net).
+// Formata telefone para envio Z-API: anexa "-group" para IDs de grupo.
+// Doc: https://developer.z-api.io/en/group/introduction
+// Idempotente: já formatado (-group) passa direto; preserva ID legado "creator-timestamp".
 function formatPhoneForSending(raw: string): string {
-  const original = String(raw || "");
-  if (/@(g\.us|c\.us|s\.whatsapp\.net)/i.test(original)) {
-    if (/@g\.us/i.test(original)) {
-      const digits = original.replace(/\D/g, "");
-      return `${digits}@g.us`;
-    }
+  const original = String(raw || "").trim();
+  // 1. já formatado
+  if (/-group$/i.test(original)) return original;
+  // 2. formato interno @g.us → converte pra -group
+  if (/@g\.us/i.test(original)) {
+    return `${original.replace(/@g\.us/gi, "").replace(/\D/g, "")}-group`;
+  }
+  // 3. ID legado de grupo "creator-timestamp" (ex: 5511...-1623456789)
+  if (/^\d+-\d{8,}$/.test(original)) {
+    return `${original}-group`;
+  }
+  // 4. individual com sufixo @c.us / @s.whatsapp.net → só dígitos
+  if (/@(c\.us|s\.whatsapp\.net)/i.test(original)) {
     return original.replace(/@c\.us|@s\.whatsapp\.net/gi, "").replace(/\D/g, "");
   }
+  // 5/6. dígitos puros: >=15 = grupo, senão individual
   const digits = original.replace(/\D/g, "");
-  return digits.length >= 15 ? `${digits}@g.us` : digits;
+  return digits.length >= 15 ? `${digits}-group` : digits;
 }
 
 function parseTimestampSeconds(msg: any): number {
