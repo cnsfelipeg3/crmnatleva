@@ -226,6 +226,44 @@ function OperacaoInboxInner() {
 
   useInboxRealtime(setMessages, setConversations, setSelectedId, lastMsgIdsRef, selectedIdRef, conversationsRef);
 
+  // ──────────────────────────────────────────────────────────────────
+  // FALLBACKS DE SINCRONIZAÇÃO (caso realtime falhe silenciosamente)
+  // FIX 1: polling de 15s das mensagens da conversa aberta
+  // FIX 2: refetch on window focus / visibilitychange
+  // FIX 3: polling de 30s da lista de conversas
+  // ──────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedId) return;
+    const tick = () => {
+      if (document.hidden) return;
+      setReloadVersion(v => v + 1);
+    };
+    const interval = setInterval(tick, 15000);
+    return () => clearInterval(interval);
+  }, [selectedId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.hidden) return;
+      setChatSyncVersion(v => v + 1);
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    const handleFocus = () => {
+      if (document.hidden) return;
+      if (selectedIdRef.current) setReloadVersion(v => v + 1);
+      setChatSyncVersion(v => v + 1);
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, []);
+
   const getZapiPhoneCandidates = useCallback((conversationId: string) => {
     const phone = conversationId.replace("wa_", "").replace(/\D/g, "").trim();
     if (!phone) return [] as string[];
