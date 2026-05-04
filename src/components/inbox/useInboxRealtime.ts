@@ -26,6 +26,12 @@ export function useInboxRealtime(
       .channel('livechat-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_messages' }, async (payload) => {
         const n = payload.new as any;
+        console.log('[realtime] INSERT recebido', {
+          conversation_id: n?.conversation_id,
+          external_message_id: n?.external_message_id,
+          sender_type: n?.sender_type,
+          timestamp: new Date().toISOString(),
+        });
         if (!n.conversation_id) return;
 
         // Fix 1: resolve waKey robustamente · prioriza conv local; se não achar, busca phone no banco e monta wa_<phone>; fallback final = UUID.
