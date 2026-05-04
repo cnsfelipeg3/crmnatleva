@@ -1109,35 +1109,29 @@ export default function LiveChat() {
 
     async function loadChats() {
       try {
-        const data = await callZapiProxy("get-chats");
-        const chats = Array.isArray(data) ? data : [];
-        // Only show chats that have a conversation in our DB
-        const phoneList = chats
-          .map((c: any) => (c.phone || c.id || "").replace(/\D/g, ""))
-          .filter(Boolean);
-        
-        // Fetch which phones already have conversations in DB
-        const knownPhones = new Set<string>();
-        if (phoneList.length > 0) {
-          const { data: dbConvs } = await supabase
-            .from("conversations")
-            .select("phone")
-            .in("phone", phoneList);
-          for (const c of dbConvs || []) {
-            knownPhones.add(c.phone);
-          }
-        }
+        // Source of truth: tabela conversations no banco (inclui outgoing-only)
+        const { data: dbConvs, error: dbErr } = await supabase
+          .from("conversations")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url")
+          .is("excluded_at", null)
+          .order("is_pinned", { ascending: false, nullsFirst: false })
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(500);
+        if (dbErr) console.error("loadChats: erro DB:", dbErr);
 
-        const newConvs: Conversation[] = [];
-
-        // Populate LID→phone mappings from get-chats data (batch upsert)
+        // Enriquecimento opcional Z-API (unread em tempo real + foto inline + LID mapping)
+        const zapiData = await callZapiProxy("get-chats").catch(() => []);
+        const zapiChats = Array.isArray(zapiData) ? zapiData : [];
+        const zapiByPhone = new Map<string, any>();
         const lidMappings: Array<{ phone: string; lid: string; name: string | null }> = [];
-        for (const chat of chats) {
-          const chatPhone = (chat.phone || "").replace(/\D/g, "");
-          const chatLid = (chat.lid || "").replace("@lid", "");
-          if (chatPhone && chatLid) {
-            lidMappings.push({ phone: chatPhone, lid: chatLid, name: chat.name || chat.chatName || null });
-          }
+        for (const z of zapiChats) {
+          const raw = z.phone || z.id || "";
+          if (!raw || raw.includes("@g.us") || raw === "status@broadcast") continue;
+          const cp = String(raw).replace(/\D/g, "");
+          if (!cp) continue;
+          zapiByPhone.set(cp, z);
+          const chatLid = (z.lid || "").replace("@lid", "");
+          if (chatLid) lidMappings.push({ phone: cp, lid: chatLid, name: z.name || z.chatName || null });
         }
         if (lidMappings.length > 0) {
           supabase.from("zapi_contacts").upsert(
@@ -1146,113 +1140,69 @@ export default function LiveChat() {
           ).then(({ error }) => { if (error) console.error("LID mapping upsert error:", error); });
         }
 
-        for (const chat of chats) {
-          const phone = chat.phone || chat.id || "";
-          if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
-
-          // Clean phone number
-          const cleanPhone = phone.replace(/\D/g, "");
-          if (!cleanPhone) continue;
-
-          // Only include chats that exist in our DB
-          if (!knownPhones.has(cleanPhone)) continue;
-
-          const convId = `wa_${cleanPhone}`;
-          const contactName = chat.name || chat.chatName || chat.contact?.name || formatPhoneDisplay(cleanPhone);
-          let lastMsgTime: string | null = null;
-          try {
-            if (chat.lastMessageTimestamp && Number(chat.lastMessageTimestamp) > 0) {
-              lastMsgTime = new Date(Number(chat.lastMessageTimestamp) * 1000).toISOString();
-            } else if (chat.lastMessageTime && Number(chat.lastMessageTime) > 0) {
-              lastMsgTime = new Date(Number(chat.lastMessageTime)).toISOString();
-            }
-          } catch { lastMsgTime = null; }
-
-          const chatPhoto = chat.imgUrl || chat.image || chat.photo || "";
-          newConvs.push({
-            id: convId, phone: cleanPhone, contact_name: contactName,
-            stage: "novo_lead" as Stage, tags: [], source: "whatsapp",
-            last_message_at: lastMsgTime || new Date().toISOString(),
-            last_message_preview: chat.lastMessage || chat.lastMessageText || "",
-            unread_count: chat.unreadMessages || chat.unread || 0,
-            is_vip: false, assigned_to: "",
-            score_potential: 0, score_risk: 0,
-          });
-          // Store photo from Z-API chat data immediately
+        const newConvs: Conversation[] = (dbConvs || []).map((c: any) => {
+          const cleanPhone = String(c.phone || "").replace(/\D/g, "");
+          const convId = cleanPhone ? `wa_${cleanPhone}` : c.id;
+          const z = zapiByPhone.get(cleanPhone);
+          const chatPhoto = z?.imgUrl || z?.image || z?.photo || "";
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
             profilePicsRef.current.set(`wa_${cleanPhone}`, chatPhoto);
-          }
-        }
-
-        if (newConvs.length > 0) {
-          // Deduplicate
-          const deduped = new Map<string, Conversation>();
-          for (const conv of newConvs) {
-            const existing = deduped.get(conv.id);
-            if (!existing || new Date(conv.last_message_at).getTime() > new Date(existing.last_message_at).getTime()) {
-              deduped.set(conv.id, conv);
+          } else if (c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
+            if (!profilePicsRef.current.has(convId)) {
+              profilePicsRef.current.set(convId, c.profile_picture_url);
+              profilePicsRef.current.set(`wa_${cleanPhone}`, c.profile_picture_url);
             }
           }
-          const dedupedConvs = Array.from(deduped.values())
-            .sort((a, b) => new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime());
+          return {
+            id: convId,
+            phone: cleanPhone || c.phone || "",
+            contact_name: c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone),
+            stage: ((c.stage || c.funnel_stage) || "novo_lead") as Stage,
+            tags: c.tags || [],
+            source: c.source || "whatsapp",
+            last_message_at: c.last_message_at || "",
+            last_message_preview: c.last_message_preview || "",
+            unread_count: Math.max(Number(c.unread_count) || 0, Number(z?.unreadMessages ?? z?.unread) || 0),
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
+            score_risk: c.score_risk || 0,
+            is_pinned: !!c.is_pinned,
+          };
+        });
 
+        if (newConvs.length > 0) {
           setConversations(prev => {
             const prevMap = new Map(prev.map(c => [c.id, c]));
-            const merged = dedupedConvs.map(c => {
+            const merged = newConvs.map(c => {
               const existing = prevMap.get(c.id);
-              if (existing) {
-                const isOpen = c.id === selectedIdRef.current;
-                // Preserve local data; use the most recent timestamp
-                const existingTime = new Date(existing.last_message_at).getTime();
-                const freshTime = new Date(c.last_message_at).getTime();
-                const bestTime = freshTime > existingTime ? c.last_message_at : existing.last_message_at;
-                const bestPreview = (freshTime > existingTime && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview);
-                return {
-                  ...c,
-                  contact_name: existing.contact_name || c.contact_name,
-                  last_message_at: bestTime,
-                  last_message_preview: bestPreview || c.last_message_preview,
-                  unread_count: isOpen ? 0 : existing.unread_count,
-                  stage: existing.stage || c.stage,
-                  tags: existing.tags.length > 0 ? existing.tags : c.tags,
-                  is_vip: existing.is_vip || c.is_vip,
-                  assigned_to: existing.assigned_to || c.assigned_to,
-                  score_potential: existing.score_potential || c.score_potential,
-                  score_risk: existing.score_risk || c.score_risk,
-                  vehicle_interest: existing.vehicle_interest || c.vehicle_interest,
-                  is_pinned: existing.is_pinned || c.is_pinned,
-                };
-              }
-              return c;
+              if (!existing) return c;
+              const isOpen = c.id === selectedIdRef.current;
+              return {
+                ...c,
+                contact_name: existing.contact_name || c.contact_name,
+                unread_count: isOpen ? 0 : Math.max(existing.unread_count || 0, c.unread_count || 0),
+                stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
+                tags: existing.tags?.length ? existing.tags : c.tags,
+                is_vip: existing.is_vip || c.is_vip,
+                assigned_to: existing.assigned_to || c.assigned_to,
+                score_potential: existing.score_potential || c.score_potential,
+                score_risk: existing.score_risk || c.score_risk,
+                vehicle_interest: existing.vehicle_interest || c.vehicle_interest,
+              };
             });
-            // Keep conversations not in fresh batch
-            const freshIds = new Set(dedupedConvs.map(c => c.id));
+            const freshIds = new Set(newConvs.map(c => c.id));
             const kept = prev.filter(c => !freshIds.has(c.id));
             return [...kept, ...merged].sort((a, b) => {
               if (a.is_pinned && !b.is_pinned) return -1;
               if (!a.is_pinned && b.is_pinned) return 1;
-              return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+              return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
             });
           });
 
-          // Persist conversations
-          for (const conv of dedupedConvs) {
-            persistConversation(conv).catch(() => {});
-          }
-
-          // Extract profile pictures from raw_data first (fast, no API call)
-          for (const conv of dedupedConvs) {
-            if (!profilePicsRef.current.has(conv.id) && (conv as any).photo) {
-              const pic = (conv as any).photo;
-              if (pic && typeof pic === "string" && pic.startsWith("http")) {
-                profilePicsRef.current.set(conv.id, pic);
-                profilePicsRef.current.set(`wa_${conv.phone}`, pic);
-              }
-            }
-          }
-          // Fetch profile pictures via API for those still missing — process all, in parallel chunks
-          const missing = dedupedConvs.filter(conv => !profilePicsRef.current.has(conv.id));
+          // Profile picture backfill via API for missing
+          const missing = newConvs.filter(conv => !profilePicsRef.current.has(conv.id));
           (async () => {
             const chunkSize = 6;
             for (let i = 0; i < missing.length; i += chunkSize) {
@@ -1265,15 +1215,13 @@ export default function LiveChat() {
                     profilePicsRef.current.set(conv.id, picUrl);
                     profilePicsRef.current.set(`wa_${conv.phone}`, picUrl);
                     setProfilePicsVersion(v => v + 1);
-                    // Persist to DB so next load is instant
                     supabase.from("conversations").update({
                       profile_picture_url: picUrl,
                       profile_picture_fetched_at: new Date().toISOString(),
                     } as any).eq("phone", conv.phone).is("profile_picture_url", null).then(() => {});
                   }
-                } catch { /* ignore individual failures */ }
+                } catch { /* ignore */ }
               }));
-              // Tiny breather between chunks to be nice to Z-API
               await new Promise(r => setTimeout(r, 80));
             }
           })();

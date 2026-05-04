@@ -679,89 +679,102 @@ function OperacaoInboxInner() {
 
     async function loadChats() {
       try {
-        const data = await callZapiProxy("get-chats");
-        const chats = Array.isArray(data) ? data : [];
-          const newConvs: Array<Conversation & { _hasReliableActivity?: boolean }> = [];
-        for (const chat of chats) {
-          const phone = chat.phone || chat.id || "";
-          if (!phone || phone.includes("@g.us") || phone === "status@broadcast") continue;
-          const zapiPhone = String(phone || "").trim();
-          const cleanPhone = zapiPhone.replace(/\D/g, "");
-          if (!cleanPhone) continue;
-          const convId = `wa_${cleanPhone}`;
-          const contactName = chat.name || chat.chatName || chat.contact?.name || formatPhoneDisplay(cleanPhone);
-          let lastMsgTime: string | null = null;
-          try {
-            if (chat.lastMessageTimestamp && Number(chat.lastMessageTimestamp) > 0) lastMsgTime = new Date(Number(chat.lastMessageTimestamp) * 1000).toISOString();
-            else if (chat.lastMessageTime && Number(chat.lastMessageTime) > 0) lastMsgTime = new Date(Number(chat.lastMessageTime)).toISOString();
-          } catch { lastMsgTime = null; }
-          const chatPhoto = chat.imgUrl || chat.image || chat.photo || "";
-          const hasReliableActivity = Boolean(lastMsgTime || chat.lastMessage || chat.lastMessageText);
-          newConvs.push({
-            id: convId, phone: cleanPhone, zapi_phone: zapiPhone, contact_name: contactName,
-            stage: "novo_lead" as Stage, tags: [], source: "whatsapp",
-            last_message_at: lastMsgTime || "",
-            last_message_preview: chat.lastMessage || chat.lastMessageText || "",
-            unread_count: toUnreadCount(chat.unreadMessages ?? chat.unread),
-            is_vip: false, assigned_to: "", score_potential: 0, score_risk: 0,
-            _hasReliableActivity: hasReliableActivity,
-          });
+        // Source of truth: tabela conversations no banco (inclui outgoing-only)
+        const { data: dbConvs, error: dbErr } = await supabase
+          .from("conversations")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url")
+          .is("excluded_at", null)
+          .order("is_pinned", { ascending: false, nullsFirst: false })
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(500);
+        if (dbErr) console.error("loadChats: erro DB:", dbErr);
+
+        // Enriquecimento opcional Z-API (unread em tempo real + foto inline)
+        const zapiData = await callZapiProxy("get-chats").catch(() => []);
+        const zapiChats = Array.isArray(zapiData) ? zapiData : [];
+        const zapiByPhone = new Map<string, any>();
+        for (const z of zapiChats) {
+          const raw = z.phone || z.id || "";
+          if (!raw || raw.includes("@g.us") || raw === "status@broadcast") continue;
+          const cp = String(raw).replace(/\D/g, "");
+          if (cp) zapiByPhone.set(cp, z);
+        }
+
+        const merged: Array<Conversation & { _hasReliableActivity?: boolean }> = (dbConvs || []).map((c: any) => {
+          const cleanPhone = String(c.phone || "").replace(/\D/g, "");
+          const convId = cleanPhone ? `wa_${cleanPhone}` : c.id;
+          const z = zapiByPhone.get(cleanPhone);
+          const chatPhoto = z?.imgUrl || z?.image || z?.photo || "";
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
+          } else if (c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
+            if (!profilePicsRef.current.has(convId)) profilePicsRef.current.set(convId, c.profile_picture_url);
           }
-        }
-        // Save any inline chat photos to cache
-        if (newConvs.length > 0) saveProfilePicsCache();
-        if (newConvs.length > 0) {
-          const deduped = new Map<string, Conversation & { _hasReliableActivity?: boolean }>();
-          for (const conv of newConvs) {
-            const existing = deduped.get(conv.id);
-            if (!existing || new Date(conv.last_message_at).getTime() > new Date(existing.last_message_at).getTime()) deduped.set(conv.id, conv);
-          }
-          const dedupedConvs = Array.from(deduped.values()).sort((a, b) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime());
-          setConversations(prev => {
-            const prevMap = new Map(prev.map(c => [c.id, c]));
-            const merged = dedupedConvs.flatMap(c => {
-              const existing = prevMap.get(c.id);
-              if (existing) {
-                const isOpen = c.id === selectedIdRef.current;
-                const existingTime = new Date(existing.last_message_at || 0).getTime();
-                const freshTime = c.last_message_at ? new Date(c.last_message_at).getTime() : 0;
-                const shouldUseFreshActivity = Boolean(c._hasReliableActivity && freshTime > existingTime);
-                return [{ ...c, db_id: existing.db_id || c.db_id, zapi_phone: c.zapi_phone || existing.zapi_phone, contact_name: existing.contact_name || c.contact_name, last_message_at: shouldUseFreshActivity ? c.last_message_at : existing.last_message_at, last_message_preview: (shouldUseFreshActivity && c.last_message_preview) ? c.last_message_preview : (existing.last_message_preview || c.last_message_preview), unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)), stage: existing.stage || c.stage, tags: existing.tags.length > 0 ? existing.tags : c.tags, is_vip: existing.is_vip || c.is_vip, assigned_to: existing.assigned_to || c.assigned_to, is_pinned: existing.is_pinned || c.is_pinned }];
-              }
-              if (!c._hasReliableActivity) return [];
-              return [{ ...c, last_message_at: c.last_message_at || new Date().toISOString() }];
-            });
-            const freshIds = new Set(dedupedConvs.map(c => c.id));
-            const kept = prev.filter(c => !freshIds.has(c.id));
-            return [...kept, ...merged].sort((a, b) => {
-              if (a.is_pinned && !b.is_pinned) return -1;
-              if (!a.is_pinned && b.is_pinned) return 1;
-              return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
-            });
+          return {
+            id: convId,
+            db_id: c.id,
+            phone: cleanPhone || c.phone || "",
+            zapi_phone: cleanPhone,
+            contact_name: c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone),
+            stage: ((c.stage || c.funnel_stage) || "novo_lead") as Stage,
+            tags: c.tags || [],
+            source: c.source || "whatsapp",
+            last_message_at: c.last_message_at || "",
+            last_message_preview: c.last_message_preview || "",
+            unread_count: Math.max(safeUnreadCount(c.unread_count), toUnreadCount(z?.unreadMessages ?? z?.unread)),
+            is_vip: c.is_vip || false,
+            assigned_to: c.assigned_to || "",
+            score_potential: c.score_potential || 0,
+            score_risk: c.score_risk || 0,
+            is_pinned: !!c.is_pinned,
+            _hasReliableActivity: true,
+          };
+        });
+
+        if (merged.length > 0) saveProfilePicsCache();
+
+        setConversations(prev => {
+          const prevMap = new Map(prev.map(c => [c.id, c]));
+          const out = merged.map(c => {
+            const existing = prevMap.get(c.id);
+            const isOpen = c.id === selectedIdRef.current;
+            if (!existing) return c;
+            return {
+              ...c,
+              contact_name: existing.contact_name && existing.contact_name !== "Novo Contato" ? existing.contact_name : c.contact_name,
+              tags: existing.tags?.length ? existing.tags : c.tags,
+              stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
+              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)),
+            };
           });
-          const existingIds = new Set(conversationsRef.current.map(c => c.id));
-          for (const conv of dedupedConvs.filter(c => c._hasReliableActivity && !existingIds.has(c.id))) persistConversation(conv).catch(() => {});
-          // Fetch profile pictures in parallel batches
-          const needsPic = dedupedConvs.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
-          if (needsPic.length > 0) {
-            const BATCH = 5;
-            for (let i = 0; i < needsPic.length; i += BATCH) {
-              const batch = needsPic.slice(i, i + BATCH);
-              await Promise.allSettled(batch.map(conv =>
-                callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
-                  const picUrl = data?.link || data?.profilePictureUrl || "";
-                  if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
-                    profilePicsRef.current.set(conv.id, picUrl);
-                  }
-                }).catch(() => {})
-              ));
-            }
-            setProfilePicsVersion(v => v + 1);
-            saveProfilePicsCache();
+          const freshIds = new Set(merged.map(c => c.id));
+          const kept = prev.filter(c => !freshIds.has(c.id));
+          return [...kept, ...out].sort((a, b) => {
+            if (a.is_pinned && !b.is_pinned) return -1;
+            if (!a.is_pinned && b.is_pinned) return 1;
+            return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
+          });
+        });
+
+        // Profile pictures para quem ainda não tem
+        const needsPic = merged.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
+        if (needsPic.length > 0) {
+          const BATCH = 5;
+          for (let i = 0; i < needsPic.length; i += BATCH) {
+            const batch = needsPic.slice(i, i + BATCH);
+            await Promise.allSettled(batch.map(conv =>
+              callZapiProxy("get-profile-picture", { phone: conv.phone }).then(data => {
+                const picUrl = data?.link || data?.profilePictureUrl || "";
+                if (picUrl && typeof picUrl === "string" && picUrl.startsWith("http")) {
+                  profilePicsRef.current.set(conv.id, picUrl);
+                }
+              }).catch(() => {})
+            ));
           }
+          setProfilePicsVersion(v => v + 1);
+          saveProfilePicsCache();
         }
+
         chatsLoadedRef.current = true;
       } catch (err) { console.error("Error loading chats:", err); }
     }
