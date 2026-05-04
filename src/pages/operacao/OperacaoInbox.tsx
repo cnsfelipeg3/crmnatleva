@@ -2479,17 +2479,7 @@ function OperacaoInboxInner() {
         onOpenChange={(v) => { setForwardOpen(v); if (!v) setForwardSeed(null); }}
         messages={forwardSeed || []}
         excludePhones={selected?.phone ? [selected.phone] : []}
-        candidates={useMemo<ForwardCandidate[]>(() => {
-          return conversations
-            .filter(c => c.phone && (c.db_id || c.id))
-            .map(c => ({
-              conversationId: (c.db_id || c.id) as string,
-              phone: (c.phone || "").replace(/\D/g, ""),
-              name: c.contact_name || c.display_name || c.phone,
-              lastPreview: c.last_message_preview || undefined,
-            }))
-            .filter(c => c.phone);
-        }, [conversations])}
+        candidates={forwardCandidates}
         onSent={() => { cancelSelection(); setForwardSeed(null); }}
       />
     </div>
