@@ -11,8 +11,11 @@ import {
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
-  AlertTriangle, Link2, LayoutGrid, List,
+  AlertTriangle, Link2, LayoutGrid, List, Forward,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
+import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -574,6 +577,40 @@ function OperacaoInboxInner() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
+  // ─── Selection mode (forward) ───
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
+  const [forwardOpen, setForwardOpen] = useState(false);
+  const [forwardSeed, setForwardSeed] = useState<Message[] | null>(null);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toggleMsgSelected = useCallback((id: string) => {
+    setSelectedMsgIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }, []);
+  const enterSelectionWith = useCallback((msg: Message) => {
+    setSelectionMode(true);
+    setSelectedMsgIds(new Set([msg.id]));
+  }, []);
+
+  // ─── Forward candidates derived from conversations list ───
+  const forwardCandidates = useMemo<ForwardCandidate[]>(() => {
+    return conversations
+      .filter(c => c.phone && (c.db_id || c.id))
+      .map(c => ({
+        conversationId: (c.db_id || c.id) as string,
+        phone: (c.phone || "").replace(/\D/g, ""),
+        name: c.contact_name || c.phone,
+        lastPreview: c.last_message_preview || undefined,
+      }))
+      .filter(c => c.phone);
+  }, [conversations]);
+  const cancelSelection = useCallback(() => {
+    setSelectionMode(false);
+    setSelectedMsgIds(new Set());
+  }, []);
   const [mediaPendingFile, setMediaPendingFile] = useState<{ file: File; previewUrl: string; mediaType: string } | null>(null);
   const [mediaCaption, setMediaCaption] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1939,8 +1976,21 @@ function OperacaoInboxInner() {
                 </div>
 
                 {/* Messages */}
-                <div ref={scrollAreaRef} className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4">
-                  <div className="py-4 space-y-3">
+                <div className="relative flex-1 min-h-0 flex flex-col">
+                  {selectionMode && (
+                    <SelectionToolbar
+                      count={selectedMsgIds.size}
+                      onCancel={cancelSelection}
+                      onForward={() => {
+                        const list = currentMessages.filter(m => selectedMsgIds.has(m.id));
+                        if (list.length === 0) return;
+                        setForwardSeed(list);
+                        setForwardOpen(true);
+                      }}
+                    />
+                  )}
+                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                    <div className="py-4 space-y-3">
                     {/* Load older messages button */}
                     {hasOlderMessages[selectedId!] && (
                       <div className="flex justify-center mb-4">
@@ -1956,7 +2006,27 @@ function OperacaoInboxInner() {
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
                         )}
-                        <div className={`flex ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}>
+                        <div
+                          className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
+                          onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
+                          onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}
+                          onPointerDown={(e) => {
+                            if (selectionMode || msg.sender_type === "sistema") return;
+                            if ((e.pointerType === "mouse" && e.button !== 0) || (e.target as HTMLElement).closest("a,button,video,audio,input,textarea")) return;
+                            longPressTimer.current && clearTimeout(longPressTimer.current);
+                            longPressTimer.current = setTimeout(() => enterSelectionWith(msg), 500);
+                          }}
+                          onPointerUp={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                          onPointerLeave={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
+                        >
+                          {selectionMode && msg.sender_type !== "sistema" && (
+                            <Checkbox
+                              checked={selectedMsgIds.has(msg.id)}
+                              onCheckedChange={() => toggleMsgSelected(msg.id)}
+                              onClick={(e) => e.stopPropagation()}
+                              className="shrink-0"
+                            />
+                          )}
                           {msg.sender_type === "sistema" ? (
                             <div className="max-w-[85%] rounded-xl px-4 py-2.5 bg-muted/50 border border-border">
                               <div className="flex items-center gap-1.5 mb-1">
@@ -1968,17 +2038,26 @@ function OperacaoInboxInner() {
                             </div>
                           ) : (
                             <div className="group relative max-w-[70%]">
-                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[72px]" : "-right-[72px]"}`}>
-                                <button onClick={() => setReplyingTo(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
+                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
+                                <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
                                 </button>
+                                <button onClick={(e) => { e.stopPropagation(); setForwardSeed([msg]); setForwardOpen(true); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Encaminhar">
+                                  <Forward className="h-3.5 w-3.5 text-muted-foreground" />
+                                </button>
                                 {msg.sender_type === "atendente" && msg.message_type === "text" && new Date(msg.created_at).getTime() > Date.now() - 3600000 && (
-                                  <button onClick={() => handleStartEdit(msg)} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
+                                  <button onClick={(e) => { e.stopPropagation(); handleStartEdit(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
                                     <Pencil className="h-3 w-3 text-muted-foreground" />
                                   </button>
                                 )}
                               </div>
                               <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                                {(msg as any).is_forwarded && (
+                                  <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
+                                    <Forward className="h-2.5 w-2.5" />
+                                    <span>Encaminhada</span>
+                                  </div>
+                                )}
                                 {msg.quoted_msg && (
                                   <div className={`rounded-lg px-3 py-1.5 mb-2 border-l-2 ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/40" : "bg-foreground/5 border-primary/40"}`}>
                                     <p className={`text-[10px] font-bold ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-primary"}`}>
@@ -2097,6 +2176,7 @@ function OperacaoInboxInner() {
                     )}
                     <div ref={messagesEndRef} />
                   </div>
+                </div>
                 </div>
 
                 {/* Media pending preview */}
@@ -2392,6 +2472,16 @@ function OperacaoInboxInner() {
           }}
         />
       )}
+
+      {/* Forward Dialog */}
+      <ForwardDialog
+        open={forwardOpen}
+        onOpenChange={(v) => { setForwardOpen(v); if (!v) setForwardSeed(null); }}
+        messages={forwardSeed || []}
+        excludePhones={selected?.phone ? [selected.phone] : []}
+        candidates={forwardCandidates}
+        onSent={() => { cancelSelection(); setForwardSeed(null); }}
+      />
     </div>
   );
 }
