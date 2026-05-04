@@ -55,6 +55,7 @@ import { useInboxMessages } from "@/components/inbox/useInboxMessages";
 import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 import { useMessageQueue } from "@/hooks/useMessageQueue";
 import type { QueuedMessage } from "@/hooks/useMessageQueue";
+import { useMessageRetry } from "@/hooks/useMessageRetry";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
