@@ -152,53 +152,107 @@ async function persistForwardedMessage(
 }
 
 /**
+ * Status por job (uma mensagem × um destino).
+ */
+export type JobStatus = "pending" | "sending" | "sent" | "failed";
+export interface JobState {
+  msgId: string;
+  phone: string;
+  status: JobStatus;
+  error?: string;
+  externalMessageId?: string;
+}
+export const jobKey = (msgId: string, phone: string) => `${msgId}::${phone}`;
+
+/**
+ * Pré-aquece URLs de mídia em paralelo (HEAD) para validar disponibilidade
+ * antes do Z-API tentar baixar · evita falhas/lentidão no envio.
+ */
+async function preloadMediaUrls(messages: Message[]): Promise<void> {
+  const urls = Array.from(new Set(
+    messages
+      .filter(m => m.message_type !== "text")
+      .map(m => m.media_storage_url || m.media_url)
+      .filter(Boolean) as string[]
+  ));
+  if (urls.length === 0) return;
+  await Promise.allSettled(
+    urls.map(u =>
+      fetch(u, { method: "HEAD", mode: "cors", cache: "force-cache" }).catch(() => null)
+    )
+  );
+}
+
+/**
  * Encaminha uma lista de mensagens para uma lista de destinos.
- * Executa em paralelo controlado para velocidade sem flood.
+ * Pré-carrega anexos · executa em paralelo controlado · emite estado por job.
  */
 export async function forwardMessages(
   messages: Message[],
   targets: ForwardTarget[],
   caption?: string,
-  onProgress?: (done: number, total: number) => void,
+  onProgress?: (done: number, total: number, jobs?: JobState[]) => void,
 ): Promise<ForwardResult[]> {
   const results: ForwardResult[] = [];
   const total = messages.length * targets.length;
   let done = 0;
 
-  // Concorrência: 3 envios em paralelo (Z-API throttle friendly)
-  const queue: Array<() => Promise<void>> = [];
+  // Estado vivo de cada job
+  const jobs = new Map<string, JobState>();
   for (const target of targets) {
     for (const msg of messages) {
-      queue.push(async () => {
-        const send = await sendOneForward(msg, target, caption);
-        if (send.ok) {
-          try {
-            await persistForwardedMessage(msg, target, caption, send.externalMessageId, send.sentAction, send.sentPayload);
-          } catch {
-            // best-effort persist; envio já confirmado
-          }
-        }
-        results.push({
-          target,
-          msgId: msg.id,
-          ok: send.ok,
-          error: send.error,
-          externalMessageId: send.externalMessageId,
-        });
-        done++;
-        onProgress?.(done, total);
-      });
+      jobs.set(jobKey(msg.id, target.phone), { msgId: msg.id, phone: target.phone, status: "pending" });
     }
   }
+  const emit = () => onProgress?.(done, total, Array.from(jobs.values()));
+  emit();
 
-  const CONCURRENCY = 3;
-  const workers = Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
-    while (queue.length) {
-      const job = queue.shift();
-      if (job) await job();
+  // Pré-aquece mídias em paralelo (best-effort, não bloqueia em erro)
+  await preloadMediaUrls(messages);
+
+  // Concorrência: 4 envios em paralelo (Z-API throttle friendly), serializa por destino.
+  const queues: Array<Array<() => Promise<void>>> = targets.map(target =>
+    messages.map(msg => async () => {
+      const k = jobKey(msg.id, target.phone);
+      jobs.set(k, { ...jobs.get(k)!, status: "sending" });
+      emit();
+
+      const send = await sendOneForward(msg, target, caption);
+      if (send.ok) {
+        try {
+          await persistForwardedMessage(msg, target, caption, send.externalMessageId, send.sentAction, send.sentPayload);
+        } catch {
+          // best-effort persist; envio já confirmado
+        }
+        jobs.set(k, { ...jobs.get(k)!, status: "sent", externalMessageId: send.externalMessageId });
+      } else {
+        jobs.set(k, { ...jobs.get(k)!, status: "failed", error: send.error });
+      }
+      results.push({
+        target,
+        msgId: msg.id,
+        ok: send.ok,
+        error: send.error,
+        externalMessageId: send.externalMessageId,
+      });
+      done++;
+      emit();
+    })
+  );
+
+  // Roda os destinos em paralelo, mensagens dentro de cada destino em série (ordem garantida)
+  const TARGET_CONCURRENCY = 4;
+  let cursor = 0;
+  const runTarget = async () => {
+    while (cursor < queues.length) {
+      const idx = cursor++;
+      const q = queues[idx];
+      for (const job of q) {
+        try { await job(); } catch { /* já capturado em sendOneForward */ }
+      }
     }
-  });
-  await Promise.all(workers);
+  };
+  await Promise.all(Array.from({ length: Math.min(TARGET_CONCURRENCY, queues.length) }, runTarget));
   return results;
 }
 
