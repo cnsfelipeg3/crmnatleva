@@ -35,6 +35,21 @@ function normalizePhone(raw: string): string {
     .trim();
 }
 
+// Formata telefone para envio Z-API: anexa @g.us para IDs de grupo (15+ dígitos).
+// Idempotente: respeita @g.us existente; remove sufixos individuais (@c.us, @s.whatsapp.net).
+function formatPhoneForSending(raw: string): string {
+  const original = String(raw || "");
+  if (/@(g\.us|c\.us|s\.whatsapp\.net)/i.test(original)) {
+    if (/@g\.us/i.test(original)) {
+      const digits = original.replace(/\D/g, "");
+      return `${digits}@g.us`;
+    }
+    return original.replace(/@c\.us|@s\.whatsapp\.net/gi, "").replace(/\D/g, "");
+  }
+  const digits = original.replace(/\D/g, "");
+  return digits.length >= 15 ? `${digits}@g.us` : digits;
+}
+
 function parseTimestampSeconds(msg: any): number {
   const raw = msg?.momment ?? msg?.moment ?? msg?.timestamp ?? msg?.messageTimestamp ?? msg?.time;
   const num = Number(raw);
