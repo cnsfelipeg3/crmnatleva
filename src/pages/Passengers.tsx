@@ -225,6 +225,7 @@ export default function Passengers() {
       address_neighborhood: form.address_neighborhood || null,
       address_city: form.address_city || null,
       address_state: form.address_state || null,
+      address_notes: form.address_notes || null,
       created_by: user?.id,
     });
     if (error) {
