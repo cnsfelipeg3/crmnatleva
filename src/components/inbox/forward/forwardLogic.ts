@@ -37,22 +37,15 @@ export interface ForwardResult {
 async function sendOneForward(
   msg: Message,
   target: ForwardTarget,
-  caption: string | undefined,
   sourcePhone: string | undefined,
 ): Promise<{ ok: boolean; error?: string; externalMessageId?: string; sentAction?: string; sentPayload?: any; nativeForward?: boolean }> {
   const phone = target.phone;
-  const finalCaption = (caption || "").trim();
 
-  // 1) Tentativa nativa: preserva selo "Encaminhada"
+  // 1) Tentativa nativa: preserva selo "Encaminhada" para QUALQUER tipo
+  // (texto, imagem, vídeo, áudio, documento/PDF, sticker).
   // Requer messageId original + telefone da conversa de origem.
-  // Não é possível anexar caption no forward nativo · se houver caption,
-  // enviamos primeiro o texto e depois o forward nativo do conteúdo.
   if (sourcePhone && msg.external_message_id) {
     try {
-      if (finalCaption && msg.message_type !== "text") {
-        // Envia comentário antes do encaminhamento
-        await callZapiProxy("send-text", { phone, message: finalCaption });
-      }
       const fwdPayload = {
         phone,
         messageId: msg.external_message_id,
@@ -67,7 +60,6 @@ async function sendOneForward(
         nativeForward: true,
       };
     } catch (err) {
-      // Fallback abaixo
       console.warn("[forward] native forward failed, falling back to resend", err);
     }
   }
@@ -75,8 +67,7 @@ async function sendOneForward(
   // 2) Fallback: reenvia como mensagem nova (sem selo nativo, mas marcado is_forwarded localmente)
   try {
     if (msg.message_type === "text") {
-      const body = finalCaption ? `${finalCaption}\n\n${msg.text}` : msg.text;
-      const payload = { phone, message: body };
+      const payload = { phone, message: msg.text };
       const data = await callZapiProxy("send-text", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-text", sentPayload: payload };
     }
@@ -86,13 +77,13 @@ async function sendOneForward(
 
     if (msg.message_type === "image") {
       const payload: any = { phone, image: mediaUrl };
-      if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
+      if (msg.text) payload.caption = msg.text;
       const data = await callZapiProxy("send-image", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-image", sentPayload: payload };
     }
     if (msg.message_type === "video") {
       const payload: any = { phone, video: mediaUrl };
-      if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
+      if (msg.text) payload.caption = msg.text;
       const data = await callZapiProxy("send-video", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-video", sentPayload: payload };
     }
@@ -104,7 +95,6 @@ async function sendOneForward(
     if (msg.message_type === "document") {
       const ext = (msg.media_filename?.split(".").pop() || "pdf").toLowerCase();
       const payload: any = { phone, document: mediaUrl, extension: ext, fileName: msg.media_filename || "documento" };
-      if (finalCaption) payload.caption = finalCaption;
       const data = await callZapiProxy("send-document", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-document", sentPayload: payload };
     }
