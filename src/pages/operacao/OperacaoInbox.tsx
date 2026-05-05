@@ -220,6 +220,35 @@ function OperacaoInboxInner() {
 
   const selected = conversations.find(c => c.id === selectedId);
 
+  // ─── Delegação ───
+  const { user, role } = useAuth();
+  const isGestao = role === "admin" || role === "gestor";
+  useMyDelegations();
+  const selectedDbId = selected?.db_id || null;
+  const {
+    participants,
+    delegate,
+    addParticipants,
+    removeParticipant,
+  } = useConversationDelegation(selectedDbId);
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [addParticipantsDialogOpen, setAddParticipantsDialogOpen] = useState(false);
+  const [profileMap, setProfileMap] = useState<Map<string, { id: string; full_name: string | null; email: string | null; avatar_url: string | null }>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url");
+      if (cancelled || !data) return;
+      const m = new Map();
+      for (const p of data as any[]) m.set(p.id, p);
+      setProfileMap(m);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
+
   // ─── Extracted hooks: messages + realtime ───
   const {
     messages, setMessages, currentMessages,
