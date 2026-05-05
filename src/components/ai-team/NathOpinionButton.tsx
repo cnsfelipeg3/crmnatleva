@@ -74,9 +74,10 @@ interface NathOpinionButtonProps {
   context?: string;
   variant?: "header" | "inline" | "floating";
   disabled?: boolean;
+  conversationId?: string;
 }
 
-export default function NathOpinionButton({ messages, context, variant = "header", disabled }: NathOpinionButtonProps) {
+export default function NathOpinionButton({ messages, context, variant = "header", disabled, conversationId }: NathOpinionButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [opinion, setOpinion] = useState("");
@@ -87,6 +88,8 @@ export default function NathOpinionButton({ messages, context, variant = "header
   const [detailAction, setDetailAction] = useState<ImprovementAction | null>(null);
   const [detailReport, setDetailReport] = useState<DetailReport | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [phase, setPhase] = useState<"idle" | "processing_media" | "generating">("idle");
   const { toast } = useToast();
 
   const askNath = useCallback(async () => {
