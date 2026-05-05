@@ -699,6 +699,13 @@ function OperacaoInboxInner() {
   const [fileInputAccept, setFileInputAccept] = useState("*/*");
   const [fileInputMediaType, setFileInputMediaType] = useState("document");
   const [isSending, setIsSending] = useState(false);
+
+  // Drag & Drop attachments
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const [dropAttachments, setDropAttachments] = useState<File[]>([]);
+  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
+  const [attachmentSending, setAttachmentSending] = useState(false);
+  const dragCounterRef = useRef(0);
   
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showProfileViewer, setShowProfileViewer] = useState(false);
