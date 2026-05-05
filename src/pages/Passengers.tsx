@@ -6,6 +6,7 @@ import { formatDateBR } from "@/lib/dateFormat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -38,6 +39,7 @@ interface Passenger {
   address_neighborhood: string | null;
   address_city: string | null;
   address_state: string | null;
+  address_notes: string | null;
 }
 
 interface SaleLink {
@@ -101,7 +103,7 @@ export default function Passengers() {
     full_name: "", cpf: "", birth_date: "", passport_number: "",
     passport_expiry: "", phone: "", address_cep: "", address_street: "",
     address_number: "", address_complement: "", address_neighborhood: "",
-    address_city: "", address_state: "",
+    address_city: "", address_state: "", address_notes: "",
   });
 
   const fetchPassengers = async () => {
@@ -224,6 +226,7 @@ export default function Passengers() {
       address_neighborhood: form.address_neighborhood || null,
       address_city: form.address_city || null,
       address_state: form.address_state || null,
+      address_notes: form.address_notes || null,
       created_by: user?.id,
     });
     if (error) {
@@ -231,7 +234,7 @@ export default function Passengers() {
       return;
     }
     toast({ title: "Passageiro cadastrado!" });
-    setForm({ full_name: "", cpf: "", birth_date: "", passport_number: "", passport_expiry: "", phone: "", address_cep: "", address_street: "", address_number: "", address_complement: "", address_neighborhood: "", address_city: "", address_state: "" });
+    setForm({ full_name: "", cpf: "", birth_date: "", passport_number: "", passport_expiry: "", phone: "", address_cep: "", address_street: "", address_number: "", address_complement: "", address_neighborhood: "", address_city: "", address_state: "", address_notes: "" });
     setDialogOpen(false);
     fetchPassengers();
   };
@@ -266,6 +269,7 @@ export default function Passengers() {
       address_neighborhood: editForm.address_neighborhood || null,
       address_city: editForm.address_city || null,
       address_state: editForm.address_state || null,
+      address_notes: editForm.address_notes || null,
     }).eq("id", detailPax.id);
     setSavingEdit(false);
     if (error) {
@@ -427,7 +431,17 @@ export default function Passengers() {
                       <Label>UF</Label>
                       <Input value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
                     </div>
+                  <div className="space-y-2 mt-3">
+                    <Label>Observações <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <Textarea
+                      value={form.address_notes}
+                      onChange={(e) => setForm(f => ({ ...f, address_notes: e.target.value }))}
+                      placeholder="Ex.: ponto de referência, instruções de entrega…"
+                      rows={2}
+                      maxLength={500}
+                    />
                   </div>
+                </div>
                 </div>
                 <Button type="submit" className="w-full">Salvar Passageiro</Button>
               </form>
@@ -693,6 +707,16 @@ export default function Passengers() {
                     <Label>UF</Label>
                     <Input value={editForm.address_state || ""} onChange={(e) => setEditForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
                   </div>
+                </div>
+                <div className="space-y-2 mt-3">
+                  <Label>Observações <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                  <Textarea
+                    value={editForm.address_notes || ""}
+                    onChange={(e) => setEditForm(f => ({ ...f, address_notes: e.target.value }))}
+                    placeholder="Ex.: ponto de referência, instruções de entrega…"
+                    rows={2}
+                    maxLength={500}
+                  />
                 </div>
               </div>
               <div className="flex gap-2">

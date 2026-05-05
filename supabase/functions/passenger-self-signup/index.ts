@@ -245,6 +245,7 @@ Deno.serve(async (req) => {
       address_neighborhood: payload.address_neighborhood || null,
       address_city: payload.address_city || null,
       address_state: payload.address_state || null,
+      address_notes: payload.address_notes || null,
       created_via: "self_signup",
       signup_link_id: link.id,
     };
