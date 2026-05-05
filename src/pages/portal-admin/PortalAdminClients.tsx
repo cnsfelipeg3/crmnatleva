@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatDateBR } from "@/lib/dateFormat";
+import { CustomerSinceBadge } from "@/components/clients/CustomerSinceBadge";
 
 export default function PortalAdminClients() {
   const { user, isLoading: authLoading } = useAuth();
@@ -28,7 +29,7 @@ export default function PortalAdminClients() {
   useEffect(() => {
     if (authLoading) return;
     Promise.all([
-      fetchAllRows("clients", "id, display_name, email, phone, created_at, city, state", { order: { column: "created_at", ascending: false } }),
+      fetchAllRows("clients", "id, display_name, email, phone, created_at, city, state, customer_since, customer_since_source", { order: { column: "created_at", ascending: false } }),
       fetchAllRows("sales", "id, client_id, departure_date, return_date, destination_iata", { order: { column: "departure_date", ascending: false } }),
     ]).then(([c, s]) => {
       setClients(c);
@@ -116,6 +117,7 @@ export default function PortalAdminClients() {
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Viagens</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Última Viagem</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cadastro</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cliente desde</th>
                     <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
@@ -135,6 +137,9 @@ export default function PortalAdminClients() {
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{stats?.lastTrip ? formatDateBR(stats.lastTrip) : "—"}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateBR(client.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <CustomerSinceBadge customerSince={client.customer_since} source={client.customer_since_source} />
+                        </td>
                         <td className="px-4 py-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
