@@ -2338,9 +2338,9 @@ function OperacaoInboxInner() {
                         >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
-                        <SelectTrigger className="h-8 text-xs w-[120px] md:w-[140px]">
+                        <SelectTrigger className="h-8 text-xs w-[110px] md:w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2362,6 +2362,61 @@ function OperacaoInboxInner() {
                           </TooltipTrigger>
                           <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
                         </Tooltip>
+                      )}
+                      {isMobile && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais opções">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" side="bottom" className="w-60 p-1">
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowContactProfile(prev => !prev)}
+                            >
+                              <User className="h-4 w-4 text-primary" /> Painel do cliente
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowSummaryDialog(true)}
+                            >
+                              <Brain className="h-4 w-4 text-primary" /> Resumir com IA
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => {
+                                if (selectionMode) cancelSelection();
+                                else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
+                              }}
+                            >
+                              <Forward className="h-4 w-4" /> {selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowLinkClient(true)}
+                            >
+                              <Link2 className="h-4 w-4" /> Vincular cliente
+                            </button>
+                            {selectedDbId && (
+                              <>
+                                <div className="my-1 h-px bg-border" />
+                                <button
+                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  onClick={() => setDelegateDialogOpen(true)}
+                                >
+                                  <UserPlus className="h-4 w-4" /> Atribuir / Delegar
+                                </button>
+                                <button
+                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  onClick={() => setAddParticipantsDialogOpen(true)}
+                                >
+                                  <UserPlus className="h-4 w-4" /> Participantes ({participants.length})
+                                </button>
+                              </>
+                            )}
+                          </PopoverContent>
+                        </Popover>
                       )}
                     </div>
                   </div>
