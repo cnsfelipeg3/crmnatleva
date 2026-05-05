@@ -1,72 +1,61 @@
+## Problema
 
+1. **Badge incorreto**: o número de não lidas no card da conversa nem sempre bate com a quantidade real de mensagens recebidas que ainda não foram respondidas. O contador hoje é incremental (soma +1 a cada nova chegada) e pode dessincronizar.
+2. **Marca como lida cedo demais**: hoje, no instante em que você clica numa conversa (`handleSelectConversation`), o sistema zera `unread_count` no banco. Se você sair sem responder, perde o sinal visual de "preciso responder isso".
 
-## Plano: Aproveitar todo o conteúdo do Hotels.com
+## Comportamento desejado
 
-Hoje a gente extrai só 4 campos básicos do JSON do Hotels.com (nome, preço, foto, nota). O JSON traz muito mais coisa útil que está sendo ignorada. Abaixo, o que vamos passar a aproveitar.
+- O badge na lista mostra o número **exato** de mensagens recebidas do cliente desde a última resposta sua (ou desde a última vez que você marcou manualmente como lida).
+- Abrir a conversa **não** zera o contador. A conversa só sai do estado "não lida" quando:
+  - você envia uma resposta para o cliente, **ou**
+  - você clica no botão "marcar como lida" (já existe na UI).
+- Se o cliente mandar mais mensagens enquanto a conversa está aberta, o badge continua subindo (ou aparece o indicador de "novas mensagens"), e só zera quando você responde.
 
-### O que está sendo desperdiçado no JSON
+## Plano de implementação
 
-| Campo no JSON | Valor de exemplo | Hoje | Vamos usar pra |
-|---|---|---|---|
-| `priceSection.badge.text` | `"$67 off"` | ❌ ignorado | Selo de desconto vermelho no card |
-| `displayMessagesV2[0]` (`$47 nightly`) | preço/noite oficial | parcial | Linha "R$ X/noite" confiável (sem ter que dividir manualmente) |
-| `priceMessagingV2` | `"for 3 nights"`, `"May 7 - May 10"` | parcial | Subtítulo do preço já formatado |
-| `accessibilityLabel` da option | `"Price was $252, price is now $185 for 3 nights..."` | ❌ | Frase pronta pra copiar/compartilhar |
-| `mediaSection.gallery.media[].description` | `"Reception"`, `"Exterior"`, `"Bar"` | ❌ | Categorizar/legendar fotos por tipo de ambiente |
-| `headingSection.amenities[].icon.id` + `text` | `pool` + `"Pool"` | parcial (só id) | Ícone visual + nome traduzido |
-| `summarySections[0].guestRatingSectionV2.badge.theme` | `"positive"` | ❌ | Cor do badge de nota (verde/amarelo/vermelho) |
-| `analyticsEvents` → `product_list` | badges (`Public_Promo`), `free_cancellation_bool`, `earn_eligible_bool` | ❌ | Selos extras: "Promoção pública", "Cancelamento grátis" |
-| `cardLink.resource.value` (URL) | parâmetros internos (`selectedRoomType`, `selectedRatePlan`, `latLong`, `regionId`, `neighborhoodId`) | só usa URL | Extrair lat/long + bairro pra mostrar no mapa/localização |
-| `propertyId` | `"553248635974547388_32905077"` | ❌ | ID composto (regionId_propertyId) pra deep links futuros |
-| `saveTripItem.attributes.roomConfiguration` | adultos/crianças | ❌ | Confirmar configuração de quartos |
-| `featuredHeader`, `callOut`, `cardBackgroundTheme` | null nesse ex., mas frequentes | ❌ | Selos editoriais ("Top pick", "Member deal") |
+### 1. Fonte da verdade: contagem derivada das mensagens
 
-### Mudanças nos arquivos
+Criar função SQL `recount_conversation_unread(conv_id uuid)` que recalcula `unread_count` contando mensagens em `conversation_messages` (e `messages`) do tipo `incoming`/`cliente` posteriores à última mensagem `outgoing`/`atendente` daquela conversa. Isso garante que o número sempre reflita a realidade.
 
-**1. `src/components/booking-rapidapi/unifiedHotelTypes.ts`**
-- Expandir `HotelscomLodgingCard` com os campos novos (`priceSection.badge`, `analyticsEvents`, `propertyId`, `featuredHeader`, `callOut`, `mediaSection.gallery.media[].media.description`).
-- Em `normalizeHotelscomHotel`, extrair: `discountBadge`, `photoCaptions[]`, `latitude`/`longitude` (via regex no `cardLink.resource.value`: `latLong=25.26,55.29`), `neighborhoodId`/`regionId`, badges de promoção do `analyticsEvents.product_list`.
-- Adicionar campos novos em `UnifiedHotel`/`UnifiedHotelOffer`: `discountBadge?: string`, `photoCaptions?: string[]`, `promoBadges?: string[]`, `accessibilityPriceLabel?: string`.
+Trigger leve: ao inserir mensagem nova ou ao marcar como lida, chamar essa função em vez de fazer aritmética incremental no frontend.
 
-**2. `src/components/booking-rapidapi/HotelscomDetailDrawer.tsx`**
-- **Header do preço:** mostrar selo `"$67 off"` (vermelho destacado) ao lado do total.
-- **Aba Fotos:** exibir a `description` de cada foto como legenda (ex: "Recepção", "Exterior", "Bar"). Traduzir os termos comuns (Reception, Lobby, Pool, Gym, Bar, Restaurant, Suite, Bedroom, Bathroom).
-- **Aba Informações:** nova seção "Selos & Promoções" com badges do `analyticsEvents` (Promoção pública, Cancelamento grátis, Elegível a pontos).
-- **Aba Informações:** adicionar bairro/região quando extraído da URL.
-- Remover a aba "Dados" (debug JSON) — virou ruído visual já que o conteúdo agora está exposto.
+### 2. Remover o auto-zerar ao abrir conversa
 
-**3. `src/components/booking-rapidapi/HotelscomCard.tsx`** *(card da listagem)*
-- Adicionar selo de desconto (`$67 off` → "R$ X off" convertido) no canto da foto.
-- Mostrar 1 badge de promoção (se houver) abaixo do nome.
+Em `src/pages/operacao/OperacaoInbox.tsx`, função `handleSelectConversation` (linhas 1698-1707): remover o `update({ unread_count: 0 })`. Abrir só seleciona, não marca como lida.
 
-### Diagrama do que será extraído
+### 3. Zerar somente após resposta enviada
 
-```text
-JSON Hotels.com (LodgingCard)
-│
-├─ priceSection
-│   ├─ badge ─────────────────► [NOVO] discountBadge "R$ X off"
-│   ├─ priceSummary
-│   │   ├─ optionsV2[].accessibilityLabel ► [NOVO] frase pronta
-│   │   └─ priceMessagingV2 ──────────────► já usado
-│
-├─ mediaSection.gallery.media[]
-│   └─ media.description ──────► [NOVO] legenda de cada foto
-│
-├─ cardLink.resource.value (URL)
-│   ├─ latLong=lat,long ───────► [NOVO] coords pro mapa
-│   ├─ neighborhoodId ─────────► [NOVO] bairro
-│   └─ regionId ───────────────► [NOVO] região
-│
-├─ analyticsEvents → product_list
-│   ├─ badges[] ───────────────► [NOVO] selos promo
-│   ├─ free_cancellation_bool ─► [NOVO] selo verde
-│   └─ earn_eligible_bool ─────► [NOVO] selo "ganha pontos"
-│
-└─ featuredHeader / callOut ───► [NOVO] selos editoriais
-```
+No fluxo de envio de mensagem do atendente (linhas ~1209 e 1241), manter o `unread_count: 0` que já existe · esse é o ponto correto. Adicionar também limpeza de `manually_marked_unread = false` (já existe trigger `reset_manually_marked_unread`, validar que está ativo).
 
-### Resultado
+### 4. Botão "marcar como lida" explícito
 
-O drawer do Hotels.com vai ficar muito mais rico: selo de desconto, fotos legendadas por ambiente, badges de promoção, bairro/região, sem precisar mais expor o JSON cru.
+Já existe `manually_marked_unread` e o handler de toggle (linha 1679). Garantir que:
+- "marcar como lida" zera `unread_count` E `manually_marked_unread`
+- "marcar como não lida" mantém `unread_count` real e seta `manually_marked_unread=true` (badge pontilhado já implementado em `ConversationItem`)
 
+### 5. Realtime alinhado
+
+Em `src/components/inbox/useInboxRealtime.ts` (linhas 133, 179): trocar `safeUnreadCount(c.unread_count) + 1` por leitura do valor vindo do banco (que já será correto pela função de recount). Remover o ramo `isOpen ? 0 : ...` · não zera mais só por estar aberto.
+
+### 6. Reconciliação periódica
+
+No polling de 30s da lista (já existe), incluir um recount em background das conversas visíveis para corrigir qualquer drift histórico.
+
+### 7. Backfill único
+
+Migration que roda `recount_conversation_unread` em todas as conversas existentes para corrigir os números atualmente errados.
+
+## Indicador visual (UX)
+
+- Badge azul (número) = mensagens não respondidas reais.
+- Badge pontilhado dourado (sem número) = você marcou manualmente como não lida.
+- Quando a conversa está aberta E há novas mensagens chegando, badge continua visível na lista lateral (não some).
+
+## Arquivos afetados
+
+- `supabase/migrations/...` (nova função SQL + triggers + backfill)
+- `src/pages/operacao/OperacaoInbox.tsx` (handleSelectConversation, handlers de envio e toggle)
+- `src/components/inbox/useInboxRealtime.ts` (parar de incrementar localmente)
+- `src/components/inbox/ConversationItem.tsx` (ajuste mínimo se precisar, badge já está ok)
+
+Posso aplicar?

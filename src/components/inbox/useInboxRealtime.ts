@@ -123,14 +123,16 @@ export function useInboxRealtime(
         }
 
         if (n.direction === "incoming") {
+          // NÃO incrementa localmente · o trigger SQL recount_conversation_unread
+          // já recalculou e o evento UPDATE de conversations vai trazer o valor correto.
+          // Aqui só atualiza preview/timestamp pra UI responder rápido.
           setConversations(prev => prev.map(c => {
             if (c.id !== waKey && c.db_id !== n.conversation_id) return c;
-            const isOpen = (c.id === selectedIdRef.current) || (waKey === selectedIdRef.current);
             return {
               ...c,
               last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
               last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
-              unread_count: isOpen ? 0 : safeUnreadCount(c.unread_count) + 1,
+              unread_count: safeUnreadCount(c.unread_count) + 1, // otimista · será corrigido pelo UPDATE
             };
           }));
         }
@@ -176,7 +178,7 @@ export function useInboxRealtime(
               phone: cleanPhone || target.phone,
               last_message_preview: bestPreview,
               last_message_at: bestTime,
-              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(target.unread_count), safeUnreadCount(u.unread_count)),
+              unread_count: safeUnreadCount(u.unread_count),
               stage: (u.stage as Stage) || target.stage,
               tags: u.tags || target.tags,
               contact_name: target.contact_name || u.contact_name,

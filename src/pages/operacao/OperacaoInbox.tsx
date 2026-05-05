@@ -1678,15 +1678,21 @@ function OperacaoInboxInner() {
   const handleToggleUnread = useCallback(async (conv: Conversation) => {
     const next = !conv.manually_marked_unread;
     const dbId = conv.db_id;
-    setConversations(prev => prev.map(c => c.id === conv.id ? { ...c, manually_marked_unread: next } : c));
+    // Quando marca como LIDA (next=false), zera também o unread_count.
+    // Quando marca como NÃO LIDA (next=true), mantém o unread_count real.
+    setConversations(prev => prev.map(c => c.id === conv.id
+      ? { ...c, manually_marked_unread: next, unread_count: next ? c.unread_count : 0 }
+      : c));
     try {
       const { data: userData } = await supabase.auth.getUser();
       const uid = userData?.user?.id || null;
+      const patch: any = { manually_marked_unread: next, marked_unread_by: next ? uid : null };
+      if (!next) patch.unread_count = 0;
       if (dbId) {
-        await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("id", dbId);
+        await supabase.from("conversations").update(patch).eq("id", dbId);
       } else {
         const cleanPhone = (conv.phone || "").replace(/\D/g, "");
-        if (cleanPhone) await supabase.from("conversations").update({ manually_marked_unread: next, marked_unread_by: next ? uid : null } as any).eq("phone", cleanPhone);
+        if (cleanPhone) await supabase.from("conversations").update(patch).eq("phone", cleanPhone);
       }
       toast({ title: next ? "Marcada como não lida" : "Marcada como lida" });
     } catch (err: any) {
@@ -1696,14 +1702,9 @@ function OperacaoInboxInner() {
   }, []);
 
   const handleSelectConversation = (id: string) => {
+    // NÃO zera unread_count ao abrir · só zera quando o atendente responde
+    // ou quando marca manualmente como lida (botão dedicado).
     setSelectedId(id); setShowAIPanel(false);
-    const target = conversations.find(c => c.id === id);
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c));
-    if (target?.db_id) {
-      supabase.from("conversations").update({ unread_count: 0 }).eq("id", target.db_id).then(() => {});
-    } else if (id.length > 10) {
-      supabase.from("conversations").update({ unread_count: 0 }).eq("id", id).then(() => {});
-    }
   };
 
   const handleClearConversations = useCallback(() => {
