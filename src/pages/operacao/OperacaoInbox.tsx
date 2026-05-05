@@ -2900,8 +2900,8 @@ function OperacaoInboxInner() {
 
                 {/* Input area */}
                 <div
-                  className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20"
-                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
+                  className={`border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20 ${isMobile ? "sticky bottom-0 left-0 right-0" : ""}`}
+                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)", paddingLeft: "calc(env(safe-area-inset-left) + 0.5rem)", paddingRight: "calc(env(safe-area-inset-right) + 0.5rem)" } : undefined}
                 >
                   {isRecording ? (
                     <div className="flex items-center gap-3">
