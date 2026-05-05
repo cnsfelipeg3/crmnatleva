@@ -24,10 +24,12 @@ interface Props {
   candidates: ForwardCandidate[];
   /** Telefone(s) já presentes na conversa atual · escondidos da lista. */
   excludePhones?: string[];
+  /** Telefone da conversa de origem · usado para o forward nativo da Z-API (preserva selo "Encaminhada"). */
+  sourcePhone?: string;
   onSent?: () => void;
 }
 
-export function ForwardDialog({ open, onOpenChange, messages, candidates, excludePhones, onSent }: Props) {
+export function ForwardDialog({ open, onOpenChange, messages, candidates, excludePhones, sourcePhone, onSent }: Props) {
   const [query, setQuery] = useState("");
   const [selectedPhones, setSelectedPhones] = useState<Set<string>>(new Set());
   const [caption, setCaption] = useState("");
