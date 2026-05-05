@@ -482,6 +482,9 @@ function VirtualEmissionGroup({
                         onNavigateClient={onNavigateClient}
                         onDeleted={onDeleted}
                         onDragStart={onDragStart}
+                        onMove={onMove}
+                        onRequestDelete={onRequestDelete}
+                        canDelete={canDelete}
                       />
                     );
                   })}
