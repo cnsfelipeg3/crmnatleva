@@ -96,7 +96,8 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
   const itemBody = (
     <div
       onClick={() => onSelect(conv.id)}
-      className={`group relative px-2.5 py-2.5 cursor-pointer transition-colors border-l-2 border-b border-b-border/40 hover:bg-accent/40 ${
+      style={{ contain: "layout paint" }}
+      className={`group relative px-2.5 py-2.5 cursor-pointer transition-colors border-l-2 border-b border-b-border/40 bg-background hover:bg-accent/40 ${
         isSelected ? "bg-accent border-l-primary" : conv.is_archived ? "border-l-muted-foreground/30 bg-muted/20 opacity-75" : isUrgent ? "border-l-destructive/50" : "border-l-transparent"
       }`}
     >

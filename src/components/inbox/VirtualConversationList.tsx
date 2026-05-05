@@ -101,7 +101,10 @@ export function VirtualConversationList({
                 left: 0,
                 width: "100%",
                 transform: `translateY(${virtualItem.start}px)`,
+                zIndex: conv.id === selectedId ? 2 : 1,
+                isolation: "isolate",
               }}
+              className="hover:z-[3]"
               data-index={virtualItem.index}
               ref={virtualizer.measureElement}
             >
