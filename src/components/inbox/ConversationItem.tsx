@@ -146,6 +146,22 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
             {conv.tags?.slice(0, 2).map((tag, i) => (
               <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{tag}</span>
             ))}
+            {conv.assigned_to && owner ? (
+              <span className={`inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full font-medium border ${isMine ? "bg-primary/10 text-primary border-primary/30" : "bg-secondary/60 text-foreground/70 border-border"}`}>
+                {owner.avatar_url ? (
+                  <img src={owner.avatar_url} alt="" className="h-2.5 w-2.5 rounded-full object-cover" />
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold">
+                    {(owner.full_name || owner.email || "?")[0]?.toUpperCase()}
+                  </span>
+                )}
+                {(owner.full_name?.split(" ")[0] || owner.email?.split("@")[0] || "—")}
+              </span>
+            ) : !conv.assigned_to ? (
+              <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-medium border border-amber-500/30">
+                ⚠ Sem dono
+              </span>
+            ) : null}
             {/* Pin toggle on hover */}
             <button
               onClick={(e) => onTogglePin(conv.id, e)}
