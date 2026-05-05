@@ -13,12 +13,12 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Building2, Calendar, FileText, Download, Plus, CheckCircle2, AlertTriangle,
   Eye, DollarSign, CreditCard, Search, RefreshCw, Printer, ArrowUpDown
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, addMonths, isWithinInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

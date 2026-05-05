@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -33,6 +32,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

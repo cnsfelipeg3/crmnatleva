@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -20,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import HotelAutocomplete from "@/components/HotelAutocomplete";
 import HotelMediaBrowser from "@/components/hotel-media/HotelMediaBrowser";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Types ─────────────────────────────────── */
 

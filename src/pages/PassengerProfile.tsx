@@ -18,13 +18,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   User, Pencil, Save, X, ShoppingCart, Plane, AlertTriangle,
   FileText, Upload, Download, Loader2, MessageCircle, ArrowLeft,
   Calendar, DollarSign, TrendingUp, MapPin, BarChart3, Brain,
   Clock, ExternalLink, Paperclip, Eye, Trash2, Phone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 interface Passenger {
   id: string;

@@ -9,7 +9,6 @@ import { getMockTripDetail, getMockTripsForDashboard } from "@/lib/portalMockTri
 import { getMockFinanceData } from "@/lib/portalMockFinance";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   CircleDollarSign, Wallet, CreditCard, PiggyBank, TrendingUp,
   Plus, ArrowUpRight, ArrowDownRight, Receipt, ShoppingBag,
   UtensilsCrossed, Car, Ticket, ShieldCheck, Package, Sparkles,
@@ -27,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Helpers ─── */
 const fmt = (v: number, currency = "BRL") =>

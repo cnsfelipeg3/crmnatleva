@@ -10,7 +10,6 @@ import { Building2, UserCheck, Users, DollarSign, ChevronDown, ChevronRight, Lay
 import { fetchAllRows } from "@/lib/fetchAll";
 import { cn } from "@/lib/utils";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   parseCommissionRules,
   computeProgressiveCommission,
   computeDefaultCommission,
@@ -18,6 +17,7 @@ import { DatePartsInput } from "@/components/ui/date-parts-input";
   DEFAULT_COMMISSION_ORGANICO,
   type CommissionRules,
 } from "@/lib/commissionRules";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 

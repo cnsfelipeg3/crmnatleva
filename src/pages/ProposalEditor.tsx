@@ -15,7 +15,6 @@ import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane,
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import { getPublicProposalUrl } from "@/lib/publicUrl";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { emitLearningEvent, emitProposalOutcome } from "@/lib/learningEvents";
@@ -38,6 +37,7 @@ import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryT
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
 import { getProductLabel } from "@/lib/productTypes";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 // Mapeia chaves de item_type da proposta → slug canônico em @/lib/productTypes.
 // "destination" não é produto vendável (label local "Destino").

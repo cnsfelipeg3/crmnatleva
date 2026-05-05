@@ -16,11 +16,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import TariffConditionsCard, { type TariffCondition, EMPTY_TARIFF } from "@/components/TariffConditionsCard";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   AlertTriangle, Plus, Search, Eye, Clock, CheckCircle2, XCircle, RotateCcw,
   Ban, CreditCard, Plane, Hotel, Shield, FileText, ArrowRight, Loader2,
   TrendingDown, TrendingUp, DollarSign, Users, AlertCircle, Building2, Car, Ticket,
 } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Constants ─── */
 const ALTERATION_TYPES = [

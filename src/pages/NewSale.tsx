@@ -8,7 +8,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -43,6 +42,7 @@ import {
 } from "@/lib/saleAttachmentCategories";
 import { useSaleAutosave } from "@/hooks/useSaleAutosave";
 import { Cloud, CloudOff } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Types ────────────────────────────────────────────── */
 

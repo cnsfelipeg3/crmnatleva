@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Plus, Users, Receipt, ArrowRight, Check, Trash2, Edit2,
   Camera, CircleDollarSign, PieChart, BarChart3, UserPlus,
   ChevronRight, Loader2, X, DollarSign, UtensilsCrossed,
@@ -16,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Constants ─── */
 const CURRENCIES = [

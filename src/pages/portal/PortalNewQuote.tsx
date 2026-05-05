@@ -9,12 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-import { DatePartsInput } from "@/components/ui/date-parts-input";
   Plane, MapPin, CalendarDays, Users, Sparkles, Hotel, Shield, Car,
   ChevronRight, ChevronLeft, Check, Plus, Trash2, Send, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getProductLabel } from "@/lib/productTypes";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const STEPS = [
   { id: 0, label: "Destino", icon: MapPin },
