@@ -4695,6 +4695,63 @@ export type Database = {
           },
         ]
       }
+      passenger_signup_attempts: {
+        Row: {
+          created_at: string
+          error: string | null
+          id: string
+          ip: string | null
+          payload_cpf: string | null
+          payload_email: string | null
+          slug: string | null
+          status: string
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          ip?: string | null
+          payload_cpf?: string | null
+          payload_email?: string | null
+          slug?: string | null
+          status: string
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          id?: string
+          ip?: string | null
+          payload_cpf?: string | null
+          payload_email?: string | null
+          slug?: string | null
+          status?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
+      passenger_signup_blocked_ips: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          ip: string
+          reason: string | null
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          ip: string
+          reason?: string | null
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          ip?: string
+          reason?: string | null
+        }
+        Relationships: []
+      }
       passenger_signup_links: {
         Row: {
           active: boolean
@@ -4755,6 +4812,7 @@ export type Database = {
           id: string
           passport_expiry: string | null
           passport_number: string | null
+          passport_photo_url: string | null
           phone: string | null
           rg: string | null
           signup_link_id: string | null
@@ -4780,6 +4838,7 @@ export type Database = {
           id?: string
           passport_expiry?: string | null
           passport_number?: string | null
+          passport_photo_url?: string | null
           phone?: string | null
           rg?: string | null
           signup_link_id?: string | null
@@ -4805,6 +4864,7 @@ export type Database = {
           id?: string
           passport_expiry?: string | null
           passport_number?: string | null
+          passport_photo_url?: string | null
           phone?: string | null
           rg?: string | null
           signup_link_id?: string | null
