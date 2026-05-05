@@ -966,6 +966,12 @@ function OperacaoInboxInner() {
         const q = searchQuery.toLowerCase();
         if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
+      // Filtro por dono (independente do filtro de status)
+      if (ownerFilter === "mine" && user) {
+        if (c.assigned_to !== user.id) return false;
+      } else if (ownerFilter === "unassigned") {
+        if (c.assigned_to) return false;
+      }
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
@@ -999,7 +1005,7 @@ function OperacaoInboxInner() {
       seen.add(norm);
       return true;
     });
-  }, [conversations, searchQuery, activeFilter]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, user]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
