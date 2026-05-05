@@ -1972,6 +1972,7 @@ function OperacaoInboxInner() {
               onSelect={handleSelectConversation}
               onTogglePin={handleTogglePin}
               onToggleUnread={handleToggleUnread}
+              onToggleArchive={handleToggleArchive}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
             />
