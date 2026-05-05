@@ -41,8 +41,8 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240, compact = fals
       title={`Abrir ${label}`}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
-        <div className="h-12 w-12 rounded-md bg-destructive/10 text-destructive flex items-center justify-center">
-          <FileText className="h-7 w-7" />
+        <div className={`${compact ? "h-7 w-7" : "h-12 w-12"} rounded-md bg-destructive/10 text-destructive flex items-center justify-center`}>
+          <FileText className={compact ? "h-4 w-4" : "h-7 w-7"} />
         </div>
         {!compact && (
           <span className="max-w-full truncate text-xs font-medium text-card-foreground">
