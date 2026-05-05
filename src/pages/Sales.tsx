@@ -8,7 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2, Check, Trash2, Loader2, Pencil } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
@@ -105,14 +110,19 @@ interface SaleRowProps {
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
   onDragStart: (saleId: string, emitted: boolean) => void;
+  onMove: (saleId: string, toEmitted: boolean) => void;
+  onRequestDelete: (sale: SaleRow) => void;
+  canDelete: boolean;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
+  const emitted = isEmitted(sale);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
@@ -128,24 +138,86 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 
   return (
     <tr
-      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+      className={cn("group border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", menuOpen && "bg-muted/40")}
       onClick={() => onNavigate(sale.id)}
     >
-      <td className="px-1 py-3 w-6">
-        <button
-          draggable
-          onDragStart={(e) => {
-            e.stopPropagation();
-            e.dataTransfer.effectAllowed = "move";
-            onDragStart(sale.id, isEmitted(sale));
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
-          title="Arrastar para mover"
-          aria-label="Arrastar venda"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </button>
+      <td className="px-1 py-3 w-6" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex items-center justify-center">
+          {/* Grip (drag) — visible by default, hidden on hover when checkbox shows */}
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.effectAllowed = "move";
+              onDragStart(sale.id, emitted);
+            }}
+            className={cn(
+              "cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-opacity p-1",
+              "group-hover:opacity-0",
+              menuOpen && "opacity-0",
+            )}
+            title="Arrastar para mover"
+            aria-label="Arrastar venda"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+          {/* Checkbox — appears on hover; click opens action popover */}
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "absolute inset-0 m-auto w-4 h-4 rounded border border-border bg-background hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center",
+                  "opacity-0 group-hover:opacity-100",
+                  menuOpen && "opacity-100 border-primary bg-primary text-primary-foreground",
+                )}
+                aria-label="Ações da venda"
+                title="Ações"
+              >
+                {menuOpen && <Check className="w-3 h-3" />}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" side="bottom" className="w-56 p-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                onClick={() => { setMenuOpen(false); onNavigate(sale.id); }}
+              >
+                <Eye className="w-4 h-4 text-muted-foreground" /> Ver detalhes
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                onClick={() => { setMenuOpen(false); onNavigate(sale.id); }}
+              >
+                <Pencil className="w-4 h-4 text-muted-foreground" /> Editar
+              </button>
+              {emitted ? (
+                <button
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                  onClick={() => { setMenuOpen(false); onMove(sale.id, false); }}
+                >
+                  <Clock className="w-4 h-4 text-warning-foreground" /> Voltar para Aguardando
+                </button>
+              ) : (
+                <button
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                  onClick={() => { setMenuOpen(false); onMove(sale.id, true); }}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-success" /> Mover para Emissão Concluída
+                </button>
+              )}
+              {canDelete && (
+                <>
+                  <div className="my-1 h-px bg-border" />
+                  <button
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-destructive/10 text-destructive transition-colors text-left"
+                    onClick={() => { setMenuOpen(false); onRequestDelete(sale); }}
+                  >
+                    <Trash2 className="w-4 h-4" /> Excluir
+                  </button>
+                </>
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
       </td>
       <td className="px-3 py-4">
         <div className="flex items-center gap-1.5 min-w-0">
@@ -302,6 +374,9 @@ interface VirtualEmissionGroupProps {
   onDeleted: (id: string) => void;
   onDragStart: (saleId: string, emitted: boolean) => void;
   onDropToGroup: (variant: "pending" | "emitted") => void;
+  onMove: (saleId: string, toEmitted: boolean) => void;
+  onRequestDelete: (sale: SaleRow) => void;
+  canDelete: boolean;
 }
 
 function VirtualEmissionGroup({
@@ -321,6 +396,9 @@ function VirtualEmissionGroup({
   onDeleted,
   onDragStart,
   onDropToGroup,
+  onMove,
+  onRequestDelete,
+  canDelete,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -404,6 +482,9 @@ function VirtualEmissionGroup({
                         onNavigateClient={onNavigateClient}
                         onDeleted={onDeleted}
                         onDragStart={onDragStart}
+                        onMove={onMove}
+                        onRequestDelete={onRequestDelete}
+                        canDelete={canDelete}
                       />
                     );
                   })}
@@ -424,7 +505,23 @@ function VirtualEmissionGroup({
 
 
 export default function Sales() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, role, isLoading: authLoading } = useAuth();
+  const canDelete = role === "admin";
+  const [saleToDelete, setSaleToDelete] = useState<SaleRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!saleToDelete) return;
+    setDeleting(true);
+    const { error } = await (supabase as any).rpc("soft_delete_sale", { _sale_id: saleToDelete.id });
+    setDeleting(false);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+      return;
+    }
+    toast.success("Venda excluída");
+    setSales((prev) => prev.filter((s) => s.id !== saleToDelete.id));
+    setSaleToDelete(null);
+  }, [saleToDelete]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
   const [filterSeller, setFilterSeller] = useState<string>("all");
@@ -575,26 +672,28 @@ export default function Sales() {
     draggedSaleRef.current = { saleId, emitted };
   }, []);
 
+  const handleMoveSale = useCallback(async (saleId: string, toEmitted: boolean) => {
+    const current = sales.find((s) => s.id === saleId);
+    const fromEmitted = current ? isEmitted(current) : false;
+    if (toEmitted === fromEmitted) return;
+    const newStatus = toEmitted ? "Emitido" : "Pendente";
+    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
+    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
+    if (error) {
+      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
+      toast.error("Não consegui mover a venda. Tenta de novo.");
+    } else {
+      toast.success(toEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
+    }
+  }, [sales]);
+
   const handleDropToGroup = useCallback(async (targetVariant: "pending" | "emitted") => {
     const dragged = draggedSaleRef.current;
     draggedSaleRef.current = null;
     const saleId = dragged?.saleId;
-    const fromEmitted = dragged?.emitted;
     if (!saleId) return;
-    const goingToEmitted = targetVariant === "emitted";
-    if (goingToEmitted === fromEmitted) return; // dropped in same group
-    const newStatus = goingToEmitted ? "Emitido" : "Pendente";
-    // Optimistic update
-    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
-    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
-    if (error) {
-      // revert
-      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
-      toast.error("Não consegui mover a venda. Tenta de novo.");
-    } else {
-      toast.success(goingToEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
-    }
-  }, []);
+    await handleMoveSale(saleId, targetVariant === "emitted");
+  }, [handleMoveSale]);
 
 
   const handleExport = async () => {
@@ -857,6 +956,9 @@ export default function Sales() {
                     onDeleted={handleDeleted}
                     onDragStart={handleNativeDragStart}
                     onDropToGroup={handleDropToGroup}
+                    onMove={handleMoveSale}
+                    onRequestDelete={setSaleToDelete}
+                    canDelete={canDelete}
                   />
                   <VirtualEmissionGroup
                     id="group:emitted"
@@ -875,6 +977,9 @@ export default function Sales() {
                     onDeleted={handleDeleted}
                     onDragStart={handleNativeDragStart}
                     onDropToGroup={handleDropToGroup}
+                    onMove={handleMoveSale}
+                    onRequestDelete={setSaleToDelete}
+                    canDelete={canDelete}
                   />
                 </div>
             </Card>}
@@ -921,6 +1026,23 @@ export default function Sales() {
           </>
         )}
       </div>
+      <AlertDialog open={!!saleToDelete} onOpenChange={(o) => !o && setSaleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir esta venda?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {saleToDelete && <>A venda <strong>{saleToDelete.display_id} · {saleToDelete.name}</strong> será removida das listas (vendas, viagens, financeiro, dashboard). O registro fica arquivado e pode ser restaurado por um administrador.</>}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Sim, excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </TooltipProvider>
   );
 }
