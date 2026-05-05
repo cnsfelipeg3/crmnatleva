@@ -814,6 +814,7 @@ export default function Sales() {
                           { key: null, label: "Lead", align: "text-center", px: "px-1" },
                           { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
                           { key: "status", label: "Status", align: "text-left", px: "px-1" },
+                          { key: null, label: "ID", align: "text-left", px: "px-2" },
                         ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
                           <th
                             key={col.label}
