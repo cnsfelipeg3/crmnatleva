@@ -150,6 +150,7 @@ const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
 const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
+const PassengerSelfSignup = lazy(() => import("@/pages/PassengerSelfSignup"));
 const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
 // Operação Diária
@@ -202,6 +203,7 @@ function AppRoutes() {
   const isPublicRoute =
     location.pathname.startsWith("/proposta/") ||
     location.pathname.startsWith("/portal/") ||
+    location.pathname.startsWith("/cadastro-passageiro/") ||
     location.pathname === "/cadastro-fornecedor";
 
   // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
@@ -386,6 +388,9 @@ function AppRoutes() {
 
         {/* Cadastro público de fornecedor */}
         <Route path="/cadastro-fornecedor" element={<Suspense fallback={<MinimalLoader />}><SupplierRegistration /></Suspense>} />
+
+        {/* Auto-cadastro público de passageiro */}
+        <Route path="/cadastro-passageiro/:slug" element={<Suspense fallback={<MinimalLoader />}><PassengerSelfSignup /></Suspense>} />
 
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />

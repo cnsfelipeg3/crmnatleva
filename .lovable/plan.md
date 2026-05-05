@@ -1,107 +1,69 @@
-# Plano · Áudio com cancelamento real + Drag & Drop estilo WhatsApp
+## Objetivo
 
-## Contexto rápido
+Permitir que o cliente preencha os próprios dados via link público, em um formulário com identidade visual NatLeva. No botão "Novo Passageiro", oferecer duas opções: cadastro manual (atual) ou copiar link público.
 
-Hoje, no `/operacao/inbox`:
-1. Ao gravar áudio e clicar na lixeira, o áudio ainda é enviado · bug real.
-2. Para anexar arquivos é preciso clicar no clips, abrir picker, etc · fricção.
+## Fluxo
 
-Vamos resolver os dois problemas com foco em UX premium.
+1. Em `/passageiros`, o botão "Novo Passageiro" abre um pequeno menu:
+   - Cadastro manual (abre o Dialog atual)
+   - Copiar link de auto-cadastro (gera/copia URL pública única)
+2. Cliente acessa o link, preenche o formulário e envia.
+3. Submissão cria registro em `passengers` via Edge Function (sem auth), com `created_via = 'self_signup'`.
+4. Atendente recebe o novo passageiro automaticamente listado em `/passageiros` (e visualiza um badge "Auto-cadastro").
 
----
+## Estrutura técnica
 
-## Parte 1 · Lixeira do áudio que realmente cancela (bug)
+### Banco
+Migration:
+- Tabela `passenger_signup_links` (id, slug único, created_by, agency_id, label opcional, expires_at nullable, max_uses nullable, uses_count, active boolean, created_at).
+- Coluna `created_via text` em `passengers` (default `'manual'`).
+- Coluna `signup_link_id uuid` em `passengers` (referência opcional).
+- RLS: `passenger_signup_links` segue padrão atual (anon ALL para testes, conforme memória do projeto).
 
-### Causa raiz
-Em `OperacaoInbox.tsx` (linha 1549), `cancelRecording` zera `audioChunksRef` e chama `stop()`. Porém o navegador dispara um último `ondataavailable` ANTES do `onstop`, repopulando os chunks. O `onstop` então monta o blob, vê tamanho > 100 e envia normalmente.
+### Edge Function `passenger-self-signup`
+- `verify_jwt = false` em `supabase/config.toml`.
+- POST `{ slug, payload }` → valida slug ativo, valida payload com Zod, normaliza nome (`smartCapitalize`), CPF e telefone. Insere em `passengers`, incrementa `uses_count`, retorna `{ ok: true }`.
+- GET `?slug=...` → retorna metadados públicos mínimos (logo agência, nome agência, ativo/expirado) para renderizar a página.
 
-### Correção
-- Criar `cancelledRef = useRef(false)`.
-- `cancelRecording` seta `cancelledRef.current = true` antes do `stop()`.
-- No `onstop`, primeira linha: `if (cancelledRef.current) { cancelledRef.current = false; cleanup(); return; }`.
-- `startRecording` reseta `cancelledRef.current = false` no início.
-- Limpeza unificada (stream, audioContext, intervalos, waveform) em função interna `cleanupRecording()` reutilizada por stop/cancel/cancelado.
-- Toast sutil "Áudio descartado" ao cancelar para feedback claro.
-
----
-
-## Parte 2 · Drag & Drop estilo WhatsApp com modal de preview
-
-### Comportamento alvo
-1. Usuário arrasta arquivo (imagem, vídeo, PDF, doc, qualquer tipo) sobre a área da conversa.
-2. Aparece um overlay full-area com indicação visual ("Solte para anexar · imagens, vídeos, documentos").
-3. Ao soltar, abre o `AttachmentPreviewDialog` com:
-   - Preview adequado por tipo (imagem grande, player de vídeo, ícone+nome para PDF/doc).
-   - Lista lateral com os outros arquivos da fila (suporte a múltiplos arquivos arrastados de uma vez, navegáveis).
-   - Campo de legenda (textarea com auto-resize, emoji-friendly, contador sutil).
-   - **Alternativa: gravar áudio como legenda** · botão de mic abaixo do preview que grava um áudio descritivo (waveform mini) que será enviado JUNTO com o arquivo, em mensagem subsequente.
-   - Botões: Cancelar · Adicionar mais · Enviar.
-4. Ao enviar:
-   - Usa pipeline existente (`sendImage`/`sendDocument`/`sendVideo` · ou seja lá como o componente faz hoje via `sendViaZapi`).
-   - Se houver legenda de texto, vai como `caption` no envio nativo do tipo (Z-API suporta caption em image/document).
-   - Se houver áudio descritivo, é enviado logo após cada arquivo como mensagem de áudio independente.
-5. Mesmo modal abre via clipe (clips) e via paste, unificando a UX.
+### Rotas
+- Adicionar `/cadastro-passageiro/:slug` à lista `isPublicRoute` em `src/App.tsx`.
+- Nova página `src/pages/PassengerSelfSignup.tsx` (lazy-loaded, sem layout autenticado).
 
 ### Componentes novos
-- `src/components/livechat/AttachmentDropOverlay.tsx` · overlay visual durante drag.
-- `src/components/livechat/AttachmentPreviewDialog.tsx` · modal completo com preview, legenda, áudio, fila múltipla.
-- `src/components/livechat/MiniAudioRecorder.tsx` · recorder reutilizável (extrai a lógica de mic/waveform já existente).
+- `src/pages/PassengerSelfSignup.tsx` — landing pública com hero NatLeva (logo, fundo glass-card, gold-line, tipografia display) e formulário multi-seção:
+  1. Dados pessoais: nome completo*, CPF*, nascimento*, RG, e-mail*.
+  2. Contato: telefone/WhatsApp* (com máscara BR).
+  3. Endereço: CEP (auto-preenche via ViaCEP), rua, número, complemento, bairro, cidade, estado.
+  4. Viagem internacional (toggle "Vai viajar para fora da América do Sul?"): se sim, exige passaporte* e validade*. Se não, campos opcionais.
+  - Validação Zod, mensagens inline, botão "Enviar dados" com loading.
+  - Tela de sucesso com checkmark e mensagem "Recebemos seus dados, obrigado!".
+- `src/components/passengers/PassengerLinkDialog.tsx` — dialog acionado pelo dropdown, gera o slug, exibe URL, botão copiar, opção "abrir link em nova aba" e seletor de validade (7/30 dias/sem validade).
+- Substituir o botão único "Novo Passageiro" por `DropdownMenu` com:
+  - Cadastrar manualmente
+  - Gerar link de auto-cadastro
 
-### Integração no `OperacaoInbox.tsx`
-- Adicionar handlers `onDragEnter/onDragOver/onDragLeave/onDrop` no container da área de mensagens (debounce com counter para evitar flicker em filhos).
-- State `pendingAttachments: File[]` e `previewOpen: boolean`.
-- Reaproveitar `handlePaste` para também abrir o preview dialog (em vez de enviar direto), com mesma UX.
-- Botão clips passa a abrir o input file e ao selecionar, alimenta o mesmo dialog.
+### Identidade visual
+- Reaproveitar `glass-card`, tokens semânticos e classes existentes (cards `#FFFFFF`, texto `#111827`, borda `0.75rem`, accent gold `4px`).
+- Logo NatLeva no topo (usar mesmo asset do portal/proposta pública).
+- Tipografia `font-display` para títulos, `Inter` no corpo.
+- Layout single-column, max-w-2xl, padding generoso, responsivo mobile-first.
 
-### Tipos suportados
-- Imagens: JPG, PNG, WEBP, GIF · preview inline.
-- Vídeo: MP4, MOV · player.
-- PDF: ícone + 1ª página opcional via `<embed>` reduzido.
-- Outros (DOCX, XLSX, ZIP): card com ícone + nome + tamanho formatado.
-- Limite tamanho por arquivo: respeitar limite do Z-API (16MB · validação client-side com toast).
+### Validação de internacional
+- Lista fixa de países América do Sul não exige passaporte. Como o formulário foca em destino futuro, basta um toggle binário "Viagem internacional fora da América do Sul" para alternar `required` no passaporte e validade.
 
-### UX/UI premium
-- Modal usa design system existente (glass-card, border 0.75rem, gold-line accent topo).
-- Animações suaves (Framer Motion fade+scale 0.96→1).
-- Atalhos: `Esc` cancela, `Ctrl/Cmd+Enter` envia.
-- Suporte a múltiplos arquivos com thumbnails na lateral (carrossel vertical).
-- Loading states por arquivo durante upload (progress bar individual).
+## Arquivos
 
----
+**Criar**
+- `supabase/functions/passenger-self-signup/index.ts`
+- `src/pages/PassengerSelfSignup.tsx`
+- `src/components/passengers/PassengerLinkDialog.tsx`
 
-## Arquivos afetados
+**Modificar**
+- `src/pages/Passengers.tsx` (dropdown no botão, badge "Auto-cadastro")
+- `src/App.tsx` (rota pública + lazy import + isPublicRoute)
+- `supabase/config.toml` (registrar a função com `verify_jwt = false`)
+- Migration SQL para tabela e colunas novas
 
-### Modificar
-- `src/pages/operacao/OperacaoInbox.tsx` · fix cancelamento + integração drop/preview.
-
-### Criar
-- `src/components/livechat/AttachmentDropOverlay.tsx`
-- `src/components/livechat/AttachmentPreviewDialog.tsx`
-- `src/components/livechat/MiniAudioRecorder.tsx`
-
----
-
-## Detalhes técnicos chave
-
-```text
-[Conversa Container]
-  ├─ onDragEnter/Over/Leave/Drop (counter para nested)
-  ├─ <AttachmentDropOverlay visible={isDragging} />
-  └─ <AttachmentPreviewDialog
-        files={pendingAttachments}
-        onRemove / onAddMore
-        onSend={(files, caption, audioBlob?) => { ... }}
-      />
-```
-
-Pipeline de envio dentro do dialog reutiliza funções já existentes no Inbox (passadas via prop ou via handler `onSend`):
-- texto+arquivo: `send-image` / `send-document` / `send-video` com `caption`.
-- áudio descritivo: chama o mesmo fluxo de `send-audio` após cada arquivo.
-
-Sem mudanças de banco, sem novas edge functions, sem novos secrets.
-
----
-
-## Não está no escopo
-- Editar imagem antes de enviar (crop/desenho) · pode vir em fase 2.
-- Compressão automática de vídeo · usaríamos o blob como veio.
+## Não incluso
+- Confirmação por e-mail/SMS do cliente (pode ser próximo passo).
+- Edição de cadastro pelo próprio cliente após submissão.

@@ -4695,6 +4695,45 @@ export type Database = {
           },
         ]
       }
+      passenger_signup_links: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          label: string | null
+          max_uses: number | null
+          slug: string
+          updated_at: string
+          uses_count: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          max_uses?: number | null
+          slug: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          label?: string | null
+          max_uses?: number | null
+          slug?: string
+          updated_at?: string
+          uses_count?: number
+        }
+        Relationships: []
+      }
       passengers: {
         Row: {
           address_cep: string | null
@@ -4710,6 +4749,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           created_by: string | null
+          created_via: string
           email: string | null
           full_name: string
           id: string
@@ -4717,6 +4757,7 @@ export type Database = {
           passport_number: string | null
           phone: string | null
           rg: string | null
+          signup_link_id: string | null
           updated_at: string
         }
         Insert: {
@@ -4733,6 +4774,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string
           email?: string | null
           full_name: string
           id?: string
@@ -4740,6 +4782,7 @@ export type Database = {
           passport_number?: string | null
           phone?: string | null
           rg?: string | null
+          signup_link_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -4756,6 +4799,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           created_by?: string | null
+          created_via?: string
           email?: string | null
           full_name?: string
           id?: string
@@ -4763,9 +4807,18 @@ export type Database = {
           passport_number?: string | null
           phone?: string | null
           rg?: string | null
+          signup_link_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "passengers_signup_link_id_fkey"
+            columns: ["signup_link_id"]
+            isOneToOne: false
+            referencedRelation: "passenger_signup_links"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_fee_rules: {
         Row: {
