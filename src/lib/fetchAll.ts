@@ -7,6 +7,8 @@ interface FetchAllOptions {
   bypassCache?: boolean;
   // Optional simple filters applied via `.is()` (e.g. { excluded_at: null }).
   isFilters?: Record<string, null | boolean>;
+  // Optional simple equality filters applied via `.eq()` (e.g. { seller_id: userId }).
+  eqFilters?: Record<string, string | number | boolean | null>;
 }
 
 const inFlightRequests = new Map<string, Promise<any[]>>();
@@ -74,6 +76,13 @@ export async function fetchAllRows(
       if (options?.isFilters) {
         for (const [col, val] of Object.entries(options.isFilters)) {
           query = query.is(col, val);
+        }
+      }
+
+      if (options?.eqFilters) {
+        for (const [col, val] of Object.entries(options.eqFilters)) {
+          if (val === null || val === undefined) continue;
+          query = query.eq(col, val);
         }
       }
 
