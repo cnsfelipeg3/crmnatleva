@@ -70,10 +70,11 @@ export default function Birthdays() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("passengers")
-        .select("id, full_name, birth_date, phone, cpf")
-        .not("birth_date", "is", null);
+      const data = await fetchAllRows(
+        "passengers",
+        "id, full_name, birth_date, phone, cpf",
+        { filter: (q) => q.not("birth_date", "is", null) }
+      );
       setPassengers((data || []) as BirthdayPassenger[]);
       setLoading(false);
     };
