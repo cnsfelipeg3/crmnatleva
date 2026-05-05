@@ -253,14 +253,11 @@ export default function PassengerSelfSignup() {
   }
 
   // Helpers for sequential DOB inputs
-  const dobParts = (() => {
-    const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
-    return { d, m, y };
-  })();
   const commitDob = (parts: { d: string; m: string; y: string }) => {
     const d = parts.d.replace(/\D/g, "").slice(0, 2);
     const m = parts.m.replace(/\D/g, "").slice(0, 2);
     const y = parts.y.replace(/\D/g, "").slice(0, 4);
+    setDobParts({ d, m, y });
     const iso = y.length === 4 && m.length >= 1 && d.length >= 1
       ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
       : "";
@@ -268,21 +265,31 @@ export default function PassengerSelfSignup() {
     if (iso) setDobError(validateDob(iso));
     else setDobError("");
   };
-  const setDob = (next: { d?: string; m?: string; y?: string }) => {
-    commitDob({
-      d: next.d ?? dobParts.d,
-      m: next.m ?? dobParts.m,
-      y: next.y ?? dobParts.y,
-    });
+  const splitDobDigits = (raw: string) => {
+    const text = raw.replace(/\D/g, "").slice(0, 8);
+    if (text.length === 8 && +text.slice(0, 4) >= 1900) {
+      return { d: text.slice(6, 8), m: text.slice(4, 6), y: text.slice(0, 4) };
+    }
+    return { d: text.slice(0, 2), m: text.slice(2, 4), y: text.slice(4, 8) };
+  };
+  const handleDobChange = (field: "d" | "m" | "y", value: string) => {
+    const clean = value.replace(/\D/g, "");
+    if ((field !== "y" && clean.length > 2) || (field === "y" && clean.length > 4)) {
+      const merged = field === "d" ? splitDobDigits(clean) : { ...dobParts, [field]: clean };
+      commitDob(merged);
+      setTimeout(() => (merged.m.length < 2 ? dobMonthRef : dobYearRef).current?.focus(), 0);
+      return;
+    }
+    const next = { ...dobParts, [field]: field === "y" ? clean.slice(0, 4) : clean.slice(0, 2) };
+    commitDob(next);
+    if (field === "d" && next.d.length === 2) setTimeout(() => dobMonthRef.current?.focus(), 0);
+    if (field === "m" && next.m.length === 2) setTimeout(() => dobYearRef.current?.focus(), 0);
   };
   const handleDobPaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "");
-    if (text.length >= 6) {
+    const text = e.clipboardData.getData("text");
+    if (text.replace(/\D/g, "").length >= 6) {
       e.preventDefault();
-      const d = text.slice(0, 2);
-      const m = text.slice(2, 4);
-      const y = text.slice(4, 8);
-      commitDob({ d, m, y });
+      commitDob(splitDobDigits(text));
       setTimeout(() => dobYearRef.current?.focus(), 0);
     }
   };
