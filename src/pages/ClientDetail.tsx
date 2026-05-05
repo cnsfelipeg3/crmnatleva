@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import ClientTimeline from "@/components/ClientTimeline";
 import { LinkConversationDialog } from "@/components/LinkConversationDialog";
+import { CustomerSinceBadge } from "@/components/clients/CustomerSinceBadge";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
