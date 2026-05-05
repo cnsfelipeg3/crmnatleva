@@ -1,84 +1,26 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle, Camera, X, Upload } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, Plus } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
-import { PhoneInput } from "@/components/ui/phone-input";
-
-function formatCpf(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 3) return d;
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
-}
-function formatPhone(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
-function formatCep(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 8);
-  if (d.length <= 5) return d;
-  return `${d.slice(0, 5)}-${d.slice(5)}`;
-}
-
-function isLeapYear(y: number) {
-  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
-}
-function daysInMonth(m: number, y: number) {
-  return [31, isLeapYear(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
-}
-function validateDob(iso: string): string {
-  // iso = YYYY-MM-DD
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!m) return "Use o formato DD/MM/AAAA";
-  const y = +m[1], mo = +m[2], d = +m[3];
-  const currentYear = new Date().getFullYear();
-  if (y < 1900 || y > currentYear) return `Ano deve estar entre 1900 e ${currentYear}`;
-  if (mo < 1 || mo > 12) return "Mês inválido (01 a 12)";
-  const max = daysInMonth(mo, y);
-  if (d < 1 || d > max) return `Dia inválido para ${String(mo).padStart(2, "0")}/${y} (máx ${max})`;
-  const date = new Date(y, mo - 1, d);
-  if (date > new Date()) return "Data não pode ser no futuro";
-  return "";
-}
-
-const initialForm = {
-  full_name: "", cpf: "", birth_date: "", rg: "", email: "",
-  phone: "", phone_country: "BR", passport_number: "", passport_expiry: "",
-  passport_photo_url: "",
-  address_cep: "", address_street: "", address_number: "",
-  address_complement: "", address_neighborhood: "",
-  address_city: "", address_state: "",
-  international_outside_sa: false,
-};
+import PassengerFormCard, {
+  emptyPassenger,
+  validateDob,
+  type PassengerFormState,
+} from "@/components/passenger-signup/PassengerFormCard";
 
 export default function PassengerSelfSignup() {
   const { slug } = useParams();
   const { toast } = useToast();
   const [linkState, setLinkState] = useState<"loading" | "valid" | "invalid">("loading");
   const [reason, setReason] = useState<string>("");
-  const [form, setForm] = useState(initialForm);
+  const [passengers, setPassengers] = useState<PassengerFormState[]>([{ ...emptyPassenger }]);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
-  const [cepLoading, setCepLoading] = useState(false);
-  const [cepError, setCepError] = useState<string>("");
-  const [cepFound, setCepFound] = useState(false);
-  const [photoUploading, setPhotoUploading] = useState(false);
+  const [doneCount, setDoneCount] = useState(0);
   const [blockedMsg, setBlockedMsg] = useState<string>("");
-  const [dobError, setDobError] = useState<string>("");
-  const [dobParts, setDobParts] = useState({ d: "", m: "", y: "" });
-  const dobDayRef = useRef<HTMLInputElement>(null);
-  const dobMonthRef = useRef<HTMLInputElement>(null);
-  const dobYearRef = useRef<HTMLInputElement>(null);
 
   const fnUrl = useMemo(() => {
     const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
@@ -87,8 +29,6 @@ export default function PassengerSelfSignup() {
 
   useEffect(() => {
     if (!slug) return;
-    // Cache-bust sem headers customizados para evitar preflight/CORS em navegadores móveis.
-    // Se a checagem falhar por rede/cache, deixa o formulário abrir e valida no envio.
     const bust = Date.now();
     fetch(`${fnUrl}?slug=${encodeURIComponent(slug)}&_=${bust}`, { cache: "no-store" })
       .then((r) => r.json())
@@ -99,58 +39,35 @@ export default function PassengerSelfSignup() {
       .catch(() => setLinkState("valid"));
   }, [slug, fnUrl]);
 
-  const fetchCep = async (cep: string) => {
-    const d = cep.replace(/\D/g, "");
-    if (d.length !== 8) return;
-    setCepLoading(true);
-    setCepError("");
-    setCepFound(false);
-    try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { cache: "no-store" });
-      const j = await r.json();
-      if (j.erro) {
-        setCepError("CEP não encontrado");
-        return;
-      }
-      setForm((f) => ({
-        ...f,
-        address_street: j.logradouro || f.address_street,
-        address_neighborhood: j.bairro || f.address_neighborhood,
-        address_city: j.localidade || f.address_city,
-        address_state: j.uf || f.address_state,
-      }));
-      setCepFound(true);
-    } catch {
-      setCepError("Erro ao buscar CEP");
-    } finally {
-      setCepLoading(false);
-    }
+  const updatePassenger = (idx: number, next: PassengerFormState) => {
+    setPassengers((arr) => arr.map((p, i) => (i === idx ? next : p)));
+  };
+  const removePassenger = (idx: number) => {
+    setPassengers((arr) => arr.filter((_, i) => i !== idx));
+  };
+  const addPassenger = () => {
+    setPassengers((arr) => [...arr, { ...emptyPassenger }]);
+    requestAnimationFrame(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    });
   };
 
-  const cepDigits = form.address_cep.replace(/\D/g, "");
-  const cepInvalid = cepDigits.length > 0 && cepDigits.length < 8;
-  const stateInvalid = form.address_state.length > 0 && form.address_state.length !== 2;
-
-  const handlePhotoUpload = async (file: File) => {
-    if (file.size > 8 * 1024 * 1024) {
-      toast({ title: "Imagem muito grande", description: "Limite de 8MB.", variant: "destructive" });
-      return;
+  const validatePassenger = (p: PassengerFormState, idx: number): string | null => {
+    if (!p.full_name.trim() || p.full_name.trim().length < 3) {
+      return `Passageiro ${idx + 1}: informe o nome completo`;
     }
-    setPhotoUploading(true);
-    try {
-      const ext = file.name.split(".").pop() || "jpg";
-      const path = `passport/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-      const { error } = await supabase.storage.from("passenger-uploads").upload(path, file, {
-        cacheControl: "3600", upsert: false, contentType: file.type,
-      });
-      if (error) throw error;
-      const { data: pub } = supabase.storage.from("passenger-uploads").getPublicUrl(path);
-      setForm((f) => ({ ...f, passport_photo_url: pub.publicUrl }));
-    } catch (e: any) {
-      toast({ title: "Não foi possível enviar a foto", description: e?.message || "Tente de novo.", variant: "destructive" });
-    } finally {
-      setPhotoUploading(false);
+    const phoneDigits = (p.phone || "").replace(/\D/g, "");
+    if (!p.phone.startsWith("+") || phoneDigits.length < 8 || phoneDigits.length > 15) {
+      return `Passageiro ${idx + 1}: telefone inválido`;
     }
+    if (p.birth_date) {
+      const err = validateDob(p.birth_date);
+      if (err) return `Passageiro ${idx + 1}: ${err}`;
+    }
+    if (p.international_outside_sa && (!p.passport_number || !p.passport_expiry)) {
+      return `Passageiro ${idx + 1}: passaporte e validade são obrigatórios para viagem internacional fora da América do Sul`;
+    }
+    return null;
   };
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -158,59 +75,47 @@ export default function PassengerSelfSignup() {
     if (!slug) return;
     setBlockedMsg("");
 
-    if (!form.full_name.trim() || form.full_name.trim().length < 3) {
-      toast({ title: "Informe o nome completo", variant: "destructive" });
-      return;
-    }
-    // Telefone em E.164 (ex: +5511999999999) · entre 8 e 15 dígitos
-    const phoneDigits = (form.phone || "").replace(/\D/g, "");
-    if (!form.phone.startsWith("+") || phoneDigits.length < 8 || phoneDigits.length > 15) {
-      toast({ title: "Telefone inválido", description: "Confira o código do país e o número.", variant: "destructive" });
-      return;
-    }
-    const hasDobInput = !!(dobParts.d || dobParts.m || dobParts.y);
-    if (hasDobInput && !form.birth_date) {
-      const err = "Informe a data completa no formato DD/MM/AAAA";
-      setDobError(err);
-      toast({ title: "Data de nascimento incompleta", description: err, variant: "destructive" });
-      return;
-    }
-    if (form.birth_date) {
-      const err = validateDob(form.birth_date);
+    for (let i = 0; i < passengers.length; i++) {
+      const err = validatePassenger(passengers[i], i);
       if (err) {
-        setDobError(err);
-        toast({ title: "Data de nascimento inválida", description: err, variant: "destructive" });
+        toast({ title: "Verifique os dados", description: err, variant: "destructive" });
         return;
       }
-    }
-    if (form.international_outside_sa && (!form.passport_number || !form.passport_expiry)) {
-      toast({ title: "Passaporte e validade são obrigatórios para viagem internacional fora da América do Sul", variant: "destructive" });
-      return;
     }
 
     setSubmitting(true);
+    let successCount = 0;
     try {
-      const r = await fetch(fnUrl, {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ slug, payload: form }),
-      });
-      const j = await r.json();
-      if (!r.ok || j.error) {
-        // Bloqueio ou rate limit · exibe mensagem destacada acima do botão
-        if (r.status === 429 || r.status === 409 || j.code) {
-          setBlockedMsg(j.error || "Não foi possível concluir o cadastro agora.");
-        } else {
-          toast({ title: "Erro ao enviar", description: j.error || "Tente novamente", variant: "destructive" });
+      for (let i = 0; i < passengers.length; i++) {
+        const r = await fetch(fnUrl, {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ slug, payload: passengers[i] }),
+        });
+        const j = await r.json();
+        if (!r.ok || j.error) {
+          if (r.status === 429 || r.status === 409 || j.code) {
+            setBlockedMsg(
+              successCount > 0
+                ? `${successCount} de ${passengers.length} cadastros foram enviados. ${j.error || "Não foi possível concluir o restante."}`
+                : (j.error || "Não foi possível concluir o cadastro agora."),
+            );
+          } else {
+            toast({
+              title: `Erro no passageiro ${i + 1}`,
+              description: j.error || "Tente novamente",
+              variant: "destructive",
+            });
+          }
+          setSubmitting(false);
+          return;
         }
-        setSubmitting(false);
-        return;
+        successCount++;
       }
+      setDoneCount(successCount);
       setDone(true);
-    } catch (err) {
+    } catch {
       toast({ title: "Erro de conexão", description: "Verifique sua internet e tente novamente.", variant: "destructive" });
     } finally {
       setSubmitting(false);
@@ -247,348 +152,54 @@ export default function PassengerSelfSignup() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
-
           <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
           <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
-          <h1 className="text-2xl font-display">Cadastro recebido!</h1>
+          <h1 className="text-2xl font-display">
+            {doneCount > 1 ? `${doneCount} cadastros recebidos!` : "Cadastro recebido!"}
+          </h1>
           <p className="text-sm text-muted-foreground">
-            Obrigado por compartilhar seus dados com a gente. Nossa equipe já está com tudo em mãos para cuidar da sua viagem.
+            {doneCount > 1
+              ? "Recebemos os dados de todos os passageiros. Nossa equipe já está com tudo em mãos para cuidar da viagem de vocês."
+              : "Obrigado por compartilhar seus dados com a gente. Nossa equipe já está com tudo em mãos para cuidar da sua viagem."}
           </p>
         </Card>
       </div>
     );
   }
 
-  // Helpers for sequential DOB inputs (iOS-safe)
-  const focusField = (ref: React.RefObject<HTMLInputElement>) => {
-    // iOS Safari prefers requestAnimationFrame over setTimeout(0) for programmatic focus
-    requestAnimationFrame(() => {
-      const el = ref.current;
-      if (!el) return;
-      el.focus();
-      try {
-        const len = el.value.length;
-        el.setSelectionRange(len, len);
-      } catch {}
-    });
-  };
-  const commitDob = (parts: { d: string; m: string; y: string }) => {
-    const d = parts.d.replace(/\D/g, "").slice(0, 2);
-    const m = parts.m.replace(/\D/g, "").slice(0, 2);
-    const y = parts.y.replace(/\D/g, "").slice(0, 4);
-    setDobParts({ d, m, y });
-    const iso = y.length === 4 && m.length >= 1 && d.length >= 1
-      ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
-      : "";
-    setForm((f) => ({ ...f, birth_date: iso }));
-    if (iso) setDobError(validateDob(iso));
-    else setDobError("");
-  };
-  const splitDobDigits = (raw: string) => {
-    const text = raw.replace(/\D/g, "").slice(0, 8);
-    if (text.length === 8 && +text.slice(0, 4) >= 1900) {
-      return { d: text.slice(6, 8), m: text.slice(4, 6), y: text.slice(0, 4) };
-    }
-    return { d: text.slice(0, 2), m: text.slice(2, 4), y: text.slice(4, 8) };
-  };
-  const handleDobChange = (field: "d" | "m" | "y", value: string) => {
-    const clean = value.replace(/\D/g, "");
-    const max = field === "y" ? 4 : 2;
-
-    // Backspace detection on iOS: campo ficou vazio e já estava vazio -> volta
-    if (clean.length === 0 && dobParts[field].length === 0) {
-      if (field === "m") focusField(dobDayRef);
-      if (field === "y") focusField(dobMonthRef);
-      return;
-    }
-
-    // Overflow: digitou mais que o limite -> distribui para os próximos
-    if (clean.length > max) {
-      const current = clean.slice(0, max);
-      const overflow = clean.slice(max);
-      const next = { ...dobParts, [field]: current };
-      if (field === "d") {
-        next.m = (overflow + dobParts.m).replace(/\D/g, "").slice(0, 2);
-        if (overflow.length >= 2) {
-          next.y = (overflow.slice(2) + dobParts.y).replace(/\D/g, "").slice(0, 4);
-        }
-        commitDob(next);
-        focusField(next.m.length >= 2 ? dobYearRef : dobMonthRef);
-      } else if (field === "m") {
-        next.y = (overflow + dobParts.y).replace(/\D/g, "").slice(0, 4);
-        commitDob(next);
-        focusField(dobYearRef);
-      } else {
-        commitDob(next);
-      }
-      return;
-    }
-
-    const next = { ...dobParts, [field]: clean };
-    commitDob(next);
-    if (field === "d" && clean.length === 2) focusField(dobMonthRef);
-    if (field === "m" && clean.length === 2) focusField(dobYearRef);
-  };
-  const handleDobPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const text = e.clipboardData.getData("text");
-    if (text.replace(/\D/g, "").length >= 6) {
-      e.preventDefault();
-      const parts = splitDobDigits(text);
-      commitDob(parts);
-      focusField(parts.y.length === 4 ? dobYearRef : dobMonthRef);
-    }
-  };
-  const handleDobKeyDown = (
-    field: "d" | "m" | "y",
-    e: React.KeyboardEvent<HTMLInputElement>,
-  ) => {
-    if (e.key === "Backspace" && !dobParts[field]) {
-      e.preventDefault();
-      if (field === "m") focusField(dobDayRef);
-      if (field === "y") focusField(dobMonthRef);
-    }
-  };
-
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center">
-      {/* Hero */}
       <header className="w-full border-b border-border/30">
         <div className="w-full max-w-xl mx-auto px-5 sm:px-6 py-8 sm:py-10 text-center space-y-3">
           <img src={logo} alt="NatLeva" className="h-10 sm:h-12 mx-auto" />
-          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Seu cadastro de passageiro</h1>
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Cadastro de passageiros</h1>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Preenche com calma. Leva só uns minutinhos e nos ajuda a deixar a sua viagem 100% redonda.
+            Preenche com calma. Se a viagem for em grupo ou família, você pode adicionar mais passageiros no mesmo formulário.
           </p>
         </div>
       </header>
 
-      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 [&_input]:h-11">
-        {/* Dados pessoais */}
-        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <Plane className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
-          </div>
-          <div className="space-y-2">
-            <Label>Nome completo *</Label>
-            <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>CPF</Label>
-              <Input inputMode="numeric" value={form.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
-            </div>
-            <div className="space-y-2">
-              <Label>Data de nascimento</Label>
-              <div className="flex w-full items-center gap-1.5">
-                <Input
-                  ref={dobDayRef}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="DD"
-                  aria-label="Dia"
-                  autoComplete="bday-day"
-                  maxLength={2}
-                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.d}
-                  onPaste={handleDobPaste}
-                  onChange={(e) => handleDobChange("d", e.target.value)}
-                  onKeyDown={(e) => handleDobKeyDown("d", e)}
-                />
-                <span className="text-muted-foreground select-none shrink-0">/</span>
-                <Input
-                  ref={dobMonthRef}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="MM"
-                  aria-label="Mês"
-                  autoComplete="bday-month"
-                  maxLength={2}
-                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.m}
-                  onPaste={handleDobPaste}
-                  onChange={(e) => handleDobChange("m", e.target.value)}
-                  onKeyDown={(e) => handleDobKeyDown("m", e)}
-                />
-                <span className="text-muted-foreground select-none shrink-0">/</span>
-                <Input
-                  ref={dobYearRef}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  placeholder="AAAA"
-                  aria-label="Ano"
-                  autoComplete="bday-year"
-                  maxLength={4}
-                  className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.y}
-                  onPaste={handleDobPaste}
-                  onChange={(e) => handleDobChange("y", e.target.value)}
-                  onKeyDown={(e) => handleDobKeyDown("y", e)}
-                />
-              </div>
-              {dobError ? (
-                <p className="text-xs text-destructive">{dobError}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
-              )}
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>RG</Label>
-              <Input value={form.rg} onChange={(e) => setForm(f => ({ ...f, rg: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>E-mail</Label>
-              <Input type="email" inputMode="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="voce@email.com" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Telefone com WhatsApp *</Label>
-            <PhoneInput
-              value={form.phone}
-              countryCode={form.phone_country}
-              onChange={(full, { country }) =>
-                setForm((f) => ({ ...f, phone: full, phone_country: country.code }))
-              }
-              required
-            />
-          </div>
-        </Card>
+      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-8 [&_input]:h-11">
+        {passengers.map((p, idx) => (
+          <PassengerFormCard
+            key={idx}
+            index={idx}
+            value={p}
+            onChange={(next) => updatePassenger(idx, next)}
+            onRemove={() => removePassenger(idx)}
+            canRemove={passengers.length > 1}
+          />
+        ))}
 
-        {/* Endereço */}
-        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <Globe2 className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-base sm:text-lg">Endereço</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>CEP</Label>
-              <div className="relative">
-                <Input
-                  inputMode="numeric"
-                  value={form.address_cep}
-                  onChange={(e) => {
-                    const v = formatCep(e.target.value);
-                    setForm(f => ({ ...f, address_cep: v }));
-                    setCepFound(false);
-                    setCepError("");
-                    if (v.replace(/\D/g, "").length === 8) fetchCep(v);
-                  }}
-                  placeholder="00000-000"
-                  className={cepInvalid || cepError ? "border-destructive pr-9" : "pr-9"}
-                />
-                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                  {cepLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                  {!cepLoading && cepFound && <Check className="w-4 h-4 text-primary" />}
-                  {!cepLoading && (cepError || cepInvalid) && <AlertCircle className="w-4 h-4 text-destructive" />}
-                </div>
-              </div>
-              {(cepInvalid || cepError) && (
-                <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
-              )}
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Rua</Label>
-              <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <Label>Número</Label>
-              <Input inputMode="numeric" value={form.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Complemento</Label>
-              <Input value={form.address_complement} onChange={(e) => setForm(f => ({ ...f, address_complement: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Bairro</Label>
-              <Input value={form.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-2 sm:col-span-2">
-              <Label>Cidade</Label>
-              <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
-            </div>
-            <div className="space-y-2">
-              <Label>Estado (UF)</Label>
-              <Input
-                maxLength={2}
-                value={form.address_state}
-                onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
-                placeholder="SP"
-                className={stateInvalid ? "border-destructive" : ""}
-              />
-              {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
-            </div>
-          </div>
-        </Card>
-
-        {/* Passaporte */}
-        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-base sm:text-lg">Passaporte</h2>
-          </div>
-          <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border/50 bg-card/50">
-            <div className="space-y-0.5">
-              <p className="text-sm font-medium">Vai viajar para fora da América do Sul?</p>
-              <p className="text-xs text-muted-foreground">Se sim, passaporte e validade são obrigatórios.</p>
-            </div>
-            <Switch checked={form.international_outside_sa} onCheckedChange={(v) => setForm(f => ({ ...f, international_outside_sa: v }))} />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Número do passaporte {form.international_outside_sa && "*"}</Label>
-              <Input value={form.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value.toUpperCase() }))} required={form.international_outside_sa} />
-            </div>
-            <div className="space-y-2">
-              <Label>Validade {form.international_outside_sa && "*"}</Label>
-              <Input type="date" value={form.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} required={form.international_outside_sa} />
-            </div>
-          </div>
-
-          {/* Passport photo · optional */}
-          <div className="space-y-2">
-            <Label className="flex items-center gap-2">
-              <Camera className="w-4 h-4" /> Foto do passaporte <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
-            </Label>
-            {form.passport_photo_url ? (
-              <div className="relative inline-block">
-                <img src={form.passport_photo_url} alt="Passaporte" className="h-32 rounded-lg border border-border object-cover" />
-                <button type="button"
-                  onClick={() => setForm(f => ({ ...f, passport_photo_url: "" }))}
-                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow"
-                  aria-label="Remover foto">
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ) : (
-              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-dashed border-border bg-card/40 cursor-pointer hover:bg-card/60 transition text-sm text-muted-foreground">
-                {photoUploading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
-                ) : (
-                  <><Upload className="w-4 h-4" /> Anexar foto do passaporte</>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  className="hidden"
-                  disabled={photoUploading}
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handlePhotoUpload(f);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-            )}
-          </div>
-        </Card>
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={addPassenger}
+          className="w-full border-dashed"
+        >
+          <Plus className="w-4 h-4 mr-2" /> Adicionar outro passageiro
+        </Button>
 
         {blockedMsg && (
           <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
@@ -597,13 +208,15 @@ export default function PassengerSelfSignup() {
           </div>
         )}
 
-        <Button type="submit" size="lg" className="w-full" disabled={submitting || photoUploading}>
+        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-          Enviar meus dados
+          {passengers.length > 1
+            ? `Enviar dados de ${passengers.length} passageiros`
+            : "Enviar meus dados"}
         </Button>
 
         <p className="text-center text-xs text-muted-foreground pb-6">
-          Seus dados são tratados com sigilo e usados apenas para organizar sua viagem.
+          Os dados são tratados com sigilo e usados apenas para organizar a viagem.
         </p>
       </form>
     </div>
