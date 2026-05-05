@@ -22,6 +22,7 @@ import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSk
 import { useExternalSellers, type ExternalSeller } from "@/hooks/useExternalSellers";
 import { ExternalSellersDialog } from "@/components/sales/ExternalSellersDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSalesScope } from "@/hooks/useSalesScope";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -454,13 +455,21 @@ export default function Sales() {
   }, []);
 
 
+  const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
+
   useEffect(() => {
-    if (authLoading) return;
-    fetchAllRows("sales", "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name", { order: { column: "created_at", ascending: false } }).then((data) => {
+    if (authLoading || scopeLoading) return;
+    // Se o usuário não pode ver todas as vendas, restringe no servidor por seller_id
+    const eqFilters = !canViewAll && sellerId ? { seller_id: sellerId } : undefined;
+    fetchAllRows(
+      "sales",
+      "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name",
+      { order: { column: "created_at", ascending: false }, eqFilters },
+    ).then((data) => {
       setSales(data as SaleRow[]);
       setLoading(false);
     }).catch(err => { console.error(err); setLoading(false); });
-  }, [authLoading]);
+  }, [authLoading, scopeLoading, canViewAll, sellerId]);
 
   const statuses = useMemo(() => {
     const ALWAYS_SHOW = ["Aguardando Emissão"];
