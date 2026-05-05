@@ -37,6 +37,8 @@ interface ClientData {
   country: string | null;
   tags: string[];
   observations: string | null;
+  customer_since: string | null;
+  customer_since_source: string | null;
 }
 
 interface SaleRow {
