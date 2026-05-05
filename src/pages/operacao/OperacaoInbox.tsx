@@ -2568,7 +2568,7 @@ function OperacaoInboxInner() {
                 {selectedId && selected && (
                   <ConversationSummaryDialog
                     open={showSummaryDialog} onClose={() => setShowSummaryDialog(false)}
-                    conversationHistory={(messages[selectedId] || []).map(m => ({ text: m.text || "", sender_type: m.sender_type, message_type: m.message_type }))}
+                    conversationId={selectedDbId}
                     contactName={selected.contact_name || "Cliente"} stage={selected.stage || "novo_lead"}
                   />
                 )}
