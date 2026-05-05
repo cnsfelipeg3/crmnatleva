@@ -38,6 +38,7 @@ interface Passenger {
   address_neighborhood: string | null;
   address_city: string | null;
   address_state: string | null;
+  address_notes: string | null;
 }
 
 interface SaleLink {
