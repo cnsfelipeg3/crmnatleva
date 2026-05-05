@@ -8401,6 +8401,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      recount_conversation_unread: {
+        Args: { conv_id: string }
+        Returns: number
+      }
       reindex_conversation: { Args: { conv_id: string }; Returns: undefined }
       smart_capitalize_name: { Args: { input_name: string }; Returns: string }
       soft_delete_sale: { Args: { _sale_id: string }; Returns: undefined }
