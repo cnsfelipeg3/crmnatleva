@@ -102,54 +102,81 @@ export default function NathOpinionButton({ messages, context, variant = "header
     setOpinion("");
     setActions([]);
     setActionsExpanded(false);
-
-    const chatHistory = messages.map(m => {
-      const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
-      const type = m.messageType || "text";
-      let desc = m.content || "";
-      if (type === "audio") {
-        desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado — conteúdo de voz não transcrito]";
-      } else if (type === "image") {
-        desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
-      } else if (type === "video") {
-        desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
-      } else if (type === "document" || type === "file") {
-        desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
-      } else if (type === "sticker") {
-        desc = "[🏷️ STICKER]";
-      } else if (type === "location") {
-        desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
-      } else if (type === "contact" || type === "vcard") {
-        desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
-      }
-      if (m.mediaUrl && type !== "text") {
-        desc += ` (mídia: ${m.mediaUrl})`;
-      }
-      return `${label}: ${desc}`;
-    }).join("\n");
-
-    const fullContext = context ? `\nCONTEXTO: ${context}` : "";
+    setStats(null);
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          question: `Analise esta conversa do meu time e me dê sua opinião como CEO da NatLeva.${fullContext}\n\nCONVERSA:\n${chatHistory}`,
-          agentName: "NATH",
-          agentRole: NATH_SYSTEM_PROMPT,
-        }),
-      });
+      let resp: Response;
+
+      if (conversationId) {
+        setPhase("processing_media");
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nath-opinion`;
+        resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            conversationId,
+            contactName: messages[0]?.agentName || "Lead",
+            customContext: context,
+            limit: 50,
+          }),
+        });
+        const statsHeader = resp.headers.get("X-Nath-Stats");
+        if (statsHeader) {
+          try { setStats(JSON.parse(statsHeader)); } catch {}
+        }
+        setPhase("generating");
+      } else {
+        const chatHistory = messages.map(m => {
+          const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
+          const type = m.messageType || "text";
+          let desc = m.content || "";
+          if (type === "audio") {
+            desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado · conteúdo de voz não transcrito]";
+          } else if (type === "image") {
+            desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
+          } else if (type === "video") {
+            desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
+          } else if (type === "document" || type === "file") {
+            desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
+          } else if (type === "sticker") {
+            desc = "[🏷️ STICKER]";
+          } else if (type === "location") {
+            desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
+          } else if (type === "contact" || type === "vcard") {
+            desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
+          }
+          if (m.mediaUrl && type !== "text") {
+            desc += ` (mídia: ${m.mediaUrl})`;
+          }
+          return `${label}: ${desc}`;
+        }).join("\n");
+
+        const fullContext = context ? `\nCONTEXTO: ${context}` : "";
+
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+        resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            question: `Analise esta conversa do meu time e me dê sua opinião como CEO da NatLeva.${fullContext}\n\nCONVERSA:\n${chatHistory}`,
+            agentName: "NATH",
+            agentRole: NATH_SYSTEM_PROMPT,
+          }),
+        });
+      }
 
       if (!resp.ok || !resp.body) {
         if (resp.status === 429) setOpinion("Estou sobrecarregada agora... tente novamente em instantes. 💜");
         else if (resp.status === 402) setOpinion("Créditos de IA insuficientes. Recarregue para continuar.");
         else setOpinion("Não consegui analisar agora. Tente novamente.");
         setLoading(false);
+        setPhase("idle");
         return;
       }
 
@@ -182,8 +209,9 @@ export default function NathOpinionButton({ messages, context, variant = "header
       setOpinion("Erro de conexão. Tente novamente.");
     } finally {
       setLoading(false);
+      setPhase("idle");
     }
-  }, [messages, context, toast]);
+  }, [messages, context, toast, conversationId]);
 
   const extractActions = useCallback(async () => {
     setActionsLoading(true);
