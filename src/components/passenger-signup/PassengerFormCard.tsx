@@ -41,7 +41,7 @@ export const emptyPassenger: PassengerFormState = {
   passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
-  address_city: "", address_state: "",
+  address_city: "", address_state: "", address_notes: "",
   international_outside_sa: false,
 };
 
