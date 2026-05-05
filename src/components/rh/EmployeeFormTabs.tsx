@@ -549,26 +549,26 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
 
         {/* TAB 5: ACESSO AO SISTEMA */}
         <TabsContent value="acesso" className="space-y-4 mt-4">
-          {form.system_user_id ? (
-            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2">
-              <p className="text-sm font-medium text-emerald-500 flex items-center gap-2"><Key className="w-4 h-4" /> Usuário do sistema vinculado</p>
-              <p className="text-xs text-muted-foreground">ID: {form.system_user_id}</p>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3">
-                <Switch checked={createUser} onCheckedChange={setCreateUser} />
-                <Label>Criar usuário para este colaborador</Label>
-              </div>
-              {createUser && (
-                <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
-                  <div><Label>Email de login</Label><Input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="colaborador@natleva.com" /></div>
-                  <div><Label>Senha inicial</Label><Input type="password" value={userPassword} onChange={e => setUserPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></div>
-                  <p className="text-[10px] text-muted-foreground">O usuário será convidado via edge function após salvar o colaborador.</p>
+          {(() => {
+            const linkedUserId = form.system_user_id || form.user_id || null;
+            return linkedUserId ? (
+              <AccessInfoPanel userId={linkedUserId} />
+            ) : (
+              <>
+                <div className="flex items-center gap-3">
+                  <Switch checked={createUser} onCheckedChange={setCreateUser} />
+                  <Label>Criar usuário para este colaborador</Label>
                 </div>
-              )}
-            </>
-          )}
+                {createUser && (
+                  <div className="space-y-3 border rounded-lg p-4 bg-muted/20">
+                    <div><Label>Email de login</Label><Input type="email" value={userEmail} onChange={e => setUserEmail(e.target.value)} placeholder="colaborador@natleva.com" /></div>
+                    <div><Label>Senha inicial</Label><Input type="password" value={userPassword} onChange={e => setUserPassword(e.target.value)} placeholder="Mín. 6 caracteres" /></div>
+                    <p className="text-[10px] text-muted-foreground">O usuário será convidado via edge function após salvar o colaborador.</p>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </TabsContent>
 
         {/* TAB 6: PERMISSÕES GRANULARES — BASEADO EM MENUS REAIS DO SISTEMA */}
