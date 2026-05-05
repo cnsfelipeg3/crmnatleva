@@ -396,6 +396,9 @@ function VirtualEmissionGroup({
   onDeleted,
   onDragStart,
   onDropToGroup,
+  onMove,
+  onRequestDelete,
+  canDelete,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
