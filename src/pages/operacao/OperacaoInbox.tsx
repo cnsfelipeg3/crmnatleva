@@ -195,6 +195,7 @@ function OperacaoInboxInner() {
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
+  const [contentMatchInfo, setContentMatchInfo] = useState<Map<string, { msgId: string; snippet: string }>>(new Map());
   const [searchingContent, setSearchingContent] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -975,6 +976,7 @@ function OperacaoInboxInner() {
     const q = searchQuery.trim();
     if (q.length < 2) {
       setContentMatchIds(null);
+      setContentMatchInfo(new Map());
       setSearchingContent(false);
       return;
     }
@@ -984,23 +986,32 @@ function OperacaoInboxInner() {
         const [m1, m2] = await Promise.all([
           supabase
             .from("messages")
-            .select("conversation_id")
+            .select("id, conversation_id, text, created_at")
             .ilike("text", `%${q}%`)
             .order("created_at", { ascending: false })
             .limit(500),
           supabase
             .from("conversation_messages")
-            .select("conversation_id")
+            .select("id, conversation_id, content, created_at")
             .ilike("content", `%${q}%`)
+            .order("created_at", { ascending: false })
             .limit(500),
         ]);
         const ids = new Set<string>();
-        (m1.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
-        (m2.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        const info = new Map<string, { msgId: string; snippet: string }>();
+        const addMatch = (cid: string | null, msgId: string, text: string) => {
+          if (!cid || !msgId) return;
+          ids.add(cid);
+          if (!info.has(cid)) info.set(cid, { msgId, snippet: text || "" });
+        };
+        (m2.data || []).forEach((r: any) => addMatch(r.conversation_id, r.id, r.content));
+        (m1.data || []).forEach((r: any) => addMatch(r.conversation_id, r.id, r.text));
         setContentMatchIds(ids);
+        setContentMatchInfo(info);
       } catch (e) {
         console.warn("[inbox] content search failed", e);
         setContentMatchIds(new Set());
+        setContentMatchInfo(new Map());
       } finally {
         setSearchingContent(false);
       }
