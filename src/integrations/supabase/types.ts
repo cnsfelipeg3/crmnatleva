@@ -2251,6 +2251,8 @@ export type Database = {
           country: string | null
           created_at: string
           created_by: string | null
+          customer_since: string | null
+          customer_since_source: string | null
           display_name: string
           email: string | null
           id: string
@@ -2266,6 +2268,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           created_by?: string | null
+          customer_since?: string | null
+          customer_since_source?: string | null
           display_name: string
           email?: string | null
           id?: string
@@ -2281,6 +2285,8 @@ export type Database = {
           country?: string | null
           created_at?: string
           created_by?: string | null
+          customer_since?: string | null
+          customer_since_source?: string | null
           display_name?: string
           email?: string | null
           id?: string
@@ -2289,6 +2295,33 @@ export type Database = {
           state?: string | null
           tags?: string[] | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      clients_monday_staging: {
+        Row: {
+          categoria: string | null
+          criado_em: string
+          email: string | null
+          id_monday: string
+          nome: string
+          telefone_digits: string | null
+        }
+        Insert: {
+          categoria?: string | null
+          criado_em: string
+          email?: string | null
+          id_monday: string
+          nome: string
+          telefone_digits?: string | null
+        }
+        Update: {
+          categoria?: string | null
+          criado_em?: string
+          email?: string | null
+          id_monday?: string
+          nome?: string
+          telefone_digits?: string | null
         }
         Relationships: []
       }
