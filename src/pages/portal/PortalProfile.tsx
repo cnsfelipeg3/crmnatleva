@@ -11,6 +11,7 @@ import {
   Utensils, Armchair, Baby, Luggage, Clock, Mountain, Palmtree,
   Wifi, CircleDollarSign, PlaneTakeoff
 } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 interface ProfileData {
   full_name: string;
@@ -657,20 +658,29 @@ interface ProfileFieldProps {
 }
 
 function ProfileField({ label, icon: Icon, value, field, editing, onChange, type = "text", placeholder }: ProfileFieldProps) {
+  const isDate = type === "date";
   return (
     <div>
       <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{label}</label>
       {editing ? (
-        <div className="relative">
-          {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
-          <input
-            type={type}
+        isDate ? (
+          <DatePartsInput
             value={value}
-            onChange={e => onChange(field, e.target.value)}
-            placeholder={placeholder || label}
-            className={`w-full p-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all ${Icon ? "pl-10" : ""}`}
+            onChange={(iso) => onChange(field, iso)}
+            inputClassName="bg-muted/50 border border-border rounded-xl"
           />
-        </div>
+        ) : (
+          <div className="relative">
+            {Icon && <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />}
+            <input
+              type={type}
+              value={value}
+              onChange={e => onChange(field, e.target.value)}
+              placeholder={placeholder || label}
+              className={`w-full p-3 rounded-xl bg-muted/50 border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent/30 transition-all ${Icon ? "pl-10" : ""}`}
+            />
+          </div>
+        )
       ) : (
         <div className={`flex items-center gap-2 p-3 rounded-xl bg-muted/30 ${!value ? "italic" : ""}`}>
           {Icon && <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />}
@@ -682,6 +692,7 @@ function ProfileField({ label, icon: Icon, value, field, editing, onChange, type
     </div>
   );
 }
+
 
 function maskValue(val: string): string {
   if (!val || val.length < 4) return val ? "•".repeat(val.length) : "";

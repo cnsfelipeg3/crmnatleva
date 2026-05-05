@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getProductLabel } from "@/lib/productTypes";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const STEPS = [
   { id: 0, label: "Destino", icon: MapPin },
@@ -263,25 +264,12 @@ export default function PortalNewQuote() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-medium text-muted-foreground mb-1 block">Data de ida</label>
-                    <Input
-                      type="date"
-                      value={departureDate}
-                      onChange={(e) => setDepartureDate(e.target.value)}
-                      className="h-12"
-                      disabled={flexibleDates}
-                    />
+                    <DatePartsInput value={departureDate} onChange={(iso) => setDepartureDate(iso)} inputClassName="h-12" />
                   </div>
                   {tripType === "roundtrip" && (
                     <div>
                       <label className="text-xs font-medium text-muted-foreground mb-1 block">Data de volta</label>
-                      <Input
-                        type="date"
-                        value={returnDate}
-                        onChange={(e) => setReturnDate(e.target.value)}
-                        className="h-12"
-                        min={departureDate}
-                        disabled={flexibleDates}
-                      />
+                      <DatePartsInput value={returnDate} onChange={(iso) => setReturnDate(iso)} inputClassName="h-12" />
                     </div>
                   )}
                 </div>

@@ -17,6 +17,7 @@ import {
   DEFAULT_COMMISSION_ORGANICO,
   type CommissionRules,
 } from "@/lib/commissionRules";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -149,9 +150,9 @@ export default function Comissoes() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Input type="date" value={periodFrom} onChange={(e) => setPeriodFrom(e.target.value)} className="w-36 text-xs" />
+          <DatePartsInput value={periodFrom} onChange={(iso) => setPeriodFrom(iso)} inputClassName="w-36 text-xs" />
           <span className="text-muted-foreground text-xs">até</span>
-          <Input type="date" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} className="w-36 text-xs" />
+          <DatePartsInput value={periodTo} onChange={(iso) => setPeriodTo(iso)} inputClassName="w-36 text-xs" />
         </div>
       </div>
 

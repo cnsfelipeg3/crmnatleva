@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Label } from "@/components/ui/label";
 import { Plus, FileText, Search, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const DOC_TYPES = ["contrato", "aditivo", "documento_pessoal", "confidencialidade", "politica", "comprovante", "advertencia", "outro"];
 
@@ -129,7 +130,7 @@ export default function ContratosDocumentos() {
               </Select>
             </div>
             <div><Label>Título *</Label><Input value={form.title || ""} onChange={e => setForm({ ...form, title: e.target.value })} /></div>
-            <div><Label>Validade</Label><Input type="date" value={form.expiry_date || ""} onChange={e => setForm({ ...form, expiry_date: e.target.value })} /></div>
+            <div><Label>Validade</Label><DatePartsInput value={form.expiry_date || ""} onChange={(iso) => setForm({ ...form, expiry_date: iso })} /></div>
             <div><Label>Observações</Label><Input value={form.notes || ""} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
             <Button onClick={handleSave} className="w-full">Salvar</Button>
           </div>

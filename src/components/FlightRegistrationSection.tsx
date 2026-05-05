@@ -20,6 +20,7 @@ import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Types ─────────────────────────────────── */
 
@@ -680,12 +681,7 @@ function FlightGroupCard({
 
             <div className="space-y-1">
               <Label className="text-xs font-medium">Data *</Label>
-              <Input
-                type="date"
-                value={first?.departure_date || defaultDate}
-                onChange={e => onSegmentUpdate(0, "departure_date", e.target.value)}
-                className="text-sm"
-              />
+              <DatePartsInput value={first?.departure_date || defaultDate} onChange={(iso) => onSegmentUpdate(0, "departure_date", iso)} inputClassName="text-sm" />
             </div>
           </div>
 
@@ -851,12 +847,7 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Data</Label>
-            <Input
-              type="date"
-              value={seg.departure_date || defaultDate}
-              onChange={e => onUpdate("departure_date", e.target.value)}
-              className="text-sm"
-            />
+            <DatePartsInput value={seg.departure_date || defaultDate} onChange={(iso) => onUpdate("departure_date", iso)} inputClassName="text-sm" />
           </div>
         </div>
       )}

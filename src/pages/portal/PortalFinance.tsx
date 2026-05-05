@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogC
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Helpers ─── */
 const fmt = (v: number, currency = "BRL") =>
@@ -1570,7 +1571,7 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Data</label>
-                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
+                  <DatePartsInput value={date} onChange={(iso) => setDate(iso)} inputClassName="rounded-xl" />
                 </div>
               </div>
               <div>

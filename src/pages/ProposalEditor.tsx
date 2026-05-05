@@ -37,6 +37,7 @@ import { classifyItinerary, assignDirections, getItineraryLabel, type ItineraryT
 import { buildFlightTitle, buildHotelTitle } from "@/lib/airportCities";
 import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
 import { getProductLabel } from "@/lib/productTypes";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 // Mapeia chaves de item_type da proposta → slug canônico em @/lib/productTypes.
 // "destination" não é produto vendável (label local "Destino").
@@ -884,13 +885,13 @@ export default function ProposalEditor() {
               {/* 4. Data início */}
               <div className="space-y-1.5">
                 <Label>Data início</Label>
-                <Input type="date" value={form.travel_start_date} onChange={(e) => setForm((f) => ({ ...f, travel_start_date: e.target.value }))} />
+                <DatePartsInput value={form.travel_start_date} onChange={(iso) => setForm((f) => ({ ...f, travel_start_date: iso }))} />
               </div>
 
               {/* 5. Data fim */}
               <div className="space-y-1.5">
                 <Label>Data fim</Label>
-                <Input type="date" value={form.travel_end_date} onChange={(e) => setForm((f) => ({ ...f, travel_end_date: e.target.value }))} />
+                <DatePartsInput value={form.travel_end_date} onChange={(iso) => setForm((f) => ({ ...f, travel_end_date: iso }))} />
               </div>
 
               {/* 6. Passageiros (adultos / crianças / idades) */}
@@ -1371,11 +1372,11 @@ export default function ProposalEditor() {
                               </div>
                               <div className="space-y-1">
                                 <Label className="text-xs">Check-in</Label>
-                                <Input type="date" value={item.data?.checkin_date || ""} onChange={(e) => updateItemData(idx, "checkin_date", e.target.value)} />
+                                <DatePartsInput value={item.data?.checkin_date || ""} onChange={(iso) => updateItemData(idx, "checkin_date", iso)} />
                               </div>
                               <div className="space-y-1">
                                 <Label className="text-xs">Check-out</Label>
-                                <Input type="date" value={item.data?.checkout_date || ""} onChange={(e) => updateItemData(idx, "checkout_date", e.target.value)} />
+                                <DatePartsInput value={item.data?.checkout_date || ""} onChange={(iso) => updateItemData(idx, "checkout_date", iso)} />
                               </div>
                               <div className="space-y-1">
                                 <Label className="text-xs">Horário check-in</Label>

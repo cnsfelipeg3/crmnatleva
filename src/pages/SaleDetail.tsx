@@ -32,6 +32,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -487,7 +488,7 @@ export default function SaleDetail() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1"><Label className="text-xs">Data Fechamento</Label><Input type="date" value={editForm.close_date || ""} onChange={e => updateEdit("close_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Data Fechamento</Label><DatePartsInput value={editForm.close_date || ""} onChange={(iso) => updateEdit("close_date", iso)} /></div>
               <div className="space-y-1"><Label className="text-xs">Pagamento</Label><Input value={editForm.payment_method || ""} onChange={e => updateEdit("payment_method", e.target.value)} /></div>
               <div className="col-span-2 space-y-1">
                 <Label className="text-xs">Origem do Lead</Label>
@@ -510,8 +511,8 @@ export default function SaleDetail() {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1"><Label className="text-xs">Origem</Label><AirportAutocomplete value={editForm.origin_iata || ""} onChange={(iata) => updateEdit("origin_iata", iata)} /></div>
               <div className="space-y-1"><Label className="text-xs">Destino</Label><AirportAutocomplete value={editForm.destination_iata || ""} onChange={(iata) => updateEdit("destination_iata", iata)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Ida</Label><Input type="date" value={editForm.departure_date || ""} onChange={e => updateEdit("departure_date", e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Volta</Label><Input type="date" value={editForm.return_date || ""} onChange={e => updateEdit("return_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Ida</Label><DatePartsInput value={editForm.departure_date || ""} onChange={(iso) => updateEdit("departure_date", iso)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Volta</Label><DatePartsInput value={editForm.return_date || ""} onChange={(iso) => updateEdit("return_date", iso)} /></div>
               <div className="space-y-1"><Label className="text-xs">Companhia</Label><AirlineAutocomplete value={editForm.airline || ""} onChange={(iata) => updateEdit("airline", iata)} /></div>
               <div className="space-y-1"><Label className="text-xs">Localizador</Label><Input value={editForm.locators?.join(", ") || ""} onChange={e => updateEdit("locators", e.target.value.split(",").map((s: string) => s.trim()).filter(Boolean))} className="font-mono" /></div>
             </div>
@@ -565,8 +566,8 @@ export default function SaleDetail() {
               </div>
               <div className="space-y-1"><Label className="text-xs">Quarto</Label><Input value={editForm.hotel_room || ""} onChange={e => updateEdit("hotel_room", e.target.value)} /></div>
               <div className="space-y-1"><Label className="text-xs">Código Reserva</Label><Input value={editForm.hotel_reservation_code || ""} onChange={e => updateEdit("hotel_reservation_code", e.target.value)} className="font-mono" /></div>
-              <div className="space-y-1"><Label className="text-xs">Check-in</Label><Input type="date" value={editForm.hotel_checkin_date || ""} onChange={e => updateEdit("hotel_checkin_date", e.target.value)} /></div>
-              <div className="space-y-1"><Label className="text-xs">Check-out</Label><Input type="date" value={editForm.hotel_checkout_date || ""} onChange={e => updateEdit("hotel_checkout_date", e.target.value)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Check-in</Label><DatePartsInput value={editForm.hotel_checkin_date || ""} onChange={(iso) => updateEdit("hotel_checkin_date", iso)} /></div>
+              <div className="space-y-1"><Label className="text-xs">Check-out</Label><DatePartsInput value={editForm.hotel_checkout_date || ""} onChange={(iso) => updateEdit("hotel_checkout_date", iso)} /></div>
               <div className="space-y-1"><Label className="text-xs">Milhas</Label><Input value={editForm.miles_program || ""} onChange={e => updateEdit("miles_program", e.target.value)} /></div>
             </div>
             <div className="space-y-1"><Label className="text-xs">Observações</Label><Textarea value={editForm.observations || ""} onChange={e => updateEdit("observations", e.target.value)} rows={3} /></div>

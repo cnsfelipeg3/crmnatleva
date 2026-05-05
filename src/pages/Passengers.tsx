@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import AIExtractButton from "@/components/AIExtractButton";
 import { useNavigate } from "react-router-dom";
 import { smartCapitalizeName } from "@/lib/nameUtils";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 interface Passenger {
   id: string;
@@ -374,7 +375,7 @@ export default function Passengers() {
                   </div>
                   <div className="space-y-2">
                     <Label>Data de Nascimento</Label>
-                    <Input type="date" value={form.birth_date} onChange={(e) => setForm(f => ({ ...f, birth_date: e.target.value }))} />
+                    <DatePartsInput value={form.birth_date} onChange={(iso) => setForm(f => ({ ...f, birth_date: iso }))} />
                   </div>
                 </div>
                 <div className="space-y-2">
@@ -388,7 +389,7 @@ export default function Passengers() {
                   </div>
                   <div className="space-y-2">
                     <Label>Vencimento Passaporte</Label>
-                    <Input type="date" value={form.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} />
+                    <DatePartsInput value={form.passport_expiry} onChange={(iso) => setForm(f => ({ ...f, passport_expiry: iso }))} />
                   </div>
                 </div>
                 <div className="border-t pt-3">
@@ -640,7 +641,7 @@ export default function Passengers() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label>Data de Nascimento</Label>
-                  <Input type="date" value={editForm.birth_date || ""} onChange={(e) => setEditForm(f => ({ ...f, birth_date: e.target.value }))} />
+                  <DatePartsInput value={editForm.birth_date || ""} onChange={(iso) => setEditForm(f => ({ ...f, birth_date: iso }))} />
                 </div>
                 <div className="space-y-2">
                   <Label>Telefone</Label>
@@ -654,7 +655,7 @@ export default function Passengers() {
                 </div>
                 <div className="space-y-2">
                   <Label>Validade Passaporte</Label>
-                  <Input type="date" value={editForm.passport_expiry || ""} onChange={(e) => setEditForm(f => ({ ...f, passport_expiry: e.target.value }))} />
+                  <DatePartsInput value={editForm.passport_expiry || ""} onChange={(iso) => setEditForm(f => ({ ...f, passport_expiry: iso }))} />
                 </div>
               </div>
               <div className="border-t pt-3">

@@ -20,6 +20,7 @@ import {
   Ban, CreditCard, Plane, Hotel, Shield, FileText, ArrowRight, Loader2,
   TrendingDown, TrendingUp, DollarSign, Users, AlertCircle, Building2, Car, Ticket,
 } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Constants ─── */
 const ALTERATION_TYPES = [
@@ -779,7 +780,7 @@ export default function TripAlterations() {
                       {(item.alteration_type === "remarcacao" || item.alteration_type === "alteracao_data") && (
                         <div className="space-y-1">
                           <Label className="text-xs font-semibold">Nova data</Label>
-                          <Input type="date" className="h-9" value={item.new_flight_date} onChange={e => updateItemAlt(idx, "new_flight_date", e.target.value)} />
+                          <DatePartsInput value={item.new_flight_date} onChange={(iso) => updateItemAlt(idx, "new_flight_date", iso)} inputClassName="h-9" />
                         </div>
                       )}
 
@@ -877,7 +878,7 @@ export default function TripAlterations() {
                       </Select>
                     </div>
                     <div className="space-y-1"><Label className="text-xs">Data prevista</Label>
-                      <Input type="date" className="h-9" value={refundDate} onChange={e => setRefundDate(e.target.value)} />
+                      <DatePartsInput value={refundDate} onChange={(iso) => setRefundDate(iso)} inputClassName="h-9" />
                     </div>
                   </div>
                   {refundMethod === "pix" && (
@@ -930,7 +931,7 @@ export default function TripAlterations() {
                       </Select>
                     </div>
                     <div className="space-y-1"><Label className="text-xs">Valor esperado</Label><Input type="number" step="0.01" className="h-9" value={supplierRefundValue || ""} onChange={e => setSupplierRefundValue(parseFloat(e.target.value) || 0)} /></div>
-                    <div className="space-y-1"><Label className="text-xs">Data prevista</Label><Input type="date" className="h-9" value={supplierRefundDate} onChange={e => setSupplierRefundDate(e.target.value)} /></div>
+                    <div className="space-y-1"><Label className="text-xs">Data prevista</Label><DatePartsInput value={supplierRefundDate} onChange={(iso) => setSupplierRefundDate(iso)} inputClassName="h-9" /></div>
                   </div>
                   {supplierRefundMethod === "abatimento_fechamento" && (
                     <div className="space-y-1 p-3 border rounded-lg bg-muted/30">

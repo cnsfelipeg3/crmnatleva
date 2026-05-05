@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 /* ─── Constants ─── */
 const CURRENCIES = [
@@ -1022,7 +1023,7 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-foreground">Data</label>
-                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                  <DatePartsInput value={date} onChange={(iso) => setDate(iso)} />
                 </div>
               </div>
 

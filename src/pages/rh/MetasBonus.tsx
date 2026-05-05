@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Target, Trophy, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 export default function MetasBonus() {
   const [employees, setEmployees] = useState<any[]>([]);
@@ -156,8 +157,8 @@ export default function MetasBonus() {
               <div><Label>Valor Atual</Label><Input type="number" value={form.current_value || ""} onChange={e => setForm({ ...form, current_value: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label>Início</Label><Input type="date" value={form.period_start || ""} onChange={e => setForm({ ...form, period_start: e.target.value })} /></div>
-              <div><Label>Fim</Label><Input type="date" value={form.period_end || ""} onChange={e => setForm({ ...form, period_end: e.target.value })} /></div>
+              <div><Label>Início</Label><DatePartsInput value={form.period_start || ""} onChange={(iso) => setForm({ ...form, period_start: iso })} /></div>
+              <div><Label>Fim</Label><DatePartsInput value={form.period_end || ""} onChange={(iso) => setForm({ ...form, period_end: iso })} /></div>
             </div>
             <p className="text-xs text-muted-foreground font-semibold">Bônus por Faixa</p>
             <div className="grid grid-cols-3 gap-2">
