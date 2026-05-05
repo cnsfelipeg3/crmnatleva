@@ -229,6 +229,21 @@ export default function PassengerSelfSignup() {
   }
 
   if (done) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background p-6">
+        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
+
+          <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
+          <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
+          <h1 className="text-2xl font-display">Cadastro recebido!</h1>
+          <p className="text-sm text-muted-foreground">
+            Obrigado por compartilhar seus dados com a gente. Nossa equipe já está com tudo em mãos para cuidar da sua viagem.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   // Helpers for sequential DOB inputs
   const dobParts = (() => {
     const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
@@ -245,6 +260,13 @@ export default function PassengerSelfSignup() {
     if (iso) setDobError(validateDob(iso));
     else setDobError("");
   };
+  const setDob = (next: { d?: string; m?: string; y?: string }) => {
+    commitDob({
+      d: next.d ?? dobParts.d,
+      m: next.m ?? dobParts.m,
+      y: next.y ?? dobParts.y,
+    });
+  };
   const handleDobPaste = (e: React.ClipboardEvent) => {
     const text = e.clipboardData.getData("text").replace(/\D/g, "");
     if (text.length >= 6) {
@@ -255,36 +277,6 @@ export default function PassengerSelfSignup() {
       commitDob({ d, m, y });
       setTimeout(() => dobYearRef.current?.focus(), 0);
     }
-  };
-
-  return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
-
-          <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
-          <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
-          <h1 className="text-2xl font-display">Cadastro recebido!</h1>
-          <p className="text-sm text-muted-foreground">
-            Obrigado por compartilhar seus dados com a gente. Nossa equipe já está com tudo em mãos para cuidar da sua viagem.
-          </p>
-        </Card>
-      </div>
-    );
-  }
-
-  
-
-  // Helpers for sequential DOB inputs
-  const dobParts = (() => {
-    const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
-    return { d, m, y };
-  })();
-  const setDob = (next: { d?: string; m?: string; y?: string }) => {
-    const d = (next.d ?? dobParts.d).replace(/\D/g, "").slice(0, 2);
-    const m = (next.m ?? dobParts.m).replace(/\D/g, "").slice(0, 2);
-    const y = (next.y ?? dobParts.y).replace(/\D/g, "").slice(0, 4);
-    const iso = y && m && d ? `${y.padStart(4, "0")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : "";
-    setForm((f) => ({ ...f, birth_date: iso }));
   };
 
   return (
