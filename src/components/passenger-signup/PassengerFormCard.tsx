@@ -392,7 +392,16 @@ export default function PassengerFormCard({ index, value, onChange, onRemove, ca
             </div>
             <div className="space-y-2">
               <Label>Validade {value.international_outside_sa && "*"}</Label>
-              <Input type="date" value={value.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} required={value.international_outside_sa} />
+              <DatePartsInput
+                value={value.passport_expiry}
+                onChange={(iso) => setForm(f => ({ ...f, passport_expiry: iso }))}
+                disablePast
+                minYear={new Date().getFullYear()}
+                maxYear={new Date().getFullYear() + 20}
+                required={value.international_outside_sa}
+                helperText="Formato DD/MM/AAAA"
+              />
+
             </div>
           </div>
 
