@@ -2046,6 +2046,8 @@ function OperacaoInboxInner() {
               onToggleArchive={handleToggleArchive}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
+              ownerMap={profileMap}
+              currentUserId={user?.id || null}
             />
           </div>
 
