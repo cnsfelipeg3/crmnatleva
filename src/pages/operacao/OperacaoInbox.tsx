@@ -2032,10 +2032,24 @@ function OperacaoInboxInner() {
     }
   }, []);
 
-  const handleSelectConversation = (id: string) => {
+  const handleSelectConversation = (id: string, jumpToMsgId?: string) => {
     // NÃO zera unread_count ao abrir · só zera quando o atendente responde
     // ou quando marca manualmente como lida (botão dedicado).
     setSelectedId(id); setShowAIPanel(false);
+    if (jumpToMsgId) {
+      setHighlightMsgId(jumpToMsgId);
+      // Aguarda a renderização das mensagens antes de rolar até a alvo
+      const tryScroll = (attempt = 0) => {
+        const el = document.querySelector(`[data-message-id="${jumpToMsgId}"]`) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        if (attempt < 30) setTimeout(() => tryScroll(attempt + 1), 150);
+      };
+      setTimeout(() => tryScroll(), 250);
+      setTimeout(() => setHighlightMsgId(null), 4000);
+    }
   };
 
   const handleClearConversations = useCallback(() => {
@@ -2243,6 +2257,7 @@ function OperacaoInboxInner() {
               searchQuery={searchQuery}
               ownerMap={profileMap}
               currentUserId={user?.id || null}
+              contentMatchInfo={contentMatchInfo}
             />
           </div>
 
