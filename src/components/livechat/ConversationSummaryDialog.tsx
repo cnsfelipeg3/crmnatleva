@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   Brain, Loader2, Copy, Check, Mic, Image as ImageIcon, FileText, MessageSquare,
-  User, Clock, Activity, Zap, AlertTriangle, TrendingUp, Calendar, Timer,
+  User, Clock, Activity, Zap, AlertTriangle, TrendingUp, Calendar, Timer, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { SummaryPdfTemplate, type SummaryPdfData } from "./SummaryPdfTemplate";
 
 interface SummaryStats {
   total: number;
@@ -92,7 +93,9 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
   const [hasGenerated, setHasGenerated] = useState(false);
   const [stats, setStats] = useState<SummaryStats | null>(null);
   const [phase, setPhase] = useState<"idle" | "processing_media" | "generating" | "done">("idle");
+  const [exportingPdf, setExportingPdf] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const generateSummary = useCallback(async () => {
     if (!conversationId) {
@@ -207,6 +210,91 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
 
   const avgQ = responseQuality(stats?.avgResponseMs);
   const firstQ = responseQuality(stats?.firstResponseMs);
+
+  const pdfData: SummaryPdfData | null = useMemo(() => {
+    if (!summary || !stats) return null;
+    return {
+      contactName,
+      stage,
+      summary,
+      attendantName: stats.attendantName,
+      generatedAt: new Date(),
+      rangeLabel: formatRange(stats.firstAt, stats.lastAt),
+      kpis: {
+        firstResponse: formatDuration(stats.firstResponseMs),
+        firstResponseHint: firstQ.label,
+        avgResponse: formatDuration(stats.avgResponseMs),
+        avgResponseHint: `${stats.responseSamples || 0} respostas · ${avgQ.label}`,
+        maxWait: formatDuration(stats.maxResponseMs),
+        maxWaitHint: responseQuality(stats.maxResponseMs).label,
+        lastActivity: stats.minutesSinceLast != null ? formatDuration(stats.minutesSinceLast * 60_000) : "·",
+        lastActivityHint: stats.lastSender === "cliente" ? "Cliente aguardando" : "Atendente respondeu",
+      },
+      balance: ratio ? {
+        agentPct: ratio.agent,
+        clientPct: ratio.client,
+        agentMsgs: stats.agentMsgs || 0,
+        clientMsgs: stats.clientMsgs || 0,
+        total: stats.total,
+      } : null,
+      media: {
+        texts: stats.texts,
+        audios: stats.audios,
+        images: stats.images,
+        documents: stats.documents,
+        cached: stats.cached,
+        failed: stats.failed,
+        skipped: stats.skipped || 0,
+      },
+    };
+  }, [summary, stats, contactName, stage, ratio, avgQ.label, firstQ.label]);
+
+  const handleExportPdf = async () => {
+    if (!pdfRef.current || !pdfData) return;
+    setExportingPdf(true);
+    try {
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      // Wait a tick to ensure render
+      await new Promise((r) => setTimeout(r, 50));
+      const canvas = await html2canvas(pdfRef.current, {
+        scale: 2,
+        backgroundColor: "#FFFFFF",
+        useCORS: true,
+        logging: false,
+        windowWidth: 800,
+      });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW;
+      const imgH = (canvas.height * imgW) / canvas.width;
+      if (imgH <= pageH) {
+        pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+      } else {
+        // Multi-page slicing
+        let remaining = imgH;
+        let position = 0;
+        while (remaining > 0) {
+          pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
+          remaining -= pageH;
+          position -= pageH;
+          if (remaining > 0) pdf.addPage();
+        }
+      }
+      const safeName = (contactName || "cliente").replace(/[^\w\sÀ-ÿ-]/g, "").replace(/\s+/g, "_").slice(0, 40);
+      const ts = new Date().toISOString().slice(0, 10);
+      pdf.save(`Natleva_Resumo_${safeName}_${ts}.pdf`);
+      toast({ title: "PDF gerado", description: "Resumo exportado com sucesso." });
+    } catch (e: any) {
+      toast({ title: "Erro ao exportar PDF", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setExportingPdf(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -349,18 +437,46 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
 
         {/* Rodapé */}
         <div className="border-t border-border/40 px-6 py-3 flex items-center justify-between bg-muted/10">
-          <Button variant="outline" size="sm" onClick={generateSummary} disabled={isStreaming} className="gap-1.5 text-xs">
+          <Button variant="outline" size="sm" onClick={generateSummary} disabled={isStreaming || exportingPdf} className="gap-1.5 text-xs">
             {isStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
             {hasGenerated ? "Regenerar" : "Gerar resumo"}
           </Button>
           {summary && !isStreaming && (
-            <Button variant="secondary" size="sm" onClick={handleCopy} className="gap-1.5 text-xs">
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleCopy} className="gap-1.5 text-xs">
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copiado" : "Copiar"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportPdf}
+                disabled={exportingPdf || !pdfData}
+                className="gap-1.5 text-xs bg-primary hover:bg-primary/90"
+              >
+                {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                {exportingPdf ? "Gerando PDF..." : "Exportar PDF"}
+              </Button>
+            </div>
           )}
         </div>
       </DialogContent>
+
+      {/* Hidden PDF render — fora do viewport mas no DOM para html2canvas capturar */}
+      {pdfData && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "-10000px",
+            zIndex: -1,
+            pointerEvents: "none",
+            opacity: 0,
+          }}
+        >
+          <SummaryPdfTemplate data={pdfData} innerRef={pdfRef} />
+        </div>
+      )}
     </Dialog>
   );
 }
