@@ -622,6 +622,14 @@ serve(async (req) => {
     const debugMode = (body as any)?.debug === true;
 
     if (debugMode) {
+      // Debug endpoint disabled in production to prevent leaking integration map.
+      return new Response(JSON.stringify({ error: "debug mode disabled" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (false) {
+
+    if (debugMode) {
       const envCheck: Record<string, boolean> = {};
       for (const k of ["SUPADATA_API_KEY", "LOVABLE_API_KEY", "ANTHROPIC_API_KEY", "FIRECRAWL_API_KEY"]) {
         envCheck[k] = !!Deno.env.get(k);
