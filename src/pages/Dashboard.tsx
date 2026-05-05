@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardKpis } from "@/hooks/useDashboardKpis";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
@@ -111,6 +112,25 @@ export default function Dashboard() {
   // We need profiles to resolve seller name → id for RPC
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [passengersCount, setPassengersCount] = useState<number>(0);
+
+  // Live count of registered passengers (real source of truth for "Clientes Totais")
+  useEffect(() => {
+    let alive = true;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("passengers")
+        .select("id", { count: "exact", head: true });
+      if (alive && typeof count === "number") setPassengersCount(count);
+    };
+    fetchCount();
+    const channel = supabase
+      .channel("dashboard-passengers-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "passengers" }, fetchCount)
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(channel); };
+  }, []);
+
 
   // Resolve seller name to id for RPC filter
   const sellerIdForRpc = useMemo(() => {
@@ -489,6 +509,7 @@ export default function Dashboard() {
         previous={previous}
         clients={clients}
         clientsGrowth={clientsGrowth}
+        passengersCount={passengersCount}
         ceoMode={ceoMode}
       />
 
