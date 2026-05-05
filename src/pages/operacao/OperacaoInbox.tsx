@@ -2140,6 +2140,78 @@ function OperacaoInboxInner() {
                       )}
                     </div>
                   </div>
+                  {/* Row 1.5: Delegation */}
+                  {selectedDbId && (
+                    <div className="flex items-center gap-3 px-3 md:px-4 pb-1.5 text-[11px] flex-wrap">
+                      {(() => {
+                        const ownerId = selected.assigned_to || null;
+                        const owner = ownerId ? profileMap.get(ownerId) : null;
+                        const ownerLabel = owner?.full_name?.split(" ")[0] || owner?.email?.split("@")[0] || "Sem dono";
+                        const inner = (
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${owner ? "bg-secondary/40 border-border" : "bg-amber-500/10 text-amber-600 border-amber-500/30"}`}>
+                            {owner?.avatar_url ? (
+                              <img src={owner.avatar_url} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                            ) : (
+                              <span className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold">
+                                {owner ? (owner.full_name || owner.email || "?")[0]?.toUpperCase() : "—"}
+                              </span>
+                            )}
+                            <span className="font-medium">{ownerLabel}</span>
+                            {isGestao && <ChevronDown className="h-3 w-3 opacity-60" />}
+                          </span>
+                        );
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Atribuída a:</span>
+                            {isGestao ? (
+                              <button type="button" onClick={() => setDelegateDialogOpen(true)} className="hover:opacity-80 transition">
+                                {inner}
+                              </button>
+                            ) : inner}
+                          </div>
+                        );
+                      })()}
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Participantes:</span>
+                        <div className="flex items-center -space-x-1.5">
+                          {participants.slice(0, 5).map(p => {
+                            const profile = profileMap.get(p.user_id);
+                            const initial = (profile?.full_name || profile?.email || "?")[0]?.toUpperCase();
+                            return (
+                              <div key={p.id} className="relative group/part">
+                                <div className="h-5 w-5 rounded-full border-2 border-background bg-secondary flex items-center justify-center overflow-hidden text-[9px] font-bold" title={profile?.full_name || profile?.email || ""}>
+                                  {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                                  ) : initial}
+                                </div>
+                                {isGestao && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeParticipant(p.id); }}
+                                    className="absolute -top-1 -right-1 w-3 h-3 bg-destructive text-destructive-foreground rounded-full text-[8px] hidden group-hover/part:flex items-center justify-center leading-none"
+                                    title="Remover participante"
+                                  >×</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {participants.length > 5 && (
+                            <div className="h-5 w-5 rounded-full border-2 border-background bg-muted text-muted-foreground flex items-center justify-center text-[8px] font-bold">
+                              +{participants.length - 5}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setAddParticipantsDialogOpen(true)}
+                            className="h-5 w-5 rounded-full border-2 border-background border-dashed border-muted-foreground/40 hover:border-primary hover:text-primary text-muted-foreground flex items-center justify-center transition"
+                            title="Adicionar participante"
+                          >
+                            <UserPlus className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {/* Row 2: Action buttons */}
                   <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
                     {activeFlowName && !isMobile && (
