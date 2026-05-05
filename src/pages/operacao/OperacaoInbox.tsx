@@ -1060,7 +1060,7 @@ function OperacaoInboxInner() {
       seen.add(norm);
       return true;
     });
-  }, [conversations, searchQuery, activeFilter, ownerFilter, user]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, user, contentMatchIds]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
