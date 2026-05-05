@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
@@ -29,6 +29,27 @@ function formatCep(v: string) {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+function isLeapYear(y: number) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+function daysInMonth(m: number, y: number) {
+  return [31, isLeapYear(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+}
+function validateDob(iso: string): string {
+  // iso = YYYY-MM-DD
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return "Use o formato DD/MM/AAAA";
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const currentYear = new Date().getFullYear();
+  if (y < 1900 || y > currentYear) return `Ano deve estar entre 1900 e ${currentYear}`;
+  if (mo < 1 || mo > 12) return "Mês inválido (01 a 12)";
+  const max = daysInMonth(mo, y);
+  if (d < 1 || d > max) return `Dia inválido para ${String(mo).padStart(2, "0")}/${y} (máx ${max})`;
+  const date = new Date(y, mo - 1, d);
+  if (date > new Date()) return "Data não pode ser no futuro";
+  return "";
+}
+
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
   phone: "", passport_number: "", passport_expiry: "",
@@ -52,6 +73,10 @@ export default function PassengerSelfSignup() {
   const [cepFound, setCepFound] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [blockedMsg, setBlockedMsg] = useState<string>("");
+  const [dobError, setDobError] = useState<string>("");
+  const dobDayRef = useRef<HTMLInputElement>(null);
+  const dobMonthRef = useRef<HTMLInputElement>(null);
+  const dobYearRef = useRef<HTMLInputElement>(null);
 
   const fnUrl = useMemo(() => {
     const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
@@ -135,6 +160,14 @@ export default function PassengerSelfSignup() {
       toast({ title: "Informe o nome completo", variant: "destructive" });
       return;
     }
+    if (form.birth_date) {
+      const err = validateDob(form.birth_date);
+      if (err) {
+        setDobError(err);
+        toast({ title: "Data de nascimento inválida", description: err, variant: "destructive" });
+        return;
+      }
+    }
     if (form.international_outside_sa && (!form.passport_number || !form.passport_expiry)) {
       toast({ title: "Passaporte e validade são obrigatórios para viagem internacional fora da América do Sul", variant: "destructive" });
       return;
@@ -211,19 +244,39 @@ export default function PassengerSelfSignup() {
     );
   }
 
-  
-
   // Helpers for sequential DOB inputs
   const dobParts = (() => {
     const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
     return { d, m, y };
   })();
-  const setDob = (next: { d?: string; m?: string; y?: string }) => {
-    const d = (next.d ?? dobParts.d).replace(/\D/g, "").slice(0, 2);
-    const m = (next.m ?? dobParts.m).replace(/\D/g, "").slice(0, 2);
-    const y = (next.y ?? dobParts.y).replace(/\D/g, "").slice(0, 4);
-    const iso = y && m && d ? `${y.padStart(4, "0")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : "";
+  const commitDob = (parts: { d: string; m: string; y: string }) => {
+    const d = parts.d.replace(/\D/g, "").slice(0, 2);
+    const m = parts.m.replace(/\D/g, "").slice(0, 2);
+    const y = parts.y.replace(/\D/g, "").slice(0, 4);
+    const iso = y.length === 4 && m.length >= 1 && d.length >= 1
+      ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+      : "";
     setForm((f) => ({ ...f, birth_date: iso }));
+    if (iso) setDobError(validateDob(iso));
+    else setDobError("");
+  };
+  const setDob = (next: { d?: string; m?: string; y?: string }) => {
+    commitDob({
+      d: next.d ?? dobParts.d,
+      m: next.m ?? dobParts.m,
+      y: next.y ?? dobParts.y,
+    });
+  };
+  const handleDobPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "");
+    if (text.length >= 6) {
+      e.preventDefault();
+      const d = text.slice(0, 2);
+      const m = text.slice(2, 4);
+      const y = text.slice(4, 8);
+      commitDob({ d, m, y });
+      setTimeout(() => dobYearRef.current?.focus(), 0);
+    }
   };
 
   return (
@@ -259,61 +312,75 @@ export default function PassengerSelfSignup() {
               <Label>Data de nascimento</Label>
               <div className="flex items-center gap-2">
                 <Input
+                  ref={dobDayRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={2}
                   placeholder="DD"
-                  className="text-center"
+                  aria-label="Dia"
+                  autoComplete="bday-day"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.d}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                     setDob({ d: v });
-                    if (v.length === 2) {
-                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined;
-                      next?.focus();
-                    }
+                    if (v.length === 2) dobMonthRef.current?.focus();
                   }}
                 />
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground select-none">/</span>
                 <Input
+                  ref={dobMonthRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={2}
                   placeholder="MM"
-                  className="text-center"
+                  aria-label="Mês"
+                  autoComplete="bday-month"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.m}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                     setDob({ m: v });
-                    if (v.length === 2) {
-                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[2] as HTMLInputElement | undefined;
-                      next?.focus();
-                    }
+                    if (v.length === 2) dobYearRef.current?.focus();
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.m) {
-                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[0] as HTMLInputElement | undefined);
-                      prev?.focus();
+                      e.preventDefault();
+                      dobDayRef.current?.focus();
                     }
                   }}
                 />
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground select-none">/</span>
                 <Input
+                  ref={dobYearRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={4}
                   placeholder="AAAA"
-                  className="text-center"
+                  aria-label="Ano"
+                  autoComplete="bday-year"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.y}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 4);
                     setDob({ y: v });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.y) {
-                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined);
-                      prev?.focus();
+                      e.preventDefault();
+                      dobMonthRef.current?.focus();
                     }
                   }}
                 />
               </div>
+              {dobError ? (
+                <p className="text-xs text-destructive">{dobError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
