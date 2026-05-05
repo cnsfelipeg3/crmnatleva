@@ -13,6 +13,7 @@ interface VirtualConversationListProps {
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
+  onToggleArchive?: (conv: Conversation) => void;
   isLoading: boolean;
   searchQuery: string;
 }
@@ -25,6 +26,7 @@ export function VirtualConversationList({
   onSelect,
   onTogglePin,
   onToggleUnread,
+  onToggleArchive,
   isLoading,
   searchQuery,
 }: VirtualConversationListProps) {
@@ -96,6 +98,7 @@ export function VirtualConversationList({
                 onSelect={onSelect}
                 onTogglePin={onTogglePin}
                 onToggleUnread={onToggleUnread}
+                onToggleArchive={onToggleArchive}
               />
             </div>
           );

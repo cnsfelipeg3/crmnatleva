@@ -729,7 +729,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       initPersistence().catch(() => {});
-      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
         cacheMs: 30_000,
@@ -758,6 +758,8 @@ function OperacaoInboxInner() {
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
             manually_marked_unread: !!(c as any).manually_marked_unread,
+            is_archived: !!(c as any).is_archived,
+            archived_at: (c as any).archived_at || null,
           };
         };
 
@@ -805,7 +807,7 @@ function OperacaoInboxInner() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -851,6 +853,8 @@ function OperacaoInboxInner() {
             score_risk: c.score_risk || 0,
             is_pinned: !!c.is_pinned,
             manually_marked_unread: !!c.manually_marked_unread,
+            is_archived: !!c.is_archived,
+            archived_at: c.archived_at || null,
             _hasReliableActivity: true,
           };
         });
@@ -870,6 +874,8 @@ function OperacaoInboxInner() {
               stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
               unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)),
               manually_marked_unread: !!c.manually_marked_unread,
+              is_archived: !!c.is_archived,
+              archived_at: c.archived_at || null,
             };
           });
           const freshIds = new Set(merged.map(c => c.id));
@@ -925,6 +931,9 @@ function OperacaoInboxInner() {
         const q = searchQuery.toLowerCase();
         if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
+      // Arquivadas só aparecem quando o filtro "archived" está ativo
+      if (activeFilter === "archived") return !!c.is_archived;
+      if (c.is_archived) return false;
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
       if (activeFilter === "groups") {
@@ -1704,6 +1713,35 @@ function OperacaoInboxInner() {
     }
   }, [conversations]);
 
+  const handleToggleArchive = useCallback(async (conv: Conversation) => {
+    const next = !conv.is_archived;
+    const nowIso = new Date().toISOString();
+    setConversations(prev => prev.map(c => c.id === conv.id
+      ? { ...c, is_archived: next, archived_at: next ? nowIso : null }
+      : c));
+    try {
+      const patch: any = { is_archived: next, archived_at: next ? nowIso : null };
+      let updated = false;
+      if (conv.db_id) {
+        const { error } = await supabase.from("conversations").update(patch).eq("id", conv.db_id);
+        if (!error) updated = true;
+      }
+      if (!updated) {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) {
+          const { error } = await supabase.from("conversations").update(patch).eq("phone", cleanPhone);
+          if (error) throw error;
+        }
+      }
+      toast({ title: next ? "Conversa arquivada" : "Conversa desarquivada" });
+    } catch (err: any) {
+      setConversations(prev => prev.map(c => c.id === conv.id
+        ? { ...c, is_archived: !next, archived_at: !next ? nowIso : null }
+        : c));
+      toast({ title: "Erro", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, []);
+
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState("");
   const handleSaveContactName = useCallback(async () => {
@@ -1910,8 +1948,10 @@ function OperacaoInboxInner() {
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-1 pb-1.5 w-max">
                   {FILTERS.map(f => {
-                    const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0).length
-                      : f.key === "vip" ? conversations.filter(c => c.is_vip).length
+                    const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0 && !c.is_archived).length
+                      : f.key === "vip" ? conversations.filter(c => c.is_vip && !c.is_archived).length
+                      : f.key === "archived" ? conversations.filter(c => c.is_archived).length
+                      : f.key === "groups" ? conversations.filter(c => { const p = (c.phone||"").replace(/\D/g,""); return !c.is_archived && (p.startsWith("120363") || p.length > 15); }).length
                       : 0;
                     return (
                       <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
@@ -1934,6 +1974,7 @@ function OperacaoInboxInner() {
               onSelect={handleSelectConversation}
               onTogglePin={handleTogglePin}
               onToggleUnread={handleToggleUnread}
+              onToggleArchive={handleToggleArchive}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
             />

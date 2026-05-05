@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Mic, Image, Video, FileText, Pin, PinOff, Star, AlertTriangle, MailX, MailOpen } from "lucide-react";
+import { Mic, Image, Video, FileText, Pin, PinOff, Star, AlertTriangle, MailX, MailOpen, Archive, ArchiveRestore } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
@@ -16,6 +16,7 @@ interface ConversationItemProps {
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
+  onToggleArchive?: (conv: Conversation) => void;
 }
 
 function getPreviewContent(raw: string) {
@@ -42,7 +43,7 @@ function TypingDots() {
   );
 }
 
-function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread }: ConversationItemProps) {
+function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread, onToggleArchive }: ConversationItemProps) {
   const stageInfo = getStageInfo(conv.stage);
   const previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
   const contactName = conv.contact_name || "Sem nome";
@@ -93,6 +94,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
             </span>
             <div className="flex items-center gap-1 shrink-0">
               {conv.is_pinned && <Pin className="h-2.5 w-2.5 text-muted-foreground rotate-45" />}
+              {conv.is_archived && <Archive className="h-2.5 w-2.5 text-muted-foreground" />}
               {manuallyUnread && (
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold">Não lido</span>
               )}
@@ -149,25 +151,42 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
     </div>
   );
 
-  if (!onToggleUnread) return itemBody;
+  if (!onToggleUnread && !onToggleArchive) return itemBody;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{itemBody}</ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        <ContextMenuItem onSelect={() => onToggleUnread(conv)} className="gap-2">
-          {manuallyUnread ? (
-            <>
-              <MailOpen className="h-4 w-4" />
-              <span>Marcar como lida</span>
-            </>
-          ) : (
-            <>
-              <MailX className="h-4 w-4" />
-              <span>Marcar como não lida</span>
-            </>
-          )}
-        </ContextMenuItem>
+        {onToggleUnread && (
+          <ContextMenuItem onSelect={() => onToggleUnread(conv)} className="gap-2">
+            {manuallyUnread ? (
+              <>
+                <MailOpen className="h-4 w-4" />
+                <span>Marcar como lida</span>
+              </>
+            ) : (
+              <>
+                <MailX className="h-4 w-4" />
+                <span>Marcar como não lida</span>
+              </>
+            )}
+          </ContextMenuItem>
+        )}
+        {onToggleArchive && (
+          <ContextMenuItem onSelect={() => onToggleArchive(conv)} className="gap-2">
+            {conv.is_archived ? (
+              <>
+                <ArchiveRestore className="h-4 w-4" />
+                <span>Desarquivar conversa</span>
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4" />
+                <span>Arquivar conversa</span>
+              </>
+            )}
+          </ContextMenuItem>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
@@ -185,6 +204,7 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.is_vip === next.conv.is_vip &&
     prev.conv.contact_name === next.conv.contact_name &&
     prev.conv.manually_marked_unread === next.conv.manually_marked_unread &&
+    prev.conv.is_archived === next.conv.is_archived &&
     prev.profilePic === next.profilePic &&
     prev.presence === next.presence
   );

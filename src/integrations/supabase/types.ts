@@ -2575,6 +2575,7 @@ export type Database = {
       }
       conversations: {
         Row: {
+          archived_at: string | null
           assigned_to: string | null
           auto_tags: string[] | null
           client_id: string | null
@@ -2591,6 +2592,7 @@ export type Database = {
           funnel_stage: string | null
           id: string
           interaction_count: number | null
+          is_archived: boolean
           is_pinned: boolean | null
           is_vip: boolean | null
           last_message_at: string | null
@@ -2619,6 +2621,7 @@ export type Database = {
           vehicle_interest: string | null
         }
         Insert: {
+          archived_at?: string | null
           assigned_to?: string | null
           auto_tags?: string[] | null
           client_id?: string | null
@@ -2635,6 +2638,7 @@ export type Database = {
           funnel_stage?: string | null
           id?: string
           interaction_count?: number | null
+          is_archived?: boolean
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
@@ -2663,6 +2667,7 @@ export type Database = {
           vehicle_interest?: string | null
         }
         Update: {
+          archived_at?: string | null
           assigned_to?: string | null
           auto_tags?: string[] | null
           client_id?: string | null
@@ -2679,6 +2684,7 @@ export type Database = {
           funnel_stage?: string | null
           id?: string
           interaction_count?: number | null
+          is_archived?: boolean
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
