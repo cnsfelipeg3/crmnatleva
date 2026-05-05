@@ -29,6 +29,27 @@ function formatCep(v: string) {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+function isLeapYear(y: number) {
+  return (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+}
+function daysInMonth(m: number, y: number) {
+  return [31, isLeapYear(y) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1];
+}
+function validateDob(iso: string): string {
+  // iso = YYYY-MM-DD
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return "Use o formato DD/MM/AAAA";
+  const y = +m[1], mo = +m[2], d = +m[3];
+  const currentYear = new Date().getFullYear();
+  if (y < 1900 || y > currentYear) return `Ano deve estar entre 1900 e ${currentYear}`;
+  if (mo < 1 || mo > 12) return "Mês inválido (01 a 12)";
+  const max = daysInMonth(mo, y);
+  if (d < 1 || d > max) return `Dia inválido para ${String(mo).padStart(2, "0")}/${y} (máx ${max})`;
+  const date = new Date(y, mo - 1, d);
+  if (date > new Date()) return "Data não pode ser no futuro";
+  return "";
+}
+
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
   phone: "", passport_number: "", passport_expiry: "",
