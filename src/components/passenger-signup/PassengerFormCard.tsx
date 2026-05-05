@@ -266,24 +266,14 @@ export default function PassengerFormCard({ index, value, onChange, onRemove, ca
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
-              <div className="flex w-full items-center gap-1.5">
-                <Input ref={dobDayRef} inputMode="numeric" pattern="[0-9]*" placeholder="DD" aria-label="Dia" autoComplete="bday-day" maxLength={2}
-                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.d} onPaste={handleDobPaste} onChange={(e) => handleDobChange("d", e.target.value)} onKeyDown={(e) => handleDobKeyDown("d", e)} />
-                <span className="text-muted-foreground select-none shrink-0">/</span>
-                <Input ref={dobMonthRef} inputMode="numeric" pattern="[0-9]*" placeholder="MM" aria-label="Mês" autoComplete="bday-month" maxLength={2}
-                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.m} onPaste={handleDobPaste} onChange={(e) => handleDobChange("m", e.target.value)} onKeyDown={(e) => handleDobKeyDown("m", e)} />
-                <span className="text-muted-foreground select-none shrink-0">/</span>
-                <Input ref={dobYearRef} inputMode="numeric" pattern="[0-9]*" placeholder="AAAA" aria-label="Ano" autoComplete="bday-year" maxLength={4}
-                  className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                  value={dobParts.y} onPaste={handleDobPaste} onChange={(e) => handleDobChange("y", e.target.value)} onKeyDown={(e) => handleDobKeyDown("y", e)} />
-              </div>
-              {dobError ? (
-                <p className="text-xs text-destructive">{dobError}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
-              )}
+              <DatePartsInput
+                value={value.birth_date}
+                onChange={(iso) => setForm(f => ({ ...f, birth_date: iso }))}
+                disableFuture
+                minYear={1900}
+                maxYear={new Date().getFullYear()}
+                helperText="Formato DD/MM/AAAA"
+              />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
