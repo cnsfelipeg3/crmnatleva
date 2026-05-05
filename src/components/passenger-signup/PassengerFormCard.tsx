@@ -370,6 +370,16 @@ export default function PassengerFormCard({ index, value, onChange, onRemove, ca
               {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
             </div>
           </div>
+          <div className="space-y-2">
+            <Label>Observações do endereço <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+            <Textarea
+              value={value.address_notes}
+              onChange={(e) => setForm(f => ({ ...f, address_notes: e.target.value }))}
+              placeholder="Ex.: ponto de referência, instruções de entrega, portaria, condomínio…"
+              rows={3}
+              maxLength={500}
+            />
+          </div>
         </section>
 
         <div className="h-px bg-border/60" />
