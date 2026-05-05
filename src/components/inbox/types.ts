@@ -26,6 +26,8 @@ export interface Conversation {
   lead_id?: string;
   is_pinned?: boolean;
   manually_marked_unread?: boolean;
+  is_archived?: boolean;
+  archived_at?: string | null;
 }
 
 export interface Message {
