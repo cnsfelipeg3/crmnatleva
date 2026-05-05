@@ -509,6 +509,7 @@ export default function Dashboard() {
         previous={previous}
         clients={clients}
         clientsGrowth={clientsGrowth}
+        passengersCount={passengersCount}
         ceoMode={ceoMode}
       />
 
