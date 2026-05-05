@@ -93,7 +93,9 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
   const [hasGenerated, setHasGenerated] = useState(false);
   const [stats, setStats] = useState<SummaryStats | null>(null);
   const [phase, setPhase] = useState<"idle" | "processing_media" | "generating" | "done">("idle");
+  const [exportingPdf, setExportingPdf] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const pdfRef = useRef<HTMLDivElement>(null);
 
   const generateSummary = useCallback(async () => {
     if (!conversationId) {
