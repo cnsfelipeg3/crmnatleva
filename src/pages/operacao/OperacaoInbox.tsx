@@ -2187,7 +2187,15 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`} style={{ maxHeight: '100%' }}>
+          <div
+            className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
+            style={{ maxHeight: '100%' }}
+            onDragEnter={handleChatDragEnter}
+            onDragOver={handleChatDragOver}
+            onDragLeave={handleChatDragLeave}
+            onDrop={handleChatDrop}
+          >
+            <AttachmentDropOverlay visible={isDraggingFiles && !!selected} />
             {selected ? (
               <>
                 {/* Chat header */}
