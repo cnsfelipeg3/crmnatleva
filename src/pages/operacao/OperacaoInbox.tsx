@@ -2822,23 +2822,6 @@ function OperacaoInboxInner() {
                       )}
                       <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
-                      {!isMobile && (
-                        <Popover open={showFlowMenu} onOpenChange={(open) => { setShowFlowMenu(open); if (open) loadFlows(); }}>
-                          <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Workflow className="h-5 w-5 text-muted-foreground" /></Button></PopoverTrigger>
-                          <PopoverContent className="w-52 p-1" side="top" align="start">
-                            <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Iniciar Fluxo</p>
-                            {availableFlows.length === 0 ? (
-                              <p className="px-3 py-2 text-xs text-muted-foreground">Nenhum fluxo publicado</p>
-                            ) : (
-                              availableFlows.map(f => (
-                                <button key={f.id} className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => handleTriggerFlow(f.id, f.name)}>
-                                  <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" /><span className="truncate">{f.name}</span>
-                                </button>
-                              ))
-                            )}
-                          </PopoverContent>
-                        </Popover>
-                      )}
 
                       <div className="flex-1">
                         <Textarea
