@@ -20,6 +20,7 @@ import { DelegateConversationDialog } from "@/components/inbox/DelegateConversat
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingState } from "@/components/ui/loading-state";
 import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
