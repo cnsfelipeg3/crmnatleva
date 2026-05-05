@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2 } from "lucide-react";
+import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -46,6 +46,9 @@ export default function PassengerSelfSignup() {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string>("");
+  const [cepFound, setCepFound] = useState(false);
 
   const fnUrl = useMemo(() => {
     const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
@@ -66,10 +69,16 @@ export default function PassengerSelfSignup() {
   const fetchCep = async (cep: string) => {
     const d = cep.replace(/\D/g, "");
     if (d.length !== 8) return;
+    setCepLoading(true);
+    setCepError("");
+    setCepFound(false);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
       const j = await r.json();
-      if (j.erro) return;
+      if (j.erro) {
+        setCepError("CEP não encontrado");
+        return;
+      }
       setForm((f) => ({
         ...f,
         address_street: j.logradouro || f.address_street,
@@ -77,8 +86,17 @@ export default function PassengerSelfSignup() {
         address_city: j.localidade || f.address_city,
         address_state: j.uf || f.address_state,
       }));
-    } catch { /* ignore */ }
+      setCepFound(true);
+    } catch {
+      setCepError("Erro ao buscar CEP");
+    } finally {
+      setCepLoading(false);
+    }
   };
+
+  const cepDigits = form.address_cep.replace(/\D/g, "");
+  const cepInvalid = cepDigits.length > 0 && cepDigits.length < 8;
+  const stateInvalid = form.address_state.length > 0 && form.address_state.length !== 2;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -218,11 +236,32 @@ export default function PassengerSelfSignup() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>CEP</Label>
-              <Input value={form.address_cep} onChange={(e) => { const v = formatCep(e.target.value); setForm(f => ({ ...f, address_cep: v })); if (v.replace(/\D/g, "").length === 8) fetchCep(v); }} placeholder="00000-000" />
+              <div className="relative">
+                <Input
+                  value={form.address_cep}
+                  onChange={(e) => {
+                    const v = formatCep(e.target.value);
+                    setForm(f => ({ ...f, address_cep: v }));
+                    setCepFound(false);
+                    setCepError("");
+                    if (v.replace(/\D/g, "").length === 8) fetchCep(v);
+                  }}
+                  placeholder="00000-000"
+                  className={cepInvalid || cepError ? "border-destructive pr-9" : "pr-9"}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  {cepLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  {!cepLoading && cepFound && <Check className="w-4 h-4 text-primary" />}
+                  {!cepLoading && (cepError || cepInvalid) && <AlertCircle className="w-4 h-4 text-destructive" />}
+                </div>
+              </div>
+              {(cepInvalid || cepError) && (
+                <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
+              )}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Rua</Label>
-              <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} />
+              <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -245,8 +284,15 @@ export default function PassengerSelfSignup() {
               <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Estado</Label>
-              <Input maxLength={2} value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase() }))} placeholder="SP" />
+              <Label>Estado (UF)</Label>
+              <Input
+                maxLength={2}
+                value={form.address_state}
+                onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
+                placeholder="SP"
+                className={stateInvalid ? "border-destructive" : ""}
+              />
+              {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
             </div>
           </div>
         </Card>
