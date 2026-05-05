@@ -44,6 +44,8 @@ import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ProfilePictureViewer } from "@/components/livechat/ProfilePictureViewer";
 import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import { AttachmentDropOverlay } from "@/components/livechat/AttachmentDropOverlay";
+import { AttachmentPreviewDialog } from "@/components/livechat/AttachmentPreviewDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
