@@ -46,6 +46,9 @@ export default function PassengerSelfSignup() {
   const [form, setForm] = useState(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepError, setCepError] = useState<string>("");
+  const [cepFound, setCepFound] = useState(false);
 
   const fnUrl = useMemo(() => {
     const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
