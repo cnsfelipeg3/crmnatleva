@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAll";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -69,11 +70,11 @@ export default function Birthdays() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data } = await supabase
-        .from("passengers")
-        .select("id, full_name, birth_date, phone, cpf")
-        .not("birth_date", "is", null);
-      setPassengers((data || []) as BirthdayPassenger[]);
+      const data = await fetchAllRows(
+        "passengers",
+        "id, full_name, birth_date, phone, cpf"
+      );
+      setPassengers(((data as any[]) || []).filter(p => p.birth_date) as BirthdayPassenger[]);
       setLoading(false);
     };
     fetch();
