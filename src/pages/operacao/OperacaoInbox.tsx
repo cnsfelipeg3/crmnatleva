@@ -1554,14 +1554,19 @@ function OperacaoInboxInner() {
   }, []);
 
   const cancelRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") { audioChunksRef.current = []; mediaRecorderRef.current.stop(); }
+    recordingCancelledRef.current = true;
+    audioChunksRef.current = [];
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
+    if (audioContextRef.current) { try { audioContextRef.current.close(); } catch {} audioContextRef.current = null; }
     if (waveformIntervalRef.current) clearInterval(waveformIntervalRef.current);
     setWaveformData(new Array(25).fill(4));
     setIsRecording(false);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     setRecordingTime(0);
+    toast({ title: "Áudio descartado" });
   }, []);
 
   // Paste handler
