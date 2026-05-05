@@ -50,7 +50,7 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
         </div>
       )}
       <Document
-        file={{ url, withCredentials: false }}
+        file={{ url }}
         options={{ disableRange: true, disableStream: true }}
         onLoadError={() => setError(true)}
         onSourceError={() => setError(true)}
