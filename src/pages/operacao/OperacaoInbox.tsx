@@ -2717,6 +2717,16 @@ function OperacaoInboxInner() {
                   />
                 )}
 
+                {/* Attachment Preview Dialog (drag&drop, paste, attach) */}
+                <AttachmentPreviewDialog
+                  open={attachmentDialogOpen}
+                  files={dropAttachments}
+                  onClose={() => { setAttachmentDialogOpen(false); setDropAttachments([]); }}
+                  onAddMore={(more) => setDropAttachments((prev) => [...prev, ...more])}
+                  onSend={handleAttachmentDialogSend}
+                  isSending={attachmentSending}
+                />
+
                 {/* Disconnected warning with queue info */}
                 {!waConnected && selectedId?.startsWith("wa_") && (
                   <div className="px-4 py-2 border-t border-destructive/20 bg-destructive/5 flex items-center gap-2">
