@@ -138,6 +138,9 @@ export default function PortalAdminClients() {
                         <td className="px-4 py-3 text-xs text-muted-foreground">{stats?.lastTrip ? formatDateBR(stats.lastTrip) : "—"}</td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateBR(client.created_at)}</td>
                         <td className="px-4 py-3">
+                          <CustomerSinceBadge customerSince={client.customer_since} source={client.customer_since_source} />
+                        </td>
+                        <td className="px-4 py-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
                               <Button variant="ghost" size="icon" className="h-7 w-7">
