@@ -45,7 +45,7 @@ function pctChange(current: number, prev: number) {
   return ((current - prev) / Math.abs(prev)) * 100;
 }
 
-export default function KpiCards({ kpiData, filtered = [], previous = [], clients = [], clientsGrowth, ceoMode }: Props) {
+export default function KpiCards({ kpiData, filtered = [], previous = [], clients = [], clientsGrowth, passengersCount, ceoMode }: Props) {
   const navigate = useNavigate();
   const [drilldown, setDrilldown] = useState<{ label: string; sales: Sale[] } | null>(null);
 
