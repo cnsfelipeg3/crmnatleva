@@ -98,6 +98,7 @@ export function VirtualConversationList({
                 onSelect={onSelect}
                 onTogglePin={onTogglePin}
                 onToggleUnread={onToggleUnread}
+                onToggleArchive={onToggleArchive}
               />
             </div>
           );
