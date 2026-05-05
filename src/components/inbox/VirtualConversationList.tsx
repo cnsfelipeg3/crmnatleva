@@ -109,6 +109,8 @@ export function VirtualConversationList({
                 onTogglePin={onTogglePin}
                 onToggleUnread={onToggleUnread}
                 onToggleArchive={onToggleArchive}
+                owner={conv.assigned_to ? ownerMap?.get(conv.assigned_to) || null : null}
+                isMine={!!currentUserId && conv.assigned_to === currentUserId}
               />
             </div>
           );
