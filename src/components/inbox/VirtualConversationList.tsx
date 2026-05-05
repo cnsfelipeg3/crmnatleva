@@ -13,6 +13,7 @@ interface VirtualConversationListProps {
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
+  onToggleArchive?: (conv: Conversation) => void;
   isLoading: boolean;
   searchQuery: string;
 }
