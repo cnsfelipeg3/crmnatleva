@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle, Camera, X, Upload } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 function formatCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -52,7 +53,7 @@ function validateDob(iso: string): string {
 
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
-  phone: "", passport_number: "", passport_expiry: "",
+  phone: "", phone_country: "BR", passport_number: "", passport_expiry: "",
   passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
@@ -396,7 +397,14 @@ export default function PassengerSelfSignup() {
           </div>
           <div className="space-y-2">
             <Label>Telefone com WhatsApp *</Label>
-            <Input inputMode="tel" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" required />
+            <PhoneInput
+              value={form.phone}
+              countryCode={form.phone_country}
+              onChange={(full, { country }) =>
+                setForm((f) => ({ ...f, phone: full, phone_country: country.code }))
+              }
+              required
+            />
           </div>
         </Card>
 
