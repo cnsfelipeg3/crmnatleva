@@ -349,7 +349,7 @@ function VirtualEmissionGroup({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
       onDrop={(e) => { e.preventDefault(); onDropToGroup(variant); }}
     >
-      <table className="w-full text-sm min-w-[1310px]">
+      <table className="w-full text-sm min-w-[1420px]">
         <SalesTableColGroup />
         <tbody>
           <tr className={cn("cursor-pointer border-y transition-colors", groupTone)} onClick={onToggle}>
@@ -374,7 +374,7 @@ function VirtualEmissionGroup({
           className="overflow-y-auto overflow-x-visible overscroll-contain"
           style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
         >
-          <table className="w-full text-sm min-w-[1310px]">
+          <table className="w-full text-sm min-w-[1420px]">
             <SalesTableColGroup />
             <tbody>
               {sales.length === 0 ? (
@@ -794,7 +794,7 @@ export default function Sales() {
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1310px]">
+                  <table className="w-full text-sm min-w-[1420px]">
                     <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
