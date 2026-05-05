@@ -48,7 +48,7 @@ export const SYSTEM_MENUS: SystemMenuItem[] = [
   { key: "viagens.flights-search", label: "Busca de Voos", path: "/flights-search", group: "Viagens", actions: READ_ONLY },
 
   // --- Operação Diária ---
-  { key: "operacao.inbox", label: "WhatsApp / Inbox", path: "/operacao/inbox", group: "Operação", actions: ALL },
+  { key: "operacao.inbox", label: "WhatsApp - NatLeva", path: "/operacao/inbox", group: "Operação", actions: ALL },
   { key: "operacao.integracoes", label: "Integrações", path: "/operacao/integracoes", group: "Operação", actions: VIEW_EDIT },
   { key: "operacao.pipeline", label: "Tags & Pipeline", path: "/operacao/pipeline", group: "Operação", actions: ALL },
   { key: "operacao.logs", label: "Logs & Auditoria", path: "/operacao/logs", group: "Operação", actions: READ_ONLY },
