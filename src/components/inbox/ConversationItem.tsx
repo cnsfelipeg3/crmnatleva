@@ -279,6 +279,8 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.assigned_to === next.conv.assigned_to &&
     prev.isMine === next.isMine &&
     prev.owner?.full_name === next.owner?.full_name &&
-    prev.owner?.avatar_url === next.owner?.avatar_url
+    prev.owner?.avatar_url === next.owner?.avatar_url &&
+    prev.searchTerm === next.searchTerm &&
+    prev.contentMatchSnippet === next.contentMatchSnippet
   );
 });
