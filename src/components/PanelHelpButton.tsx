@@ -538,7 +538,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
 
   // ── Operação ──────────────────────────────────────
   "/operacao/inbox": {
-    title: "Inbox de Conversas",
+    title: "WhatsApp - NatLeva",
     subtitle: "Central de comunicação unificada",
     description:
       "Central de comunicação com todos os canais de atendimento unificados. WhatsApp, mensagens e interações em um só lugar. Inclui pipeline visual de vendas, sugestões de IA para respostas e contexto completo do cliente ao lado da conversa.",
@@ -604,7 +604,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Fluxos ativos processam conversas reais — teste sempre antes de ativar.",
     ],
     relatedPanels: [
-      { label: "Inbox", path: "/operacao/inbox" },
+      { label: "WhatsApp - NatLeva", path: "/operacao/inbox" },
       { label: "Simulador", path: "/operacao/simulador" },
       { label: "Logs", path: "/operacao/logs" },
     ],
@@ -632,7 +632,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Use os logs para diagnosticar problemas de comunicação",
     ],
     relatedPanels: [
-      { label: "Inbox", path: "/operacao/inbox" },
+      { label: "WhatsApp - NatLeva", path: "/operacao/inbox" },
       { label: "Logs", path: "/operacao/logs" },
     ],
   },
@@ -654,7 +654,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Use cores distintas para identificação visual rápida",
     ],
     relatedPanels: [
-      { label: "Inbox", path: "/operacao/inbox" },
+      { label: "WhatsApp - NatLeva", path: "/operacao/inbox" },
     ],
   },
 
@@ -675,7 +675,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
     ],
     relatedPanels: [
       { label: "Flow Builder", path: "/operacao/flows" },
-      { label: "Inbox", path: "/operacao/inbox" },
+      { label: "WhatsApp - NatLeva", path: "/operacao/inbox" },
     ],
   },
 
@@ -1320,7 +1320,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
     description: "Importe conversas do ChatGuru para centralizar todo o histórico de atendimento no sistema.",
     features: ["Importação de conversas completas", "Mapeamento de contatos", "Preservação de mídia e anexos"],
     tips: ["A importação pode levar alguns minutos dependendo do volume"],
-    relatedPanels: [{ label: "Inbox", path: "/operacao/inbox" }],
+    relatedPanels: [{ label: "WhatsApp - NatLeva", path: "/operacao/inbox" }],
   },
 
   "/implementacao/base-conhecimento": {
@@ -1580,7 +1580,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
     description: "Análise detalhada da qualidade do atendimento com métricas de tempo de resposta, satisfação do cliente e taxa de conversão por canal e atendente.",
     features: ["Tempo de resposta por atendente", "Taxa de conversão por canal", "Análise de sentimento das conversas", "Comparativo entre períodos"],
     tips: ["Compare tempos de resposta entre atendentes para padronizar e melhorar o atendimento"],
-    relatedPanels: [{ label: "Inbox", path: "/operacao/inbox" }, { label: "Dashboard", path: "/dashboard" }],
+    relatedPanels: [{ label: "WhatsApp - NatLeva", path: "/operacao/inbox" }, { label: "Dashboard", path: "/dashboard" }],
   },
 };
 

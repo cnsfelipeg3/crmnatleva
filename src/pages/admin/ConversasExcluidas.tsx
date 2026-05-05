@@ -54,7 +54,7 @@ export default function ConversasExcluidas() {
       toast({ title: "Erro ao reativar", description: error.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Conversa reativada", description: "A conversa voltou a aparecer no inbox." });
+    toast({ title: "Conversa reativada", description: "A conversa voltou a aparecer no WhatsApp - NatLeva." });
     setRows((prev) => prev.filter((r) => r.id !== id));
   };
 
@@ -63,7 +63,7 @@ export default function ConversasExcluidas() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Conversas Excluídas</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Histórico de conversas removidas do inbox via fluxo de exclusão. Você pode reativar para que voltem a aparecer.
+          Histórico de conversas removidas do WhatsApp - NatLeva via fluxo de exclusão. Você pode reativar para que voltem a aparecer.
         </p>
       </div>
 

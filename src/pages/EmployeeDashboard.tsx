@@ -69,7 +69,7 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     menuKey: "operacao.inbox",
-    title: "WhatsApp / Inbox",
+    title: "WhatsApp - NatLeva",
     description: "Atender conversas em tempo real.",
     path: "/operacao/inbox",
     icon: MessageSquare,

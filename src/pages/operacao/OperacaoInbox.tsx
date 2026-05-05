@@ -2152,7 +2152,7 @@ function OperacaoInboxInner() {
                     <MessageSquare className="h-3.5 w-3.5 text-primary" />
                   </div>
                   <div className="min-w-0 flex items-center gap-1.5">
-                    <span className="text-sm font-bold tracking-tight text-foreground truncate">Inbox</span>
+                    <span className="text-sm font-bold tracking-tight text-foreground truncate">WhatsApp - NatLeva</span>
                     {waConnected && <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />}
                   </div>
                   {totalUnread > 0 && <Badge className="bg-primary text-primary-foreground font-mono text-[10px] px-1.5 py-0 h-4 shrink-0">{totalUnread > 99 ? "99+" : totalUnread}</Badge>}
