@@ -1,7 +1,7 @@
 // ─── Galeria de mídias da conversa · estilo WhatsApp Web ───
 // Tabs: Mídia (imagens + vídeos), Documentos, Áudios.
 // Virtualizada (react-virtual) · suporta milhares de itens sem perda de performance.
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
