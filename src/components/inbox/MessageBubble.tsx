@@ -6,6 +6,7 @@ import type { Message, MsgStatus, MsgType } from "./types";
 import { formatMsgTime, formatDateSeparator, shouldShowDateSeparator, stripQuotes } from "./helpers";
 import { formatBytes } from "@/lib/format";
 import { humanizeMediaFailure } from "@/lib/zapiFailureClassifier";
+import { PdfThumbnail } from "./PdfThumbnail";
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 function Linkify({ text }: { text: string }) {
