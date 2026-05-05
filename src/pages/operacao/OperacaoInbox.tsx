@@ -1986,6 +1986,34 @@ function OperacaoInboxInner() {
                   </button>
                 )}
               </div>
+              {/* Owner filter pills */}
+              <div className="flex items-center gap-1 mb-1.5 text-[10px]">
+                {([
+                  { k: "all", label: "Todas" },
+                  { k: "mine", label: "Minhas" },
+                  { k: "unassigned", label: "Sem dono" },
+                ] as const).map(o => (
+                  <button
+                    key={o.k}
+                    onClick={() => setOwnerFilter(o.k)}
+                    className={`px-2 py-0.5 rounded-md font-medium transition ${
+                      ownerFilter === o.k
+                        ? (o.k === "unassigned" ? "bg-amber-500/15 text-amber-600" : "bg-primary/15 text-primary")
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {o.label}
+                    {o.k === "unassigned" && (() => {
+                      const n = conversations.filter(c => !c.assigned_to && !c.is_archived).length;
+                      return n > 0 ? <span className="ml-1 opacity-60">({n})</span> : null;
+                    })()}
+                    {o.k === "mine" && user && (() => {
+                      const n = conversations.filter(c => c.assigned_to === user.id && !c.is_archived).length;
+                      return n > 0 ? <span className="ml-1 opacity-60">({n})</span> : null;
+                    })()}
+                  </button>
+                ))}
+              </div>
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-1 pb-1.5 w-max">
                   {FILTERS.map(f => {
