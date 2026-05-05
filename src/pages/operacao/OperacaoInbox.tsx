@@ -44,6 +44,8 @@ import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ProfilePictureViewer } from "@/components/livechat/ProfilePictureViewer";
 import { ClientContextPanel } from "@/components/livechat/ClientContextPanel";
 import { ConversationSummaryDialog } from "@/components/livechat/ConversationSummaryDialog";
+import { AttachmentDropOverlay } from "@/components/livechat/AttachmentDropOverlay";
+import { AttachmentPreviewDialog } from "@/components/livechat/AttachmentPreviewDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
@@ -692,10 +694,18 @@ function OperacaoInboxInner() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>();
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingCancelledRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileInputAccept, setFileInputAccept] = useState("*/*");
   const [fileInputMediaType, setFileInputMediaType] = useState("document");
   const [isSending, setIsSending] = useState(false);
+
+  // Drag & Drop attachments
+  const [isDraggingFiles, setIsDraggingFiles] = useState(false);
+  const [dropAttachments, setDropAttachments] = useState<File[]>([]);
+  const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
+  const [attachmentSending, setAttachmentSending] = useState(false);
+  const dragCounterRef = useRef(0);
   
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showProfileViewer, setShowProfileViewer] = useState(false);
@@ -1415,6 +1425,7 @@ function OperacaoInboxInner() {
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      recordingCancelledRef.current = false;
 
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
@@ -1441,6 +1452,11 @@ function OperacaoInboxInner() {
         if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
         if (waveformIntervalRef.current) clearInterval(waveformIntervalRef.current);
         setWaveformData(new Array(25).fill(4));
+        if (recordingCancelledRef.current) {
+          recordingCancelledRef.current = false;
+          audioChunksRef.current = [];
+          return;
+        }
         const rawBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
         if (rawBlob.size < 100) return;
         if (!selectedId) return;
@@ -1547,31 +1563,37 @@ function OperacaoInboxInner() {
   }, []);
 
   const cancelRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") { audioChunksRef.current = []; mediaRecorderRef.current.stop(); }
+    recordingCancelledRef.current = true;
+    audioChunksRef.current = [];
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try { mediaRecorderRef.current.stop(); } catch {}
+    }
     if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-    if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
+    if (audioContextRef.current) { try { audioContextRef.current.close(); } catch {} audioContextRef.current = null; }
     if (waveformIntervalRef.current) clearInterval(waveformIntervalRef.current);
     setWaveformData(new Array(25).fill(4));
     setIsRecording(false);
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
     setRecordingTime(0);
+    toast({ title: "Áudio descartado" });
   }, []);
 
   // Paste handler
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items || !selectedId) return;
+    const files: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === "file") {
-        e.preventDefault();
         const file = item.getAsFile();
-        if (!file) continue;
-        if (file.type.startsWith("image/")) {
-          setMediaPendingFile({ file, previewUrl: URL.createObjectURL(file), mediaType: "image" });
-        }
-        return;
+        if (file) files.push(file);
       }
+    }
+    if (files.length) {
+      e.preventDefault();
+      setDropAttachments(files);
+      setAttachmentDialogOpen(true);
     }
   }, [selectedId]);
 
@@ -1718,6 +1740,120 @@ function OperacaoInboxInner() {
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
   }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage, finalizeMessageStatus]);
+
+  // Generic send for drag&drop / preview dialog
+  const sendOneFileWithCaption = useCallback(async (file: File, caption: string) => {
+    if (!selectedId) return;
+    const phone = selectedId.replace("wa_", "");
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    const kind: MsgType = isImage ? "image" : isVideo ? "video" : "document";
+    const ext = file.name.split(".").pop() || "bin";
+    const folder = isImage ? "images" : isVideo ? "videos" : "documents";
+    const fileName = `${kind}_${Date.now()}.${ext}`;
+    const publicUrl = await uploadToStorage(file, folder, fileName);
+    const tempId = `temp_media_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const mime = guessMimeFromExt(file.name, file.type);
+    const action = isImage ? "send-image" : isVideo ? "send-video" : "send-document";
+    const sendPayload: any = isImage
+      ? { phone, image: publicUrl, caption }
+      : isVideo
+      ? { phone, video: publicUrl, caption }
+      : { phone, document: publicUrl, fileName: file.name, extension: ext };
+    const text = isImage || isVideo ? caption : "";
+
+    setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
+      id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+      message_type: kind, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+      media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
+    }] }));
+
+    let messageDbId: string | null = null;
+    try {
+      messageDbId = await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: kind,
+        text,
+        mediaUrl: publicUrl,
+        mediaStorageUrl: publicUrl,
+        mediaMimetype: mime,
+        mediaFilename: file.name,
+        mediaSizeBytes: file.size,
+        mediaStatus: "downloaded",
+        externalMessageId: tempId,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        originalPayload: { action, payload: sendPayload },
+      });
+    } catch (e) { console.error("[DROP-SEND] persist failed", e); }
+
+    const outcome = await sendViaZapi(action, sendPayload);
+    const realId = outcome.data?.messageId || outcome.data?.id || tempId;
+    if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+    if (outcome.ok) {
+      lastMsgIdsRef.current.add(realId);
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+      ) }));
+      // Documents don't carry caption reliably · send as follow-up text
+      if (kind === "document" && caption.trim()) {
+        try { await sendViaZapi("send-text", { phone, message: caption }); } catch {}
+      }
+    } else {
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+      ) }));
+      throw new Error(humanizeFailureReason(outcome.reason));
+    }
+  }, [selectedId, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
+
+  const handleAttachmentDialogSend = useCallback(async (items: { file: File; caption: string }[]) => {
+    if (!selectedId || !items.length) return;
+    setAttachmentSending(true);
+    try {
+      for (const it of items) {
+        try { await sendOneFileWithCaption(it.file, it.caption); }
+        catch (e: any) {
+          toast({ title: `Falha ao enviar ${it.file.name}`, description: String(e?.message || e), variant: "destructive" });
+        }
+      }
+      setAttachmentDialogOpen(false);
+      setDropAttachments([]);
+    } finally {
+      setAttachmentSending(false);
+    }
+  }, [selectedId, sendOneFileWithCaption]);
+
+  // Drag & Drop on chat area
+  const handleChatDragEnter = useCallback((e: React.DragEvent) => {
+    if (!selectedId) return;
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    setIsDraggingFiles(true);
+  }, [selectedId]);
+  const handleChatDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+  const handleChatDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setIsDraggingFiles(false);
+  }, []);
+  const handleChatDrop = useCallback((e: React.DragEvent) => {
+    if (!selectedId) return;
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDraggingFiles(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    setDropAttachments(files);
+    setAttachmentDialogOpen(true);
+  }, [selectedId]);
 
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -2052,7 +2188,15 @@ function OperacaoInboxInner() {
           </div>
 
           {/* ─── Column 2: Chat ─── */}
-          <div className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`} style={{ maxHeight: '100%' }}>
+          <div
+            className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
+            style={{ maxHeight: '100%' }}
+            onDragEnter={handleChatDragEnter}
+            onDragOver={handleChatDragOver}
+            onDragLeave={handleChatDragLeave}
+            onDrop={handleChatDrop}
+          >
+            <AttachmentDropOverlay visible={isDraggingFiles && !!selected} />
             {selected ? (
               <>
                 {/* Chat header */}
@@ -2573,6 +2717,16 @@ function OperacaoInboxInner() {
                     contactName={selected.contact_name || "Cliente"} stage={selected.stage || "novo_lead"}
                   />
                 )}
+
+                {/* Attachment Preview Dialog (drag&drop, paste, attach) */}
+                <AttachmentPreviewDialog
+                  open={attachmentDialogOpen}
+                  files={dropAttachments}
+                  onClose={() => { setAttachmentDialogOpen(false); setDropAttachments([]); }}
+                  onAddMore={(more) => setDropAttachments((prev) => [...prev, ...more])}
+                  onSend={handleAttachmentDialogSend}
+                  isSending={attachmentSending}
+                />
 
                 {/* Disconnected warning with queue info */}
                 {!waConnected && selectedId?.startsWith("wa_") && (
