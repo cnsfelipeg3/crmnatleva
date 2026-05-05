@@ -1649,10 +1649,10 @@ export default function PanelHelpButton() {
       <button
         onClick={() => { setOpen(true); setTab("overview"); }}
         className={cn(
-          "fixed bottom-5 right-5 z-40 flex items-center justify-center w-8 h-8 rounded-full",
-          "bg-card border border-border shadow-lg",
+          "fixed bottom-3 left-3 z-40 flex items-center justify-center w-6 h-6 rounded-full",
+          "bg-card/70 backdrop-blur border border-border/50 shadow-sm opacity-40",
           "text-muted-foreground",
-          "hover:bg-accent hover:text-foreground hover:shadow-xl hover:border-primary/30",
+          "hover:opacity-100 hover:bg-accent hover:text-foreground hover:shadow-md hover:border-primary/30",
           "transition-all duration-200 group"
         )}
         title="Entenda esse painel"
