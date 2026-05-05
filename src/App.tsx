@@ -389,6 +389,9 @@ function AppRoutes() {
         {/* Cadastro público de fornecedor */}
         <Route path="/cadastro-fornecedor" element={<Suspense fallback={<MinimalLoader />}><SupplierRegistration /></Suspense>} />
 
+        {/* Auto-cadastro público de passageiro */}
+        <Route path="/cadastro-passageiro/:slug" element={<Suspense fallback={<MinimalLoader />}><PassengerSelfSignup /></Suspense>} />
+
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
 
