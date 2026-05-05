@@ -326,7 +326,7 @@ export default function PassengerSelfSignup() {
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
-              <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.25fr)] items-center gap-2">
+              <div className="flex w-full items-center gap-1.5">
                 <Input
                   ref={dobDayRef}
                   inputMode="numeric"
@@ -334,12 +334,13 @@ export default function PassengerSelfSignup() {
                   placeholder="DD"
                   aria-label="Dia"
                   autoComplete="bday-day"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.d}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("d", e.target.value)}
                 />
-                <span className="text-muted-foreground select-none">/</span>
+                <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
                   ref={dobMonthRef}
                   inputMode="numeric"
@@ -347,7 +348,8 @@ export default function PassengerSelfSignup() {
                   placeholder="MM"
                   aria-label="Mês"
                   autoComplete="bday-month"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.m}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("m", e.target.value)}
@@ -358,7 +360,7 @@ export default function PassengerSelfSignup() {
                     }
                   }}
                 />
-                <span className="text-muted-foreground select-none">/</span>
+                <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
                   ref={dobYearRef}
                   inputMode="numeric"
@@ -366,7 +368,8 @@ export default function PassengerSelfSignup() {
                   placeholder="AAAA"
                   aria-label="Ano"
                   autoComplete="bday-year"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={4}
+                  className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.y}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("y", e.target.value)}
