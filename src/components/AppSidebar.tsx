@@ -233,6 +233,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               {pendingBriefings}
             </span>
           )}
+          {item.to === "/operacao/inbox" && myInboxCount > 0 && (
+            <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold px-1 leading-none">
+              {myInboxCount > 99 ? "99+" : myInboxCount}
+            </span>
+          )}
         </>
       )}
     </NavLink>
