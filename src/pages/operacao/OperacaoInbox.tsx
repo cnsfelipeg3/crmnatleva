@@ -2548,6 +2548,14 @@ function OperacaoInboxInner() {
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setGalleryOpen(true)}>
+                              <Images className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Mídias da conversa</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLinkClient(true)}>
                               <Link2 className="h-3.5 w-3.5" />
                             </Button>
