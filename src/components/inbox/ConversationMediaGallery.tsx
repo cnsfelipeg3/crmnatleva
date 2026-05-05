@@ -1,7 +1,7 @@
 // ─── Galeria de mídias da conversa · estilo WhatsApp Web ───
 // Tabs: Mídia (imagens + vídeos), Documentos, Áudios.
 // Virtualizada (react-virtual) · suporta milhares de itens sem perda de performance.
-import { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -16,37 +16,10 @@ import type { Message } from "./types";
 import { PdfThumbnail } from "./PdfThumbnail";
 
 
-// Pré-carrega a miniatura só quando o item entra no viewport · evita travar a galeria
 function LazyPdfThumb({ url, filename, width = 40 }: { url: string; filename?: string; width?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || visible) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setVisible(true);
-            io.disconnect();
-            break;
-          }
-        }
-      },
-      { rootMargin: "300px 0px", threshold: 0.01 }
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, [visible]);
-
   return (
-    <div ref={ref} className="h-full w-full flex items-center justify-center">
-      {visible ? (
-        <PdfThumbnail url={url} filename={filename} width={width} />
-      ) : (
-        <FileText className="h-5 w-5 text-muted-foreground/60" />
-      )}
+    <div className="h-full w-full flex items-center justify-center">
+      <PdfThumbnail url={url} filename={filename} width={width} compact />
     </div>
   );
 }
@@ -113,7 +86,7 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
   const mediaRows = useMemo<Row[]>(() => {
     const rows: Row[] = [];
     let currentMonth = "";
-    let buffer: Message[] = [];
+    const buffer: Message[] = [];
     let baseIdx = 0;
     const flush = () => {
       while (buffer.length) {
