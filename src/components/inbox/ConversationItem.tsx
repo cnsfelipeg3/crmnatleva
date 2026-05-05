@@ -8,6 +8,12 @@ import type { Conversation, Stage } from "./types";
 import { formatTimestamp, formatPhoneDisplay, getStageInfo, stripQuotes } from "./helpers";
 import { WhatsAppAvatar } from "./WhatsAppAvatar";
 
+interface OwnerInfo {
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface ConversationItemProps {
   conv: Conversation;
   isSelected: boolean;
@@ -17,6 +23,8 @@ interface ConversationItemProps {
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
   onToggleArchive?: (conv: Conversation) => void;
+  owner?: OwnerInfo | null;
+  isMine?: boolean;
 }
 
 function getPreviewContent(raw: string) {
