@@ -2439,41 +2439,7 @@ function OperacaoInboxInner() {
                   )}
                   {/* Row 2: Action buttons */}
                   <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
-                    {activeFlowName && !isMobile && (
-                      <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary mr-1">
-                        <Workflow className="h-3 w-3" />{activeFlowName}
-                      </Badge>
-                    )}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1.5 text-[11px] px-2.5"
-                          disabled={rebuildingHistoryAll}
-                          onClick={handleRebuildAllHistory}
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${rebuildingHistoryAll ? "animate-spin" : ""}`} />
-                          {!isMobile && "Reconstruir Histórico"}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Reimportar todo o histórico do WhatsApp</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 gap-1.5 text-[11px] px-2.5"
-                          disabled={reloadingMessages || rebuildingHistoryAll}
-                          onClick={handleReloadMessages}
-                        >
-                          <RefreshCw className={`h-3.5 w-3.5 ${reloadingMessages ? "animate-spin" : ""}`} />
-                          {!isMobile && "Recarregar Mensagens"}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Recarregar todas as mensagens</TooltipContent>
-                    </Tooltip>
+                    {/* Ações IA — destaque */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
@@ -2495,33 +2461,42 @@ function OperacaoInboxInner() {
                       variant="inline"
                       conversationId={selectedDbId || undefined}
                     />
+
+                    {/* Separador visual */}
+                    <div className="h-4 w-px bg-border/60 mx-1" />
+
+                    {/* Ações secundárias — apenas ícones */}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           variant={selectionMode ? "secondary" : "ghost"}
-                          size="sm"
-                          className="h-7 gap-1.5 text-[11px] px-2.5"
+                          size="icon"
+                          className="h-7 w-7"
                           onClick={() => {
                             if (selectionMode) cancelSelection();
                             else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
                           }}
                         >
                           <Forward className="h-3.5 w-3.5" />
-                          {!isMobile && (selectionMode ? "Cancelar" : "Encaminhar")}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent><p className="text-xs">Selecionar mensagens para encaminhar</p></TooltipContent>
+                      <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
                     </Tooltip>
                     {!isMobile && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 gap-1.5 text-[11px] px-2.5" onClick={() => setShowLinkClient(true)}>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLinkClient(true)}>
                             <Link2 className="h-3.5 w-3.5" />
-                            Vincular Cliente
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
                       </Tooltip>
+                    )}
+
+                    {activeFlowName && !isMobile && (
+                      <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-auto">
+                        <Workflow className="h-3 w-3" />{activeFlowName}
+                      </Badge>
                     )}
                   </div>
                 </div>
