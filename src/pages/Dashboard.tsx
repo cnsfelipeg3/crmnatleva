@@ -317,11 +317,14 @@ export default function Dashboard() {
 
   // Pre-sort client creation timestamps ONCE per clients array change.
   // Subsequent period changes use O(log n) binary search instead of O(n) scans.
+  // Use customer_since (real onboarding date from Monday import) when available,
+  // fallback to created_at (DB insertion date) only when missing.
   const clientTimestamps = useMemo(() => {
     const arr: number[] = [];
     for (const c of clients) {
-      if (!c.created_at) continue;
-      const t = new Date(c.created_at).getTime();
+      const raw = c.customer_since || c.created_at;
+      if (!raw) continue;
+      const t = new Date(raw).getTime();
       if (!Number.isNaN(t)) arr.push(t);
     }
     arr.sort((a, b) => a - b);
