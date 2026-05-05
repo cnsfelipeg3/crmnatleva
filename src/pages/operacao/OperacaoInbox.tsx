@@ -1696,14 +1696,9 @@ function OperacaoInboxInner() {
   }, []);
 
   const handleSelectConversation = (id: string) => {
+    // NÃO zera unread_count ao abrir · só zera quando o atendente responde
+    // ou quando marca manualmente como lida (botão dedicado).
     setSelectedId(id); setShowAIPanel(false);
-    const target = conversations.find(c => c.id === id);
-    setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c));
-    if (target?.db_id) {
-      supabase.from("conversations").update({ unread_count: 0 }).eq("id", target.db_id).then(() => {});
-    } else if (id.length > 10) {
-      supabase.from("conversations").update({ unread_count: 0 }).eq("id", id).then(() => {});
-    }
   };
 
   const handleClearConversations = useCallback(() => {
