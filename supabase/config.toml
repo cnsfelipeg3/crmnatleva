@@ -234,3 +234,6 @@ verify_jwt = true
 
 [functions.nath-opinion]
 verify_jwt = true
+
+[functions.passenger-self-signup]
+verify_jwt = false  # Página pública de auto-cadastro acessada por link
