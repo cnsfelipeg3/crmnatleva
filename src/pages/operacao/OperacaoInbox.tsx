@@ -1443,6 +1443,11 @@ function OperacaoInboxInner() {
         if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
         if (waveformIntervalRef.current) clearInterval(waveformIntervalRef.current);
         setWaveformData(new Array(25).fill(4));
+        if (recordingCancelledRef.current) {
+          recordingCancelledRef.current = false;
+          audioChunksRef.current = [];
+          return;
+        }
         const rawBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
         if (rawBlob.size < 100) return;
         if (!selectedId) return;
