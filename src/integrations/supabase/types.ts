@@ -2486,6 +2486,9 @@ export type Database = {
       }
       conversation_messages: {
         Row: {
+          ai_media_model: string | null
+          ai_media_processed_at: string | null
+          ai_media_transcript: string | null
           audio_duration_sec: number | null
           content: string
           conversation_id: string
@@ -2516,6 +2519,9 @@ export type Database = {
           timestamp: string | null
         }
         Insert: {
+          ai_media_model?: string | null
+          ai_media_processed_at?: string | null
+          ai_media_transcript?: string | null
           audio_duration_sec?: number | null
           content?: string
           conversation_id: string
@@ -2546,6 +2552,9 @@ export type Database = {
           timestamp?: string | null
         }
         Update: {
+          ai_media_model?: string | null
+          ai_media_processed_at?: string | null
+          ai_media_transcript?: string | null
           audio_duration_sec?: number | null
           content?: string
           conversation_id?: string

@@ -225,3 +225,9 @@ verify_jwt = true
 
 [functions.receipt-extract]
 verify_jwt = true
+
+[functions.livechat-process-media]
+verify_jwt = true
+
+[functions.livechat-summary]
+verify_jwt = true
