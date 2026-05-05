@@ -33,6 +33,7 @@ import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
+import { useSalesScope } from "@/hooks/useSalesScope";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -40,6 +41,7 @@ export default function SaleDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { canSeeSale, loading: scopeLoading } = useSalesScope();
   const [sale, setSale] = useState<any>(null);
   const [segments, setSegments] = useState<FlightSegment[]>([]);
   const [costItems, setCostItems] = useState<any[]>([]);
@@ -316,11 +318,17 @@ export default function SaleDetail() {
     };
   }, [sale, segments]);
 
-  if (loading) return <DetailPageSkeleton />;
+  if (loading || scopeLoading) return <DetailPageSkeleton />;
   if (!sale) return (
     <div className="p-6 animate-fade-in">
       <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>
       <p className="mt-8 text-center text-muted-foreground">Venda não encontrada.</p>
+    </div>
+  );
+  if (!canSeeSale(sale)) return (
+    <div className="p-6 animate-fade-in">
+      <Button variant="ghost" onClick={() => navigate("/sales")}><ArrowLeft className="w-4 h-4 mr-1" /> Voltar</Button>
+      <p className="mt-8 text-center text-muted-foreground">Você não tem permissão para visualizar esta venda.</p>
     </div>
   );
 
