@@ -1670,10 +1670,66 @@ function OperacaoInboxInner() {
     const conv = conversations.find(c => c.id === convId);
     if (!conv) return;
     const newPinned = !conv.is_pinned;
-    setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_pinned: newPinned } : c));
-    const cleanPhone = (conv.phone || "").replace(/\D/g, "");
-    if (cleanPhone) await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
+    // Optimistic + re-sort imediato (pinned no topo)
+    setConversations(prev => {
+      const next = prev.map(c => c.id === convId ? { ...c, is_pinned: newPinned } : c);
+      return next.sort((a, b) => {
+        if (a.is_pinned && !b.is_pinned) return -1;
+        if (!a.is_pinned && b.is_pinned) return 1;
+        return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
+      });
+    });
+    try {
+      let updated = false;
+      if (conv.db_id) {
+        const { error } = await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("id", conv.db_id);
+        if (!error) updated = true;
+      }
+      if (!updated) {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) {
+          const { error } = await supabase.from("conversations").update({ is_pinned: newPinned } as any).eq("phone", cleanPhone);
+          if (error) throw error;
+        }
+      }
+      toast({ title: newPinned ? "Conversa fixada" : "Conversa desafixada" });
+    } catch (err: any) {
+      // Rollback
+      setConversations(prev => prev.map(c => c.id === convId ? { ...c, is_pinned: !newPinned } : c));
+      toast({ title: "Erro ao fixar", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
   }, [conversations]);
+
+  const [editingName, setEditingName] = useState(false);
+  const [editNameValue, setEditNameValue] = useState("");
+  const handleSaveContactName = useCallback(async () => {
+    if (!selectedId) return;
+    const conv = conversations.find(c => c.id === selectedId);
+    if (!conv) return;
+    const newName = editNameValue.trim();
+    if (!newName || newName === conv.contact_name) { setEditingName(false); return; }
+    const oldName = conv.contact_name;
+    setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, contact_name: newName } : c));
+    setEditingName(false);
+    try {
+      let updated = false;
+      if (conv.db_id) {
+        const { error } = await supabase.from("conversations").update({ contact_name: newName, display_name: newName } as any).eq("id", conv.db_id);
+        if (!error) updated = true;
+      }
+      if (!updated) {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) {
+          const { error } = await supabase.from("conversations").update({ contact_name: newName, display_name: newName } as any).eq("phone", cleanPhone);
+          if (error) throw error;
+        }
+      }
+      toast({ title: "Nome atualizado", description: newName });
+    } catch (err: any) {
+      setConversations(prev => prev.map(c => c.id === selectedId ? { ...c, contact_name: oldName } : c));
+      toast({ title: "Erro", description: err?.message || "Falha ao salvar nome", variant: "destructive" });
+    }
+  }, [selectedId, editNameValue, conversations]);
 
   const handleToggleUnread = useCallback(async (conv: Conversation) => {
     const next = !conv.manually_marked_unread;
