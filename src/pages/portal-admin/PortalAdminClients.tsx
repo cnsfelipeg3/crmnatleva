@@ -117,6 +117,7 @@ export default function PortalAdminClients() {
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Viagens</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Última Viagem</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cadastro</th>
+                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cliente desde</th>
                     <th className="px-4 py-3 w-10"></th>
                   </tr>
                 </thead>
