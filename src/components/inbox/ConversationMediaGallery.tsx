@@ -197,7 +197,7 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
                           >
                             <div className="shrink-0 h-12 w-10 rounded border bg-card overflow-hidden flex items-center justify-center">
                               {m.media_mimetype?.includes("pdf") || m.media_filename?.toLowerCase().endsWith(".pdf") ? (
-                                <PdfThumbnail url={mediaUrl(m)} className="h-full w-full" />
+                                <PdfThumbnail url={mediaUrl(m)} width={40} />
                               ) : (
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               )}
