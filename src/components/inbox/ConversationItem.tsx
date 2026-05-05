@@ -204,6 +204,7 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.is_vip === next.conv.is_vip &&
     prev.conv.contact_name === next.conv.contact_name &&
     prev.conv.manually_marked_unread === next.conv.manually_marked_unread &&
+    prev.conv.is_archived === next.conv.is_archived &&
     prev.profilePic === next.profilePic &&
     prev.presence === next.presence
   );
