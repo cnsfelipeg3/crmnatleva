@@ -308,7 +308,7 @@ export default function PassengerSelfSignup() {
         </div>
       </header>
 
-      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-5 sm:px-6 py-6 sm:py-8 space-y-5">
+      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 [&_input]:h-11">
         {/* Dados pessoais */}
         <Card className="p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-2">
