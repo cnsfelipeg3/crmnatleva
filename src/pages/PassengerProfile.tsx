@@ -609,7 +609,16 @@ export default function PassengerProfile() {
                       <Input value={editForm.address_state || ""} onChange={e => setEditForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
                     </div>
                   </div>
-                </div>
+                  <div className="space-y-2 mt-3">
+                    <Label>Observações <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <Textarea
+                      value={editForm.address_notes || ""}
+                      onChange={e => setEditForm(f => ({ ...f, address_notes: e.target.value }))}
+                      placeholder="Ex.: ponto de referência, instruções de entrega…"
+                      rows={2}
+                      maxLength={500}
+                    />
+                  </div>
 
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>
