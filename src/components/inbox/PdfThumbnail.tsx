@@ -18,11 +18,35 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
   const [error, setError] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [renderWidth, setRenderWidth] = useState(width);
+  const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
 
   useEffect(() => {
     const availableWidth = Math.max(180, Math.min(width, window.innerWidth - 96));
     setRenderWidth(availableWidth);
   }, [width]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setError(false);
+    setLoaded(false);
+    setPdfData(null);
+
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) throw new Error("PDF indisponível");
+        return response.arrayBuffer();
+      })
+      .then((buffer) => {
+        if (!cancelled) setPdfData(new Uint8Array(buffer));
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
 
   if (error) {
     return (
@@ -50,8 +74,8 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
           <LoadingState variant="inline" size="sm" />
         </div>
       )}
-      <Document
-        file={{ url }}
+      {pdfData && <Document
+        file={{ data: pdfData }}
         options={{ disableRange: true, disableStream: true }}
         onLoadError={() => setError(true)}
         onSourceError={() => setError(true)}
@@ -67,7 +91,7 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
           onRenderError={() => setError(true)}
           loading={null}
         />
-      </Document>
+      </Document>}
     </div>
   );
 }
