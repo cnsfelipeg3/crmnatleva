@@ -83,20 +83,37 @@ serve(async (req) => {
       failed: 0,
     };
 
+    // Time budget: leave ~35s for AI streaming. Skip remaining media if budget exceeded.
+    const startedAt = Date.now();
+    const MEDIA_BUDGET_MS = 25_000;
+    const PER_MEDIA_TIMEOUT_MS = 12_000;
     const CHUNK_SIZE = 5;
+    stats.skipped = 0;
+
     for (let i = 0; i < toProcess.length; i += CHUNK_SIZE) {
+      if (Date.now() - startedAt > MEDIA_BUDGET_MS) {
+        stats.skipped += toProcess.length - i;
+        break;
+      }
       const chunk = toProcess.slice(i, i + CHUNK_SIZE);
       const results = await Promise.allSettled(
         chunk.map(async (m: any) => {
-          const r = await fetch(`${SUPABASE_URL}/functions/v1/livechat-process-media`, {
-            method: "POST",
-            headers: { Authorization: auth, "Content-Type": "application/json" },
-            body: JSON.stringify({ messageId: m.id }),
-          });
-          if (!r.ok) throw new Error(`status_${r.status}`);
-          const data = await r.json();
-          m.ai_media_transcript = data.transcript;
-          return data.cached;
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), PER_MEDIA_TIMEOUT_MS);
+          try {
+            const r = await fetch(`${SUPABASE_URL}/functions/v1/livechat-process-media`, {
+              method: "POST",
+              headers: { Authorization: auth, "Content-Type": "application/json" },
+              body: JSON.stringify({ messageId: m.id }),
+              signal: ctrl.signal,
+            });
+            if (!r.ok) throw new Error(`status_${r.status}`);
+            const data = await r.json();
+            m.ai_media_transcript = data.transcript;
+            return data.cached;
+          } finally {
+            clearTimeout(t);
+          }
         })
       );
       for (const r of results) {
