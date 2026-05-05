@@ -35,6 +35,26 @@ const CATEGORY_MAP: Record<string, string> = {
   seguro:             getProductLabel("seguro-viagem"),
 };
 
+/**
+ * Heurística para inferir categoria a partir do nome do arquivo quando o
+ * registro veio salvo como "outros" (ex.: vendas legado ou uploads antigos).
+ * Mantém a categoria original quando ela já é específica.
+ */
+function inferCategoryFromName(name: string, original: string): string {
+  if (original && original !== "outros") return original;
+  const n = (name || "").toLowerCase();
+  if (/espelho|print|reserva.*print|emiss[aã]o/.test(n) && !/voucher/.test(n)) return "prints_emissao";
+  if (/voucher.*a[eé]reo|aereo|a[eé]reo|bilhete|e-?ticket|passagem/.test(n)) return "voucher_aereo";
+  if (/voucher.*(hotel|hosped|pousada|resort)|hotel|hosped|pousada|resort/.test(n)) return "voucher_hospedagem";
+  if (/transfer|traslado|translad/.test(n)) return "voucher_transfer";
+  if (/pacote|operadora/.test(n)) return "voucher_pacote";
+  if (/ingresso|ticket\b|parque|show|atra[cç][aã]o|disney|universal/.test(n)) return "ingressos";
+  if (/comprovante|pix|pagamento|pago|cart[aã]o|boleto|recibo/.test(n)) return "comprovante";
+  if (/nota.?fiscal|\bnf\b|nfe/.test(n)) return "nota_fiscal";
+  if (/passaporte|rg|cpf|documento|cnh/.test(n)) return "outros";
+  return original || "outros";
+}
+
 function getFileIcon(fileName: string) {
   const ext = fileName?.split(".").pop()?.toLowerCase();
   if (ext === "pdf") return { Icon: FileText, color: "text-destructive" };
