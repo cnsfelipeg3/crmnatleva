@@ -627,66 +627,6 @@ serve(async (req) => {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (false) {
-
-    if (debugMode) {
-      const envCheck: Record<string, boolean> = {};
-      for (const k of ["SUPADATA_API_KEY", "LOVABLE_API_KEY", "ANTHROPIC_API_KEY", "FIRECRAWL_API_KEY"]) {
-        envCheck[k] = !!Deno.env.get(k);
-      }
-
-      const probes: Record<string, { status: number | null; ok: boolean; error?: string }> = {};
-
-      // 1) Supadata
-      const supadataKey = Deno.env.get("SUPADATA_API_KEY");
-      try {
-        const r = await fetch(
-          "https://api.supadata.ai/v1/transcript?url=https://youtu.be/dQw4w9WgXcQ",
-          { method: "GET", headers: supadataKey ? { "x-api-key": supadataKey } : {} },
-        );
-        const txt = await r.text().catch(() => "");
-        probes["supadata"] = { status: r.status, ok: r.ok };
-      } catch (e: any) {
-        probes["supadata"] = { status: null, ok: false, error: e.message };
-      }
-
-      // 2) TimedText
-      try {
-        const r = await fetch(
-          "https://www.youtube.com/api/timedtext?v=dQw4w9WgXcQ&lang=pt&fmt=json3",
-        );
-        const txt = await r.text().catch(() => "");
-        probes["timedtext"] = { status: r.status, ok: r.ok };
-      } catch (e: any) {
-        probes["timedtext"] = { status: null, ok: false, error: e.message };
-      }
-
-      // 3) InnerTube (iOS client)
-      try {
-        const r = await fetch(
-          "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              context: {
-                client: { clientName: "IOS", clientVersion: "19.29.1", hl: "pt" },
-              },
-              videoId: "dQw4w9WgXcQ",
-            }),
-          },
-        );
-        const txt = await r.text().catch(() => "");
-        probes["innertube_ios"] = { status: r.status, ok: r.ok };
-      } catch (e: any) {
-        probes["innertube_ios"] = { status: null, ok: false, error: e.message };
-      }
-
-      return new Response(JSON.stringify({ debug: true, env: envCheck, probes }, null, 2), {
-        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     if (!url) {
       return new Response(JSON.stringify({ error: "URL não fornecida" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
