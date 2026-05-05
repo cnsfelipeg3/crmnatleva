@@ -215,7 +215,7 @@ export default function PassengerSelfSignup() {
     );
   }
 
-  const sectionAccent = "hidden";
+  
 
   // Helpers for sequential DOB inputs
   const dobParts = (() => {
