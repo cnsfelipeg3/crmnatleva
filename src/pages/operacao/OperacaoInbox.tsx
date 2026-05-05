@@ -2431,10 +2431,10 @@ function OperacaoInboxInner() {
                       )}
                     </div>
                   </div>
-                  {/* Row 1.5: Delegation · oculto no mobile (vai pro menu de 3 pontinhos) */}
-                  {selectedDbId && !isMobile && (
-                    <div className="flex items-center gap-3 px-3 md:px-4 pb-1.5 text-[11px] flex-wrap">
-                      {(() => {
+                  {/* Row 2 · Desktop: tudo numa linha (atribuição + participantes + ações) · Mobile: nada (vai pro menu de 3 pontinhos) */}
+                  {!isMobile && (
+                    <div className="flex items-center gap-3 px-3 md:px-4 pb-2 text-[11px] flex-wrap">
+                      {selectedDbId && (() => {
                         const ownerId = selected.assigned_to || null;
                         const owner = ownerId ? profileMap.get(ownerId) : null;
                         const ownerLabel = owner?.full_name?.split(" ")[0] || owner?.email?.split("@")[0] || "Sem dono";
@@ -2453,7 +2453,7 @@ function OperacaoInboxInner() {
                         );
                         return (
                           <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground">Atribuída a:</span>
+                            <span className="text-muted-foreground">Atribuída:</span>
                             {isGestao ? (
                               <button type="button" onClick={() => setDelegateDialogOpen(true)} className="hover:opacity-80 transition">
                                 {inner}
@@ -2463,106 +2463,103 @@ function OperacaoInboxInner() {
                         );
                       })()}
 
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-muted-foreground">Participantes:</span>
-                        <div className="flex items-center -space-x-1.5">
-                          {participants.slice(0, 5).map(p => {
-                            const profile = profileMap.get(p.user_id);
-                            const initial = (profile?.full_name || profile?.email || "?")[0]?.toUpperCase();
-                            return (
-                              <div key={p.id} className="relative group/part">
-                                <div className="h-5 w-5 rounded-full border-2 border-background bg-secondary flex items-center justify-center overflow-hidden text-[9px] font-bold" title={profile?.full_name || profile?.email || ""}>
-                                  {profile?.avatar_url ? (
-                                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
-                                  ) : initial}
+                      {selectedDbId && (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-muted-foreground">Participantes:</span>
+                          <div className="flex items-center -space-x-1.5">
+                            {participants.slice(0, 5).map(p => {
+                              const profile = profileMap.get(p.user_id);
+                              const initial = (profile?.full_name || profile?.email || "?")[0]?.toUpperCase();
+                              return (
+                                <div key={p.id} className="relative group/part">
+                                  <div className="h-5 w-5 rounded-full border-2 border-background bg-secondary flex items-center justify-center overflow-hidden text-[9px] font-bold" title={profile?.full_name || profile?.email || ""}>
+                                    {profile?.avatar_url ? (
+                                      <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                                    ) : initial}
+                                  </div>
+                                  {isGestao && (
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); removeParticipant(p.id); }}
+                                      className="absolute -top-1 -right-1 w-3 h-3 bg-destructive text-destructive-foreground rounded-full text-[8px] hidden group-hover/part:flex items-center justify-center leading-none"
+                                      title="Remover participante"
+                                    >×</button>
+                                  )}
                                 </div>
-                                {isGestao && (
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); removeParticipant(p.id); }}
-                                    className="absolute -top-1 -right-1 w-3 h-3 bg-destructive text-destructive-foreground rounded-full text-[8px] hidden group-hover/part:flex items-center justify-center leading-none"
-                                    title="Remover participante"
-                                  >×</button>
-                                )}
+                              );
+                            })}
+                            {participants.length > 5 && (
+                              <div className="h-5 w-5 rounded-full border-2 border-background bg-muted text-muted-foreground flex items-center justify-center text-[8px] font-bold">
+                                +{participants.length - 5}
                               </div>
-                            );
-                          })}
-                          {participants.length > 5 && (
-                            <div className="h-5 w-5 rounded-full border-2 border-background bg-muted text-muted-foreground flex items-center justify-center text-[8px] font-bold">
-                              +{participants.length - 5}
-                            </div>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => setAddParticipantsDialogOpen(true)}
-                            className="h-5 w-5 rounded-full border-2 border-background border-dashed border-muted-foreground/40 hover:border-primary hover:text-primary text-muted-foreground flex items-center justify-center transition"
-                            title="Adicionar participante"
-                          >
-                            <UserPlus className="h-2.5 w-2.5" />
-                          </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => setAddParticipantsDialogOpen(true)}
+                              className="h-5 w-5 rounded-full border-2 border-background border-dashed border-muted-foreground/40 hover:border-primary hover:text-primary text-muted-foreground flex items-center justify-center transition"
+                              title="Adicionar participante"
+                            >
+                              <UserPlus className="h-2.5 w-2.5" />
+                            </button>
+                          </div>
                         </div>
+                      )}
+
+                      {/* Separator + Ações inline · alinhado à direita */}
+                      <div className="ml-auto flex items-center gap-0.5">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
+                              <Brain className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Resumir conversa com IA</TooltipContent>
+                        </Tooltip>
+                        <NathOpinionButton
+                          messages={currentMessages.map(m => ({
+                            role: m.sender_type === "atendente" ? "agent" : "user",
+                            content: m.text || "",
+                            agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
+                            timestamp: m.created_at,
+                            mediaUrl: m.media_url,
+                            messageType: m.message_type,
+                          }))}
+                          context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
+                          variant="inline"
+                          conversationId={selectedDbId || undefined}
+                        />
+                        <div className="h-4 w-px bg-border/60 mx-1" />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={selectionMode ? "secondary" : "ghost"}
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                if (selectionMode) cancelSelection();
+                                else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
+                              }}
+                            >
+                              <Forward className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLinkClient(true)}>
+                              <Link2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Vincular cliente</p></TooltipContent>
+                        </Tooltip>
+                        {activeFlowName && (
+                          <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-1">
+                            <Workflow className="h-3 w-3" />{activeFlowName}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   )}
-                  {/* Row 2 · Desktop: ações inline · Mobile: menu de 3 pontinhos */}
-                  {!isMobile ? (
-                    <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
-                      {/* Ações IA — destaque */}
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
-                            <Brain className="h-3.5 w-3.5 text-primary" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Resumir conversa com IA</TooltipContent>
-                      </Tooltip>
-                      <NathOpinionButton
-                        messages={currentMessages.map(m => ({
-                          role: m.sender_type === "atendente" ? "agent" : "user",
-                          content: m.text || "",
-                          agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
-                          timestamp: m.created_at,
-                          mediaUrl: m.media_url,
-                          messageType: m.message_type,
-                        }))}
-                        context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
-                        variant="inline"
-                        conversationId={selectedDbId || undefined}
-                      />
-
-                      <div className="h-4 w-px bg-border/60 mx-1" />
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={selectionMode ? "secondary" : "ghost"}
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              if (selectionMode) cancelSelection();
-                              else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
-                            }}
-                          >
-                            <Forward className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLinkClient(true)}>
-                            <Link2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
-                      </Tooltip>
-
-                      {activeFlowName && (
-                        <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-auto">
-                          <Workflow className="h-3 w-3" />{activeFlowName}
-                        </Badge>
-                      )}
-                    </div>
-                  ) : null}
                 </div>
 
                 {/* Messages */}
