@@ -1582,17 +1582,18 @@ function OperacaoInboxInner() {
   const handlePaste = useCallback(async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items || !selectedId) return;
+    const files: File[] = [];
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       if (item.kind === "file") {
-        e.preventDefault();
         const file = item.getAsFile();
-        if (!file) continue;
-        if (file.type.startsWith("image/")) {
-          setMediaPendingFile({ file, previewUrl: URL.createObjectURL(file), mediaType: "image" });
-        }
-        return;
+        if (file) files.push(file);
       }
+    }
+    if (files.length) {
+      e.preventDefault();
+      setDropAttachments(files);
+      setAttachmentDialogOpen(true);
     }
   }, [selectedId]);
 
