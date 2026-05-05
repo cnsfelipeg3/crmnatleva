@@ -268,6 +268,7 @@ export default function Passengers() {
       address_neighborhood: editForm.address_neighborhood || null,
       address_city: editForm.address_city || null,
       address_state: editForm.address_state || null,
+      address_notes: editForm.address_notes || null,
     }).eq("id", detailPax.id);
     setSavingEdit(false);
     if (error) {
