@@ -2736,9 +2736,16 @@ function OperacaoInboxInner() {
 
                                   if (isPdf && bestUrl) {
                                     return (
-                                      <button
-                                        type="button"
+                                      <div
                                         onClick={() => window.open(bestUrl, "_blank", "noopener,noreferrer")}
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            window.open(bestUrl, "_blank", "noopener,noreferrer");
+                                          }
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
                                         className="flex flex-col gap-1.5 w-[min(240px,calc(100vw-96px))] max-w-full text-left cursor-pointer"
                                         title="Abrir PDF"
                                       >
@@ -2746,7 +2753,6 @@ function OperacaoInboxInner() {
                                           url={bestUrl}
                                           filename={filename}
                                           width={240}
-                                          onClick={() => window.open(bestUrl, "_blank", "noopener,noreferrer")}
                                         />
                                         <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-primary-foreground/10 min-w-0">
                                           <FileText className="h-4 w-4 shrink-0 opacity-70" />
@@ -2759,7 +2765,7 @@ function OperacaoInboxInner() {
                                           </a>
                                         </div>
                                         {caption && <p className="text-sm leading-relaxed mt-0.5 break-words"><Linkify text={caption} /></p>}
-                                      </button>
+                                      </div>
                                     );
                                   }
 
