@@ -21,7 +21,6 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240, compact = fals
 
   const openPdf = () => {
     if (onClick) onClick();
-    else window.open(url, "_blank", "noopener,noreferrer");
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -35,10 +34,10 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240, compact = fals
     <div
       className="relative overflow-hidden rounded-md border border-border/60 bg-card cursor-pointer hover:bg-muted/50 transition-colors group"
       style={{ width: renderWidth, height: aspectHeight }}
-      onClick={openPdf}
+      onClick={onClick ? openPdf : undefined}
       onKeyDown={handleKeyDown}
-      role="button"
-      tabIndex={0}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       title={`Abrir ${label}`}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 text-center">
