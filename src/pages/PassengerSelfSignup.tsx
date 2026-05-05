@@ -215,7 +215,7 @@ export default function PassengerSelfSignup() {
     );
   }
 
-  const sectionAccent = "absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-t";
+  const sectionAccent = "hidden";
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
