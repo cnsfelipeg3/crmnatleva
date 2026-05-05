@@ -819,6 +819,17 @@ serve(async (req) => {
         body = JSON.stringify({ value: payload.message || "" });
         break;
 
+      // Encaminhar mensagem preservando o selo "Encaminhada" no WhatsApp
+      case "forward-message":
+        url = `${BASE_URL}/forward-message`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: formatPhoneForSending(payload.phone),
+          messageId: payload.messageId,
+          messagePhone: formatPhoneForSending(payload.messagePhone),
+        });
+        break;
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),

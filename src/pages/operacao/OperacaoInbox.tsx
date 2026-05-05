@@ -3136,6 +3136,7 @@ function OperacaoInboxInner() {
         onOpenChange={(v) => { setForwardOpen(v); if (!v) setForwardSeed(null); }}
         messages={forwardSeed || []}
         excludePhones={selected?.phone ? [selected.phone] : []}
+        sourcePhone={selected?.phone || undefined}
         candidates={forwardCandidates}
         onSent={() => { cancelSelection(); setForwardSeed(null); }}
       />
