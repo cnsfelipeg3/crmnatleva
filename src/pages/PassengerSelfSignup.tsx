@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle, Camera, X, Upload } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 function formatCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
@@ -52,7 +53,7 @@ function validateDob(iso: string): string {
 
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
-  phone: "", passport_number: "", passport_expiry: "",
+  phone: "", phone_country: "BR", passport_number: "", passport_expiry: "",
   passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
@@ -307,7 +308,7 @@ export default function PassengerSelfSignup() {
         </div>
       </header>
 
-      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-5 sm:px-6 py-6 sm:py-8 space-y-5">
+      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 [&_input]:h-11">
         {/* Dados pessoais */}
         <Card className="p-5 sm:p-6 space-y-4">
           <div className="flex items-center gap-2">
@@ -325,7 +326,7 @@ export default function PassengerSelfSignup() {
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
-              <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.25fr)] items-center gap-2">
+              <div className="flex w-full items-center gap-1.5">
                 <Input
                   ref={dobDayRef}
                   inputMode="numeric"
@@ -333,12 +334,13 @@ export default function PassengerSelfSignup() {
                   placeholder="DD"
                   aria-label="Dia"
                   autoComplete="bday-day"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.d}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("d", e.target.value)}
                 />
-                <span className="text-muted-foreground select-none">/</span>
+                <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
                   ref={dobMonthRef}
                   inputMode="numeric"
@@ -346,7 +348,8 @@ export default function PassengerSelfSignup() {
                   placeholder="MM"
                   aria-label="Mês"
                   autoComplete="bday-month"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.m}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("m", e.target.value)}
@@ -357,7 +360,7 @@ export default function PassengerSelfSignup() {
                     }
                   }}
                 />
-                <span className="text-muted-foreground select-none">/</span>
+                <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
                   ref={dobYearRef}
                   inputMode="numeric"
@@ -365,7 +368,8 @@ export default function PassengerSelfSignup() {
                   placeholder="AAAA"
                   aria-label="Ano"
                   autoComplete="bday-year"
-                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  maxLength={4}
+                  className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.y}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("y", e.target.value)}
@@ -396,7 +400,14 @@ export default function PassengerSelfSignup() {
           </div>
           <div className="space-y-2">
             <Label>Telefone com WhatsApp *</Label>
-            <Input inputMode="tel" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" required />
+            <PhoneInput
+              value={form.phone}
+              countryCode={form.phone_country}
+              onChange={(full, { country }) =>
+                setForm((f) => ({ ...f, phone: full, phone_country: country.code }))
+              }
+              required
+            />
           </div>
         </Card>
 
