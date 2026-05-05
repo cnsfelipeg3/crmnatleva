@@ -231,3 +231,6 @@ verify_jwt = true
 
 [functions.livechat-summary]
 verify_jwt = true
+
+[functions.nath-opinion]
+verify_jwt = true
