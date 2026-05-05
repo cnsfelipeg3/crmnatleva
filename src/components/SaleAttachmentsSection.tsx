@@ -142,7 +142,14 @@ export default function SaleAttachmentsSection({ attachments, loading = false }:
     return map;
   }, [attachments]);
 
-  const categories = Object.keys(grouped);
+  const CATEGORY_ORDER = [
+    "prints_emissao", "voucher_aereo", "voucher_hospedagem", "voucher_transfer",
+    "voucher_pacote", "ingressos", "comprovante", "nota_fiscal",
+    "voucher", "aereo", "hotel", "seguro", "outros",
+  ];
+  const categories = Object.keys(grouped).sort(
+    (a, b) => (CATEGORY_ORDER.indexOf(a) === -1 ? 99 : CATEGORY_ORDER.indexOf(a)) - (CATEGORY_ORDER.indexOf(b) === -1 ? 99 : CATEGORY_ORDER.indexOf(b))
+  );
 
   if (!attachments.length) {
     return (
