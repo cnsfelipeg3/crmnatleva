@@ -11,6 +11,7 @@ import {
   Utensils, Armchair, Baby, Luggage, Clock, Mountain, Palmtree,
   Wifi, CircleDollarSign, PlaneTakeoff
 } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 interface ProfileData {
   full_name: string;
