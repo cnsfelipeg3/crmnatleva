@@ -469,7 +469,7 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
             opacity: 0,
           }}
         >
-          <SummaryPdfTemplate data={pdfData} innerRef={pdfRef} />
+          <SummaryPdfTemplate data={pdfData} pagesContainerRef={pdfRef} />
         </div>
       )}
     </Dialog>
