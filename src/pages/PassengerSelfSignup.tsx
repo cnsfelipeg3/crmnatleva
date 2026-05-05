@@ -190,7 +190,7 @@ export default function PassengerSelfSignup() {
     };
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-4">
+        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-4">
           <img src={logo} alt="NatLeva" className="h-10 mx-auto" />
           <h1 className="text-xl font-display">Link indisponível</h1>
           <p className="text-sm text-muted-foreground">{map[reason] || "Não foi possível abrir este formulário."}</p>
@@ -202,8 +202,8 @@ export default function PassengerSelfSignup() {
   if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/70" />
+        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
+
           <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
           <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
           <h1 className="text-2xl font-display">Cadastro recebido!</h1>
@@ -215,26 +215,38 @@ export default function PassengerSelfSignup() {
     );
   }
 
-  const sectionAccent = "absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-t";
+  
+
+  // Helpers for sequential DOB inputs
+  const dobParts = (() => {
+    const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
+    return { d, m, y };
+  })();
+  const setDob = (next: { d?: string; m?: string; y?: string }) => {
+    const d = (next.d ?? dobParts.d).replace(/\D/g, "").slice(0, 2);
+    const m = (next.m ?? dobParts.m).replace(/\D/g, "").slice(0, 2);
+    const y = (next.y ?? dobParts.y).replace(/\D/g, "").slice(0, 4);
+    const iso = y && m && d ? `${y.padStart(4, "0")}-${m.padStart(2, "0")}-${d.padStart(2, "0")}` : "";
+    setForm((f) => ({ ...f, birth_date: iso }));
+  };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center">
+    <div className="min-h-screen w-full bg-background flex flex-col items-center">
       {/* Hero */}
-      <header className="w-full border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent">
-        <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-10 text-center space-y-3">
+      <header className="w-full border-b border-border/30">
+        <div className="w-full max-w-xl mx-auto px-5 sm:px-6 py-8 sm:py-10 text-center space-y-3">
           <img src={logo} alt="NatLeva" className="h-10 sm:h-12 mx-auto" />
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display tracking-tight">Seu cadastro de passageiro</h1>
-          <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-display tracking-tight">Seu cadastro de passageiro</h1>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
             Preenche com calma. Leva só uns minutinhos e nos ajuda a deixar a sua viagem 100% redonda.
           </p>
         </div>
       </header>
 
-      <form onSubmit={onSubmit} className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
+      <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-5 sm:px-6 py-6 sm:py-8 space-y-5">
         {/* Dados pessoais */}
-        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
-          <div className={sectionAccent} />
-          <div className="flex items-center gap-2 pt-1">
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
             <Plane className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
           </div>
@@ -249,7 +261,63 @@ export default function PassengerSelfSignup() {
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
-              <Input type="date" value={form.birth_date} onChange={(e) => setForm(f => ({ ...f, birth_date: e.target.value }))} />
+              <div className="flex items-center gap-2">
+                <Input
+                  inputMode="numeric"
+                  maxLength={2}
+                  placeholder="DD"
+                  className="text-center"
+                  value={dobParts.d}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                    setDob({ d: v });
+                    if (v.length === 2) {
+                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined;
+                      next?.focus();
+                    }
+                  }}
+                />
+                <span className="text-muted-foreground">/</span>
+                <Input
+                  inputMode="numeric"
+                  maxLength={2}
+                  placeholder="MM"
+                  className="text-center"
+                  value={dobParts.m}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
+                    setDob({ m: v });
+                    if (v.length === 2) {
+                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[2] as HTMLInputElement | undefined;
+                      next?.focus();
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && !dobParts.m) {
+                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[0] as HTMLInputElement | undefined);
+                      prev?.focus();
+                    }
+                  }}
+                />
+                <span className="text-muted-foreground">/</span>
+                <Input
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="AAAA"
+                  className="text-center"
+                  value={dobParts.y}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                    setDob({ y: v });
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Backspace" && !dobParts.y) {
+                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined);
+                      prev?.focus();
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -269,9 +337,8 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Endereço */}
-        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
-          <div className={sectionAccent} />
-          <div className="flex items-center gap-2 pt-1">
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
             <Globe2 className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Endereço</h2>
           </div>
@@ -341,9 +408,8 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Passaporte */}
-        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
-          <div className={sectionAccent} />
-          <div className="flex items-center gap-2 pt-1">
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Passaporte</h2>
           </div>
