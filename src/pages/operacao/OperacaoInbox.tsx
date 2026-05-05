@@ -12,7 +12,7 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
-  ChevronDown, UserPlus, MoreVertical,
+  ChevronDown, UserPlus, MoreVertical, Images,
 } from "lucide-react";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
@@ -23,6 +23,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingState } from "@/components/ui/loading-state";
 import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
+import { ConversationMediaGallery } from "@/components/inbox/ConversationMediaGallery";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -665,6 +666,7 @@ function OperacaoInboxInner() {
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardSeed, setForwardSeed] = useState<Message[] | null>(null);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggleMsgSelected = useCallback((id: string) => {
     setSelectedMsgIds(prev => {
@@ -2405,6 +2407,12 @@ function OperacaoInboxInner() {
                             </button>
                             <button
                               className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setGalleryOpen(true)}
+                            >
+                              <Images className="h-4 w-4" /> Mídias da conversa
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
                               onClick={() => setShowLinkClient(true)}
                             >
                               <Link2 className="h-4 w-4" /> Vincular cliente
@@ -2543,6 +2551,14 @@ function OperacaoInboxInner() {
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setGalleryOpen(true)}>
+                              <Images className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Mídias da conversa</p></TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
