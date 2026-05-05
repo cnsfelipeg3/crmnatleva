@@ -96,7 +96,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
   const itemBody = (
     <div
       onClick={() => onSelect(conv.id)}
-      className={`group px-2.5 py-2.5 cursor-pointer transition-all border-l-2 hover:bg-accent/30 ${
+      className={`group relative px-2.5 py-2.5 cursor-pointer transition-colors border-l-2 border-b border-b-border/40 hover:bg-accent/40 ${
         isSelected ? "bg-accent border-l-primary" : conv.is_archived ? "border-l-muted-foreground/30 bg-muted/20 opacity-75" : isUrgent ? "border-l-destructive/50" : "border-l-transparent"
       }`}
     >
@@ -178,16 +178,16 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
             </div>
           )}
 
-          {/* Bottom row: stage + tags */}
-          <div className="flex items-center gap-1 mt-1.5 flex-wrap">
-            <span className={`text-[8px] px-1.5 py-0.5 rounded-full text-white font-medium ${stageInfo.color}`}>
+          {/* Bottom row: stage + tags · uma linha só, com overflow oculto · evita reflow/overlap */}
+          <div className="flex items-center gap-1 mt-1.5 min-w-0 overflow-hidden flex-nowrap">
+            <span className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded-full text-white font-medium ${stageInfo.color}`}>
               {stageInfo.label}
             </span>
             {conv.tags?.slice(0, 2).map((tag, i) => (
-              <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{tag}</span>
+              <span key={i} className="shrink-0 text-[8px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium truncate max-w-[80px]">{tag}</span>
             ))}
             {conv.assigned_to && owner ? (
-              <span className={`inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full font-medium border ${isMine ? "bg-primary/10 text-primary border-primary/30" : "bg-secondary/60 text-foreground/70 border-border"}`}>
+              <span className={`shrink-0 inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full font-medium border ${isMine ? "bg-primary/10 text-primary border-primary/30" : "bg-secondary/60 text-foreground/70 border-border"}`}>
                 {owner.avatar_url ? (
                   <img src={owner.avatar_url} alt="" className="h-2.5 w-2.5 rounded-full object-cover" />
                 ) : (
@@ -195,25 +195,25 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
                     {(owner.full_name || owner.email || "?")[0]?.toUpperCase()}
                   </span>
                 )}
-                {(owner.full_name?.split(" ")[0] || owner.email?.split("@")[0] || "—")}
+                <span className="truncate max-w-[60px]">{(owner.full_name?.split(" ")[0] || owner.email?.split("@")[0] || "·")}</span>
               </span>
             ) : !conv.assigned_to ? (
-              <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-medium border border-amber-500/30">
+              <span className="shrink-0 inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-medium border border-amber-500/30">
                 ⚠ Sem dono
               </span>
             ) : null}
-            {/* Pin toggle on hover */}
+            {isUrgent && (
+              <span className="shrink-0 text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium flex items-center gap-0.5">
+                <AlertTriangle className="h-2.5 w-2.5" />
+              </span>
+            )}
+            {/* Pin toggle on hover · absoluto pra não empurrar layout */}
             <button
               onClick={(e) => onTogglePin(conv.id, e)}
-              className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+              className="ml-auto shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
             >
               {conv.is_pinned ? <PinOff className="h-3 w-3 text-muted-foreground" /> : <Pin className="h-3 w-3 text-muted-foreground" />}
             </button>
-            {isUrgent && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-destructive/10 text-destructive font-medium flex items-center gap-0.5">
-                <AlertTriangle className="h-2.5 w-2.5" /> Atenção
-              </span>
-            )}
           </div>
         </div>
       </div>
