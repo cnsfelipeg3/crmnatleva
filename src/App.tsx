@@ -45,7 +45,7 @@ const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
 const NatLevaIntelligence = lazy(() => import("@/pages/NatLevaIntelligence"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const UserLocations = lazy(() => import("@/pages/settings/UserLocations"));
-const LiveChat = lazy(() => import("@/pages/LiveChat"));
+
 const WhatsAppIntegration = lazy(() => import("@/pages/WhatsAppIntegration"));
 const WhatsAppQRConnect = lazy(() => import("@/pages/WhatsAppQRConnect"));
 const FlowBuilder = lazy(() => import("@/pages/FlowBuilder"));
@@ -261,7 +261,7 @@ function AppRoutes() {
           <Route path="/propostas/modelos/:id" element={<ProposalTemplateEditor />} />
           <Route path="/propostas/nova" element={<ProposalEditor />} />
           <Route path="/propostas/:id" element={<ProposalEditor />} />
-          <Route path="/livechat" element={<LiveChat />} />
+          
           <Route path="/livechat/integration" element={<WhatsAppIntegration />} />
           <Route path="/livechat/whatsapp-qr" element={<WhatsAppQRConnect />} />
           <Route path="/livechat/flows" element={<Navigate to="/ai-team/workflow" replace />} />

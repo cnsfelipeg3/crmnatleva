@@ -32,7 +32,7 @@ const loaders: Record<string, Loader> = {
   "/propostas": () => import("@/pages/Proposals"),
   "/propostas/nova": () => import("@/pages/ProposalEditor"),
   "/propostas/modelos": () => import("@/pages/ProposalTemplates"),
-  "/livechat": () => import("@/pages/LiveChat"),
+  
   "/financeiro": () => import("@/pages/financeiro/FinanceiroIndex"),
   "/financeiro/receber": () => import("@/pages/financeiro/ContasReceber"),
   "/financeiro/pagar": () => import("@/pages/financeiro/ContasPagar"),

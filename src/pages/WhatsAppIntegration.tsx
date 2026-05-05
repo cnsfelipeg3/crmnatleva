@@ -297,7 +297,7 @@ export default function WhatsAppIntegration() {
         {/* Header */}
         <div className="px-4 py-3 border-b border-border bg-card flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/livechat")}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/operacao/inbox")}>
               <ChevronLeft className="w-5 h-5" />
             </Button>
             <div>
