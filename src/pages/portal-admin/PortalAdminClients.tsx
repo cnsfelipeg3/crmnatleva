@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatDateBR } from "@/lib/dateFormat";
+import { CustomerSinceBadge } from "@/components/clients/CustomerSinceBadge";
 
 export default function PortalAdminClients() {
   const { user, isLoading: authLoading } = useAuth();
