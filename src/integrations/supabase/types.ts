@@ -392,6 +392,13 @@ export type Database = {
             foreignKeyName: "ai_chat_suggestions_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "ai_chat_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -474,6 +481,13 @@ export type Database = {
           response_time_ms?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_execution_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "ai_execution_logs_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -798,6 +812,13 @@ export type Database = {
             foreignKeyName: "ai_learning_events_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "ai_learning_events_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -942,6 +963,13 @@ export type Database = {
           used?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "ai_suggestions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "ai_suggestions_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -1499,6 +1527,13 @@ export type Database = {
             foreignKeyName: "automation_executions_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "automation_executions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -1781,6 +1816,13 @@ export type Database = {
           sender_type?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "chat_messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -2183,6 +2225,13 @@ export type Database = {
             foreignKeyName: "client_trip_memory_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "client_trip_memory_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -2336,6 +2385,54 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_assignments_log: {
+        Row: {
+          action: string
+          changed_at: string
+          changed_by: string | null
+          conversation_id: string
+          from_user_id: string | null
+          id: string
+          reason: string | null
+          to_user_id: string | null
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          changed_by?: string | null
+          conversation_id: string
+          from_user_id?: string | null
+          id?: string
+          reason?: string | null
+          to_user_id?: string | null
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          changed_by?: string | null
+          conversation_id?: string
+          from_user_id?: string | null
+          id?: string
+          reason?: string | null
+          to_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_assignments_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_assignments_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_chunks: {
         Row: {
           chunk_index: number
@@ -2483,6 +2580,58 @@ export type Database = {
             foreignKeyName: "conversation_messages_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_participants: {
+        Row: {
+          added_at: string
+          added_by: string | null
+          conversation_id: string
+          id: string
+          removed_at: string | null
+          removed_by: string | null
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          added_by?: string | null
+          conversation_id: string
+          id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          added_by?: string | null
+          conversation_id?: string
+          id?: string
+          removed_at?: string | null
+          removed_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_participants_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -2533,6 +2682,13 @@ export type Database = {
             foreignKeyName: "conversation_reconciliation_log_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_reconciliation_log_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -2564,6 +2720,13 @@ export type Database = {
           to_user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "conversation_transfers_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "conversation_transfers_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -4253,6 +4416,13 @@ export type Database = {
             foreignKeyName: "message_queue_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "message_queue_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -4332,6 +4502,13 @@ export type Database = {
           text?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
           {
             foreignKeyName: "messages_conversation_id_fkey"
             columns: ["conversation_id"]
@@ -6371,6 +6548,13 @@ export type Database = {
             foreignKeyName: "quotation_briefings_conversation_id_fkey"
             columns: ["conversation_id"]
             isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "quotation_briefings_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
             referencedRelation: "conversations"
             referencedColumns: ["id"]
           },
@@ -8358,6 +8542,32 @@ export type Database = {
       }
     }
     Views: {
+      conversation_team: {
+        Row: {
+          conversation_id: string | null
+          owner_user_id: string | null
+          participants: Json | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          owner_user_id?: string | null
+          participants?: never
+        }
+        Update: {
+          conversation_id?: string | null
+          owner_user_id?: string | null
+          participants?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversations_assigned_to_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_connection_current: {
         Row: {
           error_message: string | null

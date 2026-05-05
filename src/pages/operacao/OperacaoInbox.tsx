@@ -12,7 +12,13 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
+  ChevronDown, UserPlus,
 } from "lucide-react";
+import { useConversationDelegation } from "@/hooks/useConversationDelegation";
+import { useMyDelegations } from "@/hooks/useMyDelegations";
+import { DelegateConversationDialog } from "@/components/inbox/DelegateConversationDialog";
+import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
@@ -213,6 +219,35 @@ function OperacaoInboxInner() {
   const presenceByPhone = usePresenceByPhone();
 
   const selected = conversations.find(c => c.id === selectedId);
+
+  // ─── Delegação ───
+  const { user, role } = useAuth();
+  const isGestao = role === "admin" || role === "gestor";
+  useMyDelegations();
+  const selectedDbId = selected?.db_id || null;
+  const {
+    participants,
+    delegate,
+    addParticipants,
+    removeParticipant,
+  } = useConversationDelegation(selectedDbId);
+  const [delegateDialogOpen, setDelegateDialogOpen] = useState(false);
+  const [addParticipantsDialogOpen, setAddParticipantsDialogOpen] = useState(false);
+  const [profileMap, setProfileMap] = useState<Map<string, { id: string; full_name: string | null; email: string | null; avatar_url: string | null }>>(new Map());
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id, full_name, email, avatar_url");
+      if (cancelled || !data) return;
+      const m = new Map();
+      for (const p of data as any[]) m.set(p.id, p);
+      setProfileMap(m);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+  const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
 
   // ─── Extracted hooks: messages + realtime ───
   const {
@@ -931,6 +966,12 @@ function OperacaoInboxInner() {
         const q = searchQuery.toLowerCase();
         if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
+      // Filtro por dono (independente do filtro de status)
+      if (ownerFilter === "mine" && user) {
+        if (c.assigned_to !== user.id) return false;
+      } else if (ownerFilter === "unassigned") {
+        if (c.assigned_to) return false;
+      }
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
@@ -964,7 +1005,7 @@ function OperacaoInboxInner() {
       seen.add(norm);
       return true;
     });
-  }, [conversations, searchQuery, activeFilter]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, user]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
@@ -1945,6 +1986,34 @@ function OperacaoInboxInner() {
                   </button>
                 )}
               </div>
+              {/* Owner filter pills */}
+              <div className="flex items-center gap-1 mb-1.5 text-[10px]">
+                {([
+                  { k: "all", label: "Todas" },
+                  { k: "mine", label: "Minhas" },
+                  { k: "unassigned", label: "Sem dono" },
+                ] as const).map(o => (
+                  <button
+                    key={o.k}
+                    onClick={() => setOwnerFilter(o.k)}
+                    className={`px-2 py-0.5 rounded-md font-medium transition ${
+                      ownerFilter === o.k
+                        ? (o.k === "unassigned" ? "bg-amber-500/15 text-amber-600" : "bg-primary/15 text-primary")
+                        : "text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    {o.label}
+                    {o.k === "unassigned" && (() => {
+                      const n = conversations.filter(c => !c.assigned_to && !c.is_archived).length;
+                      return n > 0 ? <span className="ml-1 opacity-60">({n})</span> : null;
+                    })()}
+                    {o.k === "mine" && user && (() => {
+                      const n = conversations.filter(c => c.assigned_to === user.id && !c.is_archived).length;
+                      return n > 0 ? <span className="ml-1 opacity-60">({n})</span> : null;
+                    })()}
+                  </button>
+                ))}
+              </div>
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-1 pb-1.5 w-max">
                   {FILTERS.map(f => {
@@ -1977,6 +2046,8 @@ function OperacaoInboxInner() {
               onToggleArchive={handleToggleArchive}
               isLoading={!chatsLoadedRef.current}
               searchQuery={searchQuery}
+              ownerMap={profileMap}
+              currentUserId={user?.id || null}
             />
           </div>
 
@@ -2069,6 +2140,78 @@ function OperacaoInboxInner() {
                       )}
                     </div>
                   </div>
+                  {/* Row 1.5: Delegation */}
+                  {selectedDbId && (
+                    <div className="flex items-center gap-3 px-3 md:px-4 pb-1.5 text-[11px] flex-wrap">
+                      {(() => {
+                        const ownerId = selected.assigned_to || null;
+                        const owner = ownerId ? profileMap.get(ownerId) : null;
+                        const ownerLabel = owner?.full_name?.split(" ")[0] || owner?.email?.split("@")[0] || "Sem dono";
+                        const inner = (
+                          <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${owner ? "bg-secondary/40 border-border" : "bg-amber-500/10 text-amber-600 border-amber-500/30"}`}>
+                            {owner?.avatar_url ? (
+                              <img src={owner.avatar_url} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
+                            ) : (
+                              <span className="h-3.5 w-3.5 rounded-full bg-muted flex items-center justify-center text-[8px] font-bold">
+                                {owner ? (owner.full_name || owner.email || "?")[0]?.toUpperCase() : "—"}
+                              </span>
+                            )}
+                            <span className="font-medium">{ownerLabel}</span>
+                            {isGestao && <ChevronDown className="h-3 w-3 opacity-60" />}
+                          </span>
+                        );
+                        return (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Atribuída a:</span>
+                            {isGestao ? (
+                              <button type="button" onClick={() => setDelegateDialogOpen(true)} className="hover:opacity-80 transition">
+                                {inner}
+                              </button>
+                            ) : inner}
+                          </div>
+                        );
+                      })()}
+
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-muted-foreground">Participantes:</span>
+                        <div className="flex items-center -space-x-1.5">
+                          {participants.slice(0, 5).map(p => {
+                            const profile = profileMap.get(p.user_id);
+                            const initial = (profile?.full_name || profile?.email || "?")[0]?.toUpperCase();
+                            return (
+                              <div key={p.id} className="relative group/part">
+                                <div className="h-5 w-5 rounded-full border-2 border-background bg-secondary flex items-center justify-center overflow-hidden text-[9px] font-bold" title={profile?.full_name || profile?.email || ""}>
+                                  {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                                  ) : initial}
+                                </div>
+                                {isGestao && (
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); removeParticipant(p.id); }}
+                                    className="absolute -top-1 -right-1 w-3 h-3 bg-destructive text-destructive-foreground rounded-full text-[8px] hidden group-hover/part:flex items-center justify-center leading-none"
+                                    title="Remover participante"
+                                  >×</button>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {participants.length > 5 && (
+                            <div className="h-5 w-5 rounded-full border-2 border-background bg-muted text-muted-foreground flex items-center justify-center text-[8px] font-bold">
+                              +{participants.length - 5}
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setAddParticipantsDialogOpen(true)}
+                            className="h-5 w-5 rounded-full border-2 border-background border-dashed border-muted-foreground/40 hover:border-primary hover:text-primary text-muted-foreground flex items-center justify-center transition"
+                            title="Adicionar participante"
+                          >
+                            <UserPlus className="h-2.5 w-2.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                   {/* Row 2: Action buttons */}
                   <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
                     {activeFlowName && !isMobile && (
@@ -2675,6 +2818,22 @@ function OperacaoInboxInner() {
         excludePhones={selected?.phone ? [selected.phone] : []}
         candidates={forwardCandidates}
         onSent={() => { cancelSelection(); setForwardSeed(null); }}
+      />
+
+      {/* Delegation dialogs */}
+      <DelegateConversationDialog
+        open={delegateDialogOpen}
+        onOpenChange={setDelegateDialogOpen}
+        currentOwnerId={selected?.assigned_to || null}
+        conversationName={selected?.contact_name || selected?.phone || ""}
+        onDelegate={delegate}
+      />
+      <AddParticipantsDialog
+        open={addParticipantsDialogOpen}
+        onOpenChange={setAddParticipantsDialogOpen}
+        currentOwnerId={selected?.assigned_to || null}
+        existingParticipantIds={participants.map(p => p.user_id)}
+        onAdd={addParticipants}
       />
     </div>
   );

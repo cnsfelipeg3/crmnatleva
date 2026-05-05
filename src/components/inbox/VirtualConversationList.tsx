@@ -5,6 +5,12 @@ import type { Conversation } from "./types";
 import { ConversationItem } from "./ConversationItem";
 import { getActivePresence, type PresenceMap } from "@/hooks/usePresenceByPhone";
 
+interface OwnerInfo {
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface VirtualConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
@@ -16,6 +22,8 @@ interface VirtualConversationListProps {
   onToggleArchive?: (conv: Conversation) => void;
   isLoading: boolean;
   searchQuery: string;
+  ownerMap?: Map<string, OwnerInfo>;
+  currentUserId?: string | null;
 }
 
 export function VirtualConversationList({
@@ -29,6 +37,8 @@ export function VirtualConversationList({
   onToggleArchive,
   isLoading,
   searchQuery,
+  ownerMap,
+  currentUserId,
 }: VirtualConversationListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +109,8 @@ export function VirtualConversationList({
                 onTogglePin={onTogglePin}
                 onToggleUnread={onToggleUnread}
                 onToggleArchive={onToggleArchive}
+                owner={conv.assigned_to ? ownerMap?.get(conv.assigned_to) || null : null}
+                isMine={!!currentUserId && conv.assigned_to === currentUserId}
               />
             </div>
           );

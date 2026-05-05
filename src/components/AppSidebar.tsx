@@ -113,6 +113,33 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
   const [portalAdminOpen, setPortalAdminOpen] = useState(false);
   const isCollapsed = mobile ? false : collapsed;
   const [pendingBriefings, setPendingBriefings] = useState(0);
+  const [myInboxCount, setMyInboxCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.id) { setMyInboxCount(0); return; }
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const { count } = await (supabase as any)
+          .from("conversations")
+          .select("id", { count: "exact", head: true })
+          .eq("assigned_to", user.id)
+          .gt("unread_count", 0)
+          .eq("is_archived", false);
+        if (!cancelled) setMyInboxCount(count || 0);
+      } catch { /* silent */ }
+    };
+    refresh();
+    const interval = setInterval(refresh, 30000);
+    const channel = supabase
+      .channel("sidebar_inbox_count")
+      .on("postgres_changes",
+        { event: "*", schema: "public", table: "conversations", filter: `assigned_to=eq.${user.id}` },
+        refresh
+      )
+      .subscribe();
+    return () => { cancelled = true; clearInterval(interval); supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -204,6 +231,11 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           {item.to === "/cotacoes" && pendingBriefings > 0 && (
             <span className="ml-auto shrink-0 min-w-[15px] h-[15px] flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[8px] font-bold px-1 leading-none">
               {pendingBriefings}
+            </span>
+          )}
+          {item.to === "/operacao/inbox" && myInboxCount > 0 && (
+            <span className="ml-auto shrink-0 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[9px] font-bold px-1 leading-none">
+              {myInboxCount > 99 ? "99+" : myInboxCount}
             </span>
           )}
         </>

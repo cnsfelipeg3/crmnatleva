@@ -8,6 +8,12 @@ import type { Conversation, Stage } from "./types";
 import { formatTimestamp, formatPhoneDisplay, getStageInfo, stripQuotes } from "./helpers";
 import { WhatsAppAvatar } from "./WhatsAppAvatar";
 
+interface OwnerInfo {
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface ConversationItemProps {
   conv: Conversation;
   isSelected: boolean;
@@ -17,6 +23,8 @@ interface ConversationItemProps {
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
   onToggleArchive?: (conv: Conversation) => void;
+  owner?: OwnerInfo | null;
+  isMine?: boolean;
 }
 
 function getPreviewContent(raw: string) {
@@ -43,7 +51,7 @@ function TypingDots() {
   );
 }
 
-function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread, onToggleArchive }: ConversationItemProps) {
+function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread, onToggleArchive, owner, isMine }: ConversationItemProps) {
   const stageInfo = getStageInfo(conv.stage);
   const previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
   const contactName = conv.contact_name || "Sem nome";
@@ -138,6 +146,22 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
             {conv.tags?.slice(0, 2).map((tag, i) => (
               <span key={i} className="text-[8px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground font-medium">{tag}</span>
             ))}
+            {conv.assigned_to && owner ? (
+              <span className={`inline-flex items-center gap-1 text-[8px] px-1.5 py-0.5 rounded-full font-medium border ${isMine ? "bg-primary/10 text-primary border-primary/30" : "bg-secondary/60 text-foreground/70 border-border"}`}>
+                {owner.avatar_url ? (
+                  <img src={owner.avatar_url} alt="" className="h-2.5 w-2.5 rounded-full object-cover" />
+                ) : (
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted flex items-center justify-center text-[7px] font-bold">
+                    {(owner.full_name || owner.email || "?")[0]?.toUpperCase()}
+                  </span>
+                )}
+                {(owner.full_name?.split(" ")[0] || owner.email?.split("@")[0] || "—")}
+              </span>
+            ) : !conv.assigned_to ? (
+              <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 font-medium border border-amber-500/30">
+                ⚠ Sem dono
+              </span>
+            ) : null}
             {/* Pin toggle on hover */}
             <button
               onClick={(e) => onTogglePin(conv.id, e)}
@@ -211,6 +235,10 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.manually_marked_unread === next.conv.manually_marked_unread &&
     prev.conv.is_archived === next.conv.is_archived &&
     prev.profilePic === next.profilePic &&
-    prev.presence === next.presence
+    prev.presence === next.presence &&
+    prev.conv.assigned_to === next.conv.assigned_to &&
+    prev.isMine === next.isMine &&
+    prev.owner?.full_name === next.owner?.full_name &&
+    prev.owner?.avatar_url === next.owner?.avatar_url
   );
 });
