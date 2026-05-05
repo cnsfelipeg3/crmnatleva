@@ -99,6 +99,29 @@ export default function Proposals() {
     },
   });
 
+  const creatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    (proposals || []).forEach((p: any) => { if (p.created_by) ids.add(p.created_by); });
+    return Array.from(ids);
+  }, [proposals]);
+
+  const { data: creatorsMap } = useQuery({
+    queryKey: ["proposals-creators", creatorIds],
+    enabled: creatorIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", creatorIds);
+      if (error) throw error;
+      const map: Record<string, { name: string }> = {};
+      (data || []).forEach((u: any) => {
+        map[u.id] = { name: u.full_name || u.email || "Usuário" };
+      });
+      return map;
+    },
+  });
+
   const filtered = useMemo(() => {
     const q = deferredSearch.toLowerCase();
     return proposals?.filter(
