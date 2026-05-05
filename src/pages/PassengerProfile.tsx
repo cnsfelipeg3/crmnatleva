@@ -241,6 +241,7 @@ export default function PassengerProfile() {
       address_neighborhood: editForm.address_neighborhood || null,
       address_city: editForm.address_city || null,
       address_state: editForm.address_state || null,
+      address_notes: editForm.address_notes || null,
     }).eq("id", passenger.id);
     setSaving(false);
     if (error) {
