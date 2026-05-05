@@ -69,10 +69,16 @@ export default function PassengerSelfSignup() {
   const fetchCep = async (cep: string) => {
     const d = cep.replace(/\D/g, "");
     if (d.length !== 8) return;
+    setCepLoading(true);
+    setCepError("");
+    setCepFound(false);
     try {
       const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
       const j = await r.json();
-      if (j.erro) return;
+      if (j.erro) {
+        setCepError("CEP não encontrado");
+        return;
+      }
       setForm((f) => ({
         ...f,
         address_street: j.logradouro || f.address_street,
@@ -80,8 +86,17 @@ export default function PassengerSelfSignup() {
         address_city: j.localidade || f.address_city,
         address_state: j.uf || f.address_state,
       }));
-    } catch { /* ignore */ }
+      setCepFound(true);
+    } catch {
+      setCepError("Erro ao buscar CEP");
+    } finally {
+      setCepLoading(false);
+    }
   };
+
+  const cepDigits = form.address_cep.replace(/\D/g, "");
+  const cepInvalid = cepDigits.length > 0 && cepDigits.length < 8;
+  const stateInvalid = form.address_state.length > 0 && form.address_state.length !== 2;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
