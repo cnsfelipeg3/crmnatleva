@@ -198,31 +198,31 @@ export function DatePartsInput({
 
   return (
     <div className={cn("space-y-1", className)} aria-label={ariaLabel}>
-      <div className="flex w-full items-center gap-1.5">
+      <div className="flex w-full items-center gap-0.5">
         <Input
           ref={dRef} inputMode="numeric" pattern="[0-9]*" placeholder="DD" aria-label="Dia"
           autoComplete="off" maxLength={2} required={required}
-          className={cn("h-11 flex-1 min-w-0 text-center tabular-nums px-2", errCls, inputClassName)}
+          className={cn("h-11 w-9 flex-shrink-0 text-center tabular-nums px-0", errCls, inputClassName)}
           value={parts.d}
           onPaste={handlePaste}
           onChange={(e) => handleChange("d", e.target.value)}
           onKeyDown={(e) => handleKeyDown("d", e)}
         />
-        <span className="text-muted-foreground select-none shrink-0">/</span>
+        <span className="text-muted-foreground select-none shrink-0 px-0.5">/</span>
         <Input
           ref={mRef} inputMode="numeric" pattern="[0-9]*" placeholder="MM" aria-label="Mês"
           autoComplete="off" maxLength={2} required={required}
-          className={cn("h-11 flex-1 min-w-0 text-center tabular-nums px-2", errCls, inputClassName)}
+          className={cn("h-11 w-9 flex-shrink-0 text-center tabular-nums px-0", errCls, inputClassName)}
           value={parts.m}
           onPaste={handlePaste}
           onChange={(e) => handleChange("m", e.target.value)}
           onKeyDown={(e) => handleKeyDown("m", e)}
         />
-        <span className="text-muted-foreground select-none shrink-0">/</span>
+        <span className="text-muted-foreground select-none shrink-0 px-0.5">/</span>
         <Input
           ref={yRef} inputMode="numeric" pattern="[0-9]*" placeholder="AAAA" aria-label="Ano"
           autoComplete="off" maxLength={4} required={required}
-          className={cn("h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2", errCls, inputClassName)}
+          className={cn("h-11 flex-1 min-w-[3.5rem] text-center tabular-nums px-0", errCls, inputClassName)}
           value={parts.y}
           onPaste={handlePaste}
           onChange={(e) => handleChange("y", e.target.value)}
@@ -235,7 +235,7 @@ export function DatePartsInput({
               variant="ghost"
               size="icon"
               aria-label="Abrir calendário"
-              className="h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground"
+              className="h-11 w-8 shrink-0 text-muted-foreground hover:text-foreground"
             >
               <CalendarIcon className="h-4 w-4" />
             </Button>
