@@ -333,10 +333,30 @@ export default function Passengers() {
             {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
             Sincronizar das Vendas
           </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Passageiro <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-64">
+                  <DropdownMenuItem onClick={() => setDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    <div>
+                      <div className="text-sm font-medium">Cadastrar manualmente</div>
+                      <div className="text-xs text-muted-foreground">Preencher os dados aqui</div>
+                    </div>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setLinkDialogOpen(true)}>
+                    <Link2 className="w-4 h-4 mr-2" />
+                    <div>
+                      <div className="text-sm font-medium">Gerar link de auto-cadastro</div>
+                      <div className="text-xs text-muted-foreground">Cliente preenche pelo celular</div>
+                    </div>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <PassengerLinkDialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen} />
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-1" /> Novo Passageiro</Button>
-            </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Cadastrar Passageiro</DialogTitle>
