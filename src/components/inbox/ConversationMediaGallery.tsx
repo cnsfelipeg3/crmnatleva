@@ -1,7 +1,7 @@
 // ─── Galeria de mídias da conversa · estilo WhatsApp Web ───
 // Tabs: Mídia (imagens + vídeos), Documentos, Áudios.
 // Grid scrollável agrupado por mês · lightbox com navegação ← → e teclado.
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,42 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Message } from "./types";
 import { PdfThumbnail } from "./PdfThumbnail";
+
+
+// Pré-carrega a miniatura só quando o item entra no viewport · evita travar a galeria
+function LazyPdfThumb({ url, width = 40 }: { url: string; width?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || visible) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setVisible(true);
+            io.disconnect();
+            break;
+          }
+        }
+      },
+      { rootMargin: "300px 0px", threshold: 0.01 }
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [visible]);
+
+  return (
+    <div ref={ref} className="h-full w-full flex items-center justify-center">
+      {visible ? (
+        <PdfThumbnail url={url} width={width} />
+      ) : (
+        <FileText className="h-5 w-5 text-muted-foreground/60" />
+      )}
+    </div>
+  );
+}
 
 interface Props {
   open: boolean;
@@ -197,7 +233,7 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
                           >
                             <div className="shrink-0 h-12 w-10 rounded border bg-card overflow-hidden flex items-center justify-center">
                               {m.media_mimetype?.includes("pdf") || m.media_filename?.toLowerCase().endsWith(".pdf") ? (
-                                <PdfThumbnail url={mediaUrl(m)} width={40} />
+                                <LazyPdfThumb url={mediaUrl(m)} width={40} />
                               ) : (
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               )}
