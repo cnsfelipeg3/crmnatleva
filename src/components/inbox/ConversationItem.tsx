@@ -16,6 +16,7 @@ interface ConversationItemProps {
   onSelect: (id: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
+  onToggleArchive?: (conv: Conversation) => void;
 }
 
 function getPreviewContent(raw: string) {
