@@ -1,13 +1,14 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import {
   Brain, Loader2, Copy, Check, Mic, Image as ImageIcon, FileText, MessageSquare,
-  User, Clock, Activity, Zap, AlertTriangle, TrendingUp, Calendar, Timer,
+  User, Clock, Activity, Zap, AlertTriangle, TrendingUp, Calendar, Timer, Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import { SummaryPdfTemplate, type SummaryPdfData } from "./SummaryPdfTemplate";
 
 interface SummaryStats {
   total: number;
