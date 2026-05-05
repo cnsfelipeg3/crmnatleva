@@ -135,7 +135,7 @@ export default function SaleAttachmentsSection({ attachments, loading = false }:
   const grouped = useMemo(() => {
     const map: Record<string, Attachment[]> = {};
     attachments.forEach(att => {
-      const key = att.category || "outros";
+      const key = inferCategoryFromName(att.file_name || "", att.category || "outros");
       if (!map[key]) map[key] = [];
       map[key].push(att);
     });
