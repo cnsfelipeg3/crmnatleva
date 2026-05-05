@@ -94,6 +94,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
             </span>
             <div className="flex items-center gap-1 shrink-0">
               {conv.is_pinned && <Pin className="h-2.5 w-2.5 text-muted-foreground rotate-45" />}
+              {conv.is_archived && <Archive className="h-2.5 w-2.5 text-muted-foreground" />}
               {manuallyUnread && (
                 <span className="text-[8px] px-1.5 py-0.5 rounded-full bg-primary/15 text-primary font-bold">Não lido</span>
               )}
