@@ -31,6 +31,7 @@ export type PassengerFormState = {
   address_neighborhood: string;
   address_city: string;
   address_state: string;
+  address_notes: string;
   international_outside_sa: boolean;
 };
 
