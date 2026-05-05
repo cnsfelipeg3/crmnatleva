@@ -74,9 +74,10 @@ interface NathOpinionButtonProps {
   context?: string;
   variant?: "header" | "inline" | "floating";
   disabled?: boolean;
+  conversationId?: string;
 }
 
-export default function NathOpinionButton({ messages, context, variant = "header", disabled }: NathOpinionButtonProps) {
+export default function NathOpinionButton({ messages, context, variant = "header", disabled, conversationId }: NathOpinionButtonProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [opinion, setOpinion] = useState("");
@@ -87,6 +88,8 @@ export default function NathOpinionButton({ messages, context, variant = "header
   const [detailAction, setDetailAction] = useState<ImprovementAction | null>(null);
   const [detailReport, setDetailReport] = useState<DetailReport | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [stats, setStats] = useState<any>(null);
+  const [phase, setPhase] = useState<"idle" | "processing_media" | "generating">("idle");
   const { toast } = useToast();
 
   const askNath = useCallback(async () => {
@@ -99,54 +102,81 @@ export default function NathOpinionButton({ messages, context, variant = "header
     setOpinion("");
     setActions([]);
     setActionsExpanded(false);
-
-    const chatHistory = messages.map(m => {
-      const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
-      const type = m.messageType || "text";
-      let desc = m.content || "";
-      if (type === "audio") {
-        desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado — conteúdo de voz não transcrito]";
-      } else if (type === "image") {
-        desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
-      } else if (type === "video") {
-        desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
-      } else if (type === "document" || type === "file") {
-        desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
-      } else if (type === "sticker") {
-        desc = "[🏷️ STICKER]";
-      } else if (type === "location") {
-        desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
-      } else if (type === "contact" || type === "vcard") {
-        desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
-      }
-      if (m.mediaUrl && type !== "text") {
-        desc += ` (mídia: ${m.mediaUrl})`;
-      }
-      return `${label}: ${desc}`;
-    }).join("\n");
-
-    const fullContext = context ? `\nCONTEXTO: ${context}` : "";
+    setStats(null);
 
     try {
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({
-          question: `Analise esta conversa do meu time e me dê sua opinião como CEO da NatLeva.${fullContext}\n\nCONVERSA:\n${chatHistory}`,
-          agentName: "NATH",
-          agentRole: NATH_SYSTEM_PROMPT,
-        }),
-      });
+      let resp: Response;
+
+      if (conversationId) {
+        setPhase("processing_media");
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nath-opinion`;
+        resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            conversationId,
+            contactName: messages[0]?.agentName || "Lead",
+            customContext: context,
+            limit: 50,
+          }),
+        });
+        const statsHeader = resp.headers.get("X-Nath-Stats");
+        if (statsHeader) {
+          try { setStats(JSON.parse(statsHeader)); } catch {}
+        }
+        setPhase("generating");
+      } else {
+        const chatHistory = messages.map(m => {
+          const label = m.role === "agent" ? `AGENTE (${m.agentName || "IA"})` : "LEAD/CLIENTE";
+          const type = m.messageType || "text";
+          let desc = m.content || "";
+          if (type === "audio") {
+            desc = desc ? `[🎵 ÁUDIO] ${desc}` : "[🎵 ÁUDIO enviado · conteúdo de voz não transcrito]";
+          } else if (type === "image") {
+            desc = desc ? `[📷 IMAGEM] ${desc}` : "[📷 IMAGEM enviada]";
+          } else if (type === "video") {
+            desc = desc ? `[🎬 VÍDEO] ${desc}` : "[🎬 VÍDEO enviado]";
+          } else if (type === "document" || type === "file") {
+            desc = desc ? `[📄 DOCUMENTO] ${desc}` : "[📄 DOCUMENTO/ARQUIVO enviado]";
+          } else if (type === "sticker") {
+            desc = "[🏷️ STICKER]";
+          } else if (type === "location") {
+            desc = desc ? `[📍 LOCALIZAÇÃO] ${desc}` : "[📍 LOCALIZAÇÃO compartilhada]";
+          } else if (type === "contact" || type === "vcard") {
+            desc = desc ? `[👤 CONTATO] ${desc}` : "[👤 CARTÃO DE CONTATO compartilhado]";
+          }
+          if (m.mediaUrl && type !== "text") {
+            desc += ` (mídia: ${m.mediaUrl})`;
+          }
+          return `${label}: ${desc}`;
+        }).join("\n");
+
+        const fullContext = context ? `\nCONTEXTO: ${context}` : "";
+
+        const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/agent-chat`;
+        resp = await fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            question: `Analise esta conversa do meu time e me dê sua opinião como CEO da NatLeva.${fullContext}\n\nCONVERSA:\n${chatHistory}`,
+            agentName: "NATH",
+            agentRole: NATH_SYSTEM_PROMPT,
+          }),
+        });
+      }
 
       if (!resp.ok || !resp.body) {
         if (resp.status === 429) setOpinion("Estou sobrecarregada agora... tente novamente em instantes. 💜");
         else if (resp.status === 402) setOpinion("Créditos de IA insuficientes. Recarregue para continuar.");
         else setOpinion("Não consegui analisar agora. Tente novamente.");
         setLoading(false);
+        setPhase("idle");
         return;
       }
 
@@ -179,8 +209,9 @@ export default function NathOpinionButton({ messages, context, variant = "header
       setOpinion("Erro de conexão. Tente novamente.");
     } finally {
       setLoading(false);
+      setPhase("idle");
     }
-  }, [messages, context, toast]);
+  }, [messages, context, toast, conversationId]);
 
   const extractActions = useCallback(async () => {
     setActionsLoading(true);
@@ -651,8 +682,37 @@ Retorne SOMENTE o JSON, sem markdown.`,
                   <div className="absolute inset-0 rounded-full animate-ping opacity-20"
                     style={{ background: "rgba(168,85,247,0.2)" }} />
                 </div>
-                <p className="text-[12px] font-medium" style={{ color: "#A78BFA" }}>Nath está analisando a conversa...</p>
+                <p className="text-[12px] font-medium" style={{ color: "#A78BFA" }}>
+                  {phase === "processing_media" ? "Processando áudios, imagens e documentos..." : "Nath está analisando a conversa..."}
+                </p>
                 <p className="text-[10px]" style={{ color: "#6B21A8" }}>Visão de CEO · Proteção da marca · Oportunidades</p>
+              </div>
+            )}
+            {stats && conversationId && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[10px]">
+                <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(168,85,247,0.08)", color: "#A78BFA", border: "1px solid rgba(168,85,247,0.15)" }}>
+                  {stats.texts} textos
+                </span>
+                {stats.audios > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(59,130,246,0.08)", color: "#60A5FA", border: "1px solid rgba(59,130,246,0.15)" }}>
+                    🎵 {stats.audios} áudios{stats.cached > 0 ? ` (${stats.cached} cache)` : ""}
+                  </span>
+                )}
+                {stats.images > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.08)", color: "#34D399", border: "1px solid rgba(16,185,129,0.15)" }}>
+                    📷 {stats.images} imagens
+                  </span>
+                )}
+                {stats.documents > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.08)", color: "#FBBF24", border: "1px solid rgba(245,158,11,0.15)" }}>
+                    📄 {stats.documents} docs
+                  </span>
+                )}
+                {stats.failed > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(239,68,68,0.08)", color: "#F87171", border: "1px solid rgba(239,68,68,0.15)" }}>
+                    ⚠ {stats.failed} falhas
+                  </span>
+                )}
               </div>
             )}
             {opinion && (

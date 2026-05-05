@@ -2268,6 +2268,7 @@ function OperacaoInboxInner() {
                       }))}
                       context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
                       variant="inline"
+                      conversationId={selectedDbId || undefined}
                     />
                     <Tooltip>
                       <TooltipTrigger asChild>
