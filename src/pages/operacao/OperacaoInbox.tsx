@@ -692,6 +692,7 @@ function OperacaoInboxInner() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingTimerRef = useRef<ReturnType<typeof setInterval>>();
   const audioChunksRef = useRef<Blob[]>([]);
+  const recordingCancelledRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [fileInputAccept, setFileInputAccept] = useState("*/*");
   const [fileInputMediaType, setFileInputMediaType] = useState("document");
