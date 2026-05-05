@@ -12,7 +12,13 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
+  ChevronDown, UserPlus,
 } from "lucide-react";
+import { useConversationDelegation } from "@/hooks/useConversationDelegation";
+import { useMyDelegations } from "@/hooks/useMyDelegations";
+import { DelegateConversationDialog } from "@/components/inbox/DelegateConversationDialog";
+import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
+import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
