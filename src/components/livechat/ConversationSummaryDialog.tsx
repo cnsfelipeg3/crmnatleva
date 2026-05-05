@@ -257,34 +257,29 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
         import("html2canvas"),
         import("jspdf"),
       ]);
-      // Wait a tick to ensure render
-      await new Promise((r) => setTimeout(r, 50));
-      const canvas = await html2canvas(pdfRef.current, {
-        scale: 2,
-        backgroundColor: "#FFFFFF",
-        useCORS: true,
-        logging: false,
-        windowWidth: 800,
-      });
-      const imgData = canvas.toDataURL("image/png");
+      // Wait a tick + image load
+      await new Promise((r) => setTimeout(r, 80));
+      const pageEls = Array.from(pdfRef.current.querySelectorAll<HTMLElement>("[data-pdf-page]"));
+      if (!pageEls.length) throw new Error("Nenhuma página renderizada");
+
       const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
       const pageW = pdf.internal.pageSize.getWidth();
       const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-      if (imgH <= pageH) {
-        pdf.addImage(imgData, "PNG", 0, 0, imgW, imgH);
-      } else {
-        // Multi-page slicing
-        let remaining = imgH;
-        let position = 0;
-        while (remaining > 0) {
-          pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-          remaining -= pageH;
-          position -= pageH;
-          if (remaining > 0) pdf.addPage();
-        }
+
+      for (let i = 0; i < pageEls.length; i++) {
+        const canvas = await html2canvas(pageEls[i], {
+          scale: 2,
+          backgroundColor: "#FFFFFF",
+          useCORS: true,
+          logging: false,
+          windowWidth: 800,
+        });
+        const imgData = canvas.toDataURL("image/png");
+        if (i > 0) pdf.addPage();
+        // Stretch to full A4 (each page element is already A4-proportional)
+        pdf.addImage(imgData, "PNG", 0, 0, pageW, pageH);
       }
+
       const safeName = (contactName || "cliente").replace(/[^\w\sÀ-ÿ-]/g, "").replace(/\s+/g, "_").slice(0, 40);
       const ts = new Date().toISOString().slice(0, 10);
       pdf.save(`Natleva_Resumo_${safeName}_${ts}.pdf`);
@@ -474,7 +469,7 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
             opacity: 0,
           }}
         >
-          <SummaryPdfTemplate data={pdfData} innerRef={pdfRef} />
+          <SummaryPdfTemplate data={pdfData} pagesContainerRef={pdfRef} />
         </div>
       )}
     </Dialog>
