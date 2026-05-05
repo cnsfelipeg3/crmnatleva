@@ -21,6 +21,13 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
   const documentFile = useMemo(() => (pdfData ? { data: pdfData } : null), [pdfData]);
   const documentOptions = useMemo(() => ({ disableRange: true, disableStream: true }), []);
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (!onClick) return;
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
 
   useEffect(() => {
     const availableWidth = Math.max(180, Math.min(width, window.innerWidth - 96));
@@ -55,8 +62,13 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
   if (error) {
     return (
       <div
-        className="flex items-center justify-center rounded-md bg-foreground/5 border border-border/40"
+        className="flex items-center justify-center rounded-md bg-foreground/5 border border-border/40 cursor-pointer hover:opacity-95 transition-opacity"
         style={{ width: renderWidth, height: aspectHeight }}
+        onClick={onClick}
+        onKeyDown={handleKeyDown}
+        role={onClick ? "button" : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        title={filename || "Abrir PDF"}
       >
         <FileText className="h-10 w-10 opacity-50" />
       </div>
@@ -68,6 +80,9 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
       className="relative rounded-md overflow-hidden bg-background border border-border/40 cursor-pointer hover:opacity-95 transition-opacity"
       style={{ width: renderWidth, height: aspectHeight }}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
       title={filename || "Abrir PDF"}
     >
       {!loaded && (
