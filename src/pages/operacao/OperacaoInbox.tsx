@@ -2819,6 +2819,22 @@ function OperacaoInboxInner() {
         candidates={forwardCandidates}
         onSent={() => { cancelSelection(); setForwardSeed(null); }}
       />
+
+      {/* Delegation dialogs */}
+      <DelegateConversationDialog
+        open={delegateDialogOpen}
+        onOpenChange={setDelegateDialogOpen}
+        currentOwnerId={selected?.assigned_to || null}
+        conversationName={selected?.contact_name || selected?.phone || ""}
+        onDelegate={delegate}
+      />
+      <AddParticipantsDialog
+        open={addParticipantsDialogOpen}
+        onOpenChange={setAddParticipantsDialogOpen}
+        currentOwnerId={selected?.assigned_to || null}
+        existingParticipantIds={participants.map(p => p.user_id)}
+        onAdd={addParticipants}
+      />
     </div>
   );
 }
