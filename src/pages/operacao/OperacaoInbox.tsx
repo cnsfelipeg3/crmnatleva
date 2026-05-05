@@ -2900,8 +2900,8 @@ function OperacaoInboxInner() {
 
                 {/* Input area */}
                 <div
-                  className="border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20"
-                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" } : undefined}
+                  className={`border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20 ${isMobile ? "sticky bottom-0 left-0 right-0" : ""}`}
+                  style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)", paddingLeft: "calc(env(safe-area-inset-left) + 0.5rem)", paddingRight: "calc(env(safe-area-inset-right) + 0.5rem)" } : undefined}
                 >
                   {isRecording ? (
                     <div className="flex items-center gap-3">
@@ -2924,9 +2924,9 @@ function OperacaoInboxInner() {
                     </div>
                   ) : isMobile ? (
                     /* ─── WhatsApp-style mobile composer ─── */
-                    <div className="flex items-end gap-2 w-full">
+                    <div className="flex items-end gap-2 w-full flex-nowrap">
                       {/* Pill input with embedded actions */}
-                      <div className="flex-1 min-w-0 flex items-end gap-1 bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
+                      <div className="flex-1 min-w-0 flex items-end gap-1 flex-nowrap bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
                         <Popover open={showMobilePlusMenu} onOpenChange={setShowMobilePlusMenu}>
                           <PopoverTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5">
@@ -2956,8 +2956,8 @@ function OperacaoInboxInner() {
                           onChange={e => { setInputText(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
                           onKeyDown={handleKeyDown} onPaste={handlePaste}
                           placeholder="Mensagem"
-                          className="flex-1 min-h-[36px] max-h-[120px] resize-none text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 leading-snug placeholder:text-muted-foreground/60 shadow-none"
-                          style={{ height: "36px" }} rows={1}
+                          className="flex-1 min-w-0 min-h-[36px] max-h-[120px] resize-none text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 leading-snug placeholder:text-muted-foreground/60 shadow-none break-words"
+                          style={{ height: "36px", wordBreak: "break-word", overflowWrap: "anywhere" }} rows={1}
                         />
 
                         {inputText.trim() && (
