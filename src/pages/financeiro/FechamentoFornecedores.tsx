@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   Building2, Calendar, FileText, Download, Plus, CheckCircle2, AlertTriangle,
   Eye, DollarSign, CreditCard, Search, RefreshCw, Printer, ArrowUpDown
 } from "lucide-react";
@@ -469,11 +470,11 @@ export default function FechamentoFornecedores() {
            </div>
           <div className="w-[160px]">
             <Label className="text-xs">Data emissão de</Label>
-            <Input type="date" className="h-9" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} />
+            <DatePartsInput value={filterDateFrom} onChange={(iso) => setFilterDateFrom(iso)} inputClassName="h-9" />
           </div>
           <div className="w-[160px]">
             <Label className="text-xs">Data emissão até</Label>
-            <Input type="date" className="h-9" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} />
+            <DatePartsInput value={filterDateTo} onChange={(iso) => setFilterDateTo(iso)} inputClassName="h-9" />
           </div>
           {(filterDateFrom || filterDateTo) && (
             <Button variant="ghost" size="sm" className="h-9 mt-auto" onClick={() => { setFilterDateFrom(""); setFilterDateTo(""); }}>
@@ -710,7 +711,7 @@ export default function FechamentoFornecedores() {
           <div className="space-y-4 mt-2">
             <div>
               <Label className="text-xs font-semibold">Data do Pagamento</Label>
-              <Input type="date" value={payForm.payment_date} onChange={e => setPayForm(f => ({ ...f, payment_date: e.target.value }))} />
+              <DatePartsInput value={payForm.payment_date} onChange={(iso) => setPayForm(f => ({ ...f, payment_date: iso }))} />
             </div>
             <div>
               <Label className="text-xs font-semibold">Forma de Pagamento</Label>

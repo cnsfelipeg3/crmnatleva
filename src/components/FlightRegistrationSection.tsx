@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -680,12 +681,7 @@ function FlightGroupCard({
 
             <div className="space-y-1">
               <Label className="text-xs font-medium">Data *</Label>
-              <Input
-                type="date"
-                value={first?.departure_date || defaultDate}
-                onChange={e => onSegmentUpdate(0, "departure_date", e.target.value)}
-                className="text-sm"
-              />
+              <DatePartsInput value={first?.departure_date || defaultDate} onChange={(iso) => onSegmentUpdate(0, "departure_date", iso)} inputClassName="text-sm" />
             </div>
           </div>
 
@@ -851,12 +847,7 @@ function SegmentCard({ seg, segIndex, totalSegments, onUpdate, defaultAirline, d
           </div>
           <div className="space-y-1">
             <Label className="text-xs">Data</Label>
-            <Input
-              type="date"
-              value={seg.departure_date || defaultDate}
-              onChange={e => onUpdate("departure_date", e.target.value)}
-              className="text-sm"
-            />
+            <DatePartsInput value={seg.departure_date || defaultDate} onChange={(iso) => onUpdate("departure_date", iso)} inputClassName="text-sm" />
           </div>
         </div>
       )}

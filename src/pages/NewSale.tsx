@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -1169,7 +1170,7 @@ export default function NewSale() {
               </div>
               <div className="space-y-2">
                 <Label>Data de Fechamento</Label>
-                <Input type="date" value={form.close_date} onChange={(e) => updateForm("close_date", e.target.value)} />
+                <DatePartsInput value={form.close_date} onChange={(iso) => updateForm("close_date", iso)} />
               </div>
               <div className="space-y-2">
                 <Label>Vendedor Responsável {isAdmin && <span className="text-[10px] text-muted-foreground font-normal">(admin pode trocar)</span>}</Label>
@@ -1435,7 +1436,7 @@ export default function NewSale() {
                         </div>
                       </div>
                       <div className="space-y-2"><Label>Descrição</Label><Input value={product.description} onChange={(e) => updateProduct(product.id, "description", e.target.value)} placeholder="Detalhes do produto" /></div>
-                      <div className="space-y-2"><Label>Data</Label><Input type="date" value={product.date} onChange={(e) => updateProduct(product.id, "date", e.target.value)} /></div>
+                      <div className="space-y-2"><Label>Data</Label><DatePartsInput value={product.date} onChange={(iso) => updateProduct(product.id, "date", iso)} /></div>
                       <div className="space-y-2"><Label>Código de Reserva</Label><Input value={product.reservation_code} onChange={(e) => updateProduct(product.id, "reservation_code", e.target.value.toUpperCase())} placeholder="Localizador / confirmação" className="font-mono" /></div>
                     </div>
 

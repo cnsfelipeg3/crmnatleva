@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
@@ -256,11 +257,11 @@ export default function HotelEntriesEditor({
                     {/* Check-in date + time */}
                     <div className="space-y-1.5">
                       <Label className="text-xs">Check-in (data)</Label>
-                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkin_date} onChange={e => updateHotel(hotel.id, "hotel_checkin_date", e.target.value)} />
+                      <DatePartsInput value={hotel.hotel_checkin_date} onChange={(iso) => updateHotel(hotel.id, "hotel_checkin_date", iso)} inputClassName="h-9 text-sm" />
                     </div>
                     <div className="space-y-1.5">
                       <Label className="text-xs">Check-out (data)</Label>
-                      <Input type="date" className="h-9 text-sm" value={hotel.hotel_checkout_date} onChange={e => updateHotel(hotel.id, "hotel_checkout_date", e.target.value)} />
+                      <DatePartsInput value={hotel.hotel_checkout_date} onChange={(iso) => updateHotel(hotel.id, "hotel_checkout_date", iso)} inputClassName="h-9 text-sm" />
                     </div>
 
                     {/* Check-in/out times */}

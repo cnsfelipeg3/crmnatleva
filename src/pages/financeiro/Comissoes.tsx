@@ -10,6 +10,7 @@ import { Building2, UserCheck, Users, DollarSign, ChevronDown, ChevronRight, Lay
 import { fetchAllRows } from "@/lib/fetchAll";
 import { cn } from "@/lib/utils";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   parseCommissionRules,
   computeProgressiveCommission,
   computeDefaultCommission,
@@ -149,9 +150,9 @@ export default function Comissoes() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Input type="date" value={periodFrom} onChange={(e) => setPeriodFrom(e.target.value)} className="w-36 text-xs" />
+          <DatePartsInput value={periodFrom} onChange={(iso) => setPeriodFrom(iso)} inputClassName="w-36 text-xs" />
           <span className="text-muted-foreground text-xs">até</span>
-          <Input type="date" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} className="w-36 text-xs" />
+          <DatePartsInput value={periodTo} onChange={(iso) => setPeriodTo(iso)} inputClassName="w-36 text-xs" />
         </div>
       </div>
 

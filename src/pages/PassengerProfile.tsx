@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   User, Pencil, Save, X, ShoppingCart, Plane, AlertTriangle,
   FileText, Upload, Download, Loader2, MessageCircle, ArrowLeft,
   Calendar, DollarSign, TrendingUp, MapPin, BarChart3, Brain,
@@ -543,7 +544,7 @@ export default function PassengerProfile() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
                     <Label>Data de Nascimento</Label>
-                    <Input type="date" value={editForm.birth_date || ""} onChange={e => setEditForm(f => ({ ...f, birth_date: e.target.value }))} />
+                    <DatePartsInput value={editForm.birth_date || ""} onChange={(iso) => setEditForm(f => ({ ...f, birth_date: iso }))} />
                   </div>
                   <div className="space-y-2">
                     <Label>Telefone</Label>
@@ -557,7 +558,7 @@ export default function PassengerProfile() {
                   </div>
                   <div className="space-y-2">
                     <Label>Validade Passaporte</Label>
-                    <Input type="date" value={editForm.passport_expiry || ""} onChange={e => setEditForm(f => ({ ...f, passport_expiry: e.target.value }))} />
+                    <DatePartsInput value={editForm.passport_expiry || ""} onChange={(iso) => setEditForm(f => ({ ...f, passport_expiry: iso }))} />
                   </div>
                 </div>
 

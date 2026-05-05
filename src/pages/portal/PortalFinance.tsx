@@ -9,6 +9,7 @@ import { getMockTripDetail, getMockTripsForDashboard } from "@/lib/portalMockTri
 import { getMockFinanceData } from "@/lib/portalMockFinance";
 import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   CircleDollarSign, Wallet, CreditCard, PiggyBank, TrendingUp,
   Plus, ArrowUpRight, ArrowDownRight, Receipt, ShoppingBag,
   UtensilsCrossed, Car, Ticket, ShieldCheck, Package, Sparkles,
@@ -1570,7 +1571,7 @@ function AddExpenseDialog({ open, onClose, budgetId, categories, cards, onSaved 
                 </div>
                 <div>
                   <label className="text-xs font-bold text-muted-foreground/60 mb-1.5 block">Data</label>
-                  <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-xl" />
+                  <DatePartsInput value={date} onChange={(iso) => setDate(iso)} inputClassName="rounded-xl" />
                 </div>
               </div>
               <div>

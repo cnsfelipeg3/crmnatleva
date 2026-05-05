@@ -12,6 +12,7 @@ import { User, Briefcase, DollarSign, Clock, Shield, Key, FileText, MessageSquar
 import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTemplate } from "@/lib/systemMenus";
 import CommissionRulesEditor from "@/components/rh/CommissionRulesEditor";
 import AccessInfoPanel from "@/components/rh/AccessInfoPanel";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const POSITIONS = [
   "SDR",
@@ -293,7 +294,7 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
             <div><Label>RG</Label><Input value={f("rg")} onChange={e => set("rg", e.target.value)} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Data de nascimento</Label><Input type="date" value={f("birth_date")} onChange={e => set("birth_date", e.target.value)} /></div>
+            <div><Label>Data de nascimento</Label><DatePartsInput value={f("birth_date")} onChange={(iso) => set("birth_date", iso)} /></div>
             <div><Label>Telefone</Label><Input value={f("phone")} onChange={e => set("phone", e.target.value)} /></div>
           </div>
           <div><Label>Email</Label><Input type="email" value={f("email")} onChange={e => set("email", e.target.value)} /></div>
@@ -343,7 +344,7 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
                 <SelectContent>{CONTRACT_TYPES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Data de admissão</Label><Input type="date" value={f("hire_date")} onChange={e => set("hire_date", e.target.value)} /></div>
+            <div><Label>Data de admissão</Label><DatePartsInput value={f("hire_date")} onChange={(iso) => set("hire_date", iso)} /></div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Supervisor direto</Label>

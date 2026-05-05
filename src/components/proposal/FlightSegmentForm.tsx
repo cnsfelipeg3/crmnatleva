@@ -11,6 +11,7 @@ import { Search, Loader2, Sparkles, Luggage, Briefcase } from "lucide-react";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import type { FlightSegmentData } from "./ProposalFlightSearch";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 interface FlightSegmentFormProps {
   seg: FlightSegmentData;
@@ -167,7 +168,7 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Data</Label>
-          <Input type="date" value={seg.departure_date} onChange={(e) => onUpdate("departure_date", e.target.value)} />
+          <DatePartsInput value={seg.departure_date} onChange={(iso) => onUpdate("departure_date", iso)} />
         </div>
         <div className="space-y-1">
           <Label className="text-xs">Horário saída</Label>

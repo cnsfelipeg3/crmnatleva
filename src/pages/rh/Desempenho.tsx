@@ -12,6 +12,7 @@ import { Progress } from "@/components/ui/progress";
 import { Plus, Star } from "lucide-react";
 import { toast } from "sonner";
 import { RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from "recharts";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const KPI_FIELDS = [
   { key: "attendance_score", label: "Presença" },
@@ -150,7 +151,7 @@ export default function Desempenho() {
                 <SelectContent>{employees.map(e => <SelectItem key={e.id} value={e.id}>{e.full_name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Mês Referência</Label><Input type="date" value={form.period_month || ""} onChange={e => setForm({ ...form, period_month: e.target.value })} /></div>
+            <div><Label>Mês Referência</Label><DatePartsInput value={form.period_month || ""} onChange={(iso) => setForm({ ...form, period_month: iso })} /></div>
             {KPI_FIELDS.map(f => (
               <div key={f.key}><Label>{f.label} (0-100)</Label><Input type="number" min={0} max={100} value={form[f.key] || ""} onChange={e => setForm({ ...form, [f.key]: e.target.value })} /></div>
             ))}

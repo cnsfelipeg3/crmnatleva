@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, AlertTriangle, Search } from "lucide-react";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const WARNING_TYPES = ["atraso_recorrente", "falta", "conduta", "desempenho", "outro"];
 const SEVERITIES = [
@@ -133,7 +134,7 @@ export default function Advertencias() {
                 <SelectContent>{SEVERITIES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Data</Label><Input type="date" value={form.date_issued || ""} onChange={e => setForm({ ...form, date_issued: e.target.value })} /></div>
+            <div><Label>Data</Label><DatePartsInput value={form.date_issued || ""} onChange={(iso) => setForm({ ...form, date_issued: iso })} /></div>
             <div><Label>Descrição *</Label><Textarea value={form.description || ""} onChange={e => setForm({ ...form, description: e.target.value })} rows={3} /></div>
             <div><Label>Emitido por</Label>
               <Select value={form.issued_by || ""} onValueChange={v => setForm({ ...form, issued_by: v })}>

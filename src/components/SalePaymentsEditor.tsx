@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, Trash2, CreditCard, Banknote, Wallet, AlertCircle, Clock, CheckCircle2, AlertTriangle, Paperclip, FileText, X, Upload, ExternalLink } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 export interface SalePayment {
   id: string;
@@ -312,11 +313,11 @@ export default function SalePaymentsEditor({ payments, onChange, totalSaleValue 
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Data do pagamento</Label>
-                <Input type="date" className="h-9" value={payment.payment_date} onChange={e => updatePayment(payment.id, "payment_date", e.target.value)} />
+                <DatePartsInput value={payment.payment_date} onChange={(iso) => updatePayment(payment.id, "payment_date", iso)} inputClassName="h-9" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Data de vencimento</Label>
-                <Input type="date" className="h-9" value={payment.due_date || ""} onChange={e => updatePayment(payment.id, "due_date", e.target.value)} />
+                <DatePartsInput value={payment.due_date || ""} onChange={(iso) => updatePayment(payment.id, "due_date", iso)} inputClassName="h-9" />
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Observações</Label>

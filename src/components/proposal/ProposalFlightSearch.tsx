@@ -14,6 +14,7 @@ import FlightSegmentForm from "./FlightSegmentForm";
 import ConnectionLayoverBadge from "./ConnectionLayoverBadge";
 import { UnifiedLegCard } from "./ProposalPreviewRenderer";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 export interface FlightSegmentData {
   airline: string;
@@ -370,13 +371,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                     </div>
                     <div className="space-y-1 sm:col-span-2">
                       <Label className="text-[11px]">Data exibida</Label>
-                      <Input
-                        type="date"
-                        value={headSeg.leg_date_override ?? ""}
-                        onChange={(e) => updateSegment(headIdx, "leg_date_override", e.target.value)}
-                        placeholder={autoDate}
-                        className="h-8 text-sm"
-                      />
+                      <DatePartsInput value={headSeg.leg_date_override ?? ""} onChange={(iso) => updateSegment(headIdx, "leg_date_override", iso)} inputClassName="h-8 text-sm" />
                     </div>
                   </div>
                 </Card>
@@ -442,7 +437,7 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Data do voo</Label>
-                              <Input type="date" value={form.date} onChange={(e) => setForm(idx, { ...form, date: e.target.value })} />
+                              <DatePartsInput value={form.date} onChange={(iso) => setForm(idx, { ...form, date: iso })} />
                             </div>
                             <div className="space-y-1">
                               <Label className="text-xs">Origem</Label>

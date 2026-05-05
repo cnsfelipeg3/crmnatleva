@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+import { DatePartsInput } from "@/components/ui/date-parts-input";
   Plus, Users, Receipt, ArrowRight, Check, Trash2, Edit2,
   Camera, CircleDollarSign, PieChart, BarChart3, UserPlus,
   ChevronRight, Loader2, X, DollarSign, UtensilsCrossed,
@@ -1022,7 +1023,7 @@ function AddExpenseDialog({ open, onClose, group, members, onSaved, recentExpens
                 </div>
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-foreground">Data</label>
-                  <Input type="date" value={date} onChange={e => setDate(e.target.value)} />
+                  <DatePartsInput value={date} onChange={(iso) => setDate(iso)} />
                 </div>
               </div>
 

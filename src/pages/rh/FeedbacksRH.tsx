@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, MessageSquare, Search } from "lucide-react";
 import { toast } from "sonner";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 const TYPES = [
   { value: "positivo", label: "Positivo", color: "bg-emerald-500/10 text-emerald-600" },
@@ -135,11 +136,11 @@ export default function FeedbacksRH() {
                 <SelectContent>{TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div><Label>Data</Label><Input type="date" value={form.meeting_date || ""} onChange={e => setForm({ ...form, meeting_date: e.target.value })} /></div>
+            <div><Label>Data</Label><DatePartsInput value={form.meeting_date || ""} onChange={(iso) => setForm({ ...form, meeting_date: iso })} /></div>
             <div><Label>Contexto</Label><Textarea value={form.context || ""} onChange={e => setForm({ ...form, context: e.target.value })} rows={2} /></div>
             <div><Label>Pontos Abordados *</Label><Textarea value={form.points || ""} onChange={e => setForm({ ...form, points: e.target.value })} rows={3} /></div>
             <div><Label>Plano de Ação</Label><Textarea value={form.action_plan || ""} onChange={e => setForm({ ...form, action_plan: e.target.value })} rows={2} /></div>
-            <div><Label>Próximo Follow-up</Label><Input type="date" value={form.next_followup || ""} onChange={e => setForm({ ...form, next_followup: e.target.value })} /></div>
+            <div><Label>Próximo Follow-up</Label><DatePartsInput value={form.next_followup || ""} onChange={(iso) => setForm({ ...form, next_followup: iso })} /></div>
             <Button onClick={handleSave} className="w-full">Salvar</Button>
           </div>
         </DialogContent>
