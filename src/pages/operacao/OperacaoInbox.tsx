@@ -194,6 +194,8 @@ function OperacaoInboxInner() {
 
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
+  const [searchingContent, setSearchingContent] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
