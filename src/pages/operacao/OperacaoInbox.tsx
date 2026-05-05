@@ -1740,6 +1740,120 @@ function OperacaoInboxInner() {
     setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
   }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage, finalizeMessageStatus]);
 
+  // Generic send for drag&drop / preview dialog
+  const sendOneFileWithCaption = useCallback(async (file: File, caption: string) => {
+    if (!selectedId) return;
+    const phone = selectedId.replace("wa_", "");
+    const isImage = file.type.startsWith("image/");
+    const isVideo = file.type.startsWith("video/");
+    const kind: MsgType = isImage ? "image" : isVideo ? "video" : "document";
+    const ext = file.name.split(".").pop() || "bin";
+    const folder = isImage ? "images" : isVideo ? "videos" : "documents";
+    const fileName = `${kind}_${Date.now()}.${ext}`;
+    const publicUrl = await uploadToStorage(file, folder, fileName);
+    const tempId = `temp_media_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const mime = guessMimeFromExt(file.name, file.type);
+    const action = isImage ? "send-image" : isVideo ? "send-video" : "send-document";
+    const sendPayload: any = isImage
+      ? { phone, image: publicUrl, caption }
+      : isVideo
+      ? { phone, video: publicUrl, caption }
+      : { phone, document: publicUrl, fileName: file.name, extension: ext };
+    const text = isImage || isVideo ? caption : "";
+
+    setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
+      id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+      message_type: kind, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+      media_url: publicUrl, media_storage_url: publicUrl, media_mimetype: mime, media_filename: file.name, media_size_bytes: file.size, media_status: "downloaded",
+    }] }));
+
+    let messageDbId: string | null = null;
+    try {
+      messageDbId = await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: kind,
+        text,
+        mediaUrl: publicUrl,
+        mediaStorageUrl: publicUrl,
+        mediaMimetype: mime,
+        mediaFilename: file.name,
+        mediaSizeBytes: file.size,
+        mediaStatus: "downloaded",
+        externalMessageId: tempId,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        originalPayload: { action, payload: sendPayload },
+      });
+    } catch (e) { console.error("[DROP-SEND] persist failed", e); }
+
+    const outcome = await sendViaZapi(action, sendPayload);
+    const realId = outcome.data?.messageId || outcome.data?.id || tempId;
+    if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+    if (outcome.ok) {
+      lastMsgIdsRef.current.add(realId);
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+      ) }));
+      // Documents don't carry caption reliably · send as follow-up text
+      if (kind === "document" && caption.trim()) {
+        try { await sendViaZapi("send-text", { phone, message: caption }); } catch {}
+      }
+    } else {
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+      ) }));
+      throw new Error(humanizeFailureReason(outcome.reason));
+    }
+  }, [selectedId, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
+
+  const handleAttachmentDialogSend = useCallback(async (items: { file: File; caption: string }[]) => {
+    if (!selectedId || !items.length) return;
+    setAttachmentSending(true);
+    try {
+      for (const it of items) {
+        try { await sendOneFileWithCaption(it.file, it.caption); }
+        catch (e: any) {
+          toast({ title: `Falha ao enviar ${it.file.name}`, description: String(e?.message || e), variant: "destructive" });
+        }
+      }
+      setAttachmentDialogOpen(false);
+      setDropAttachments([]);
+    } finally {
+      setAttachmentSending(false);
+    }
+  }, [selectedId, sendOneFileWithCaption]);
+
+  // Drag & Drop on chat area
+  const handleChatDragEnter = useCallback((e: React.DragEvent) => {
+    if (!selectedId) return;
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    setIsDraggingFiles(true);
+  }, [selectedId]);
+  const handleChatDragOver = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+  const handleChatDragLeave = useCallback((e: React.DragEvent) => {
+    if (!e.dataTransfer?.types?.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) setIsDraggingFiles(false);
+  }, []);
+  const handleChatDrop = useCallback((e: React.DragEvent) => {
+    if (!selectedId) return;
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDraggingFiles(false);
+    const files = Array.from(e.dataTransfer?.files || []);
+    if (!files.length) return;
+    setDropAttachments(files);
+    setAttachmentDialogOpen(true);
+  }, [selectedId]);
+
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     const conv = conversations.find(c => c.id === convId);
