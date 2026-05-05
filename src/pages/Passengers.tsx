@@ -81,6 +81,7 @@ export default function Passengers() {
   const [stateFilter, setStateFilter] = useState("all");
   const [docFilter, setDocFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
   const [detailPax, setDetailPax] = useState<Passenger | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
