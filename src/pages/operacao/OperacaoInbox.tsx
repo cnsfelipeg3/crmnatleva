@@ -931,6 +931,9 @@ function OperacaoInboxInner() {
         const q = searchQuery.toLowerCase();
         if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
       }
+      // Arquivadas só aparecem quando o filtro "archived" está ativo
+      if (activeFilter === "archived") return !!c.is_archived;
+      if (c.is_archived) return false;
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
       if (activeFilter === "groups") {
