@@ -3180,6 +3180,12 @@ function OperacaoInboxInner() {
         existingParticipantIds={participants.map(p => p.user_id)}
         onAdd={addParticipants}
       />
+      <ConversationMediaGallery
+        open={galleryOpen}
+        onOpenChange={setGalleryOpen}
+        messages={currentMessages as any}
+        contactName={selected?.contact_name || selected?.phone || ""}
+      />
     </div>
   );
 }
