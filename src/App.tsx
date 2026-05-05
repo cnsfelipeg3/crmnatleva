@@ -203,6 +203,7 @@ function AppRoutes() {
   const isPublicRoute =
     location.pathname.startsWith("/proposta/") ||
     location.pathname.startsWith("/portal/") ||
+    location.pathname.startsWith("/cadastro-passageiro/") ||
     location.pathname === "/cadastro-fornecedor";
 
   // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
