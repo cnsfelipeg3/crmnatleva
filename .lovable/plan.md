@@ -1,69 +1,77 @@
 ## Objetivo
 
-Permitir que o cliente preencha os próprios dados via link público, em um formulário com identidade visual NatLeva. No botão "Novo Passageiro", oferecer duas opções: cadastro manual (atual) ou copiar link público.
+Substituir todos os 49 inputs nativos `type="date"` espalhados em 23 arquivos pelo componente `DatePartsInput` (mesmo usado no cadastro de passageiro). Sem mexer em dados, apenas UX e formato de entrada.
 
-## Fluxo
+## Por que é seguro
 
-1. Em `/passageiros`, o botão "Novo Passageiro" abre um pequeno menu:
-   - Cadastro manual (abre o Dialog atual)
-   - Copiar link de auto-cadastro (gera/copia URL pública única)
-2. Cliente acessa o link, preenche o formulário e envia.
-3. Submissão cria registro em `passengers` via Edge Function (sem auth), com `created_via = 'self_signup'`.
-4. Atendente recebe o novo passageiro automaticamente listado em `/passageiros` (e visualiza um badge "Auto-cadastro").
+- O `DatePartsInput` já existe e está testado.
+- Ele emite o mesmo formato ISO `YYYY-MM-DD` que o `<input type="date">` produz hoje.
+- Nenhuma migração de banco, nenhuma mudança em queries, nenhum risco de perda de dados.
+- A troca é puramente visual/UX: campo segmentado DD / MM / AAAA com auto-tab, back-tab, paste inteligente e validação.
 
-## Estrutura técnica
+## Escopo (49 ocorrências em 23 arquivos)
 
-### Banco
-Migration:
-- Tabela `passenger_signup_links` (id, slug único, created_by, agency_id, label opcional, expires_at nullable, max_uses nullable, uses_count, active boolean, created_at).
-- Coluna `created_via text` em `passengers` (default `'manual'`).
-- Coluna `signup_link_id uuid` em `passengers` (referência opcional).
-- RLS: `passenger_signup_links` segue padrão atual (anon ALL para testes, conforme memória do projeto).
+Agrupados por área para execução em lotes incrementais:
 
-### Edge Function `passenger-self-signup`
-- `verify_jwt = false` em `supabase/config.toml`.
-- POST `{ slug, payload }` → valida slug ativo, valida payload com Zod, normaliza nome (`smartCapitalize`), CPF e telefone. Insere em `passengers`, incrementa `uses_count`, retorna `{ ok: true }`.
-- GET `?slug=...` → retorna metadados públicos mínimos (logo agência, nome agência, ativo/expirado) para renderizar a página.
+**Lote 1 · RH (já parcial)**
+- `src/components/rh/EmployeeFormTabs.tsx`
+- `src/pages/rh/MetasBonus.tsx`
+- `src/pages/rh/FeedbacksRH.tsx`
+- `src/pages/rh/Desempenho.tsx`
+- `src/pages/rh/ContratosDocumentos.tsx`
+- `src/pages/rh/Advertencias.tsx`
 
-### Rotas
-- Adicionar `/cadastro-passageiro/:slug` à lista `isPublicRoute` em `src/App.tsx`.
-- Nova página `src/pages/PassengerSelfSignup.tsx` (lazy-loaded, sem layout autenticado).
+**Lote 2 · Vendas / Propostas / Operações**
+- `src/pages/NewSale.tsx`
+- `src/pages/SaleDetail.tsx`
+- `src/pages/TripAlterations.tsx`
+- `src/pages/ProposalEditor.tsx`
+- `src/components/proposal/ProposalFlightSearch.tsx`
+- `src/components/proposal/FlightSegmentForm.tsx`
+- `src/components/FlightRegistrationSection.tsx`
+- `src/components/HotelEntriesEditor.tsx`
+- `src/components/SalePaymentsEditor.tsx`
 
-### Componentes novos
-- `src/pages/PassengerSelfSignup.tsx` — landing pública com hero NatLeva (logo, fundo glass-card, gold-line, tipografia display) e formulário multi-seção:
-  1. Dados pessoais: nome completo*, CPF*, nascimento*, RG, e-mail*.
-  2. Contato: telefone/WhatsApp* (com máscara BR).
-  3. Endereço: CEP (auto-preenche via ViaCEP), rua, número, complemento, bairro, cidade, estado.
-  4. Viagem internacional (toggle "Vai viajar para fora da América do Sul?"): se sim, exige passaporte* e validade*. Se não, campos opcionais.
-  - Validação Zod, mensagens inline, botão "Enviar dados" com loading.
-  - Tela de sucesso com checkmark e mensagem "Recebemos seus dados, obrigado!".
-- `src/components/passengers/PassengerLinkDialog.tsx` — dialog acionado pelo dropdown, gera o slug, exibe URL, botão copiar, opção "abrir link em nova aba" e seletor de validade (7/30 dias/sem validade).
-- Substituir o botão único "Novo Passageiro" por `DropdownMenu` com:
-  - Cadastrar manualmente
-  - Gerar link de auto-cadastro
+**Lote 3 · Passageiros / Financeiro**
+- `src/pages/Passengers.tsx`
+- `src/pages/PassengerProfile.tsx`
+- `src/pages/financeiro/Comissoes.tsx`
+- `src/pages/financeiro/FechamentoFornecedores.tsx`
 
-### Identidade visual
-- Reaproveitar `glass-card`, tokens semânticos e classes existentes (cards `#FFFFFF`, texto `#111827`, borda `0.75rem`, accent gold `4px`).
-- Logo NatLeva no topo (usar mesmo asset do portal/proposta pública).
-- Tipografia `font-display` para títulos, `Inter` no corpo.
-- Layout single-column, max-w-2xl, padding generoso, responsivo mobile-first.
+**Lote 4 · Portal do viajante**
+- `src/pages/portal/PortalProfile.tsx`
+- `src/pages/portal/PortalNewQuote.tsx`
+- `src/pages/portal/PortalFinance.tsx`
+- `src/components/portal/PortalExpenseSplit.tsx`
 
-### Validação de internacional
-- Lista fixa de países América do Sul não exige passaporte. Como o formulário foca em destino futuro, basta um toggle binário "Viagem internacional fora da América do Sul" para alternar `required` no passaporte e validade.
+## Padrão de substituição
 
-## Arquivos
+Antes:
+```tsx
+<Input type="date" value={form.data} onChange={(e) => setForm({...form, data: e.target.value})} />
+```
 
-**Criar**
-- `supabase/functions/passenger-self-signup/index.ts`
-- `src/pages/PassengerSelfSignup.tsx`
-- `src/components/passengers/PassengerLinkDialog.tsx`
+Depois:
+```tsx
+<DatePartsInput value={form.data} onChange={(iso) => setForm({...form, data: iso})} />
+```
 
-**Modificar**
-- `src/pages/Passengers.tsx` (dropdown no botão, badge "Auto-cadastro")
-- `src/App.tsx` (rota pública + lazy import + isPublicRoute)
-- `supabase/config.toml` (registrar a função com `verify_jwt = false`)
-- Migration SQL para tabela e colunas novas
+Regras de aplicação por contexto:
+- **Datas de nascimento**: `disableFuture`
+- **Validade de documento / vencimento**: `disablePast`
+- **Datas de viagem (embarque/desembarque, check-in/out)**: sem restrição (pode ser passada para registro retroativo)
+- **Filtros de período**: sem restrição
 
-## Não incluso
-- Confirmação por e-mail/SMS do cliente (pode ser próximo passo).
-- Edição de cadastro pelo próprio cliente após submissão.
+## Fora do escopo (mantidos como estão)
+
+- Date pickers de **filtros inteligentes** (`SmartFilters.tsx`) que usam shadcn Calendar com seleção por range · UX já validada e diferente.
+- Componentes de **visualização** (TripCard, JourneyHero, ItineraryDocument) que apenas exibem datas, não recebem input.
+- `calendar.tsx` (componente base shadcn).
+
+## Execução
+
+Faço os 4 lotes em sequência, um commit por lote, para você validar cada área antes de seguir. Se preferir tudo de uma vez, executo em uma única passada · me avise.
+
+## Riscos
+
+Praticamente zero. O componente já está em produção no cadastro de passageiro funcionando bem. Caso algum campo específico tenha lógica customizada (ex.: `min`/`max` dinâmico), eu trato no momento da troca preservando o comportamento.
