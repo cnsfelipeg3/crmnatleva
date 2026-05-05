@@ -52,6 +52,7 @@ import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
+import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
