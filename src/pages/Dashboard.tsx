@@ -40,7 +40,7 @@ interface Sale {
 }
 
 interface Profile { id: string; full_name: string; }
-interface Client { id: string; display_name: string; created_at: string; }
+interface Client { id: string; display_name: string; created_at: string; customer_since: string | null; }
 interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
 interface CostItem {
   sale_id: string; category: string; miles_quantity: number | null;
