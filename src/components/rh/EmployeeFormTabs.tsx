@@ -39,6 +39,7 @@ const POSITIONS = [
   "Estagiário",
   "CEO",
   "Presidente",
+  "Boss",
   "Vice-Presidente",
   "Auxiliar de Limpeza",
   "Assistente Financeiro",
