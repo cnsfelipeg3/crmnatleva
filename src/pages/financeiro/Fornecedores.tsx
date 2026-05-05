@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X, Gavel, Link2, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { CepInput } from "@/components/ui/cep-input";
 
 interface MilesProgram {
   id: string;
