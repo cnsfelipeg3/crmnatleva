@@ -10,6 +10,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { CheckCircle, Clock, AlertTriangle, Search, Plus, Download } from "lucide-react";
+import { useSalesScope } from "@/hooks/useSalesScope";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtDate = (d: string | null) => d ? new Date(d + "T00:00:00").toLocaleDateString("pt-BR") : "-";
@@ -17,22 +18,28 @@ const fmtDate = (d: string | null) => d ? new Date(d + "T00:00:00").toLocaleDate
 export default function ContasReceber() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { canViewAll, sellerId } = useSalesScope();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<any>(null);
 
   const { data: receivables = [], isLoading } = useQuery({
-    queryKey: ["accounts-receivable"],
+    queryKey: ["accounts-receivable", canViewAll, sellerId],
     queryFn: async () => {
-      const { data } = await supabase.from("accounts_receivable").select("*").order("due_date", { ascending: true });
-      return data || [];
+      let q = supabase.from("accounts_receivable").select("*, sale:sales(seller_id)").order("due_date", { ascending: true });
+      const { data } = await q;
+      const all = data || [];
+      if (canViewAll) return all;
+      return all.filter((r: any) => !r.sale || r.sale.seller_id === sellerId);
     },
   });
 
   const { data: sales = [] } = useQuery({
-    queryKey: ["ar-sales"],
+    queryKey: ["ar-sales", canViewAll, sellerId],
     queryFn: async () => {
-      const { data } = await supabase.from("sales").select("id, display_id, name, received_value, status, payment_method, created_at, seller_id");
+      let q = supabase.from("sales").select("id, display_id, name, received_value, status, payment_method, created_at, seller_id");
+      if (!canViewAll && sellerId) q = q.eq("seller_id", sellerId);
+      const { data } = await q;
       return data || [];
     },
   });

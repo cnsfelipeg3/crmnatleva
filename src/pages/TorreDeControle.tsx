@@ -6,6 +6,7 @@ import { Plane, ClipboardCheck, Hotel, RotateCcw, AlertTriangle, Eye } from "luc
 import { format, isValid, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useSalesScope } from "@/hooks/useSalesScope";
 
 interface KpiData {
   activeTrips: number;
@@ -26,23 +27,27 @@ interface UrgentItem {
 
 export default function TorreDeControle() {
   const navigate = useNavigate();
+  const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
   const [kpis, setKpis] = useState<KpiData>({ activeTrips: 0, pendingCheckins: 0, pendingLodgings: 0, pendingAlterations: 0 });
   const [urgentItems, setUrgentItems] = useState<UrgentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (scopeLoading) return;
     const fetchData = async () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
 
         // Active trips: currently traveling (departure <= today <= return)
         // or departed within 30 days with no return date
-        const { data: activeSales } = await supabase
+        let q = supabase
           .from("sales")
-          .select("id, name, departure_date, return_date, destination_iata, origin_iata")
+          .select("id, name, departure_date, return_date, destination_iata, origin_iata, seller_id")
           .not("departure_date", "is", null)
           .neq("status", "Cancelado")
           .lte("departure_date", today);
+        if (!canViewAll && sellerId) q = q.eq("seller_id", sellerId);
+        const { data: activeSales } = await q;
 
         const activeTrips = (activeSales || []).filter(s => {
           if (s.return_date && s.return_date >= today) return true;
@@ -81,16 +86,31 @@ export default function TorreDeControle() {
         // Build urgent items list
         const items: UrgentItem[] = [];
 
+        // Set of sale_ids visíveis ao usuário (para filtrar tarefas)
+        let visibleSaleIds: Set<string> | null = null;
+        if (!canViewAll && sellerId) {
+          const { data: visibleSales } = await supabase
+            .from("sales")
+            .select("id")
+            .eq("seller_id", sellerId);
+          visibleSaleIds = new Set((visibleSales || []).map((s: any) => s.id));
+        }
+
         // Upcoming checkins
-        const { data: checkins } = await supabase
+        let checkinsQuery = supabase
           .from("checkin_tasks")
           .select("id, sale_id, direction, departure_datetime_utc, status, priority_score")
           .eq("status", "PENDENTE")
           .order("departure_datetime_utc", { ascending: true })
-          .limit(5);
+          .limit(20);
+        if (visibleSaleIds) {
+          if (visibleSaleIds.size === 0) checkinsQuery = checkinsQuery.eq("sale_id", "00000000-0000-0000-0000-000000000000");
+          else checkinsQuery = checkinsQuery.in("sale_id", Array.from(visibleSaleIds));
+        }
+        const { data: checkins } = await checkinsQuery;
 
         if (checkins) {
-          for (const c of checkins) {
+          for (const c of checkins.slice(0, 5)) {
             const depDate = c.departure_datetime_utc ? parseISO(c.departure_datetime_utc) : null;
             const daysLeft = depDate && isValid(depDate) ? differenceInDays(depDate, new Date()) : null;
             items.push({
@@ -108,15 +128,20 @@ export default function TorreDeControle() {
         }
 
         // Pending lodging confirmations
-        const { data: lodgings } = await (supabase as any)
+        let lodgingsQuery = (supabase as any)
           .from("lodging_confirmation_tasks")
-          .select("id, milestone, status, scheduled_at_utc")
+          .select("id, sale_id, milestone, status, scheduled_at_utc")
           .eq("status", "PENDENTE")
           .order("scheduled_at_utc", { ascending: true })
-          .limit(3);
+          .limit(20);
+        if (visibleSaleIds) {
+          if (visibleSaleIds.size === 0) lodgingsQuery = lodgingsQuery.eq("sale_id", "00000000-0000-0000-0000-000000000000");
+          else lodgingsQuery = lodgingsQuery.in("sale_id", Array.from(visibleSaleIds));
+        }
+        const { data: lodgings } = await lodgingsQuery;
 
         if (lodgings) {
-          for (const l of lodgings) {
+          for (const l of lodgings.slice(0, 3)) {
             const scheduled = l.scheduled_at_utc ? parseISO(l.scheduled_at_utc) : null;
             const daysLeft = scheduled && isValid(scheduled) ? differenceInDays(scheduled, new Date()) : null;
             items.push({
@@ -165,7 +190,7 @@ export default function TorreDeControle() {
     };
 
     fetchData();
-  }, []);
+  }, [scopeLoading, canViewAll, sellerId]);
 
   const kpiCards = [
     {

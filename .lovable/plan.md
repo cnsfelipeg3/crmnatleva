@@ -1,77 +1,64 @@
 ## Objetivo
 
-Substituir todos os 49 inputs nativos `type="date"` espalhados em 23 arquivos pelo componente `DatePartsInput` (mesmo usado no cadastro de passageiro). Sem mexer em dados, apenas UX e formato de entrada.
+Separar visibilidade de vendas em duas categorias **sem mexer nas permissões já configuradas** de cada colaborador:
 
-## Por que é seguro
+- **Acesso total às vendas**: Nathalia, Tiago, Arthur, Laura, Nikoly · veem TODAS as vendas do sistema.
+- **Acesso restrito**: Tassia e demais vendedores · veem apenas vendas onde são `seller_id`.
 
-- O `DatePartsInput` já existe e está testado.
-- Ele emite o mesmo formato ISO `YYYY-MM-DD` que o `<input type="date">` produz hoje.
-- Nenhuma migração de banco, nenhuma mudança em queries, nenhum risco de perda de dados.
-- A troca é puramente visual/UX: campo segmentado DD / MM / AAAA com auto-tab, back-tab, paste inteligente e validação.
+## Como vai funcionar (sem promover ninguém a admin)
 
-## Escopo (49 ocorrências em 23 arquivos)
+Em vez de mexer em `user_roles`, vou criar uma **flag específica de visibilidade de vendas** que convive com as permissões personalizadas que você já configurou para cada um.
 
-Agrupados por área para execução em lotes incrementais:
+### 1. Nova permissão: `sales.view_all`
 
-**Lote 1 · RH (já parcial)**
-- `src/components/rh/EmployeeFormTabs.tsx`
-- `src/pages/rh/MetasBonus.tsx`
-- `src/pages/rh/FeedbacksRH.tsx`
-- `src/pages/rh/Desempenho.tsx`
-- `src/pages/rh/ContratosDocumentos.tsx`
-- `src/pages/rh/Advertencias.tsx`
+Adicionar uma nova entrada `menu_key = 'sales.view_all'` na tabela `employee_permissions`. Funciona assim:
 
-**Lote 2 · Vendas / Propostas / Operações**
-- `src/pages/NewSale.tsx`
-- `src/pages/SaleDetail.tsx`
-- `src/pages/TripAlterations.tsx`
-- `src/pages/ProposalEditor.tsx`
-- `src/components/proposal/ProposalFlightSearch.tsx`
-- `src/components/proposal/FlightSegmentForm.tsx`
-- `src/components/FlightRegistrationSection.tsx`
-- `src/components/HotelEntriesEditor.tsx`
-- `src/components/SalePaymentsEditor.tsx`
+- Se o colaborador tem `sales.view_all` com `can_view = true` → vê todas as vendas.
+- Se não tem (ou tem `false`) → vê só as vendas onde `seller_id = user.id`.
+- Admins (Nathalia e Tiago) continuam vendo tudo automaticamente, como hoje.
 
-**Lote 3 · Passageiros / Financeiro**
-- `src/pages/Passengers.tsx`
-- `src/pages/PassengerProfile.tsx`
-- `src/pages/financeiro/Comissoes.tsx`
-- `src/pages/financeiro/FechamentoFornecedores.tsx`
+Isso é totalmente isolado das outras permissões deles · não toca em `sales`, `sales.new`, `financeiro.*`, nada. É um interruptor à parte só pra escopo de visualização.
 
-**Lote 4 · Portal do viajante**
-- `src/pages/portal/PortalProfile.tsx`
-- `src/pages/portal/PortalNewQuote.tsx`
-- `src/pages/portal/PortalFinance.tsx`
-- `src/components/portal/PortalExpenseSplit.tsx`
+### 2. Ativação inicial via insert tool
 
-## Padrão de substituição
+Vou marcar `sales.view_all = true` para os 3 vendedores que precisam de acesso total:
 
-Antes:
-```tsx
-<Input type="date" value={form.data} onChange={(e) => setForm({...form, data: e.target.value})} />
+| Nome | Email | Role atual | sales.view_all |
+|---|---|---|---|
+| Nathalia | nathalia@natleva.com | admin | (admin já vê tudo) |
+| Tiago | tiago@natleva.com | admin | (admin já vê tudo) |
+| Arthur | arthur@natleva.com | vendedor | ✅ ativar |
+| Laura | laura@natleva.com | vendedor | ✅ ativar |
+| Nikoly | nikoly@natleva.com | vendedor | ✅ ativar |
+| Tassia | tassia@natleva.com | vendedor | ❌ fica só com as próprias |
+
+### 3. Filtro no frontend
+
+- Criar hook `useSalesScope()` que retorna `{ canViewAll, sellerId }` (combina `isAdmin` + `can("sales.view_all", "view")`).
+- Aplicar nas listagens: `Sales.tsx`, `TorreDeControle.tsx`, `Itinerary.tsx`, `financeiro/ContasReceber.tsx`, `financeiro/ContasPagar.tsx`, `Checkin.tsx`, `Lodging.tsx`, `TripAlterations.tsx`.
+- Quando `canViewAll === false`, o `fetchAllRows("sales", ...)` recebe filtro `seller_id = user.id` (vou estender `fetchAll.ts` para aceitar `eqFilters`, hoje só tem `isFilters`).
+- Telas de detalhe (`SaleDetail`, `TripDetail`, `NewSale` em modo edição): guard que devolve "Sem permissão" se `!canViewAll && sale.seller_id !== user.id`.
+
+### 4. UI no painel de permissões
+
+Na tela `/admin/users` (ou onde você edita permissões do colaborador), aparecerá um novo toggle:
+
+```text
+[ ] Ver todas as vendas (não só as próprias)
 ```
 
-Depois:
-```tsx
-<DatePartsInput value={form.data} onChange={(iso) => setForm({...form, data: iso})} />
-```
+Assim, no futuro, você mesma liga/desliga essa flag pra qualquer colaborador sem precisar pedir.
 
-Regras de aplicação por contexto:
-- **Datas de nascimento**: `disableFuture`
-- **Validade de documento / vencimento**: `disablePast`
-- **Datas de viagem (embarque/desembarque, check-in/out)**: sem restrição (pode ser passada para registro retroativo)
-- **Filtros de período**: sem restrição
+## Detalhes técnicos
 
-## Fora do escopo (mantidos como estão)
+- Nenhuma mudança de schema · `employee_permissions` já suporta qualquer `menu_key`.
+- Nenhuma mudança em `user_roles` · ninguém vira admin.
+- `usePermissions` já carrega todas as permissões do colaborador, então `can("sales.view_all", "view")` funciona de imediato.
+- Sem mudança em RLS (que está desligado conforme memória de segurança v4).
 
-- Date pickers de **filtros inteligentes** (`SmartFilters.tsx`) que usam shadcn Calendar com seleção por range · UX já validada e diferente.
-- Componentes de **visualização** (TripCard, JourneyHero, ItineraryDocument) que apenas exibem datas, não recebem input.
-- `calendar.tsx` (componente base shadcn).
+## Fora de escopo
 
-## Execução
+- Reativar RLS no banco para blindagem servidor-side · proposta separada se quiser.
+- Criar a mesma flag para outros módulos (clientes, propostas) · faço quando você pedir.
 
-Faço os 4 lotes em sequência, um commit por lote, para você validar cada área antes de seguir. Se preferir tudo de uma vez, executo em uma única passada · me avise.
-
-## Riscos
-
-Praticamente zero. O componente já está em produção no cadastro de passageiro funcionando bem. Caso algum campo específico tenha lógica customizada (ex.: `min`/`max` dinâmico), eu trato no momento da troca preservando o comportamento.
+Pode aprovar que executo.
