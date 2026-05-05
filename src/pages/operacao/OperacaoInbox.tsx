@@ -853,6 +853,8 @@ function OperacaoInboxInner() {
             score_risk: c.score_risk || 0,
             is_pinned: !!c.is_pinned,
             manually_marked_unread: !!c.manually_marked_unread,
+            is_archived: !!c.is_archived,
+            archived_at: c.archived_at || null,
             _hasReliableActivity: true,
           };
         });
