@@ -29,7 +29,7 @@ export default function PortalAdminClients() {
   useEffect(() => {
     if (authLoading) return;
     Promise.all([
-      fetchAllRows("clients", "id, display_name, email, phone, created_at, city, state", { order: { column: "created_at", ascending: false } }),
+      fetchAllRows("clients", "id, display_name, email, phone, created_at, city, state, customer_since, customer_since_source", { order: { column: "created_at", ascending: false } }),
       fetchAllRows("sales", "id, client_id, departure_date, return_date, destination_iata", { order: { column: "departure_date", ascending: false } }),
     ]).then(([c, s]) => {
       setClients(c);
