@@ -11,6 +11,7 @@ interface Client {
   id: string;
   display_name: string;
   created_at: string;
+  customer_since?: string | null;
 }
 
 interface Sale {
@@ -38,7 +39,10 @@ export default function ClientsSection({ clients, filtered, periodStart }: Props
 
   const newClients = useMemo(() => {
     if (!periodStart) return clients.length;
-    return clients.filter(c => new Date(c.created_at) >= periodStart).length;
+    return clients.filter(c => {
+      const raw = c.customer_since || c.created_at;
+      return raw ? new Date(raw) >= periodStart : false;
+    }).length;
   }, [clients, periodStart]);
 
   const recurrentData = useMemo(() => {

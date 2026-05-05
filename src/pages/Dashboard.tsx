@@ -40,7 +40,7 @@ interface Sale {
 }
 
 interface Profile { id: string; full_name: string; }
-interface Client { id: string; display_name: string; created_at: string; }
+interface Client { id: string; display_name: string; created_at: string; customer_since: string | null; }
 interface Segment { sale_id: string; origin_iata: string; destination_iata: string; }
 interface CostItem {
   sale_id: string; category: string; miles_quantity: number | null;
@@ -167,7 +167,7 @@ export default function Dashboard() {
     // Phase 1: lightweight metadata (profiles, clients)
     Promise.all([
       fetchAllRows("profiles", "id, full_name", { cacheMs: 60000 }),
-      fetchAllRows("clients", "id, display_name, created_at", { maxRows: 15000, cacheMs: 30000 }),
+      fetchAllRows("clients", "id, display_name, created_at, customer_since", { maxRows: 15000, cacheMs: 30000 }),
     ]).then(([p, c]) => {
       if (!alive) return;
       setProfiles(p as Profile[]);
@@ -317,11 +317,14 @@ export default function Dashboard() {
 
   // Pre-sort client creation timestamps ONCE per clients array change.
   // Subsequent period changes use O(log n) binary search instead of O(n) scans.
+  // Use customer_since (real onboarding date from Monday import) when available,
+  // fallback to created_at (DB insertion date) only when missing.
   const clientTimestamps = useMemo(() => {
     const arr: number[] = [];
     for (const c of clients) {
-      if (!c.created_at) continue;
-      const t = new Date(c.created_at).getTime();
+      const raw = c.customer_since || c.created_at;
+      if (!raw) continue;
+      const t = new Date(raw).getTime();
       if (!Number.isNaN(t)) arr.push(t);
     }
     arr.sort((a, b) => a - b);
