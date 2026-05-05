@@ -8,7 +8,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2 } from "lucide-react";
+import { Plus, Download, Eye, X, ArrowUp, ArrowDown, ArrowUpDown, ChevronDown, ChevronRight, GripVertical, Clock, CheckCircle2, Check, Trash2, Loader2, Pencil } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { routeCode } from "@/lib/cityExtract";
