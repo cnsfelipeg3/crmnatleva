@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 /**
@@ -170,6 +175,27 @@ export function DatePartsInput({
 
   const errCls = error ? "border-destructive" : "";
 
+  const [open, setOpen] = useState(false);
+  const selectedDate = (() => {
+    if (parts.y.length === 4 && parts.m.length >= 1 && parts.d.length >= 1) {
+      const y = +parts.y, mo = +parts.m, d = +parts.d;
+      if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return new Date(y, mo - 1, d);
+    }
+    return undefined;
+  })();
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const minY = minYear ?? 1900;
+  const maxY = maxYear ?? new Date().getFullYear() + 50;
+
+  const handleCalendarSelect = (date?: Date) => {
+    if (!date) return;
+    const y = String(date.getFullYear()).padStart(4, "0");
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    commit({ d, m, y });
+    setOpen(false);
+  };
+
   return (
     <div className={cn("space-y-1", className)} aria-label={ariaLabel}>
       <div className="flex w-full items-center gap-1.5">
@@ -202,6 +228,38 @@ export function DatePartsInput({
           onChange={(e) => handleChange("y", e.target.value)}
           onKeyDown={(e) => handleKeyDown("y", e)}
         />
+        <Popover open={open} onOpenChange={setOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              aria-label="Abrir calendário"
+              className="h-11 w-11 shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="end">
+            <Calendar
+              mode="single"
+              locale={ptBR}
+              selected={selectedDate}
+              defaultMonth={selectedDate}
+              onSelect={handleCalendarSelect}
+              captionLayout="dropdown"
+              fromYear={minY}
+              toYear={maxY}
+              disabled={(date) => {
+                if (disableFuture && date > new Date()) return true;
+                if (disablePast && date < today) return true;
+                return false;
+              }}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
