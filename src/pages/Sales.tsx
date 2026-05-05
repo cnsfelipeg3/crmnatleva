@@ -961,6 +961,9 @@ export default function Sales() {
                     onDeleted={handleDeleted}
                     onDragStart={handleNativeDragStart}
                     onDropToGroup={handleDropToGroup}
+                    onMove={handleMoveSale}
+                    onRequestDelete={setSaleToDelete}
+                    canDelete={canDelete}
                   />
                 </div>
             </Card>}
