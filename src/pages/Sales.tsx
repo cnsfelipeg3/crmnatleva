@@ -580,26 +580,28 @@ export default function Sales() {
     draggedSaleRef.current = { saleId, emitted };
   }, []);
 
+  const handleMoveSale = useCallback(async (saleId: string, toEmitted: boolean) => {
+    const current = sales.find((s) => s.id === saleId);
+    const fromEmitted = current ? isEmitted(current) : false;
+    if (toEmitted === fromEmitted) return;
+    const newStatus = toEmitted ? "Emitido" : "Pendente";
+    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
+    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
+    if (error) {
+      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
+      toast.error("Não consegui mover a venda. Tenta de novo.");
+    } else {
+      toast.success(toEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
+    }
+  }, [sales]);
+
   const handleDropToGroup = useCallback(async (targetVariant: "pending" | "emitted") => {
     const dragged = draggedSaleRef.current;
     draggedSaleRef.current = null;
     const saleId = dragged?.saleId;
-    const fromEmitted = dragged?.emitted;
     if (!saleId) return;
-    const goingToEmitted = targetVariant === "emitted";
-    if (goingToEmitted === fromEmitted) return; // dropped in same group
-    const newStatus = goingToEmitted ? "Emitido" : "Pendente";
-    // Optimistic update
-    setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: newStatus } : s)));
-    const { error } = await supabase.from("sales").update({ emission_status: newStatus }).eq("id", saleId);
-    if (error) {
-      // revert
-      setSales((prev) => prev.map((s) => (s.id === saleId ? { ...s, emission_status: fromEmitted ? "Emitido" : null } : s)));
-      toast.error("Não consegui mover a venda. Tenta de novo.");
-    } else {
-      toast.success(goingToEmitted ? "Venda marcada como Emitida" : "Venda voltou para Aguardando Emissão");
-    }
-  }, []);
+    await handleMoveSale(saleId, targetVariant === "emitted");
+  }, [handleMoveSale]);
 
 
   const handleExport = async () => {
