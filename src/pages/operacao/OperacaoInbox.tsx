@@ -874,6 +874,8 @@ function OperacaoInboxInner() {
               stage: existing.stage && existing.stage !== "novo_lead" ? existing.stage : c.stage,
               unread_count: isOpen ? 0 : Math.max(safeUnreadCount(existing.unread_count), safeUnreadCount(c.unread_count)),
               manually_marked_unread: !!c.manually_marked_unread,
+              is_archived: !!c.is_archived,
+              archived_at: c.archived_at || null,
             };
           });
           const freshIds = new Set(merged.map(c => c.id));
