@@ -2799,9 +2799,6 @@ function OperacaoInboxInner() {
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
                               <Sparkles className="h-4 w-4 text-primary" /> Sugestão IA
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { loadFlows(); setShowFlowMenu(true); setShowMobilePlusMenu(false); }}>
-                              <Workflow className="h-4 w-4 text-muted-foreground" /> Iniciar Fluxo
-                            </button>
                           </PopoverContent>
                         </Popover>
                       ) : (
