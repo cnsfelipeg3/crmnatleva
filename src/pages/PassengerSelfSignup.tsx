@@ -74,6 +74,7 @@ export default function PassengerSelfSignup() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [blockedMsg, setBlockedMsg] = useState<string>("");
   const [dobError, setDobError] = useState<string>("");
+  const [dobParts, setDobParts] = useState({ d: "", m: "", y: "" });
   const dobDayRef = useRef<HTMLInputElement>(null);
   const dobMonthRef = useRef<HTMLInputElement>(null);
   const dobYearRef = useRef<HTMLInputElement>(null);
@@ -158,6 +159,13 @@ export default function PassengerSelfSignup() {
 
     if (!form.full_name.trim() || form.full_name.trim().length < 3) {
       toast({ title: "Informe o nome completo", variant: "destructive" });
+      return;
+    }
+    const hasDobInput = !!(dobParts.d || dobParts.m || dobParts.y);
+    if (hasDobInput && !form.birth_date) {
+      const err = "Informe a data completa no formato DD/MM/AAAA";
+      setDobError(err);
+      toast({ title: "Data de nascimento incompleta", description: err, variant: "destructive" });
       return;
     }
     if (form.birth_date) {
@@ -245,14 +253,11 @@ export default function PassengerSelfSignup() {
   }
 
   // Helpers for sequential DOB inputs
-  const dobParts = (() => {
-    const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
-    return { d, m, y };
-  })();
   const commitDob = (parts: { d: string; m: string; y: string }) => {
     const d = parts.d.replace(/\D/g, "").slice(0, 2);
     const m = parts.m.replace(/\D/g, "").slice(0, 2);
     const y = parts.y.replace(/\D/g, "").slice(0, 4);
+    setDobParts({ d, m, y });
     const iso = y.length === 4 && m.length >= 1 && d.length >= 1
       ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
       : "";
@@ -260,21 +265,31 @@ export default function PassengerSelfSignup() {
     if (iso) setDobError(validateDob(iso));
     else setDobError("");
   };
-  const setDob = (next: { d?: string; m?: string; y?: string }) => {
-    commitDob({
-      d: next.d ?? dobParts.d,
-      m: next.m ?? dobParts.m,
-      y: next.y ?? dobParts.y,
-    });
+  const splitDobDigits = (raw: string) => {
+    const text = raw.replace(/\D/g, "").slice(0, 8);
+    if (text.length === 8 && +text.slice(0, 4) >= 1900) {
+      return { d: text.slice(6, 8), m: text.slice(4, 6), y: text.slice(0, 4) };
+    }
+    return { d: text.slice(0, 2), m: text.slice(2, 4), y: text.slice(4, 8) };
+  };
+  const handleDobChange = (field: "d" | "m" | "y", value: string) => {
+    const clean = value.replace(/\D/g, "");
+    if ((field !== "y" && clean.length > 2) || (field === "y" && clean.length > 4)) {
+      const merged = field === "d" ? splitDobDigits(clean) : { ...dobParts, [field]: clean };
+      commitDob(merged);
+      setTimeout(() => (merged.m.length < 2 ? dobMonthRef : dobYearRef).current?.focus(), 0);
+      return;
+    }
+    const next = { ...dobParts, [field]: field === "y" ? clean.slice(0, 4) : clean.slice(0, 2) };
+    commitDob(next);
+    if (field === "d" && next.d.length === 2) setTimeout(() => dobMonthRef.current?.focus(), 0);
+    if (field === "m" && next.m.length === 2) setTimeout(() => dobYearRef.current?.focus(), 0);
   };
   const handleDobPaste = (e: React.ClipboardEvent) => {
-    const text = e.clipboardData.getData("text").replace(/\D/g, "");
-    if (text.length >= 6) {
+    const text = e.clipboardData.getData("text");
+    if (text.replace(/\D/g, "").length >= 6) {
       e.preventDefault();
-      const d = text.slice(0, 2);
-      const m = text.slice(2, 4);
-      const y = text.slice(4, 8);
-      commitDob({ d, m, y });
+      commitDob(splitDobDigits(text));
       setTimeout(() => dobYearRef.current?.focus(), 0);
     }
   };
@@ -310,41 +325,31 @@ export default function PassengerSelfSignup() {
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
-              <div className="flex items-center gap-2">
+              <div className="grid w-full max-w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_minmax(0,1.25fr)] items-center gap-2">
                 <Input
                   ref={dobDayRef}
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={2}
                   placeholder="DD"
                   aria-label="Dia"
                   autoComplete="bday-day"
-                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.d}
                   onPaste={handleDobPaste}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                    setDob({ d: v });
-                    if (v.length === 2) dobMonthRef.current?.focus();
-                  }}
+                  onChange={(e) => handleDobChange("d", e.target.value)}
                 />
                 <span className="text-muted-foreground select-none">/</span>
                 <Input
                   ref={dobMonthRef}
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={2}
                   placeholder="MM"
                   aria-label="Mês"
                   autoComplete="bday-month"
-                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.m}
                   onPaste={handleDobPaste}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(0, 2);
-                    setDob({ m: v });
-                    if (v.length === 2) dobYearRef.current?.focus();
-                  }}
+                  onChange={(e) => handleDobChange("m", e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.m) {
                       e.preventDefault();
@@ -357,17 +362,13 @@ export default function PassengerSelfSignup() {
                   ref={dobYearRef}
                   inputMode="numeric"
                   pattern="[0-9]*"
-                  maxLength={4}
                   placeholder="AAAA"
                   aria-label="Ano"
                   autoComplete="bday-year"
-                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
+                  className={`min-w-0 text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.y}
                   onPaste={handleDobPaste}
-                  onChange={(e) => {
-                    const v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                    setDob({ y: v });
-                  }}
+                  onChange={(e) => handleDobChange("y", e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.y) {
                       e.preventDefault();
