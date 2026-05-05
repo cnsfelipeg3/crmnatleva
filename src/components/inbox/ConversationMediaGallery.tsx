@@ -16,37 +16,10 @@ import type { Message } from "./types";
 import { PdfThumbnail } from "./PdfThumbnail";
 
 
-// Pré-carrega a miniatura só quando o item entra no viewport · evita travar a galeria
 function LazyPdfThumb({ url, filename, width = 40 }: { url: string; filename?: string; width?: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node || visible) return;
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setVisible(true);
-            io.disconnect();
-            break;
-          }
-        }
-      },
-      { rootMargin: "300px 0px", threshold: 0.01 }
-    );
-    io.observe(node);
-    return () => io.disconnect();
-  }, [visible]);
-
   return (
-    <div ref={ref} className="h-full w-full flex items-center justify-center">
-      {visible ? (
-        <PdfThumbnail url={url} filename={filename} width={width} />
-      ) : (
-        <FileText className="h-5 w-5 text-muted-foreground/60" />
-      )}
+    <div className="h-full w-full flex items-center justify-center">
+      <PdfThumbnail url={url} filename={filename} width={width} compact />
     </div>
   );
 }
