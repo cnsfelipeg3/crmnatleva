@@ -505,7 +505,23 @@ function VirtualEmissionGroup({
 
 
 export default function Sales() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, role, isLoading: authLoading } = useAuth();
+  const canDelete = role === "admin";
+  const [saleToDelete, setSaleToDelete] = useState<SaleRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const handleConfirmDelete = useCallback(async () => {
+    if (!saleToDelete) return;
+    setDeleting(true);
+    const { error } = await (supabase as any).rpc("soft_delete_sale", { _sale_id: saleToDelete.id });
+    setDeleting(false);
+    if (error) {
+      toast.error("Erro ao excluir: " + error.message);
+      return;
+    }
+    toast.success("Venda excluída");
+    setSales((prev) => prev.filter((s) => s.id !== saleToDelete.id));
+    setSaleToDelete(null);
+  }, [saleToDelete]);
   const [sales, setSales] = useState<SaleRow[]>([]);
   const [sellersMap, setSellersMap] = useState<Map<string, SellerProfile>>(new Map());
   const [filterSeller, setFilterSeller] = useState<string>("all");
