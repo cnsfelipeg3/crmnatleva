@@ -970,6 +970,37 @@ function OperacaoInboxInner() {
     checkAndStartPolling();
   }, [chatSyncVersion]);
 
+  // Busca em conteúdo de mensagens (debounced) · ativa quando query >= 2 chars
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setContentMatchIds(null);
+      setSearchingContent(false);
+      return;
+    }
+    setSearchingContent(true);
+    const handle = setTimeout(async () => {
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("conversation_id")
+          .ilike("text", `%${q}%`)
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (error) throw error;
+        const ids = new Set<string>();
+        (data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        setContentMatchIds(ids);
+      } catch (e) {
+        console.warn("[inbox] content search failed", e);
+        setContentMatchIds(new Set());
+      } finally {
+        setSearchingContent(false);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
+
   const filteredConversations = useMemo(() => {
     const filtered = conversations.filter(c => {
       const contactName = c.contact_name || "";
