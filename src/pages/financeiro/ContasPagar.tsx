@@ -16,31 +16,40 @@ const fmtDate = (d: string | null) => d ? new Date(d + "T00:00:00").toLocaleDate
 
 export default function ContasPagar() {
   const qc = useQueryClient();
+  const { canViewAll, sellerId } = useSalesScope();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [selected, setSelected] = useState<any>(null);
 
+  const { data: sales = [] } = useQuery({
+    queryKey: ["ap-sales", canViewAll, sellerId],
+    queryFn: async () => {
+      let q = supabase.from("sales").select("id, display_id, name, total_cost, seller_id");
+      if (!canViewAll && sellerId) q = q.eq("seller_id", sellerId);
+      const { data } = await q;
+      return data || [];
+    },
+  });
+
+  const visibleSaleIds = useMemo(() => new Set(sales.map((s: any) => s.id)), [sales]);
+
   const { data: payables = [] } = useQuery({
-    queryKey: ["accounts-payable"],
+    queryKey: ["accounts-payable", canViewAll, visibleSaleIds.size],
     queryFn: async () => {
       const { data } = await supabase.from("accounts_payable").select("*").order("due_date", { ascending: true });
-      return data || [];
+      const all = data || [];
+      if (canViewAll) return all;
+      return all.filter((p: any) => !p.sale_id || visibleSaleIds.has(p.sale_id));
     },
   });
 
   const { data: costItems = [] } = useQuery({
-    queryKey: ["ap-cost-items"],
+    queryKey: ["ap-cost-items", canViewAll, visibleSaleIds.size],
     queryFn: async () => {
       const { data } = await supabase.from("cost_items").select("id, sale_id, category, description, total_item_cost");
-      return data || [];
-    },
-  });
-
-  const { data: sales = [] } = useQuery({
-    queryKey: ["ap-sales"],
-    queryFn: async () => {
-      const { data } = await supabase.from("sales").select("id, display_id, name, total_cost");
-      return data || [];
+      const all = data || [];
+      if (canViewAll) return all;
+      return all.filter((c: any) => !c.sale_id || visibleSaleIds.has(c.sale_id));
     },
   });
 
