@@ -20,6 +20,7 @@ import { DelegateConversationDialog } from "@/components/inbox/DelegateConversat
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingState } from "@/components/ui/loading-state";
 import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -2340,8 +2341,17 @@ function OperacaoInboxInner() {
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
-                        <SelectTrigger className="h-8 text-xs w-[110px] md:w-[140px]">
-                          <SelectValue />
+                        <SelectTrigger
+                          className={isMobile
+                            ? "h-8 w-8 p-0 justify-center [&>svg]:hidden rounded-full"
+                            : "h-8 text-xs w-[140px]"}
+                          aria-label={isMobile ? `Etapa: ${getStageInfo(selected.stage).label}` : undefined}
+                        >
+                          {isMobile ? (
+                            <span className={`h-2.5 w-2.5 rounded-full ${getStageInfo(selected.stage).color || "bg-primary"}`} />
+                          ) : (
+                            <SelectValue />
+                          )}
                         </SelectTrigger>
                         <SelectContent>
                           {STAGES.map(s => (
@@ -2742,13 +2752,13 @@ function OperacaoInboxInner() {
                       </Fragment>
                     ))}
                     {currentMessages.length === 0 && !flowRunning && (
-                      <div className="flex flex-col items-center justify-center py-14 gap-2">
-                        {loadingMessages ? (
-                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground/40" />
-                        ) : (
+                      loadingMessages ? (
+                        <LoadingState variant="block" size="md" className="min-h-[60vh]" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center min-h-[40vh] gap-2">
                           <p className="text-sm text-muted-foreground">Sem mensagens nesta conversa.</p>
-                        )}
-                      </div>
+                        </div>
+                      )
                     )}
                     {flowRunning && (
                       <div className="flex justify-center">
