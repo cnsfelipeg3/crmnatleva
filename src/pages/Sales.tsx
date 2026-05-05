@@ -333,26 +333,28 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 const TABLE_COLUMN_COUNT = 17;
 const ESTIMATED_ROW_HEIGHT = 64;
 
+// Total: 1660px · keep in sync with SALES_TABLE_MIN_WIDTH below
+const SALES_TABLE_MIN_WIDTH = 1660;
 function SalesTableColGroup() {
   return (
     <colgroup>
-      <col style={{ width: "28px" }} />
-      <col style={{ minWidth: "200px" }} />
-      <col style={{ minWidth: "100px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "50px" }} />
-      <col style={{ minWidth: "80px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "70px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "130px" }} />
-      <col style={{ minWidth: "100px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "90px" }} />
+      <col style={{ width: "32px" }} />
+      <col style={{ width: "210px" }} />
+      <col style={{ width: "105px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "55px" }} />
+      <col style={{ width: "85px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "75px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "135px" }} />
+      <col style={{ width: "105px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "95px" }} />
     </colgroup>
   );
 }
