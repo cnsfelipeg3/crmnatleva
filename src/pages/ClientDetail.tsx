@@ -278,6 +278,7 @@ export default function ClientDetail() {
               <Badge variant="outline" className="text-[10px]">
                 {client.client_type === "pessoa_fisica" ? "Pessoa Física" : client.client_type === "familia" ? "Família" : "Empresa"}
               </Badge>
+              <CustomerSinceBadge customerSince={client.customer_since} source={client.customer_since_source} />
               {client.city && <span className="flex items-center gap-1"><MapPin className="w-3 h-3" />{[client.city, client.state].filter(Boolean).join("/")}</span>}
               {client.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{formatPhoneDisplay(client.phone)}</span>}
               {client.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{client.email}</span>}
