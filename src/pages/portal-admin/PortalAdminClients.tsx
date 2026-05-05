@@ -116,7 +116,6 @@ export default function PortalAdminClients() {
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Telefone</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Viagens</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Última Viagem</th>
-                    <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cadastro</th>
                     <th className="text-left px-4 py-3 font-semibold text-muted-foreground">Cliente desde</th>
                     <th className="px-4 py-3 w-10"></th>
                   </tr>
@@ -136,9 +135,10 @@ export default function PortalAdminClients() {
                           <Badge variant="outline" className="text-[10px]">{stats?.tripCount || 0}</Badge>
                         </td>
                         <td className="px-4 py-3 text-xs text-muted-foreground">{stats?.lastTrip ? formatDateBR(stats.lastTrip) : "—"}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{formatDateBR(client.created_at)}</td>
                         <td className="px-4 py-3">
-                          <CustomerSinceBadge customerSince={client.customer_since} source={client.customer_since_source} />
+                          {client.customer_since
+                            ? <CustomerSinceBadge customerSince={client.customer_since} source={client.customer_since_source} />
+                            : <span className="text-xs text-muted-foreground/60">—</span>}
                         </td>
                         <td className="px-4 py-3">
                           <DropdownMenu>
