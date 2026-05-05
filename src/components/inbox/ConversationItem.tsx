@@ -58,7 +58,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
     <div
       onClick={() => onSelect(conv.id)}
       className={`group px-2.5 py-2.5 cursor-pointer transition-all border-l-2 hover:bg-accent/30 ${
-        isSelected ? "bg-accent border-l-primary" : isUrgent ? "border-l-destructive/50" : "border-l-transparent"
+        isSelected ? "bg-accent border-l-primary" : conv.is_archived ? "border-l-muted-foreground/30 bg-muted/20 opacity-75" : isUrgent ? "border-l-destructive/50" : "border-l-transparent"
       }`}
     >
       <div className="flex gap-2.5">
