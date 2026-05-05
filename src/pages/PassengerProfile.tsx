@@ -619,6 +619,7 @@ export default function PassengerProfile() {
                       maxLength={500}
                     />
                   </div>
+                </div>
 
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" className="flex-1" onClick={() => setEditing(false)}>
