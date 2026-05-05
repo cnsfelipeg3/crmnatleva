@@ -246,6 +246,25 @@ export default function Proposals() {
                     )}
                   </div>
 
+                  {p.created_at && (
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground/80 pt-1">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Calendar className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          Gerada em {format(new Date(p.created_at), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
+                      </span>
+                      {p.created_by && (
+                        <span className="flex items-center gap-1 shrink-0">
+                          <User className="w-3 h-3" />
+                          <span className="truncate max-w-[120px]">
+                            {creatorsMap?.[p.created_by]?.name || "Usuário"}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Eye className="w-3.5 h-3.5" />
