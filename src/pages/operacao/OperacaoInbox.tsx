@@ -2736,7 +2736,12 @@ function OperacaoInboxInner() {
 
                                   if (isPdf && bestUrl) {
                                     return (
-                                      <div className="flex flex-col gap-1.5 w-[min(240px,calc(100vw-96px))] max-w-full">
+                                      <button
+                                        type="button"
+                                        onClick={() => window.open(bestUrl, "_blank", "noopener,noreferrer")}
+                                        className="flex flex-col gap-1.5 w-[min(240px,calc(100vw-96px))] max-w-full text-left cursor-pointer"
+                                        title="Abrir PDF"
+                                      >
                                         <PdfThumbnail
                                           url={bestUrl}
                                           filename={filename}
@@ -2754,7 +2759,7 @@ function OperacaoInboxInner() {
                                           </a>
                                         </div>
                                         {caption && <p className="text-sm leading-relaxed mt-0.5 break-words"><Linkify text={caption} /></p>}
-                                      </div>
+                                      </button>
                                     );
                                   }
 
