@@ -178,7 +178,7 @@ export function useInboxRealtime(
               phone: cleanPhone || target.phone,
               last_message_preview: bestPreview,
               last_message_at: bestTime,
-              unread_count: isOpen ? 0 : Math.max(safeUnreadCount(target.unread_count), safeUnreadCount(u.unread_count)),
+              unread_count: safeUnreadCount(u.unread_count),
               stage: (u.stage as Stage) || target.stage,
               tags: u.tags || target.tags,
               contact_name: target.contact_name || u.contact_name,
