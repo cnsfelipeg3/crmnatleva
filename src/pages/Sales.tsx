@@ -147,30 +147,30 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           <GripVertical className="w-3.5 h-3.5" />
         </button>
       </td>
-      <td className="px-3 py-3">
-        <p className="font-medium text-foreground truncate">{sale.name}</p>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-          <span className="truncate">{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+      <td className="px-3 py-4">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="font-medium text-foreground truncate">{sale.name}</p>
           {sale.client_id && (
             <button
               onClick={(e) => { e.stopPropagation(); onNavigateClient(sale.client_id!); }}
               className="text-primary hover:underline font-medium flex-shrink-0"
+              title="Abrir ficha do cliente"
             >
               👤
             </button>
           )}
         </div>
       </td>
-      <td className="px-2 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
-      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
-      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
+      <td className="px-2 py-4 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
+      <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
+      <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
       <td className="px-2 py-3">
         <span className={cn("font-mono text-xs", routeEmpty && "text-muted-foreground/40 italic")}>
           {o && d ? `${o} → ${d}` : o ? `${o} → N/D` : d ? `N/D → ${d}` : "—"}
         </span>
       </td>
-      <td className="px-1 py-3 text-center">{pax}</td>
-      <td className="px-1 py-3">
+      <td className="px-1 py-4 text-center">{pax}</td>
+      <td className="px-1 py-4">
         <div className="flex gap-1 items-center flex-wrap">
           {slugs.map((slug) => {
             const meta = getProductMeta(slug, productCatalog);
@@ -185,24 +185,24 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           })}
         </div>
       </td>
-      <td className="px-2 py-3 text-right font-medium whitespace-nowrap">{fmt(sale.received_value || 0)}</td>
-      <td className="px-2 py-3 text-right text-muted-foreground whitespace-nowrap">{fmt(sale.total_cost || 0)}</td>
-      <td className="px-2 py-3 text-right">
+      <td className="px-2 py-4 text-right font-medium whitespace-nowrap">{fmt(sale.received_value || 0)}</td>
+      <td className="px-2 py-4 text-right text-muted-foreground whitespace-nowrap">{fmt(sale.total_cost || 0)}</td>
+      <td className="px-2 py-4 text-right">
         <span className={cn("font-medium whitespace-nowrap", (sale.profit || 0) > 0 ? "text-success" : (sale.profit || 0) < 0 ? "text-destructive" : "text-foreground")}>
           {fmt(sale.profit || 0)}
         </span>
       </td>
-      <td className="px-1 py-3 text-right">
+      <td className="px-1 py-4 text-right">
         <span className={cn("whitespace-nowrap", (sale.margin || 0) > 25 ? "text-success font-semibold" : "text-foreground")}>
           {(sale.margin || 0).toFixed(1)}%
         </span>
       </td>
-      <td className="px-1 py-3 text-center">
+      <td className="px-1 py-4 text-center">
         {sale.lead_type === "organico"
           ? <Badge variant="outline" className={cn("text-[10px]", leadColor.organico)}>Orgânico</Badge>
           : <Badge variant="outline" className={cn("text-[10px]", leadColor.agencia)}>Agência</Badge>}
       </td>
-      <td className="px-2 py-3 text-xs">
+      <td className="px-2 py-4 text-xs">
         {seller ? (
           <span className="inline-flex items-center gap-1.5" title={seller.email || seller.full_name || ""}>
             {seller.avatar_url ? (
@@ -244,10 +244,11 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           </span>
         )}
       </td>
-      <td className="px-2 py-3">
+      <td className="px-2 py-4">
         <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
-      <td className="px-2 py-3">
+      <td className="px-2 py-4 text-xs font-mono text-muted-foreground whitespace-nowrap">{sale.display_id}</td>
+      <td className="px-2 py-4">
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
           <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
@@ -257,8 +258,8 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
   );
 });
 
-const TABLE_COLUMN_COUNT = 16;
-const ESTIMATED_ROW_HEIGHT = 54;
+const TABLE_COLUMN_COUNT = 17;
+const ESTIMATED_ROW_HEIGHT = 64;
 
 function SalesTableColGroup() {
   return (
@@ -278,6 +279,7 @@ function SalesTableColGroup() {
       <col style={{ minWidth: "85px" }} />
       <col style={{ minWidth: "130px" }} />
       <col style={{ minWidth: "100px" }} />
+      <col style={{ minWidth: "110px" }} />
       <col style={{ minWidth: "90px" }} />
     </colgroup>
   );
@@ -347,7 +349,7 @@ function VirtualEmissionGroup({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
       onDrop={(e) => { e.preventDefault(); onDropToGroup(variant); }}
     >
-      <table className="w-full text-sm min-w-[1310px]">
+      <table className="w-full text-sm min-w-[1420px]">
         <SalesTableColGroup />
         <tbody>
           <tr className={cn("cursor-pointer border-y transition-colors", groupTone)} onClick={onToggle}>
@@ -372,7 +374,7 @@ function VirtualEmissionGroup({
           className="overflow-y-auto overflow-x-visible overscroll-contain"
           style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
         >
-          <table className="w-full text-sm min-w-[1310px]">
+          <table className="w-full text-sm min-w-[1420px]">
             <SalesTableColGroup />
             <tbody>
               {sales.length === 0 ? (
@@ -792,7 +794,7 @@ export default function Sales() {
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1310px]">
+                  <table className="w-full text-sm min-w-[1420px]">
                     <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
@@ -812,6 +814,7 @@ export default function Sales() {
                           { key: null, label: "Lead", align: "text-center", px: "px-1" },
                           { key: "seller", label: "Vendedor", align: "text-left", px: "px-2" },
                           { key: "status", label: "Status", align: "text-left", px: "px-1" },
+                          { key: null, label: "ID", align: "text-left", px: "px-2" },
                         ] as { key: ColSortKey | null; label: string; align: string; px: string }[]).map((col) => (
                           <th
                             key={col.label}
