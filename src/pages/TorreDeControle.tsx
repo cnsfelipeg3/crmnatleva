@@ -6,6 +6,7 @@ import { Plane, ClipboardCheck, Hotel, RotateCcw, AlertTriangle, Eye } from "luc
 import { format, isValid, differenceInDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useSalesScope } from "@/hooks/useSalesScope";
 
 interface KpiData {
   activeTrips: number;
@@ -26,23 +27,27 @@ interface UrgentItem {
 
 export default function TorreDeControle() {
   const navigate = useNavigate();
+  const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
   const [kpis, setKpis] = useState<KpiData>({ activeTrips: 0, pendingCheckins: 0, pendingLodgings: 0, pendingAlterations: 0 });
   const [urgentItems, setUrgentItems] = useState<UrgentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (scopeLoading) return;
     const fetchData = async () => {
       try {
         const today = new Date().toISOString().slice(0, 10);
 
         // Active trips: currently traveling (departure <= today <= return)
         // or departed within 30 days with no return date
-        const { data: activeSales } = await supabase
+        let q = supabase
           .from("sales")
-          .select("id, name, departure_date, return_date, destination_iata, origin_iata")
+          .select("id, name, departure_date, return_date, destination_iata, origin_iata, seller_id")
           .not("departure_date", "is", null)
           .neq("status", "Cancelado")
           .lte("departure_date", today);
+        if (!canViewAll && sellerId) q = q.eq("seller_id", sellerId);
+        const { data: activeSales } = await q;
 
         const activeTrips = (activeSales || []).filter(s => {
           if (s.return_date && s.return_date >= today) return true;
