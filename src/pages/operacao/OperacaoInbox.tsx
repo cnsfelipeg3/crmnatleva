@@ -2160,7 +2160,10 @@ function OperacaoInboxInner() {
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Buscar por nome, telefone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                <Input placeholder="Buscar nome, telefone ou conteúdo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                {searchingContent && (
+                  <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground animate-pulse">buscando…</span>
+                )}
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X className="h-3 w-3" />
