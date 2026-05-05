@@ -37,6 +37,8 @@ export function VirtualConversationList({
   onToggleArchive,
   isLoading,
   searchQuery,
+  ownerMap,
+  currentUserId,
 }: VirtualConversationListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
