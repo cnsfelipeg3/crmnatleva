@@ -852,47 +852,60 @@ export default function Sales() {
         ) : (
           <>
             {/* Mobile card view */}
-            {isMobile && <div className="sm:hidden space-y-3">
+            {isMobile && <div className="sm:hidden space-y-2.5">
               {filtered.map((sale) => (
-                <Card key={sale.id} className="p-4 glass-card cursor-pointer active:scale-[0.98] transition-transform" onClick={() => navigate(`/sales/${sale.id}`)}>
+                <Card
+                  key={sale.id}
+                  className="p-3 glass-card cursor-pointer active:scale-[0.99] transition-transform overflow-hidden"
+                  onClick={() => navigate(`/sales/${sale.id}`)}
+                >
+                  {/* Linha 1 · nome + valor */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground truncate">{sale.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{sale.display_id} · {formatDateBR(sale.close_date)}</p>
+                      <p className="font-medium text-foreground text-sm leading-tight truncate">{sale.name}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+                        {sale.display_id} · {formatDateBR(sale.close_date)}
+                      </p>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={cn("text-[10px] shrink-0", statusColor[sale.status] || "")}>{sale.status}</Badge>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-semibold leading-tight whitespace-nowrap">{fmt(sale.received_value || 0)}</p>
+                      <p className={cn("text-[10px] whitespace-nowrap", (sale.profit || 0) > 0 ? "text-success" : "text-destructive")}>
+                        {fmt(sale.profit || 0)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Linha 2 · rota + datas (uma linha só) */}
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-muted-foreground overflow-hidden">
+                    <div className="truncate">{renderRoute(sale)}</div>
+                    <span className="shrink-0">·</span>
+                    <div className="truncate">{renderDates(sale)}</div>
+                  </div>
+
+                  {/* Linha 3 · badges + pax + produtos + ações */}
+                  <div className="flex items-center justify-between gap-2 mt-2.5 flex-wrap">
+                    <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                      <Badge variant="outline" className={cn("text-[10px] h-5 px-1.5", statusColor[sale.status] || "")}>
+                        {sale.status}
+                      </Badge>
                       {renderLeadBadge(sale.lead_type)}
-                      <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={handleDeleted} />
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                        {(sale.adults || 0) + (sale.children || 0)} pax
+                      </span>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                    {renderDates(sale)}
-                    <span className="mx-1">·</span>
-                    {renderRoute(sale)}
-                  </div>
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{(sale.adults || 0) + (sale.children || 0)} pax</span>
-                      <div className="flex gap-1 items-center flex-wrap">
-                        {normalizeProductsToSlugs(sale.products).map((slug) => {
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="flex gap-1 items-center">
+                        {normalizeProductsToSlugs(sale.products).slice(0, 4).map((slug) => {
                           const meta = getProductMeta(slug, productCatalog);
                           const Icon = meta.icon;
-                          const tooltipLabel = slug === "hospedagem" && sale.hotel_name ? sale.hotel_name : meta.label;
-                          return (
-                            <Tooltip key={slug}>
-                              <TooltipTrigger asChild><span><Icon className={cn("w-3.5 h-3.5", meta.className)} /></span></TooltipTrigger>
-                              <TooltipContent>{tooltipLabel}</TooltipContent>
-                            </Tooltip>
-                          );
+                          return <Icon key={slug} className={cn("w-3.5 h-3.5", meta.className)} />;
                         })}
                       </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">{fmt(sale.received_value || 0)}</p>
-                      <p className={cn("text-[10px]", (sale.profit || 0) > 0 ? "text-success" : "text-destructive")}>
-                        Lucro {fmt(sale.profit || 0)}
-                      </p>
+                      <DeleteSaleButton
+                        saleId={sale.id}
+                        saleLabel={`${sale.display_id} · ${sale.name}`}
+                        onDeleted={handleDeleted}
+                      />
                     </div>
                   </div>
                 </Card>
