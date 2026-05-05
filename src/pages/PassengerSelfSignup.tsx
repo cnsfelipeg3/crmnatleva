@@ -9,6 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle, Camera, X, Upload } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 function formatCpf(v: string) {
   const d = v.replace(/\D/g, "").slice(0, 11);
