@@ -4848,6 +4848,7 @@ export type Database = {
           address_complement: string | null
           address_country: string | null
           address_neighborhood: string | null
+          address_notes: string | null
           address_number: string | null
           address_state: string | null
           address_street: string | null
@@ -4874,6 +4875,7 @@ export type Database = {
           address_complement?: string | null
           address_country?: string | null
           address_neighborhood?: string | null
+          address_notes?: string | null
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
@@ -4900,6 +4902,7 @@ export type Database = {
           address_complement?: string | null
           address_country?: string | null
           address_neighborhood?: string | null
+          address_notes?: string | null
           address_number?: string | null
           address_state?: string | null
           address_street?: string | null
