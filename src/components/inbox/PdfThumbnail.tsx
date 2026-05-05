@@ -2,9 +2,10 @@ import { memo, useEffect, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { FileText } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
-// Configure pdf.js worker (use CDN matching installed version)
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+// Configure pdf.js worker locally so previews don't depend on an external CDN.
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 interface PdfThumbnailProps {
   url: string;
