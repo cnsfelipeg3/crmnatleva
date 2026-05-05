@@ -758,6 +758,8 @@ function OperacaoInboxInner() {
             score_risk: c.score_risk || 0,
             is_pinned: (c as any).is_pinned || false,
             manually_marked_unread: !!(c as any).manually_marked_unread,
+            is_archived: !!(c as any).is_archived,
+            archived_at: (c as any).archived_at || null,
           };
         };
 
