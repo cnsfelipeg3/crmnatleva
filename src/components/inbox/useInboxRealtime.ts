@@ -133,6 +133,9 @@ export function useInboxRealtime(
               last_message_preview: n.content || `📎 ${n.message_type || "media"}`,
               last_message_at: toIsoTimestamp(n.timestamp || n.created_at),
               unread_count: safeUnreadCount(c.unread_count) + 1, // otimista · será corrigido pelo UPDATE
+              // Trigger SQL desarquiva no banco; aqui refletimos imediato na UI
+              is_archived: false,
+              archived_at: null,
             };
           }));
         }
