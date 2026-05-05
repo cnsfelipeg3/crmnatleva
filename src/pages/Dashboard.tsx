@@ -167,7 +167,7 @@ export default function Dashboard() {
     // Phase 1: lightweight metadata (profiles, clients)
     Promise.all([
       fetchAllRows("profiles", "id, full_name", { cacheMs: 60000 }),
-      fetchAllRows("clients", "id, display_name, created_at", { maxRows: 15000, cacheMs: 30000 }),
+      fetchAllRows("clients", "id, display_name, created_at, customer_since", { maxRows: 15000, cacheMs: 30000 }),
     ]).then(([p, c]) => {
       if (!alive) return;
       setProfiles(p as Profile[]);
