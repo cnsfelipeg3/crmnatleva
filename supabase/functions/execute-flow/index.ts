@@ -5,6 +5,32 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ─── SSRF guard for util_webhook URLs ───
+function isSafeWebhookUrl(raw: string): boolean {
+  let u: URL;
+  try { u = new URL(raw); } catch { return false; }
+  if (u.protocol !== "https:") return false;
+  const host = u.hostname.toLowerCase();
+  // Block localhost / metadata / link-local / private ranges
+  if (host === "localhost" || host.endsWith(".localhost")) return false;
+  if (host === "169.254.169.254" || host === "metadata.google.internal") return false;
+  // IPv4 literal check
+  const m = host.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (m) {
+    const [a, b] = [parseInt(m[1]), parseInt(m[2])];
+    if (a === 10) return false;
+    if (a === 127) return false;
+    if (a === 0) return false;
+    if (a === 169 && b === 254) return false;
+    if (a === 172 && b >= 16 && b <= 31) return false;
+    if (a === 192 && b === 168) return false;
+    if (a >= 224) return false;
+  }
+  // Block IPv6 literals (URL hostname wraps them in [])
+  if (raw.includes("[")) return false;
+  return true;
+}
+
 // ─── Z-API Helper ───
 async function sendViaZapi(phone: string, action: string, payload: Record<string, unknown>) {
   const instanceId = Deno.env.get("ZAPI_INSTANCE_ID") || "";
@@ -526,6 +552,11 @@ Deno.serve(async (req) => {
           // UTIL: WEBHOOK
           case current.node_type === "util_webhook": {
             if (config.url) {
+              if (!isSafeWebhookUrl(String(config.url))) {
+                output.webhook_error = "URL bloqueada (SSRF guard): exige https público";
+                stepActions.push(`webhook bloqueado: ${config.url}`);
+                break;
+              }
               try {
                 const webhookBody = config.body_template
                   ? JSON.parse(interpolate(JSON.stringify(config.body_template), context.variables))
