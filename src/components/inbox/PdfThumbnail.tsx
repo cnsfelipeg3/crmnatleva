@@ -68,15 +68,20 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
       onClick={onClick}
       title={filename || "Abrir PDF"}
     >
+      <iframe
+        src={`${url}#page=1&toolbar=0&navpanes=0&scrollbar=0`}
+        title={filename || "Prévia do PDF"}
+        className="absolute inset-0 h-full w-full border-0 bg-background"
+      />
       {!loaded && (
         <div
-          className="absolute inset-0 flex items-center justify-center bg-muted/60 z-10"
-          style={{ height: renderWidth * 1.25 }}
+          className="absolute right-2 top-2 flex items-center justify-center rounded-full bg-background/80 px-2 py-1 z-10 shadow-sm"
         >
           <LoadingState variant="inline" size="sm" />
         </div>
       )}
       {documentFile && <Document
+        className="relative z-[1]"
         file={documentFile}
         options={documentOptions}
         onLoadError={() => setError(true)}
