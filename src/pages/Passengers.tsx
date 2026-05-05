@@ -46,6 +46,7 @@ interface SaleLink {
   sale_id: string;
   sale_name: string;
   sale_display_id: string;
+  sale_date: string | null;
 }
 
 function formatCpf(v: string) {
@@ -112,7 +113,7 @@ export default function Passengers() {
       setPassengers(data as Passenger[]);
       setLoading(false);
 
-      const links = await fetchAllRows("sale_passengers", "passenger_id, sale_id, sales:sale_id(name, display_id)");
+      const links = await fetchAllRows("sale_passengers", "passenger_id, sale_id, sales:sale_id(name, display_id, close_date, created_at)");
       if (links) {
         const map: Record<string, SaleLink[]> = {};
         for (const link of links as any[]) {
@@ -122,6 +123,7 @@ export default function Passengers() {
             sale_id: link.sale_id,
             sale_name: link.sales?.name || "",
             sale_display_id: link.sales?.display_id || "",
+            sale_date: link.sales?.close_date || link.sales?.created_at || null,
           });
         }
         setSaleLinks(map);
@@ -285,6 +287,14 @@ export default function Passengers() {
 
   const states = [...new Set(passengers.map(p => p.address_state).filter(Boolean))].sort() as string[];
 
+  const getPassengerSince = (passengerId: string) => {
+    const dates = (saleLinks[passengerId] || [])
+      .map(link => link.sale_date)
+      .filter(Boolean) as string[];
+    if (dates.length === 0) return null;
+    return dates.sort()[0];
+  };
+
   const filtered = passengers.filter((p) => {
     const matchSearch = !search || p.full_name.toLowerCase().includes(search.toLowerCase()) || p.cpf?.includes(search) || p.phone?.includes(search);
     const matchState = stateFilter === "all" || p.address_state === stateFilter;
@@ -296,8 +306,8 @@ export default function Passengers() {
     return matchSearch && matchState && matchDoc;
   }).sort((a, b) => {
     if (!sortBy) return 0;
-    const da = (a as any).created_at ? new Date((a as any).created_at).getTime() : 0;
-    const db = (b as any).created_at ? new Date((b as any).created_at).getTime() : 0;
+    const da = getPassengerSince(a.id) ? new Date(getPassengerSince(a.id)!).getTime() : 0;
+    const db = getPassengerSince(b.id) ? new Date(getPassengerSince(b.id)!).getTime() : 0;
     return sortBy === "created_desc" ? db - da : da - db;
   });
 
@@ -498,7 +508,7 @@ export default function Passengers() {
                     <TableHead
                       className="cursor-pointer select-none hover:text-foreground transition-colors"
                       onClick={() => setSortBy(sortBy === "created_desc" ? "created_asc" : "created_desc")}
-                      title="Ordenar por data de cadastro"
+                      title="Ordenar pela primeira venda vinculada"
                     >
                       Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : ""}
                     </TableHead>
@@ -509,6 +519,7 @@ export default function Passengers() {
                   {filtered.slice(0, visibleCount).map((p) => {
                     const expiring = isPassportExpiringSoon(p.passport_expiry);
                     const tripCount = saleLinks[p.id]?.length || 0;
+                    const passengerSince = getPassengerSince(p.id);
                     return (
                       <TableRow
                         key={p.id}
@@ -552,7 +563,7 @@ export default function Passengers() {
                           {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {(p as any).created_at ? formatDateBR((p as any).created_at) : "—"}
+                          {passengerSince ? formatDateBR(passengerSince) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {tripCount > 0 ? (
