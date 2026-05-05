@@ -779,13 +779,13 @@ export default function Sales() {
         />
 
         {sellersMap.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Vendedor:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-muted-foreground shrink-0">Vendedor:</span>
             <Select value={filterSeller} onValueChange={(v) => {
               if (v === "__manage__") { setExternalDialogOpen(true); return; }
               setFilterSeller(v);
             }}>
-              <SelectTrigger className="w-[220px] h-9 text-xs">
+              <SelectTrigger className="w-full sm:w-[220px] h-9 text-xs min-w-0 flex-1 sm:flex-none">
                 <SelectValue placeholder="Todos vendedores" />
               </SelectTrigger>
               <SelectContent>
@@ -823,7 +823,7 @@ export default function Sales() {
               </SelectContent>
             </Select>
             {filterSeller !== "all" && (
-              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setFilterSeller("all")}>
+              <Button variant="ghost" size="sm" className="h-8 text-xs shrink-0" onClick={() => setFilterSeller("all")}>
                 <X className="w-3 h-3 mr-1" /> Limpar
               </Button>
             )}
