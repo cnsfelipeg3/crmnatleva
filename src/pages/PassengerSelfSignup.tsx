@@ -229,7 +229,35 @@ export default function PassengerSelfSignup() {
   }
 
   if (done) {
-    return (
+  // Helpers for sequential DOB inputs
+  const dobParts = (() => {
+    const [y = "", m = "", d = ""] = (form.birth_date || "").split("-");
+    return { d, m, y };
+  })();
+  const commitDob = (parts: { d: string; m: string; y: string }) => {
+    const d = parts.d.replace(/\D/g, "").slice(0, 2);
+    const m = parts.m.replace(/\D/g, "").slice(0, 2);
+    const y = parts.y.replace(/\D/g, "").slice(0, 4);
+    const iso = y.length === 4 && m.length >= 1 && d.length >= 1
+      ? `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`
+      : "";
+    setForm((f) => ({ ...f, birth_date: iso }));
+    if (iso) setDobError(validateDob(iso));
+    else setDobError("");
+  };
+  const handleDobPaste = (e: React.ClipboardEvent) => {
+    const text = e.clipboardData.getData("text").replace(/\D/g, "");
+    if (text.length >= 6) {
+      e.preventDefault();
+      const d = text.slice(0, 2);
+      const m = text.slice(2, 4);
+      const y = text.slice(4, 8);
+      commitDob({ d, m, y });
+      setTimeout(() => dobYearRef.current?.focus(), 0);
+    }
+  };
+
+  return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
         <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
 
