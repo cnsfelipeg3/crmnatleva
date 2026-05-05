@@ -316,13 +316,13 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           </span>
         )}
       </td>
-      <td className="px-2 py-4">
-        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
+      <td className="px-2 py-4 overflow-hidden">
+        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap max-w-full truncate inline-block", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
-      <td className="px-2 py-4 text-xs font-mono text-muted-foreground whitespace-nowrap">{sale.display_id}</td>
-      <td className="px-2 py-4">
+      <td className="px-2 py-4 text-xs font-mono text-muted-foreground whitespace-nowrap truncate">{sale.display_id}</td>
+      <td className="px-2 py-4 overflow-hidden">
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
           <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
         </div>
       </td>
@@ -333,26 +333,28 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 const TABLE_COLUMN_COUNT = 17;
 const ESTIMATED_ROW_HEIGHT = 64;
 
+// Total: 1660px · keep in sync with SALES_TABLE_MIN_WIDTH below
+const SALES_TABLE_MIN_WIDTH = 1660;
 function SalesTableColGroup() {
   return (
     <colgroup>
-      <col style={{ width: "28px" }} />
-      <col style={{ minWidth: "200px" }} />
-      <col style={{ minWidth: "100px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "50px" }} />
-      <col style={{ minWidth: "80px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "70px" }} />
-      <col style={{ minWidth: "85px" }} />
-      <col style={{ minWidth: "130px" }} />
-      <col style={{ minWidth: "100px" }} />
-      <col style={{ minWidth: "110px" }} />
-      <col style={{ minWidth: "90px" }} />
+      <col style={{ width: "32px" }} />
+      <col style={{ width: "210px" }} />
+      <col style={{ width: "105px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "55px" }} />
+      <col style={{ width: "85px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "75px" }} />
+      <col style={{ width: "90px" }} />
+      <col style={{ width: "135px" }} />
+      <col style={{ width: "105px" }} />
+      <col style={{ width: "115px" }} />
+      <col style={{ width: "95px" }} />
     </colgroup>
   );
 }
@@ -427,7 +429,7 @@ function VirtualEmissionGroup({
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }}
       onDrop={(e) => { e.preventDefault(); onDropToGroup(variant); }}
     >
-      <table className="w-full text-sm min-w-[1420px]">
+      <table className="w-full text-sm min-w-[1660px] table-fixed">
         <SalesTableColGroup />
         <tbody>
           <tr className={cn("cursor-pointer border-y transition-colors", groupTone)} onClick={onToggle}>
@@ -449,10 +451,10 @@ function VirtualEmissionGroup({
       {open && (
         <div
           ref={scrollRef}
-          className="overflow-y-auto overscroll-contain min-w-[1420px]"
+          className="overflow-y-auto overscroll-contain min-w-[1660px]"
           style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
         >
-          <table className="w-full text-sm min-w-[1420px]">
+          <table className="w-full text-sm min-w-[1660px] table-fixed">
             <SalesTableColGroup />
             <tbody>
               {sales.length === 0 ? (
@@ -893,7 +895,7 @@ export default function Sales() {
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1420px]">
+                  <table className="w-full text-sm min-w-[1660px] table-fixed">
                     <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
