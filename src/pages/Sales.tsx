@@ -147,23 +147,22 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           <GripVertical className="w-3.5 h-3.5" />
         </button>
       </td>
-      <td className="px-3 py-3">
-        <p className="font-medium text-foreground truncate">{sale.name}</p>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground truncate">
-          <span className="truncate">{sale.display_id} · {formatDateBR(sale.close_date)}</span>
+      <td className="px-3 py-4">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <p className="font-medium text-foreground truncate">{sale.name}</p>
           {sale.client_id && (
             <button
               onClick={(e) => { e.stopPropagation(); onNavigateClient(sale.client_id!); }}
               className="text-primary hover:underline font-medium flex-shrink-0"
+              title="Abrir ficha do cliente"
             >
               👤
             </button>
           )}
         </div>
       </td>
-      <td className="px-2 py-3 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
-      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
-      <td className="px-2 py-3"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
+      <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
+      <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
       <td className="px-2 py-3">
         <span className={cn("font-mono text-xs", routeEmpty && "text-muted-foreground/40 italic")}>
           {o && d ? `${o} → ${d}` : o ? `${o} → N/D` : d ? `N/D → ${d}` : "—"}
