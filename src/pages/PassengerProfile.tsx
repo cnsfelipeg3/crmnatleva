@@ -523,6 +523,11 @@ export default function PassengerProfile() {
                       <DataField label="Complemento" value={passenger.address_complement} />
                       <DataField label="Bairro" value={passenger.address_neighborhood} />
                       <DataField label="Cidade/UF" value={passenger.address_city ? `${passenger.address_city}/${passenger.address_state}` : null} />
+                      {passenger.address_notes && (
+                        <div className="md:col-span-2">
+                          <DataField label="Observações" value={passenger.address_notes} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
