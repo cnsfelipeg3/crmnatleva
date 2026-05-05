@@ -2407,6 +2407,12 @@ function OperacaoInboxInner() {
                             </button>
                             <button
                               className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setGalleryOpen(true)}
+                            >
+                              <Images className="h-4 w-4" /> Mídias da conversa
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
                               onClick={() => setShowLinkClient(true)}
                             >
                               <Link2 className="h-4 w-4" /> Vincular cliente
