@@ -194,6 +194,8 @@ function OperacaoInboxInner() {
 
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
+  const [searchingContent, setSearchingContent] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
@@ -968,13 +970,56 @@ function OperacaoInboxInner() {
     checkAndStartPolling();
   }, [chatSyncVersion]);
 
+  // Busca em conteúdo de mensagens (debounced) · ativa quando query >= 2 chars
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (q.length < 2) {
+      setContentMatchIds(null);
+      setSearchingContent(false);
+      return;
+    }
+    setSearchingContent(true);
+    const handle = setTimeout(async () => {
+      try {
+        const [m1, m2] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("conversation_id")
+            .ilike("text", `%${q}%`)
+            .order("created_at", { ascending: false })
+            .limit(500),
+          supabase
+            .from("conversation_messages")
+            .select("conversation_id")
+            .ilike("content", `%${q}%`)
+            .limit(500),
+        ]);
+        const ids = new Set<string>();
+        (m1.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        (m2.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        setContentMatchIds(ids);
+      } catch (e) {
+        console.warn("[inbox] content search failed", e);
+        setContentMatchIds(new Set());
+      } finally {
+        setSearchingContent(false);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchQuery]);
+
   const filteredConversations = useMemo(() => {
     const filtered = conversations.filter(c => {
       const contactName = c.contact_name || "";
       const phone = c.phone || "";
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
+        const matchesMeta = contactName.toLowerCase().includes(q)
+          || phone.includes(q)
+          || (c.last_message_preview || "").toLowerCase().includes(q);
+        const convDbId = (c as any).db_id || c.id;
+        const matchesContent = contentMatchIds?.has(convDbId) ?? false;
+        if (!matchesMeta && !matchesContent) return false;
       }
       // Filtro por dono (independente do filtro de status)
       if (ownerFilter === "mine" && user) {
@@ -1015,7 +1060,7 @@ function OperacaoInboxInner() {
       seen.add(norm);
       return true;
     });
-  }, [conversations, searchQuery, activeFilter, ownerFilter, user]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, user, contentMatchIds]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
@@ -2115,7 +2160,10 @@ function OperacaoInboxInner() {
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Buscar por nome, telefone..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                <Input placeholder="Buscar nome, telefone ou conteúdo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                {searchingContent && (
+                  <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground animate-pulse">buscando…</span>
+                )}
                 {searchQuery && (
                   <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     <X className="h-3 w-3" />
