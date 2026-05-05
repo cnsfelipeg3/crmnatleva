@@ -397,7 +397,14 @@ export default function PassengerSelfSignup() {
           </div>
           <div className="space-y-2">
             <Label>Telefone com WhatsApp *</Label>
-            <Input inputMode="tel" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" required />
+            <PhoneInput
+              value={form.phone}
+              countryCode={form.phone_country}
+              onChange={(full, { country }) =>
+                setForm((f) => ({ ...f, phone: full, phone_country: country.code }))
+              }
+              required
+            />
           </div>
         </Card>
 
