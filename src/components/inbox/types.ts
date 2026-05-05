@@ -74,6 +74,7 @@ export const FILTERS = [
   { key: "unread", label: "Não lidas" },
   { key: "mine", label: "Minhas" },
   { key: "vip", label: "VIP" },
+  { key: "groups", label: "Grupos" },
   { key: "qualificacao", label: "Qualificação" },
   { key: "proposta_enviada", label: "Proposta" },
   { key: "fechado", label: "Clientes" },
