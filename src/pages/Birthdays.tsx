@@ -73,9 +73,10 @@ export default function Birthdays() {
       const data = await fetchAllRows(
         "passengers",
         "id, full_name, birth_date, phone, cpf",
-        { filter: (q) => q.not("birth_date", "is", null) }
+        { isFilters: { birth_date: null as any } }
       );
-      setPassengers((data || []) as BirthdayPassenger[]);
+      // isFilters acima usa .is(col, null) — mas queremos NOT null. Filtramos no client.
+      setPassengers(((data as any[]) || []).filter(p => p.birth_date) as BirthdayPassenger[]);
       setLoading(false);
     };
     fetch();
