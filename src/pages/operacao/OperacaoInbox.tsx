@@ -1416,6 +1416,7 @@ function OperacaoInboxInner() {
       const mediaRecorder = new MediaRecorder(stream, { mimeType });
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
+      recordingCancelledRef.current = false;
 
       const audioContext = new AudioContext();
       const analyser = audioContext.createAnalyser();
