@@ -86,7 +86,7 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
   const mediaRows = useMemo<Row[]>(() => {
     const rows: Row[] = [];
     let currentMonth = "";
-    let buffer: Message[] = [];
+    const buffer: Message[] = [];
     let baseIdx = 0;
     const flush = () => {
       while (buffer.length) {
