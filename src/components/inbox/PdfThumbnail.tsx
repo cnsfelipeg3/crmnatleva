@@ -87,6 +87,7 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
         <Page
           pageNumber={1}
           width={renderWidth}
+          height={renderWidth * 1.25}
           renderAnnotationLayer={false}
           renderTextLayer={false}
           onRenderSuccess={() => setLoaded(true)}
