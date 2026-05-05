@@ -102,7 +102,7 @@ export default function Passengers() {
     full_name: "", cpf: "", birth_date: "", passport_number: "",
     passport_expiry: "", phone: "", address_cep: "", address_street: "",
     address_number: "", address_complement: "", address_neighborhood: "",
-    address_city: "", address_state: "",
+    address_city: "", address_state: "", address_notes: "",
   });
 
   const fetchPassengers = async () => {
