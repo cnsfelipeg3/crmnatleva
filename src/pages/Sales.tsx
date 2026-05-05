@@ -374,6 +374,9 @@ interface VirtualEmissionGroupProps {
   onDeleted: (id: string) => void;
   onDragStart: (saleId: string, emitted: boolean) => void;
   onDropToGroup: (variant: "pending" | "emitted") => void;
+  onMove: (saleId: string, toEmitted: boolean) => void;
+  onRequestDelete: (sale: SaleRow) => void;
+  canDelete: boolean;
 }
 
 function VirtualEmissionGroup({
