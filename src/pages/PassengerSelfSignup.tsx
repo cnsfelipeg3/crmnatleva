@@ -139,6 +139,14 @@ export default function PassengerSelfSignup() {
       toast({ title: "Informe o nome completo", variant: "destructive" });
       return;
     }
+    if (form.birth_date) {
+      const err = validateDob(form.birth_date);
+      if (err) {
+        setDobError(err);
+        toast({ title: "Data de nascimento inválida", description: err, variant: "destructive" });
+        return;
+      }
+    }
     if (form.international_outside_sa && (!form.passport_number || !form.passport_expiry)) {
       toast({ title: "Passaporte e validade são obrigatórios para viagem internacional fora da América do Sul", variant: "destructive" });
       return;
