@@ -2887,23 +2887,18 @@ function OperacaoInboxInner() {
                       </div>
                       <Button size="icon" className="h-9 w-9 shrink-0" onClick={stopRecording}><Send className="h-4 w-4" /></Button>
                     </div>
-                  ) : (
-                    <div className="flex items-end gap-1 md:gap-2">
-                      {!isMobile && (
-                        <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-                          <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" side="top" align="start">
-                            <LazyEmojiPicker onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
-                          </PopoverContent>
-                        </Popover>
-                      )}
-
-                      {isMobile ? (
+                  ) : isMobile ? (
+                    /* ─── WhatsApp-style mobile composer ─── */
+                    <div className="flex items-end gap-2 w-full">
+                      {/* Pill input with embedded actions */}
+                      <div className="flex-1 min-w-0 flex items-end gap-1 bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
                         <Popover open={showMobilePlusMenu} onOpenChange={setShowMobilePlusMenu}>
-                          <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Plus className="h-5 w-5 text-muted-foreground" /></Button></PopoverTrigger>
-                          <PopoverContent className="w-48 p-1" side="top" align="start">
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5">
+                              <Plus className="h-5 w-5 text-muted-foreground" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-52 p-1" side="top" align="start">
                             <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Anexos</p>
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
                               <Image className="h-4 w-4 text-blue-400" /> Imagem
@@ -2915,30 +2910,67 @@ function OperacaoInboxInner() {
                               <File className="h-4 w-4 text-amber-400" /> Documento
                             </button>
                             <Separator className="my-1" />
-                            <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Ferramentas</p>
                             <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
                               <Sparkles className="h-4 w-4 text-primary" /> Sugestão IA
                             </button>
                           </PopoverContent>
                         </Popover>
-                      ) : (
-                        <Popover open={showMediaMenu} onOpenChange={setShowMediaMenu}>
-                          <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Paperclip className="h-5 w-5 text-muted-foreground" /></Button></PopoverTrigger>
-                          <PopoverContent className="w-40 p-1" side="top" align="start">
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); }}>
-                              <Image className="h-4 w-4 text-blue-400" /> Imagem
-                            </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); }}>
-                              <Video className="h-4 w-4 text-purple-400" /> Vídeo
-                            </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); }}>
-                              <File className="h-4 w-4 text-amber-400" /> Documento
-                            </button>
-                          </PopoverContent>
-                        </Popover>
-                      )}
+
+                        <Textarea
+                          ref={textareaRef} value={inputText}
+                          onChange={e => { setInputText(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
+                          onKeyDown={handleKeyDown} onPaste={handlePaste}
+                          placeholder="Mensagem"
+                          className="flex-1 min-h-[36px] max-h-[120px] resize-none text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 leading-snug placeholder:text-muted-foreground/60 shadow-none"
+                          style={{ height: "36px" }} rows={1}
+                        />
+
+                        {inputText.trim() && (
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5" onClick={handleCorrectText} disabled={isCorrecting}>
+                            {isCorrecting ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Wand2 className="h-4 w-4 text-primary" />}
+                          </Button>
+                        )}
+                      </div>
+
                       <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
+                      {/* Standalone send / mic button (WhatsApp green circle) */}
+                      {inputText.trim() ? (
+                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={handleSend} disabled={isSending}>
+                          {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                        </Button>
+                      ) : (
+                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={startRecording}>
+                          <Mic className="h-5 w-5" />
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-end gap-2">
+                      <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+                        <PopoverTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" side="top" align="start">
+                          <LazyEmojiPicker onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover open={showMediaMenu} onOpenChange={setShowMediaMenu}>
+                        <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Paperclip className="h-5 w-5 text-muted-foreground" /></Button></PopoverTrigger>
+                        <PopoverContent className="w-40 p-1" side="top" align="start">
+                          <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); }}>
+                            <Image className="h-4 w-4 text-blue-400" /> Imagem
+                          </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); }}>
+                            <Video className="h-4 w-4 text-purple-400" /> Vídeo
+                          </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); }}>
+                            <File className="h-4 w-4 text-amber-400" /> Documento
+                          </button>
+                        </PopoverContent>
+                      </Popover>
+                      <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
                       <div className="flex-1">
                         <Textarea
@@ -2951,16 +2983,14 @@ function OperacaoInboxInner() {
                         />
                       </div>
 
-                      {!isMobile && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className={`h-9 w-9 shrink-0 ${showAIPanel ? 'bg-primary/10' : ''}`} onClick={handleAISuggest}>
-                              <Sparkles className="h-5 w-5 text-primary" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent><p className="text-xs">Sugestão IA</p></TooltipContent>
-                        </Tooltip>
-                      )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className={`h-9 w-9 shrink-0 ${showAIPanel ? 'bg-primary/10' : ''}`} onClick={handleAISuggest}>
+                            <Sparkles className="h-5 w-5 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">Sugestão IA</p></TooltipContent>
+                      </Tooltip>
 
                       {inputText.trim() && (
                         <Tooltip>
