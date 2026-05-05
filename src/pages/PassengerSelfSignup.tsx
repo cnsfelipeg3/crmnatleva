@@ -74,6 +74,7 @@ export default function PassengerSelfSignup() {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [blockedMsg, setBlockedMsg] = useState<string>("");
   const [dobError, setDobError] = useState<string>("");
+  const [dobParts, setDobParts] = useState({ d: "", m: "", y: "" });
   const dobDayRef = useRef<HTMLInputElement>(null);
   const dobMonthRef = useRef<HTMLInputElement>(null);
   const dobYearRef = useRef<HTMLInputElement>(null);
@@ -158,6 +159,13 @@ export default function PassengerSelfSignup() {
 
     if (!form.full_name.trim() || form.full_name.trim().length < 3) {
       toast({ title: "Informe o nome completo", variant: "destructive" });
+      return;
+    }
+    const hasDobInput = !!(dobParts.d || dobParts.m || dobParts.y);
+    if (hasDobInput && !form.birth_date) {
+      const err = "Informe a data completa no formato DD/MM/AAAA";
+      setDobError(err);
+      toast({ title: "Data de nascimento incompleta", description: err, variant: "destructive" });
       return;
     }
     if (form.birth_date) {
