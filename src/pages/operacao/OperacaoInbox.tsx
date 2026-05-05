@@ -1014,7 +1014,12 @@ function OperacaoInboxInner() {
       const phone = c.phone || "";
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        if (!contactName.toLowerCase().includes(q) && !phone.includes(q)) return false;
+        const matchesMeta = contactName.toLowerCase().includes(q)
+          || phone.includes(q)
+          || (c.last_message_preview || "").toLowerCase().includes(q);
+        const convDbId = (c as any).db_id || c.id;
+        const matchesContent = contentMatchIds?.has(convDbId) ?? false;
+        if (!matchesMeta && !matchesContent) return false;
       }
       // Filtro por dono (independente do filtro de status)
       if (ownerFilter === "mine" && user) {
