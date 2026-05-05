@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Building2, CheckCircle2, Loader2 } from "lucide-react";
+import { CepInput } from "@/components/ui/cep-input";
 
 export default function SupplierRegistration() {
   const [params] = useSearchParams();
@@ -141,11 +142,26 @@ export default function SupplierRegistration() {
               {fields.map(({ key, label, placeholder, colSpan }) => (
                 <div key={key} className={colSpan === 2 ? "md:col-span-2" : ""}>
                   <Label className="text-xs">{label}</Label>
-                  <Input
-                    value={(form as any)[key]}
-                    onChange={(e) => setForm(f => ({ ...f, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                  />
+                  {key === "cep" ? (
+                    <CepInput
+                      value={form.cep}
+                      onChange={(v) => setForm(f => ({ ...f, cep: v }))}
+                      onResolved={(r) => setForm(f => ({
+                        ...f,
+                        endereco: f.endereco || r.street,
+                        bairro: f.bairro || r.neighborhood,
+                        cidade: r.city || f.cidade,
+                        estado: r.state || f.estado,
+                      }))}
+                      placeholder={placeholder}
+                    />
+                  ) : (
+                    <Input
+                      value={(form as any)[key]}
+                      onChange={(e) => setForm(f => ({ ...f, [key]: e.target.value }))}
+                      placeholder={placeholder}
+                    />
+                  )}
                 </div>
               ))}
             </div>

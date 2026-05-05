@@ -13,6 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Search, Building2, Trash2, Pencil, ChevronDown, ChevronRight, Check, X, Gavel, Link2, Copy } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { CepInput } from "@/components/ui/cep-input";
 
 interface MilesProgram {
   id: string;
@@ -261,7 +262,21 @@ export default function Fornecedores() {
             ].map(({ key, label }) => (
               <div key={key}>
                 <Label className="text-xs">{label}</Label>
-                <Input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                {key === "cep" ? (
+                  <CepInput
+                    value={(form as any).cep}
+                    onChange={(v) => setForm({ ...form, cep: v })}
+                    onResolved={(r) => setForm((prev: any) => ({
+                      ...prev,
+                      endereco: prev.endereco || r.street,
+                      bairro: prev.bairro || r.neighborhood,
+                      cidade: r.city || prev.cidade,
+                      estado: r.state || prev.estado,
+                    }))}
+                  />
+                ) : (
+                  <Input value={(form as any)[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+                )}
               </div>
             ))}
             <Button onClick={handleSave} className="w-full">{editingSupplier ? "Atualizar" : "Salvar"}</Button>

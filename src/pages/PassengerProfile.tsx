@@ -43,6 +43,7 @@ interface Passenger {
   address_city: string | null;
   address_state: string | null;
   address_country: string | null;
+  address_notes: string | null;
   categoria: string | null;
   created_at: string;
 }
@@ -240,6 +241,7 @@ export default function PassengerProfile() {
       address_neighborhood: editForm.address_neighborhood || null,
       address_city: editForm.address_city || null,
       address_state: editForm.address_state || null,
+      address_notes: editForm.address_notes || null,
     }).eq("id", passenger.id);
     setSaving(false);
     if (error) {
@@ -521,6 +523,11 @@ export default function PassengerProfile() {
                       <DataField label="Complemento" value={passenger.address_complement} />
                       <DataField label="Bairro" value={passenger.address_neighborhood} />
                       <DataField label="Cidade/UF" value={passenger.address_city ? `${passenger.address_city}/${passenger.address_state}` : null} />
+                      {passenger.address_notes && (
+                        <div className="md:col-span-2">
+                          <DataField label="Observações" value={passenger.address_notes} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -601,6 +608,16 @@ export default function PassengerProfile() {
                       <Label>UF</Label>
                       <Input value={editForm.address_state || ""} onChange={e => setEditForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
                     </div>
+                  </div>
+                  <div className="space-y-2 mt-3">
+                    <Label>Observações <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <Textarea
+                      value={editForm.address_notes || ""}
+                      onChange={e => setEditForm(f => ({ ...f, address_notes: e.target.value }))}
+                      placeholder="Ex.: ponto de referência, instruções de entrega…"
+                      rows={2}
+                      maxLength={500}
+                    />
                   </div>
                 </div>
 

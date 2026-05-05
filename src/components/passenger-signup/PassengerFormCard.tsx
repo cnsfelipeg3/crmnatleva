@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ export type PassengerFormState = {
   address_neighborhood: string;
   address_city: string;
   address_state: string;
+  address_notes: string;
   international_outside_sa: boolean;
 };
 
@@ -40,7 +42,7 @@ export const emptyPassenger: PassengerFormState = {
   passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
-  address_city: "", address_state: "",
+  address_city: "", address_state: "", address_notes: "",
   international_outside_sa: false,
 };
 
@@ -367,6 +369,16 @@ export default function PassengerFormCard({ index, value, onChange, onRemove, ca
                 placeholder="SP" className={stateInvalid ? "border-destructive" : ""} />
               {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Observações do endereço <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+            <Textarea
+              value={value.address_notes}
+              onChange={(e) => setForm(f => ({ ...f, address_notes: e.target.value }))}
+              placeholder="Ex.: ponto de referência, instruções de entrega, portaria, condomínio…"
+              rows={3}
+              maxLength={500}
+            />
           </div>
         </section>
 

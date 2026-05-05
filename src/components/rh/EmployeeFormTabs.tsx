@@ -13,6 +13,7 @@ import { SYSTEM_MENUS, MENU_GROUPS, ROLE_TEMPLATES, type MenuAction, type RoleTe
 import CommissionRulesEditor from "@/components/rh/CommissionRulesEditor";
 import AccessInfoPanel from "@/components/rh/AccessInfoPanel";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
+import { CepInput } from "@/components/ui/cep-input";
 
 const POSITIONS = [
   "SDR",
@@ -312,7 +313,18 @@ export default function EmployeeFormTabs({ form, setForm, onSave, employees }: E
           <div className="grid grid-cols-3 gap-3">
             <div><Label>Cidade</Label><Input value={f("address_city")} onChange={e => set("address_city", e.target.value)} /></div>
             <div><Label>Estado</Label><Input value={f("address_state")} onChange={e => set("address_state", e.target.value)} /></div>
-            <div><Label>CEP</Label><Input value={f("address_cep")} onChange={e => set("address_cep", e.target.value)} /></div>
+            <div><Label>CEP</Label>
+              <CepInput
+                value={f("address_cep")}
+                onChange={(v) => set("address_cep", v)}
+                onResolved={(r) => {
+                  if (!f("address_street")) set("address_street", r.street);
+                  if (!f("address_neighborhood")) set("address_neighborhood", r.neighborhood);
+                  if (r.city) set("address_city", r.city);
+                  if (r.state) set("address_state", r.state);
+                }}
+              />
+            </div>
           </div>
 
           <p className="text-xs font-semibold text-muted-foreground pt-2">Contato de Emergência</p>
