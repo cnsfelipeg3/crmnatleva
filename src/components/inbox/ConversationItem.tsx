@@ -165,7 +165,16 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
           ) : (
             <div className={`flex items-center gap-1.5 text-[11px] ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
               {preview.icon}
-              <span className={`truncate ${preview.italic ? "italic opacity-50" : ""}`}>{preview.text}</span>
+              <span className={`truncate ${preview.italic ? "italic opacity-50" : ""}`}>
+                {term ? highlightTerm(preview.text, term) : preview.text}
+              </span>
+            </div>
+          )}
+
+          {hasContentMatch && (
+            <div className="mt-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-[10px] leading-snug text-foreground/90 line-clamp-2">
+              <span className="font-bold text-amber-600 dark:text-amber-400 mr-1">↳ Encontrado:</span>
+              {highlightTerm(buildSnippet(contentMatchSnippet || "", term), term)}
             </div>
           )}
 
