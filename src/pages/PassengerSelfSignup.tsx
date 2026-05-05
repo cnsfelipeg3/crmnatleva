@@ -202,8 +202,8 @@ export default function PassengerSelfSignup() {
   if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/70" />
+        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-5">
+
           <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
           <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
           <h1 className="text-2xl font-display">Cadastro recebido!</h1>
