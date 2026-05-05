@@ -2560,6 +2560,7 @@ function OperacaoInboxInner() {
                           </div>
                         )}
                         <div
+                          data-message-id={msg.id}
                           className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
                           onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
                           onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}

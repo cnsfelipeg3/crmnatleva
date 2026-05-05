@@ -1,4 +1,4 @@
-import { useRef, useCallback } from "react";
+import { useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2, MessageSquare } from "lucide-react";
 import type { Conversation } from "./types";
@@ -16,7 +16,7 @@ interface VirtualConversationListProps {
   selectedId: string | null;
   profilePics: Map<string, string>;
   presenceByPhone?: PresenceMap;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, jumpToMsgId?: string) => void;
   onTogglePin: (id: string, e?: React.MouseEvent) => void;
   onToggleUnread?: (conv: Conversation) => void;
   onToggleArchive?: (conv: Conversation) => void;
@@ -24,6 +24,7 @@ interface VirtualConversationListProps {
   searchQuery: string;
   ownerMap?: Map<string, OwnerInfo>;
   currentUserId?: string | null;
+  contentMatchInfo?: Map<string, { msgId: string; snippet: string }>;
 }
 
 export function VirtualConversationList({
@@ -39,13 +40,14 @@ export function VirtualConversationList({
   searchQuery,
   ownerMap,
   currentUserId,
+  contentMatchInfo,
 }: VirtualConversationListProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
   const virtualizer = useVirtualizer({
     count: conversations.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 82, // estimated item height
+    estimateSize: () => 92,
     overscan: 8,
   });
 
@@ -87,6 +89,8 @@ export function VirtualConversationList({
       >
         {virtualizer.getVirtualItems().map((virtualItem) => {
           const conv = conversations[virtualItem.index];
+          const convDbId = (conv as any).db_id || conv.id;
+          const match = contentMatchInfo?.get(convDbId);
           return (
             <div
               key={conv.id}
@@ -105,12 +109,14 @@ export function VirtualConversationList({
                 isSelected={conv.id === selectedId}
                 profilePic={profilePics.get(conv.id)}
                 presence={presenceByPhone ? getActivePresence(presenceByPhone, conv.phone) : null}
-                onSelect={onSelect}
+                onSelect={(id) => onSelect(id, match?.msgId)}
                 onTogglePin={onTogglePin}
                 onToggleUnread={onToggleUnread}
                 onToggleArchive={onToggleArchive}
                 owner={conv.assigned_to ? ownerMap?.get(conv.assigned_to) || null : null}
                 isMine={!!currentUserId && conv.assigned_to === currentUserId}
+                searchTerm={searchQuery}
+                contentMatchSnippet={match?.snippet}
               />
             </div>
           );
