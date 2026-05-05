@@ -190,7 +190,7 @@ export default function PassengerSelfSignup() {
     };
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-4">
+        <Card className="p-8 sm:p-10 max-w-md w-full text-center space-y-4">
           <img src={logo} alt="NatLeva" className="h-10 mx-auto" />
           <h1 className="text-xl font-display">Link indisponível</h1>
           <p className="text-sm text-muted-foreground">{map[reason] || "Não foi possível abrir este formulário."}</p>
