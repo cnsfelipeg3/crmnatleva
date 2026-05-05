@@ -616,6 +616,10 @@ export default function PassengerProfile() {
             )}
           </Card>
         </TabsContent>
+
+        <TabsContent value="anexos" className="mt-4">
+          {id && <PassengerAttachments passengerId={id} />}
+        </TabsContent>
       </Tabs>
     </div>
   );
