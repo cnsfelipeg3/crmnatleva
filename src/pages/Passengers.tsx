@@ -431,7 +431,17 @@ export default function Passengers() {
                       <Label>UF</Label>
                       <Input value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value }))} maxLength={2} />
                     </div>
+                  <div className="space-y-2 mt-3">
+                    <Label>Observações <span className="text-muted-foreground font-normal">(opcional)</span></Label>
+                    <Textarea
+                      value={form.address_notes}
+                      onChange={(e) => setForm(f => ({ ...f, address_notes: e.target.value }))}
+                      placeholder="Ex.: ponto de referência, instruções de entrega…"
+                      rows={2}
+                      maxLength={500}
+                    />
                   </div>
+                </div>
                 </div>
                 <Button type="submit" className="w-full">Salvar Passageiro</Button>
               </form>
