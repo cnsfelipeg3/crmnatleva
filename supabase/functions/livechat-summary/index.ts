@@ -13,9 +13,9 @@ const json = (body: any, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const SUMMARY_PROMPT = `Você é um analista de atendimento da NatLeva (agência de viagens). Analise a conversa abaixo e produza um relatório executivo em PT-BR.
+const buildSummaryPrompt = (attendantName: string | null, stats: any) => `Você é um analista de atendimento da NatLeva (agência de viagens). Analise a conversa abaixo e produza um relatório executivo em PT-BR.
 
-ESTRUTURA:
+ESTRUTURA OBRIGATÓRIA (use exatamente esses títulos com ##):
 
 ## 📋 Panorama Geral
 Resuma o que aconteceu na conversa do início ao fim. Quem é o cliente, o que ele quer, como evoluiu.
@@ -32,7 +32,27 @@ O que deveria ser feito agora pra avançar essa negociação.
 ## 📊 Score do Atendimento
 Nota de 0 a 10 com justificativa breve.
 
-Seja direto, específico e construtivo. Use dados reais da conversa.
+## 💬 Feedback para ${attendantName || "o Atendente"}
+Esta seção é um feedback DIRETO E PESSOAL para ${attendantName || "o atendente responsável"} (escreva em 2ª pessoa, "você"). Use os indicadores reais de desempenho deste atendimento:
+· Mensagens enviadas: ${stats.agentMsgs} (cliente: ${stats.clientMsgs})
+· 1ª resposta: ${stats.firstResponseMs ? Math.round(stats.firstResponseMs / 60000) + " min" : "n/d"}
+· Tempo médio de resposta: ${stats.avgResponseMs ? Math.round(stats.avgResponseMs / 60000) + " min" : "n/d"}
+· Maior espera: ${stats.maxResponseMs ? Math.round(stats.maxResponseMs / 60000) + " min" : "n/d"}
+· Última mensagem foi do: ${stats.lastSender}
+
+Estruture assim (use sub-tópicos com ###):
+
+### 📈 Leitura dos Seus Indicadores
+Comente cada métrica acima de forma construtiva (o que está bom, o que precisa melhorar, comparando com o ideal: 1ª resposta < 5min, média < 15min).
+
+### 🎯 Plano de Ação Detalhado
+Liste de 4 a 6 ações CONCRETAS e ESPECÍFICAS que ${attendantName || "você"} deve aplicar nos próximos atendimentos. Use formato numerado. Cada ação deve ter:
+**[Número]. [Título da ação]** — descrição prática do que fazer, quando fazer e por quê. Cite o exemplo real desta conversa que motivou a recomendação.
+
+### 💪 Mensagem de Encerramento
+Uma frase curta de incentivo, reconhecendo um ponto forte real e reforçando o próximo passo prioritário.
+
+Seja direto, específico, construtivo e humano. Use dados reais da conversa, nunca generalidades.
 
 IMPORTANTE: A conversa inclui transcrições de áudio, descrições de imagens e resumos de PDFs (entre colchetes). CONSIDERE ESSE CONTEÚDO COMO PARTE DA CONVERSA · eles são a fala/contexto real do cliente.`;
 
@@ -226,7 +246,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "openai/gpt-5-mini",
         messages: [
-          { role: "system", content: SUMMARY_PROMPT },
+          { role: "system", content: buildSummaryPrompt(attendantName, stats) },
           {
             role: "user",
             content: `[CONVERSA]\nCliente: ${contactName || "Desconhecido"}\nEtapa: ${stage || "novo_lead"}\n\nMensagens (cronológicas):\n${historyText}\n[FIM]`,
