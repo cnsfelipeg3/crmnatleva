@@ -1,7 +1,7 @@
 // ─── Galeria de mídias da conversa · estilo WhatsApp Web ───
 // Tabs: Mídia (imagens + vídeos), Documentos, Áudios.
 // Grid scrollável agrupado por mês · lightbox com navegação ← → e teclado.
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Message } from "./types";
 import { PdfThumbnail } from "./PdfThumbnail";
-import { useRef } from "react";
+
 
 // Pré-carrega a miniatura só quando o item entra no viewport · evita travar a galeria
 function LazyPdfThumb({ url, width = 40 }: { url: string; width?: number }) {
