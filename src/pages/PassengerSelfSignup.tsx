@@ -236,11 +236,32 @@ export default function PassengerSelfSignup() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>CEP</Label>
-              <Input value={form.address_cep} onChange={(e) => { const v = formatCep(e.target.value); setForm(f => ({ ...f, address_cep: v })); if (v.replace(/\D/g, "").length === 8) fetchCep(v); }} placeholder="00000-000" />
+              <div className="relative">
+                <Input
+                  value={form.address_cep}
+                  onChange={(e) => {
+                    const v = formatCep(e.target.value);
+                    setForm(f => ({ ...f, address_cep: v }));
+                    setCepFound(false);
+                    setCepError("");
+                    if (v.replace(/\D/g, "").length === 8) fetchCep(v);
+                  }}
+                  placeholder="00000-000"
+                  className={cepInvalid || cepError ? "border-destructive pr-9" : "pr-9"}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  {cepLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  {!cepLoading && cepFound && <Check className="w-4 h-4 text-primary" />}
+                  {!cepLoading && (cepError || cepInvalid) && <AlertCircle className="w-4 h-4 text-destructive" />}
+                </div>
+              </div>
+              {(cepInvalid || cepError) && (
+                <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
+              )}
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label>Rua</Label>
-              <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} />
+              <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -263,8 +284,15 @@ export default function PassengerSelfSignup() {
               <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
             </div>
             <div className="space-y-2">
-              <Label>Estado</Label>
-              <Input maxLength={2} value={form.address_state} onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase() }))} placeholder="SP" />
+              <Label>Estado (UF)</Label>
+              <Input
+                maxLength={2}
+                value={form.address_state}
+                onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
+                placeholder="SP"
+                className={stateInvalid ? "border-destructive" : ""}
+              />
+              {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
             </div>
           </div>
         </Card>
