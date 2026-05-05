@@ -111,6 +111,25 @@ export default function Dashboard() {
   // We need profiles to resolve seller name → id for RPC
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  const [passengersCount, setPassengersCount] = useState<number>(0);
+
+  // Live count of registered passengers (real source of truth for "Clientes Totais")
+  useEffect(() => {
+    let alive = true;
+    const fetchCount = async () => {
+      const { count } = await supabase
+        .from("passengers")
+        .select("id", { count: "exact", head: true });
+      if (alive && typeof count === "number") setPassengersCount(count);
+    };
+    fetchCount();
+    const channel = supabase
+      .channel("dashboard-passengers-count")
+      .on("postgres_changes", { event: "*", schema: "public", table: "passengers" }, fetchCount)
+      .subscribe();
+    return () => { alive = false; supabase.removeChannel(channel); };
+  }, []);
+
 
   // Resolve seller name to id for RPC filter
   const sellerIdForRpc = useMemo(() => {
