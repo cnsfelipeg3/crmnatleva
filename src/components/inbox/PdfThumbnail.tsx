@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState, type KeyboardEvent } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { FileText } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -21,7 +21,7 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
   const documentFile = useMemo(() => (pdfData ? { data: pdfData } : null), [pdfData]);
   const documentOptions = useMemo(() => ({ disableRange: true, disableStream: true }), []);
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!onClick) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
