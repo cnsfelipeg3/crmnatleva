@@ -245,181 +245,187 @@ export default function PassengerFormCard({ index, value, onChange, onRemove, ca
         )}
       </div>
 
-      {/* Dados pessoais */}
-      <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-        <div className="flex items-center gap-2">
-          <Plane className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
-        </div>
-        <div className="space-y-2">
-          <Label>Nome completo *</Label>
-          <Input value={value.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>CPF</Label>
-            <Input inputMode="numeric" value={value.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
+      <Card className="p-5 sm:p-6 space-y-8 overflow-hidden">
+        {/* Dados pessoais */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <Plane className="w-4 h-4 text-primary" />
+            <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
           </div>
           <div className="space-y-2">
-            <Label>Data de nascimento</Label>
-            <div className="flex w-full items-center gap-1.5">
-              <Input ref={dobDayRef} inputMode="numeric" pattern="[0-9]*" placeholder="DD" aria-label="Dia" autoComplete="bday-day" maxLength={2}
-                className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                value={dobParts.d} onPaste={handleDobPaste} onChange={(e) => handleDobChange("d", e.target.value)} onKeyDown={(e) => handleDobKeyDown("d", e)} />
-              <span className="text-muted-foreground select-none shrink-0">/</span>
-              <Input ref={dobMonthRef} inputMode="numeric" pattern="[0-9]*" placeholder="MM" aria-label="Mês" autoComplete="bday-month" maxLength={2}
-                className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                value={dobParts.m} onPaste={handleDobPaste} onChange={(e) => handleDobChange("m", e.target.value)} onKeyDown={(e) => handleDobKeyDown("m", e)} />
-              <span className="text-muted-foreground select-none shrink-0">/</span>
-              <Input ref={dobYearRef} inputMode="numeric" pattern="[0-9]*" placeholder="AAAA" aria-label="Ano" autoComplete="bday-year" maxLength={4}
-                className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
-                value={dobParts.y} onPaste={handleDobPaste} onChange={(e) => handleDobChange("y", e.target.value)} onKeyDown={(e) => handleDobKeyDown("y", e)} />
+            <Label>Nome completo *</Label>
+            <Input value={value.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>CPF</Label>
+              <Input inputMode="numeric" value={value.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
             </div>
-            {dobError ? (
-              <p className="text-xs text-destructive">{dobError}</p>
-            ) : (
-              <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
-            )}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>RG</Label>
-            <Input value={value.rg} onChange={(e) => setForm(f => ({ ...f, rg: e.target.value }))} />
-          </div>
-          <div className="space-y-2">
-            <Label>E-mail</Label>
-            <Input type="email" inputMode="email" value={value.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="voce@email.com" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <Label>Telefone com WhatsApp *</Label>
-          <PhoneInput
-            value={value.phone}
-            countryCode={value.phone_country}
-            onChange={(full, { country }) => setForm((f) => ({ ...f, phone: full, phone_country: country.code }))}
-            required
-          />
-        </div>
-      </Card>
-
-      {/* Endereço */}
-      <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-        <div className="flex items-center gap-2">
-          <Globe2 className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-base sm:text-lg">Endereço</h2>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-2">
-            <Label>CEP</Label>
-            <div className="relative">
-              <Input inputMode="numeric" value={value.address_cep}
-                onChange={(e) => {
-                  const v = formatCep(e.target.value);
-                  setForm(f => ({ ...f, address_cep: v }));
-                  setCepFound(false); setCepError("");
-                  if (v.replace(/\D/g, "").length === 8) fetchCep(v);
-                }}
-                placeholder="00000-000"
-                className={cepInvalid || cepError ? "border-destructive pr-9" : "pr-9"} />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                {cepLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
-                {!cepLoading && cepFound && <Check className="w-4 h-4 text-primary" />}
-                {!cepLoading && (cepError || cepInvalid) && <AlertCircle className="w-4 h-4 text-destructive" />}
+            <div className="space-y-2">
+              <Label>Data de nascimento</Label>
+              <div className="flex w-full items-center gap-1.5">
+                <Input ref={dobDayRef} inputMode="numeric" pattern="[0-9]*" placeholder="DD" aria-label="Dia" autoComplete="bday-day" maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
+                  value={dobParts.d} onPaste={handleDobPaste} onChange={(e) => handleDobChange("d", e.target.value)} onKeyDown={(e) => handleDobKeyDown("d", e)} />
+                <span className="text-muted-foreground select-none shrink-0">/</span>
+                <Input ref={dobMonthRef} inputMode="numeric" pattern="[0-9]*" placeholder="MM" aria-label="Mês" autoComplete="bday-month" maxLength={2}
+                  className={`h-11 flex-1 min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
+                  value={dobParts.m} onPaste={handleDobPaste} onChange={(e) => handleDobChange("m", e.target.value)} onKeyDown={(e) => handleDobKeyDown("m", e)} />
+                <span className="text-muted-foreground select-none shrink-0">/</span>
+                <Input ref={dobYearRef} inputMode="numeric" pattern="[0-9]*" placeholder="AAAA" aria-label="Ano" autoComplete="bday-year" maxLength={4}
+                  className={`h-11 flex-[1.4] min-w-0 text-center tabular-nums px-2 ${dobError ? "border-destructive" : ""}`}
+                  value={dobParts.y} onPaste={handleDobPaste} onChange={(e) => handleDobChange("y", e.target.value)} onKeyDown={(e) => handleDobKeyDown("y", e)} />
               </div>
+              {dobError ? (
+                <p className="text-xs text-destructive">{dobError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
+              )}
             </div>
-            {(cepInvalid || cepError) && (
-              <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>RG</Label>
+              <Input value={value.rg} onChange={(e) => setForm(f => ({ ...f, rg: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>E-mail</Label>
+              <Input type="email" inputMode="email" value={value.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="voce@email.com" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Telefone com WhatsApp *</Label>
+            <PhoneInput
+              value={value.phone}
+              countryCode={value.phone_country}
+              onChange={(full, { country }) => setForm((f) => ({ ...f, phone: full, phone_country: country.code }))}
+              required
+            />
+          </div>
+        </section>
+
+        <div className="h-px bg-border/60" />
+
+        {/* Endereço */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <Globe2 className="w-4 h-4 text-primary" />
+            <h2 className="font-display text-base sm:text-lg">Endereço</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label>CEP</Label>
+              <div className="relative">
+                <Input inputMode="numeric" value={value.address_cep}
+                  onChange={(e) => {
+                    const v = formatCep(e.target.value);
+                    setForm(f => ({ ...f, address_cep: v }));
+                    setCepFound(false); setCepError("");
+                    if (v.replace(/\D/g, "").length === 8) fetchCep(v);
+                  }}
+                  placeholder="00000-000"
+                  className={cepInvalid || cepError ? "border-destructive pr-9" : "pr-9"} />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                  {cepLoading && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+                  {!cepLoading && cepFound && <Check className="w-4 h-4 text-primary" />}
+                  {!cepLoading && (cepError || cepInvalid) && <AlertCircle className="w-4 h-4 text-destructive" />}
+                </div>
+              </div>
+              {(cepInvalid || cepError) && (
+                <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
+              )}
+            </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Rua</Label>
+              <Input value={value.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label>Número</Label>
+              <Input inputMode="numeric" value={value.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Complemento</Label>
+              <Input value={value.address_complement} onChange={(e) => setForm(f => ({ ...f, address_complement: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Bairro</Label>
+              <Input value={value.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Cidade</Label>
+              <Input value={value.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
+            </div>
+            <div className="space-y-2">
+              <Label>Estado (UF)</Label>
+              <Input maxLength={2} value={value.address_state}
+                onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
+                placeholder="SP" className={stateInvalid ? "border-destructive" : ""} />
+              {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
+            </div>
+          </div>
+        </section>
+
+        <div className="h-px bg-border/60" />
+
+        {/* Documento de Viagem */}
+        <section className="space-y-4">
+          <div className="flex items-center justify-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-primary" />
+            <h2 className="font-display text-base sm:text-lg">Documento de Viagem</h2>
+          </div>
+          <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border/50 bg-card/50">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Vai viajar para fora da América do Sul?</p>
+              <p className="text-xs text-muted-foreground">Se sim, passaporte e validade são obrigatórios.</p>
+            </div>
+            <Switch checked={value.international_outside_sa} onCheckedChange={(v) => setForm(f => ({ ...f, international_outside_sa: v }))} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Número do passaporte {value.international_outside_sa && "*"}</Label>
+              <Input value={value.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value.toUpperCase() }))} required={value.international_outside_sa} />
+            </div>
+            <div className="space-y-2">
+              <Label>Validade {value.international_outside_sa && "*"}</Label>
+              <Input type="date" value={value.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} required={value.international_outside_sa} />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Camera className="w-4 h-4" /> Foto do passaporte <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+            </Label>
+            {value.passport_photo_url ? (
+              <div className="relative inline-block">
+                <img src={value.passport_photo_url} alt="Passaporte" className="h-32 rounded-lg border border-border object-cover" />
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, passport_photo_url: "" }))}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow"
+                  aria-label="Remover foto">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-dashed border-border bg-card/40 cursor-pointer hover:bg-card/60 transition text-sm text-muted-foreground">
+                {photoUploading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Anexar foto do passaporte</>
+                )}
+                <input type="file" accept="image/*" capture="environment" className="hidden" disabled={photoUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handlePhotoUpload(f);
+                    e.target.value = "";
+                  }} />
+              </label>
             )}
           </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Rua</Label>
-            <Input value={value.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-2">
-            <Label>Número</Label>
-            <Input inputMode="numeric" value={value.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
-          </div>
-          <div className="space-y-2">
-            <Label>Complemento</Label>
-            <Input value={value.address_complement} onChange={(e) => setForm(f => ({ ...f, address_complement: e.target.value }))} />
-          </div>
-          <div className="space-y-2">
-            <Label>Bairro</Label>
-            <Input value={value.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="space-y-2 sm:col-span-2">
-            <Label>Cidade</Label>
-            <Input value={value.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
-          </div>
-          <div className="space-y-2">
-            <Label>Estado (UF)</Label>
-            <Input maxLength={2} value={value.address_state}
-              onChange={(e) => setForm(f => ({ ...f, address_state: e.target.value.toUpperCase().replace(/[^A-Z]/g, "") }))}
-              placeholder="SP" className={stateInvalid ? "border-destructive" : ""} />
-            {stateInvalid && <p className="text-xs text-destructive">UF deve ter 2 letras</p>}
-          </div>
-        </div>
-      </Card>
-
-      {/* Passaporte */}
-      <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-4 h-4 text-primary" />
-          <h2 className="font-display text-base sm:text-lg">Passaporte</h2>
-        </div>
-        <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border/50 bg-card/50">
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">Vai viajar para fora da América do Sul?</p>
-            <p className="text-xs text-muted-foreground">Se sim, passaporte e validade são obrigatórios.</p>
-          </div>
-          <Switch checked={value.international_outside_sa} onCheckedChange={(v) => setForm(f => ({ ...f, international_outside_sa: v }))} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label>Número do passaporte {value.international_outside_sa && "*"}</Label>
-            <Input value={value.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value.toUpperCase() }))} required={value.international_outside_sa} />
-          </div>
-          <div className="space-y-2">
-            <Label>Validade {value.international_outside_sa && "*"}</Label>
-            <Input type="date" value={value.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} required={value.international_outside_sa} />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="flex items-center gap-2">
-            <Camera className="w-4 h-4" /> Foto do passaporte <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
-          </Label>
-          {value.passport_photo_url ? (
-            <div className="relative inline-block">
-              <img src={value.passport_photo_url} alt="Passaporte" className="h-32 rounded-lg border border-border object-cover" />
-              <button type="button"
-                onClick={() => setForm(f => ({ ...f, passport_photo_url: "" }))}
-                className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow"
-                aria-label="Remover foto">
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-dashed border-border bg-card/40 cursor-pointer hover:bg-card/60 transition text-sm text-muted-foreground">
-              {photoUploading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
-              ) : (
-                <><Upload className="w-4 h-4" /> Anexar foto do passaporte</>
-              )}
-              <input type="file" accept="image/*" capture="environment" className="hidden" disabled={photoUploading}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) handlePhotoUpload(f);
-                  e.target.value = "";
-                }} />
-            </label>
-          )}
-        </div>
+        </section>
       </Card>
     </div>
   );
