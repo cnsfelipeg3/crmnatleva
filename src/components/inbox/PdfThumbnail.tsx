@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { FileText } from "lucide-react";
 import { LoadingState } from "@/components/ui/loading-state";
@@ -19,6 +19,8 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
   const [loaded, setLoaded] = useState(false);
   const [renderWidth, setRenderWidth] = useState(width);
   const [pdfData, setPdfData] = useState<Uint8Array | null>(null);
+  const documentFile = useMemo(() => (pdfData ? { data: pdfData } : null), [pdfData]);
+  const documentOptions = useMemo(() => ({ disableRange: true, disableStream: true }), []);
 
   useEffect(() => {
     const availableWidth = Math.max(180, Math.min(width, window.innerWidth - 96));
@@ -74,9 +76,9 @@ function PdfThumbnailInner({ url, filename, onClick, width = 240 }: PdfThumbnail
           <LoadingState variant="inline" size="sm" />
         </div>
       )}
-      {pdfData && <Document
-        file={{ data: pdfData }}
-        options={{ disableRange: true, disableStream: true }}
+      {documentFile && <Document
+        file={documentFile}
+        options={documentOptions}
         onLoadError={() => setError(true)}
         onSourceError={() => setError(true)}
         loading={null}
