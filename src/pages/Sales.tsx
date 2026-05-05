@@ -161,6 +161,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           )}
         </div>
       </td>
+      <td className="px-2 py-4 text-left"><span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateBR(sale.close_date)}</span></td>
       <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.departure_date) || <span className="text-muted-foreground/40">—</span>}</span></td>
       <td className="px-2 py-4"><span className="text-xs font-mono whitespace-nowrap">{fmtShortDate(sale.return_date) || <span className="text-muted-foreground/40 italic text-[11px]">Somente ida</span>}</span></td>
       <td className="px-2 py-3">
