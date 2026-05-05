@@ -44,7 +44,7 @@ function LazyPdfThumb({ url, filename, width = 40 }: { url: string; filename?: s
   return (
     <div ref={ref} className="h-full w-full flex items-center justify-center">
       {visible ? (
-        <PdfThumbnail url={url} filename={filename} width={width} onClick={() => window.open(url, "_blank", "noopener,noreferrer")} />
+        <PdfThumbnail url={url} filename={filename} width={width} />
       ) : (
         <FileText className="h-5 w-5 text-muted-foreground/60" />
       )}
