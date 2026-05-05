@@ -151,25 +151,42 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
     </div>
   );
 
-  if (!onToggleUnread) return itemBody;
+  if (!onToggleUnread && !onToggleArchive) return itemBody;
 
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>{itemBody}</ContextMenuTrigger>
       <ContextMenuContent className="w-56">
-        <ContextMenuItem onSelect={() => onToggleUnread(conv)} className="gap-2">
-          {manuallyUnread ? (
-            <>
-              <MailOpen className="h-4 w-4" />
-              <span>Marcar como lida</span>
-            </>
-          ) : (
-            <>
-              <MailX className="h-4 w-4" />
-              <span>Marcar como não lida</span>
-            </>
-          )}
-        </ContextMenuItem>
+        {onToggleUnread && (
+          <ContextMenuItem onSelect={() => onToggleUnread(conv)} className="gap-2">
+            {manuallyUnread ? (
+              <>
+                <MailOpen className="h-4 w-4" />
+                <span>Marcar como lida</span>
+              </>
+            ) : (
+              <>
+                <MailX className="h-4 w-4" />
+                <span>Marcar como não lida</span>
+              </>
+            )}
+          </ContextMenuItem>
+        )}
+        {onToggleArchive && (
+          <ContextMenuItem onSelect={() => onToggleArchive(conv)} className="gap-2">
+            {conv.is_archived ? (
+              <>
+                <ArchiveRestore className="h-4 w-4" />
+                <span>Desarquivar conversa</span>
+              </>
+            ) : (
+              <>
+                <Archive className="h-4 w-4" />
+                <span>Arquivar conversa</span>
+              </>
+            )}
+          </ContextMenuItem>
+        )}
       </ContextMenuContent>
     </ContextMenu>
   );
