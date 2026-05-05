@@ -18,7 +18,7 @@ import { PdfThumbnail } from "./PdfThumbnail";
 
 
 // Pré-carrega a miniatura só quando o item entra no viewport · evita travar a galeria
-function LazyPdfThumb({ url, width = 40 }: { url: string; width?: number }) {
+function LazyPdfThumb({ url, filename, width = 40 }: { url: string; filename?: string; width?: number }) {
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
 
@@ -44,7 +44,7 @@ function LazyPdfThumb({ url, width = 40 }: { url: string; width?: number }) {
   return (
     <div ref={ref} className="h-full w-full flex items-center justify-center">
       {visible ? (
-        <PdfThumbnail url={url} width={width} />
+        <PdfThumbnail url={url} filename={filename} width={width} onClick={() => window.open(url, "_blank", "noopener,noreferrer")} />
       ) : (
         <FileText className="h-5 w-5 text-muted-foreground/60" />
       )}
@@ -229,11 +229,12 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
                             href={mediaUrl(m)}
                             target="_blank"
                             rel="noreferrer"
-                            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/60 transition-colors"
+                            className="flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/60 transition-colors cursor-pointer"
+                            title="Abrir documento"
                           >
                             <div className="shrink-0 h-12 w-10 rounded border bg-card overflow-hidden flex items-center justify-center">
                               {m.media_mimetype?.includes("pdf") || m.media_filename?.toLowerCase().endsWith(".pdf") ? (
-                                <LazyPdfThumb url={mediaUrl(m)} width={40} />
+                                <LazyPdfThumb url={mediaUrl(m)} filename={m.media_filename || "PDF"} width={40} />
                               ) : (
                                 <FileText className="h-5 w-5 text-muted-foreground" />
                               )}
