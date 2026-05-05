@@ -662,7 +662,7 @@ export default function ImportChatGuru() {
             <Button variant="outline" onClick={() => { setStep(1); setFiles([]); setAllMessages([]); setJob(null); setJobId(null); }}>
               Importar mais
             </Button>
-            <Button onClick={() => (window.location.href = "/livechat")} className="flex-1">
+            <Button onClick={() => (window.location.href = "/operacao/inbox")} className="flex-1">
               <MessageSquare className="w-4 h-4 mr-2" /> Ver Conversas Importadas
             </Button>
           </div>
