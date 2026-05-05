@@ -43,6 +43,7 @@ interface Passenger {
   address_city: string | null;
   address_state: string | null;
   address_country: string | null;
+  address_notes: string | null;
   categoria: string | null;
   created_at: string;
 }
