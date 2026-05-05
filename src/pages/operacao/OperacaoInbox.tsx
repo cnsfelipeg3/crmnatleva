@@ -12,7 +12,7 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
-  ChevronDown, UserPlus,
+  ChevronDown, UserPlus, MoreVertical,
 } from "lucide-react";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
