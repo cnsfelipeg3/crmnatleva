@@ -1713,6 +1713,35 @@ function OperacaoInboxInner() {
     }
   }, [conversations]);
 
+  const handleToggleArchive = useCallback(async (conv: Conversation) => {
+    const next = !conv.is_archived;
+    const nowIso = new Date().toISOString();
+    setConversations(prev => prev.map(c => c.id === conv.id
+      ? { ...c, is_archived: next, archived_at: next ? nowIso : null }
+      : c));
+    try {
+      const patch: any = { is_archived: next, archived_at: next ? nowIso : null };
+      let updated = false;
+      if (conv.db_id) {
+        const { error } = await supabase.from("conversations").update(patch).eq("id", conv.db_id);
+        if (!error) updated = true;
+      }
+      if (!updated) {
+        const cleanPhone = (conv.phone || "").replace(/\D/g, "");
+        if (cleanPhone) {
+          const { error } = await supabase.from("conversations").update(patch).eq("phone", cleanPhone);
+          if (error) throw error;
+        }
+      }
+      toast({ title: next ? "Conversa arquivada" : "Conversa desarquivada" });
+    } catch (err: any) {
+      setConversations(prev => prev.map(c => c.id === conv.id
+        ? { ...c, is_archived: !next, archived_at: !next ? nowIso : null }
+        : c));
+      toast({ title: "Erro", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, []);
+
   const [editingName, setEditingName] = useState(false);
   const [editNameValue, setEditNameValue] = useState("");
   const handleSaveContactName = useCallback(async () => {
