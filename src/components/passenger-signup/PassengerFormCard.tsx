@@ -11,6 +11,7 @@ import {
   Plane, Globe2, ShieldCheck, Loader2, Check, AlertCircle,
   Camera, Upload, X, Trash2, User,
 } from "lucide-react";
+import { DatePartsInput } from "@/components/ui/date-parts-input";
 
 export type PassengerFormState = {
   full_name: string;
