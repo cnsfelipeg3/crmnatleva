@@ -316,13 +316,13 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
           </span>
         )}
       </td>
-      <td className="px-2 py-4">
-        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap", statusColor[sale.status] || "")}>{sale.status}</Badge>
+      <td className="px-2 py-4 overflow-hidden">
+        <Badge variant="outline" className={cn("text-[10px] whitespace-nowrap max-w-full truncate inline-block", statusColor[sale.status] || "")}>{sale.status}</Badge>
       </td>
-      <td className="px-2 py-4 text-xs font-mono text-muted-foreground whitespace-nowrap">{sale.display_id}</td>
-      <td className="px-2 py-4">
+      <td className="px-2 py-4 text-xs font-mono text-muted-foreground whitespace-nowrap truncate">{sale.display_id}</td>
+      <td className="px-2 py-4 overflow-hidden">
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 shrink-0" onClick={() => onNavigate(sale.id)} title="Ver detalhes"><Eye className="w-4 h-4" /></Button>
           <DeleteSaleButton saleId={sale.id} saleLabel={`${sale.display_id} — ${sale.name}`} onDeleted={onDeleted} />
         </div>
       </td>
