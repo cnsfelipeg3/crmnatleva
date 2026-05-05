@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate, Bot } from "lucide-react";
+import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate, Bot, Calendar, User } from "lucide-react";
 import { countProposalCompleteness, PROPOSAL_TOTAL_FIELDS } from "@/lib/briefingProposalBridge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -96,6 +96,29 @@ export default function Proposals() {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  const creatorIds = useMemo(() => {
+    const ids = new Set<string>();
+    (proposals || []).forEach((p: any) => { if (p.created_by) ids.add(p.created_by); });
+    return Array.from(ids);
+  }, [proposals]);
+
+  const { data: creatorsMap } = useQuery({
+    queryKey: ["proposals-creators", creatorIds],
+    enabled: creatorIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", creatorIds);
+      if (error) throw error;
+      const map: Record<string, { name: string }> = {};
+      (data || []).forEach((u: any) => {
+        map[u.id] = { name: u.full_name || u.email || "Usuário" };
+      });
+      return map;
     },
   });
 
@@ -222,6 +245,25 @@ export default function Proposals() {
                       </span>
                     )}
                   </div>
+
+                  {p.created_at && (
+                    <div className="flex items-center justify-between gap-2 text-[11px] text-muted-foreground/80 pt-1">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <Calendar className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          Gerada em {format(new Date(p.created_at), "dd MMM yyyy 'às' HH:mm", { locale: ptBR })}
+                        </span>
+                      </span>
+                      {p.created_by && (
+                        <span className="flex items-center gap-1 shrink-0">
+                          <User className="w-3 h-3" />
+                          <span className="truncate max-w-[120px]">
+                            {creatorsMap?.[p.created_by]?.name || "Usuário"}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
