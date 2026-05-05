@@ -408,9 +408,8 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Passaporte */}
-        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
-          <div className={sectionAccent} />
-          <div className="flex items-center gap-2 pt-1">
+        <Card className="p-5 sm:p-6 space-y-4">
+          <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Passaporte</h2>
           </div>
