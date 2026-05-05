@@ -176,7 +176,7 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
                 {menuOpen && <Check className="w-3 h-3" />}
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" side="bottom" className="w-56 p-1" onClick={(e) => e.stopPropagation()}>
+            <PopoverContent align="start" side="bottom" className="w-72 p-1 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
               <button
                 className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
                 onClick={() => { setMenuOpen(false); onNavigate(sale.id); }}
@@ -449,7 +449,7 @@ function VirtualEmissionGroup({
       {open && (
         <div
           ref={scrollRef}
-          className="overflow-y-auto overflow-x-visible overscroll-contain"
+          className="overflow-y-auto overscroll-contain min-w-[1420px]"
           style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
         >
           <table className="w-full text-sm min-w-[1420px]">
