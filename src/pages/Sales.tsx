@@ -449,7 +449,7 @@ function VirtualEmissionGroup({
       {open && (
         <div
           ref={scrollRef}
-          className="overflow-y-auto overflow-x-visible overscroll-contain"
+          className="overflow-y-auto overscroll-contain min-w-[1420px]"
           style={sales.length > 0 ? { height: Math.min(640, sales.length * ESTIMATED_ROW_HEIGHT) } : undefined}
         >
           <table className="w-full text-sm min-w-[1420px]">
