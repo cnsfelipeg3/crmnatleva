@@ -235,6 +235,10 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.conv.manually_marked_unread === next.conv.manually_marked_unread &&
     prev.conv.is_archived === next.conv.is_archived &&
     prev.profilePic === next.profilePic &&
-    prev.presence === next.presence
+    prev.presence === next.presence &&
+    prev.conv.assigned_to === next.conv.assigned_to &&
+    prev.isMine === next.isMine &&
+    prev.owner?.full_name === next.owner?.full_name &&
+    prev.owner?.avatar_url === next.owner?.avatar_url
   );
 });
