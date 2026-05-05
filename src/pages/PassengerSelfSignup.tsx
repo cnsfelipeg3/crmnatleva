@@ -387,6 +387,7 @@ export default function PassengerSelfSignup() {
                   value={dobParts.d}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("d", e.target.value)}
+                  onKeyDown={(e) => handleDobKeyDown("d", e)}
                 />
                 <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
@@ -401,12 +402,7 @@ export default function PassengerSelfSignup() {
                   value={dobParts.m}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("m", e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Backspace" && !dobParts.m) {
-                      e.preventDefault();
-                      dobDayRef.current?.focus();
-                    }
-                  }}
+                  onKeyDown={(e) => handleDobKeyDown("m", e)}
                 />
                 <span className="text-muted-foreground select-none shrink-0">/</span>
                 <Input
@@ -421,12 +417,7 @@ export default function PassengerSelfSignup() {
                   value={dobParts.y}
                   onPaste={handleDobPaste}
                   onChange={(e) => handleDobChange("y", e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Backspace" && !dobParts.y) {
-                      e.preventDefault();
-                      dobMonthRef.current?.focus();
-                    }
-                  }}
+                  onKeyDown={(e) => handleDobKeyDown("y", e)}
                 />
               </div>
               {dobError ? (
