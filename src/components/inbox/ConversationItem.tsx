@@ -25,6 +25,35 @@ interface ConversationItemProps {
   onToggleArchive?: (conv: Conversation) => void;
   owner?: OwnerInfo | null;
   isMine?: boolean;
+  searchTerm?: string;
+  contentMatchSnippet?: string;
+}
+
+function highlightTerm(text: string, term: string) {
+  if (!term || term.trim().length < 1) return text;
+  const t = term.trim();
+  const lower = text.toLowerCase();
+  const idx = lower.indexOf(t.toLowerCase());
+  if (idx < 0) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-amber-300/60 dark:bg-amber-500/40 text-foreground rounded px-0.5">
+        {text.slice(idx, idx + t.length)}
+      </mark>
+      {text.slice(idx + t.length)}
+    </>
+  );
+}
+
+function buildSnippet(raw: string, term: string, around = 40) {
+  if (!raw) return "";
+  if (!term) return raw.slice(0, 120);
+  const idx = raw.toLowerCase().indexOf(term.toLowerCase());
+  if (idx < 0) return raw.slice(0, 120);
+  const start = Math.max(0, idx - around);
+  const end = Math.min(raw.length, idx + term.length + around);
+  return (start > 0 ? "…" : "") + raw.slice(start, end) + (end < raw.length ? "…" : "");
 }
 
 function getPreviewContent(raw: string) {
@@ -51,7 +80,7 @@ function TypingDots() {
   );
 }
 
-function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread, onToggleArchive, owner, isMine }: ConversationItemProps) {
+function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelect, onTogglePin, onToggleUnread, onToggleArchive, owner, isMine, searchTerm, contentMatchSnippet }: ConversationItemProps) {
   const stageInfo = getStageInfo(conv.stage);
   const previewRaw = stripQuotes((conv.last_message_preview || "").replace(/\n/g, " "));
   const contactName = conv.contact_name || "Sem nome";
@@ -61,6 +90,8 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
   const manuallyUnread = !!conv.manually_marked_unread;
   const hasUnread = conv.unread_count > 0 || manuallyUnread;
   const preview = getPreviewContent(previewRaw);
+  const term = (searchTerm || "").trim();
+  const hasContentMatch = !!contentMatchSnippet;
 
   const itemBody = (
     <div
