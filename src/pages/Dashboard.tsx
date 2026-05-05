@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
+import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDashboardKpis } from "@/hooks/useDashboardKpis";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
