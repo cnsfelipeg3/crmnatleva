@@ -110,14 +110,19 @@ interface SaleRowProps {
   onNavigateClient: (clientId: string) => void;
   onDeleted: (id: string) => void;
   onDragStart: (saleId: string, emitted: boolean) => void;
+  onMove: (saleId: string, toEmitted: boolean) => void;
+  onRequestDelete: (sale: SaleRow) => void;
+  canDelete: boolean;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
   const pax = (sale.adults || 0) + (sale.children || 0);
   const slugs = normalizeProductsToSlugs(sale.products);
+  const emitted = isEmitted(sale);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const sellerInitials = seller
     ? (seller.full_name || seller.email || "?")
@@ -133,24 +138,86 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
 
   return (
     <tr
-      className="border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer"
+      className={cn("group border-b border-border/50 hover:bg-muted/30 transition-colors cursor-pointer", menuOpen && "bg-muted/40")}
       onClick={() => onNavigate(sale.id)}
     >
-      <td className="px-1 py-3 w-6">
-        <button
-          draggable
-          onDragStart={(e) => {
-            e.stopPropagation();
-            e.dataTransfer.effectAllowed = "move";
-            onDragStart(sale.id, isEmitted(sale));
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-colors p-1"
-          title="Arrastar para mover"
-          aria-label="Arrastar venda"
-        >
-          <GripVertical className="w-3.5 h-3.5" />
-        </button>
+      <td className="px-1 py-3 w-6" onClick={(e) => e.stopPropagation()}>
+        <div className="relative flex items-center justify-center">
+          {/* Grip (drag) — visible by default, hidden on hover when checkbox shows */}
+          <button
+            draggable
+            onDragStart={(e) => {
+              e.stopPropagation();
+              e.dataTransfer.effectAllowed = "move";
+              onDragStart(sale.id, emitted);
+            }}
+            className={cn(
+              "cursor-grab active:cursor-grabbing text-muted-foreground/40 hover:text-foreground transition-opacity p-1",
+              "group-hover:opacity-0",
+              menuOpen && "opacity-0",
+            )}
+            title="Arrastar para mover"
+            aria-label="Arrastar venda"
+          >
+            <GripVertical className="w-3.5 h-3.5" />
+          </button>
+          {/* Checkbox — appears on hover; click opens action popover */}
+          <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+            <PopoverTrigger asChild>
+              <button
+                className={cn(
+                  "absolute inset-0 m-auto w-4 h-4 rounded border border-border bg-background hover:border-primary hover:bg-primary/5 transition-all flex items-center justify-center",
+                  "opacity-0 group-hover:opacity-100",
+                  menuOpen && "opacity-100 border-primary bg-primary text-primary-foreground",
+                )}
+                aria-label="Ações da venda"
+                title="Ações"
+              >
+                {menuOpen && <Check className="w-3 h-3" />}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" side="bottom" className="w-56 p-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                onClick={() => { setMenuOpen(false); onNavigate(sale.id); }}
+              >
+                <Eye className="w-4 h-4 text-muted-foreground" /> Ver detalhes
+              </button>
+              <button
+                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                onClick={() => { setMenuOpen(false); onNavigate(sale.id); }}
+              >
+                <Pencil className="w-4 h-4 text-muted-foreground" /> Editar
+              </button>
+              {emitted ? (
+                <button
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                  onClick={() => { setMenuOpen(false); onMove(sale.id, false); }}
+                >
+                  <Clock className="w-4 h-4 text-warning-foreground" /> Voltar para Aguardando
+                </button>
+              ) : (
+                <button
+                  className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted transition-colors text-left"
+                  onClick={() => { setMenuOpen(false); onMove(sale.id, true); }}
+                >
+                  <CheckCircle2 className="w-4 h-4 text-success" /> Mover para Emissão Concluída
+                </button>
+              )}
+              {canDelete && (
+                <>
+                  <div className="my-1 h-px bg-border" />
+                  <button
+                    className="w-full flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-destructive/10 text-destructive transition-colors text-left"
+                    onClick={() => { setMenuOpen(false); onRequestDelete(sale); }}
+                  >
+                    <Trash2 className="w-4 h-4" /> Excluir
+                  </button>
+                </>
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
       </td>
       <td className="px-3 py-4">
         <div className="flex items-center gap-1.5 min-w-0">
