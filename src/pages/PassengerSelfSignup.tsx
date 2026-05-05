@@ -312,61 +312,75 @@ export default function PassengerSelfSignup() {
               <Label>Data de nascimento</Label>
               <div className="flex items-center gap-2">
                 <Input
+                  ref={dobDayRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={2}
                   placeholder="DD"
-                  className="text-center"
+                  aria-label="Dia"
+                  autoComplete="bday-day"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.d}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                     setDob({ d: v });
-                    if (v.length === 2) {
-                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined;
-                      next?.focus();
-                    }
+                    if (v.length === 2) dobMonthRef.current?.focus();
                   }}
                 />
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground select-none">/</span>
                 <Input
+                  ref={dobMonthRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={2}
                   placeholder="MM"
-                  className="text-center"
+                  aria-label="Mês"
+                  autoComplete="bday-month"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.m}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 2);
                     setDob({ m: v });
-                    if (v.length === 2) {
-                      const next = e.currentTarget.parentElement?.querySelectorAll("input")[2] as HTMLInputElement | undefined;
-                      next?.focus();
-                    }
+                    if (v.length === 2) dobYearRef.current?.focus();
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.m) {
-                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[0] as HTMLInputElement | undefined);
-                      prev?.focus();
+                      e.preventDefault();
+                      dobDayRef.current?.focus();
                     }
                   }}
                 />
-                <span className="text-muted-foreground">/</span>
+                <span className="text-muted-foreground select-none">/</span>
                 <Input
+                  ref={dobYearRef}
                   inputMode="numeric"
+                  pattern="[0-9]*"
                   maxLength={4}
                   placeholder="AAAA"
-                  className="text-center"
+                  aria-label="Ano"
+                  autoComplete="bday-year"
+                  className={`text-center tabular-nums ${dobError ? "border-destructive" : ""}`}
                   value={dobParts.y}
+                  onPaste={handleDobPaste}
                   onChange={(e) => {
                     const v = e.target.value.replace(/\D/g, "").slice(0, 4);
                     setDob({ y: v });
                   }}
                   onKeyDown={(e) => {
                     if (e.key === "Backspace" && !dobParts.y) {
-                      const prev = (e.currentTarget.parentElement?.querySelectorAll("input")[1] as HTMLInputElement | undefined);
-                      prev?.focus();
+                      e.preventDefault();
+                      dobMonthRef.current?.focus();
                     }
                   }}
                 />
               </div>
+              {dobError ? (
+                <p className="text-xs text-destructive">{dobError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Formato DD/MM/AAAA</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
