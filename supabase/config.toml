@@ -200,3 +200,28 @@ verify_jwt = false  # Chamado por pg_cron interno · sem JWT
 [functions.message-watchdog]
 verify_jwt = false  # Chamado por pg_cron · protegido por X-Watchdog-Token shared secret
 
+
+# ---- Frente Segurança: paid APIs require JWT ----
+[functions.youtube-transcribe]
+verify_jwt = true
+
+[functions.booking-rapidapi]
+verify_jwt = true
+
+[functions.extract-booking-data]
+verify_jwt = true
+
+[functions.hotel-checkin-times]
+verify_jwt = true
+
+[functions.simulator-ai]
+verify_jwt = true
+
+[functions.simulator-create-proposal]
+verify_jwt = true
+
+[functions.simulator-media]
+verify_jwt = true
+
+[functions.receipt-extract]
+verify_jwt = true
