@@ -2038,17 +2038,24 @@ function OperacaoInboxInner() {
     setSelectedId(id); setShowAIPanel(false);
     if (jumpToMsgId) {
       setHighlightMsgId(jumpToMsgId);
-      // Aguarda a renderização das mensagens antes de rolar até a alvo
+      let loadAttempts = 0;
       const tryScroll = (attempt = 0) => {
         const el = document.querySelector(`[data-message-id="${jumpToMsgId}"]`) as HTMLElement | null;
         if (el) {
           el.scrollIntoView({ behavior: "smooth", block: "center" });
           return;
         }
-        if (attempt < 30) setTimeout(() => tryScroll(attempt + 1), 150);
+        if (attempt < 40) {
+          // A cada ~10 tentativas (1.5s) tenta carregar mensagens mais antigas
+          if (attempt > 0 && attempt % 10 === 0 && loadAttempts < 5) {
+            loadAttempts++;
+            try { loadOlderMessages?.(); } catch {}
+          }
+          setTimeout(() => tryScroll(attempt + 1), 150);
+        }
       };
-      setTimeout(() => tryScroll(), 250);
-      setTimeout(() => setHighlightMsgId(null), 4000);
+      setTimeout(() => tryScroll(), 300);
+      setTimeout(() => setHighlightMsgId(null), 5000);
     }
   };
 
