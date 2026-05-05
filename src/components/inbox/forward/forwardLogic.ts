@@ -37,22 +37,15 @@ export interface ForwardResult {
 async function sendOneForward(
   msg: Message,
   target: ForwardTarget,
-  caption: string | undefined,
   sourcePhone: string | undefined,
 ): Promise<{ ok: boolean; error?: string; externalMessageId?: string; sentAction?: string; sentPayload?: any; nativeForward?: boolean }> {
   const phone = target.phone;
-  const finalCaption = (caption || "").trim();
 
-  // 1) Tentativa nativa: preserva selo "Encaminhada"
+  // 1) Tentativa nativa: preserva selo "Encaminhada" para QUALQUER tipo
+  // (texto, imagem, vídeo, áudio, documento/PDF, sticker).
   // Requer messageId original + telefone da conversa de origem.
-  // Não é possível anexar caption no forward nativo · se houver caption,
-  // enviamos primeiro o texto e depois o forward nativo do conteúdo.
   if (sourcePhone && msg.external_message_id) {
     try {
-      if (finalCaption && msg.message_type !== "text") {
-        // Envia comentário antes do encaminhamento
-        await callZapiProxy("send-text", { phone, message: finalCaption });
-      }
       const fwdPayload = {
         phone,
         messageId: msg.external_message_id,
@@ -67,7 +60,6 @@ async function sendOneForward(
         nativeForward: true,
       };
     } catch (err) {
-      // Fallback abaixo
       console.warn("[forward] native forward failed, falling back to resend", err);
     }
   }
@@ -75,8 +67,7 @@ async function sendOneForward(
   // 2) Fallback: reenvia como mensagem nova (sem selo nativo, mas marcado is_forwarded localmente)
   try {
     if (msg.message_type === "text") {
-      const body = finalCaption ? `${finalCaption}\n\n${msg.text}` : msg.text;
-      const payload = { phone, message: body };
+      const payload = { phone, message: msg.text };
       const data = await callZapiProxy("send-text", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-text", sentPayload: payload };
     }
@@ -86,13 +77,13 @@ async function sendOneForward(
 
     if (msg.message_type === "image") {
       const payload: any = { phone, image: mediaUrl };
-      if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
+      if (msg.text) payload.caption = msg.text;
       const data = await callZapiProxy("send-image", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-image", sentPayload: payload };
     }
     if (msg.message_type === "video") {
       const payload: any = { phone, video: mediaUrl };
-      if (finalCaption || msg.text) payload.caption = finalCaption || msg.text;
+      if (msg.text) payload.caption = msg.text;
       const data = await callZapiProxy("send-video", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-video", sentPayload: payload };
     }
@@ -104,7 +95,6 @@ async function sendOneForward(
     if (msg.message_type === "document") {
       const ext = (msg.media_filename?.split(".").pop() || "pdf").toLowerCase();
       const payload: any = { phone, document: mediaUrl, extension: ext, fileName: msg.media_filename || "documento" };
-      if (finalCaption) payload.caption = finalCaption;
       const data = await callZapiProxy("send-document", payload);
       return { ok: true, externalMessageId: data?.messageId || data?.zaapId, sentAction: "send-document", sentPayload: payload };
     }
@@ -244,19 +234,39 @@ export async function forwardMessages(
   // Pré-aquece mídias em paralelo (best-effort, não bloqueia em erro)
   await preloadMediaUrls(messages);
 
-  // Concorrência: 4 envios em paralelo (Z-API throttle friendly), serializa por destino.
-  const queues: Array<Array<() => Promise<void>>> = targets.map(target =>
-    messages.map(msg => async () => {
+  // Pequeno delay entre envios sequenciais por destino · ajuda Z-API a
+  // processar a mídia anterior antes de receber a próxima (preserva ordem
+  // e evita perder o selo "Encaminhada" em PDFs/vídeos grandes).
+  const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+  const finalCaption = (caption || "").trim();
+
+  // Concorrência: até 4 destinos em paralelo · mensagens dentro de cada
+  // destino são serializadas pra preservar a ordem original (texto/comentário
+  // primeiro, depois cada anexo encaminhado nativamente, um a um).
+  const runTarget = async (target: ForwardTarget) => {
+    // (a) Comentário opcional · enviado UMA vez por destinatário, antes dos anexos.
+    if (finalCaption) {
+      try {
+        await callZapiProxy("send-text", { phone: target.phone, message: finalCaption });
+      } catch (err) {
+        console.warn("[forward] caption send failed (continuing)", err);
+      }
+    }
+
+    // (b) Encaminha cada mensagem em sequência, preservando ordem.
+    for (const msg of messages) {
       const k = jobKey(msg.id, target.phone);
       jobs.set(k, { ...jobs.get(k)!, status: "sending" });
       emit();
 
-      const send = await sendOneForward(msg, target, caption, sourcePhone);
+      const send = await sendOneForward(msg, target, sourcePhone);
       if (send.ok) {
         try {
-          await persistForwardedMessage(msg, target, caption, send.externalMessageId, send.sentAction, send.sentPayload);
+          // Caption já foi enviada como mensagem própria · não duplica no row.
+          await persistForwardedMessage(msg, target, undefined, send.externalMessageId, send.sentAction, send.sentPayload);
         } catch {
-          // best-effort persist; envio já confirmado
+          /* best-effort persist · envio já confirmado */
         }
         jobs.set(k, { ...jobs.get(k)!, status: "sent", externalMessageId: send.externalMessageId });
       } else {
@@ -271,22 +281,26 @@ export async function forwardMessages(
       });
       done++;
       emit();
-    })
-  );
 
-  // Roda os destinos em paralelo, mensagens dentro de cada destino em série (ordem garantida)
-  const TARGET_CONCURRENCY = 4;
-  let cursor = 0;
-  const runTarget = async () => {
-    while (cursor < queues.length) {
-      const idx = cursor++;
-      const q = queues[idx];
-      for (const job of q) {
-        try { await job(); } catch { /* já capturado em sendOneForward */ }
+      // Throttle leve entre mídias do mesmo destino (mais alto para vídeo/documento)
+      if (msg.message_type === "video" || msg.message_type === "document") {
+        await sleep(450);
+      } else if (msg.message_type !== "text") {
+        await sleep(220);
       }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(TARGET_CONCURRENCY, queues.length) }, runTarget));
+
+  // Roda destinos em paralelo controlado.
+  const TARGET_CONCURRENCY = 4;
+  let cursor = 0;
+  const worker = async () => {
+    while (cursor < targets.length) {
+      const idx = cursor++;
+      try { await runTarget(targets[idx]); } catch { /* já capturado */ }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(TARGET_CONCURRENCY, targets.length) }, worker));
   return results;
 }
 
