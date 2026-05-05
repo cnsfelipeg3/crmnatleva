@@ -225,6 +225,7 @@ export async function forwardMessages(
   targets: ForwardTarget[],
   caption?: string,
   onProgress?: (done: number, total: number, jobs?: JobState[]) => void,
+  sourcePhone?: string,
 ): Promise<ForwardResult[]> {
   const results: ForwardResult[] = [];
   const total = messages.length * targets.length;
@@ -250,7 +251,7 @@ export async function forwardMessages(
       jobs.set(k, { ...jobs.get(k)!, status: "sending" });
       emit();
 
-      const send = await sendOneForward(msg, target, caption);
+      const send = await sendOneForward(msg, target, caption, sourcePhone);
       if (send.ok) {
         try {
           await persistForwardedMessage(msg, target, caption, send.externalMessageId, send.sentAction, send.sentPayload);
