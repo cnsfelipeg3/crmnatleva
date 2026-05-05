@@ -36,6 +36,7 @@ interface Props {
   previous?: Sale[];
   clients?: { id: string }[];
   clientsGrowth?: ClientsGrowth;
+  passengersCount?: number;
   ceoMode?: boolean;
 }
 
