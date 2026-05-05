@@ -508,7 +508,7 @@ export default function Passengers() {
                     <TableHead
                       className="cursor-pointer select-none hover:text-foreground transition-colors"
                       onClick={() => setSortBy(sortBy === "created_desc" ? "created_asc" : "created_desc")}
-                      title="Ordenar por data de cadastro"
+                      title="Ordenar pela primeira venda vinculada"
                     >
                       Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : ""}
                     </TableHead>
@@ -519,6 +519,7 @@ export default function Passengers() {
                   {filtered.slice(0, visibleCount).map((p) => {
                     const expiring = isPassportExpiringSoon(p.passport_expiry);
                     const tripCount = saleLinks[p.id]?.length || 0;
+                    const passengerSince = getPassengerSince(p.id);
                     return (
                       <TableRow
                         key={p.id}
@@ -562,7 +563,7 @@ export default function Passengers() {
                           {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {(p as any).created_at ? formatDateBR((p as any).created_at) : "—"}
+                          {passengerSince ? formatDateBR(passengerSince) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {tripCount > 0 ? (
