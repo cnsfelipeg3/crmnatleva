@@ -1,61 +1,54 @@
-## Problema
+## Função Arquivar/Desarquivar Conversas
 
-1. **Badge incorreto**: o número de não lidas no card da conversa nem sempre bate com a quantidade real de mensagens recebidas que ainda não foram respondidas. O contador hoje é incremental (soma +1 a cada nova chegada) e pode dessincronizar.
-2. **Marca como lida cedo demais**: hoje, no instante em que você clica numa conversa (`handleSelectConversation`), o sistema zera `unread_count` no banco. Se você sair sem responder, perde o sinal visual de "preciso responder isso".
+Vamos adicionar arquivamento manual com retorno automático ao receber mensagem do lead.
 
-## Comportamento desejado
+### 1. Banco de dados (migration)
+Adicionar 2 colunas em `conversations`:
+- `is_archived` boolean default false
+- `archived_at` timestamptz nullable
 
-- O badge na lista mostra o número **exato** de mensagens recebidas do cliente desde a última resposta sua (ou desde a última vez que você marcou manualmente como lida).
-- Abrir a conversa **não** zera o contador. A conversa só sai do estado "não lida" quando:
-  - você envia uma resposta para o cliente, **ou**
-  - você clica no botão "marcar como lida" (já existe na UI).
-- Se o cliente mandar mais mensagens enquanto a conversa está aberta, o badge continua subindo (ou aparece o indicador de "novas mensagens"), e só zera quando você responde.
+Criar trigger em `conversation_messages` (e `messages`, pra cobrir as duas tabelas usadas) que, quando `sender_type = 'cliente'`, faz:
+```sql
+UPDATE conversations SET is_archived = false, archived_at = null
+WHERE id = NEW.conversation_id AND is_archived = true;
+```
 
-## Plano de implementação
+Assim, qualquer mensagem nova do lead desarquiva automaticamente, sem depender do frontend estar aberto.
 
-### 1. Fonte da verdade: contagem derivada das mensagens
+### 2. UI no Inbox (`OperacaoInbox.tsx`)
 
-Criar função SQL `recount_conversation_unread(conv_id uuid)` que recalcula `unread_count` contando mensagens em `conversation_messages` (e `messages`) do tipo `incoming`/`cliente` posteriores à última mensagem `outgoing`/`atendente` daquela conversa. Isso garante que o número sempre reflita a realidade.
+**Ação manual de arquivar/desarquivar:**
+- Adicionar botão no menu de ações da conversa (mesmo lugar do "fixar" e "marcar não lida"), com ícone Archive/ArchiveRestore.
+- Handler `handleToggleArchive` espelhando o `handleTogglePin` (optimistic update + persistência por `db_id` ou `phone`).
+- Swipe/atalho: opcional, deixo só o botão pra manter elegante.
 
-Trigger leve: ao inserir mensagem nova ou ao marcar como lida, chamar essa função em vez de fazer aritmética incremental no frontend.
+**Filtro de visualização:**
+- Por padrão a caixa de entrada esconde arquivadas (filtro `archived = false` no `useMemo` de filtragem).
+- Adicionar nova chip de filtro "Arquivadas" na barra superior (junto de Todos / Não lidas / VIP / Grupos). Quando ativa, mostra somente arquivadas.
+- Contador na chip mostrando quantas arquivadas existem.
 
-### 2. Remover o auto-zerar ao abrir conversa
+**Indicador visual:**
+- Conversas arquivadas (quando vistas no filtro) recebem badge sutil "Arquivada" e ícone Archive ao lado do nome.
 
-Em `src/pages/operacao/OperacaoInbox.tsx`, função `handleSelectConversation` (linhas 1698-1707): remover o `update({ unread_count: 0 })`. Abrir só seleciona, não marca como lida.
+### 3. Carregamento e realtime
+- Incluir `is_archived, archived_at` no `select` inicial e no fetch incremental.
+- No realtime de novas mensagens incoming, se a conversa local estiver `is_archived = true`, atualizar localmente para `false` (o trigger já cuida do banco, isso é só pra UI refletir na hora).
 
-### 3. Zerar somente após resposta enviada
+### Detalhes técnicos
 
-No fluxo de envio de mensagem do atendente (linhas ~1209 e 1241), manter o `unread_count: 0` que já existe · esse é o ponto correto. Adicionar também limpeza de `manually_marked_unread = false` (já existe trigger `reset_manually_marked_unread`, validar que está ativo).
+```text
+conversations
+  + is_archived boolean default false
+  + archived_at timestamptz
 
-### 4. Botão "marcar como lida" explícito
+trigger after insert on conversation_messages / messages
+  when NEW.sender_type = 'cliente'
+  -> unarchive conversation
+```
 
-Já existe `manually_marked_unread` e o handler de toggle (linha 1679). Garantir que:
-- "marcar como lida" zera `unread_count` E `manually_marked_unread`
-- "marcar como não lida" mantém `unread_count` real e seta `manually_marked_unread=true` (badge pontilhado já implementado em `ConversationItem`)
+Arquivos a editar:
+- `supabase/migrations/*` (nova migration: 2 colunas + 2 triggers)
+- `src/pages/operacao/OperacaoInbox.tsx` (tipo Conversation, selects, filtro, handler, botão, chip "Arquivadas", realtime unarchive local)
 
-### 5. Realtime alinhado
-
-Em `src/components/inbox/useInboxRealtime.ts` (linhas 133, 179): trocar `safeUnreadCount(c.unread_count) + 1` por leitura do valor vindo do banco (que já será correto pela função de recount). Remover o ramo `isOpen ? 0 : ...` · não zera mais só por estar aberto.
-
-### 6. Reconciliação periódica
-
-No polling de 30s da lista (já existe), incluir um recount em background das conversas visíveis para corrigir qualquer drift histórico.
-
-### 7. Backfill único
-
-Migration que roda `recount_conversation_unread` em todas as conversas existentes para corrigir os números atualmente errados.
-
-## Indicador visual (UX)
-
-- Badge azul (número) = mensagens não respondidas reais.
-- Badge pontilhado dourado (sem número) = você marcou manualmente como não lida.
-- Quando a conversa está aberta E há novas mensagens chegando, badge continua visível na lista lateral (não some).
-
-## Arquivos afetados
-
-- `supabase/migrations/...` (nova função SQL + triggers + backfill)
-- `src/pages/operacao/OperacaoInbox.tsx` (handleSelectConversation, handlers de envio e toggle)
-- `src/components/inbox/useInboxRealtime.ts` (parar de incrementar localmente)
-- `src/components/inbox/ConversationItem.tsx` (ajuste mínimo se precisar, badge já está ok)
-
-Posso aplicar?
+### Resposta à pergunta
+Sim, dá pra fazer exatamente como você descreveu, e o desarquivamento automático fica no banco (trigger), então funciona mesmo com o CRM fechado · sem risco de perder mensagem.
