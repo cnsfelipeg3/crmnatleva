@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import PassengerAttachments from "@/components/passenger/PassengerAttachments";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -352,6 +353,7 @@ export default function PassengerProfile() {
           <TabsTrigger value="resumo" className="text-xs">📊 Resumo</TabsTrigger>
           <TabsTrigger value="viagens" className="text-xs">✈️ Viagens</TabsTrigger>
           <TabsTrigger value="dados" className="text-xs">📋 Dados Pessoais</TabsTrigger>
+          <TabsTrigger value="anexos" className="text-xs">📎 Anexos</TabsTrigger>
         </TabsList>
 
         {/* TAB RESUMO */}
@@ -613,6 +615,10 @@ export default function PassengerProfile() {
               </div>
             )}
           </Card>
+        </TabsContent>
+
+        <TabsContent value="anexos" className="mt-4">
+          {id && <PassengerAttachments passengerId={id} />}
         </TabsContent>
       </Tabs>
     </div>
