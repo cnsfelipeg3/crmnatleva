@@ -60,18 +60,16 @@ export default function PassengerSelfSignup() {
 
   useEffect(() => {
     if (!slug) return;
-    // Cache-bust with timestamp + no-store to evitar 404 antigo cacheado pelo navegador
+    // Cache-bust sem headers customizados para evitar preflight/CORS em navegadores móveis.
+    // Se a checagem falhar por rede/cache, deixa o formulário abrir e valida no envio.
     const bust = Date.now();
-    fetch(`${fnUrl}?slug=${encodeURIComponent(slug)}&_=${bust}`, {
-      cache: "no-store",
-      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
-    })
+    fetch(`${fnUrl}?slug=${encodeURIComponent(slug)}&_=${bust}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (d.valid) setLinkState("valid");
         else { setLinkState("invalid"); setReason(d.reason || ""); }
       })
-      .catch(() => setLinkState("invalid"));
+      .catch(() => setLinkState("valid"));
   }, [slug, fnUrl]);
 
   const fetchCep = async (cep: string) => {
@@ -149,8 +147,6 @@ export default function PassengerSelfSignup() {
         cache: "no-store",
         headers: {
           "Content-Type": "application/json",
-          "Cache-Control": "no-cache",
-          Pragma: "no-cache",
         },
         body: JSON.stringify({ slug, payload: form }),
       });
