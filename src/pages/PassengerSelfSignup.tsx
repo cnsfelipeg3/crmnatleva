@@ -253,7 +253,19 @@ export default function PassengerSelfSignup() {
     );
   }
 
-  // Helpers for sequential DOB inputs
+  // Helpers for sequential DOB inputs (iOS-safe)
+  const focusField = (ref: React.RefObject<HTMLInputElement>) => {
+    // iOS Safari prefers requestAnimationFrame over setTimeout(0) for programmatic focus
+    requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      el.focus();
+      try {
+        const len = el.value.length;
+        el.setSelectionRange(len, len);
+      } catch {}
+    });
+  };
   const commitDob = (parts: { d: string; m: string; y: string }) => {
     const d = parts.d.replace(/\D/g, "").slice(0, 2);
     const m = parts.m.replace(/\D/g, "").slice(0, 2);
@@ -275,23 +287,59 @@ export default function PassengerSelfSignup() {
   };
   const handleDobChange = (field: "d" | "m" | "y", value: string) => {
     const clean = value.replace(/\D/g, "");
-    if ((field !== "y" && clean.length > 2) || (field === "y" && clean.length > 4)) {
-      const merged = field === "d" ? splitDobDigits(clean) : { ...dobParts, [field]: clean };
-      commitDob(merged);
-      setTimeout(() => (merged.m.length < 2 ? dobMonthRef : dobYearRef).current?.focus(), 0);
+    const max = field === "y" ? 4 : 2;
+
+    // Backspace detection on iOS: campo ficou vazio e já estava vazio -> volta
+    if (clean.length === 0 && dobParts[field].length === 0) {
+      if (field === "m") focusField(dobDayRef);
+      if (field === "y") focusField(dobMonthRef);
       return;
     }
-    const next = { ...dobParts, [field]: field === "y" ? clean.slice(0, 4) : clean.slice(0, 2) };
+
+    // Overflow: digitou mais que o limite -> distribui para os próximos
+    if (clean.length > max) {
+      const current = clean.slice(0, max);
+      const overflow = clean.slice(max);
+      const next = { ...dobParts, [field]: current };
+      if (field === "d") {
+        next.m = (overflow + dobParts.m).replace(/\D/g, "").slice(0, 2);
+        if (overflow.length >= 2) {
+          next.y = (overflow.slice(2) + dobParts.y).replace(/\D/g, "").slice(0, 4);
+        }
+        commitDob(next);
+        focusField(next.m.length >= 2 ? dobYearRef : dobMonthRef);
+      } else if (field === "m") {
+        next.y = (overflow + dobParts.y).replace(/\D/g, "").slice(0, 4);
+        commitDob(next);
+        focusField(dobYearRef);
+      } else {
+        commitDob(next);
+      }
+      return;
+    }
+
+    const next = { ...dobParts, [field]: clean };
     commitDob(next);
-    if (field === "d" && next.d.length === 2) setTimeout(() => dobMonthRef.current?.focus(), 0);
-    if (field === "m" && next.m.length === 2) setTimeout(() => dobYearRef.current?.focus(), 0);
+    if (field === "d" && clean.length === 2) focusField(dobMonthRef);
+    if (field === "m" && clean.length === 2) focusField(dobYearRef);
   };
-  const handleDobPaste = (e: React.ClipboardEvent) => {
+  const handleDobPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     const text = e.clipboardData.getData("text");
     if (text.replace(/\D/g, "").length >= 6) {
       e.preventDefault();
-      commitDob(splitDobDigits(text));
-      setTimeout(() => dobYearRef.current?.focus(), 0);
+      const parts = splitDobDigits(text);
+      commitDob(parts);
+      focusField(parts.y.length === 4 ? dobYearRef : dobMonthRef);
+    }
+  };
+  const handleDobKeyDown = (
+    field: "d" | "m" | "y",
+    e: React.KeyboardEvent<HTMLInputElement>,
+  ) => {
+    if (e.key === "Backspace" && !dobParts[field]) {
+      e.preventDefault();
+      if (field === "m") focusField(dobDayRef);
+      if (field === "y") focusField(dobMonthRef);
     }
   };
 
