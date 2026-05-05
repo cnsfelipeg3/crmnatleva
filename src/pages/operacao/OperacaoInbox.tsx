@@ -195,6 +195,7 @@ function OperacaoInboxInner() {
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
+  const [contentMatchInfo, setContentMatchInfo] = useState<Map<string, { msgId: string; snippet: string }>>(new Map());
   const [searchingContent, setSearchingContent] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
   const [showAIPanel, setShowAIPanel] = useState(false);
@@ -975,6 +976,7 @@ function OperacaoInboxInner() {
     const q = searchQuery.trim();
     if (q.length < 2) {
       setContentMatchIds(null);
+      setContentMatchInfo(new Map());
       setSearchingContent(false);
       return;
     }
@@ -984,23 +986,32 @@ function OperacaoInboxInner() {
         const [m1, m2] = await Promise.all([
           supabase
             .from("messages")
-            .select("conversation_id")
+            .select("id, conversation_id, text, created_at")
             .ilike("text", `%${q}%`)
             .order("created_at", { ascending: false })
             .limit(500),
           supabase
             .from("conversation_messages")
-            .select("conversation_id")
+            .select("id, conversation_id, content, created_at")
             .ilike("content", `%${q}%`)
+            .order("created_at", { ascending: false })
             .limit(500),
         ]);
         const ids = new Set<string>();
-        (m1.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
-        (m2.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        const info = new Map<string, { msgId: string; snippet: string }>();
+        const addMatch = (cid: string | null, msgId: string, text: string) => {
+          if (!cid || !msgId) return;
+          ids.add(cid);
+          if (!info.has(cid)) info.set(cid, { msgId, snippet: text || "" });
+        };
+        (m2.data || []).forEach((r: any) => addMatch(r.conversation_id, r.id, r.content));
+        (m1.data || []).forEach((r: any) => addMatch(r.conversation_id, r.id, r.text));
         setContentMatchIds(ids);
+        setContentMatchInfo(info);
       } catch (e) {
         console.warn("[inbox] content search failed", e);
         setContentMatchIds(new Set());
+        setContentMatchInfo(new Map());
       } finally {
         setSearchingContent(false);
       }
@@ -2021,10 +2032,31 @@ function OperacaoInboxInner() {
     }
   }, []);
 
-  const handleSelectConversation = (id: string) => {
+  const handleSelectConversation = (id: string, jumpToMsgId?: string) => {
     // NÃO zera unread_count ao abrir · só zera quando o atendente responde
     // ou quando marca manualmente como lida (botão dedicado).
     setSelectedId(id); setShowAIPanel(false);
+    if (jumpToMsgId) {
+      setHighlightMsgId(jumpToMsgId);
+      let loadAttempts = 0;
+      const tryScroll = (attempt = 0) => {
+        const el = document.querySelector(`[data-message-id="${jumpToMsgId}"]`) as HTMLElement | null;
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          return;
+        }
+        if (attempt < 40) {
+          // A cada ~10 tentativas (1.5s) tenta carregar mensagens mais antigas
+          if (attempt > 0 && attempt % 10 === 0 && loadAttempts < 5) {
+            loadAttempts++;
+            try { loadOlderMessages?.(); } catch {}
+          }
+          setTimeout(() => tryScroll(attempt + 1), 150);
+        }
+      };
+      setTimeout(() => tryScroll(), 300);
+      setTimeout(() => setHighlightMsgId(null), 5000);
+    }
   };
 
   const handleClearConversations = useCallback(() => {
@@ -2232,6 +2264,7 @@ function OperacaoInboxInner() {
               searchQuery={searchQuery}
               ownerMap={profileMap}
               currentUserId={user?.id || null}
+              contentMatchInfo={contentMatchInfo}
             />
           </div>
 
@@ -2534,6 +2567,7 @@ function OperacaoInboxInner() {
                           </div>
                         )}
                         <div
+                          data-message-id={msg.id}
                           className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
                           onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
                           onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}
