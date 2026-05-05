@@ -981,15 +981,22 @@ function OperacaoInboxInner() {
     setSearchingContent(true);
     const handle = setTimeout(async () => {
       try {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("conversation_id")
-          .ilike("text", `%${q}%`)
-          .order("created_at", { ascending: false })
-          .limit(500);
-        if (error) throw error;
+        const [m1, m2] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("conversation_id")
+            .ilike("text", `%${q}%`)
+            .order("created_at", { ascending: false })
+            .limit(500),
+          supabase
+            .from("conversation_messages")
+            .select("conversation_id")
+            .ilike("content", `%${q}%`)
+            .limit(500),
+        ]);
         const ids = new Set<string>();
-        (data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        (m1.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
+        (m2.data || []).forEach((r: any) => { if (r.conversation_id) ids.add(r.conversation_id); });
         setContentMatchIds(ids);
       } catch (e) {
         console.warn("[inbox] content search failed", e);
