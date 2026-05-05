@@ -437,18 +437,46 @@ export function ConversationSummaryDialog({ open, onClose, conversationId, conta
 
         {/* Rodapé */}
         <div className="border-t border-border/40 px-6 py-3 flex items-center justify-between bg-muted/10">
-          <Button variant="outline" size="sm" onClick={generateSummary} disabled={isStreaming} className="gap-1.5 text-xs">
+          <Button variant="outline" size="sm" onClick={generateSummary} disabled={isStreaming || exportingPdf} className="gap-1.5 text-xs">
             {isStreaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Brain className="h-3.5 w-3.5" />}
             {hasGenerated ? "Regenerar" : "Gerar resumo"}
           </Button>
           {summary && !isStreaming && (
-            <Button variant="secondary" size="sm" onClick={handleCopy} className="gap-1.5 text-xs">
-              {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-              {copied ? "Copiado" : "Copiar"}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={handleCopy} className="gap-1.5 text-xs">
+                {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? "Copiado" : "Copiar"}
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleExportPdf}
+                disabled={exportingPdf || !pdfData}
+                className="gap-1.5 text-xs bg-primary hover:bg-primary/90"
+              >
+                {exportingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                {exportingPdf ? "Gerando PDF..." : "Exportar PDF"}
+              </Button>
+            </div>
           )}
         </div>
       </DialogContent>
+
+      {/* Hidden PDF render — fora do viewport mas no DOM para html2canvas capturar */}
+      {pdfData && (
+        <div
+          aria-hidden
+          style={{
+            position: "fixed",
+            top: 0,
+            left: "-10000px",
+            zIndex: -1,
+            pointerEvents: "none",
+            opacity: 0,
+          }}
+        >
+          <SummaryPdfTemplate data={pdfData} innerRef={pdfRef} />
+        </div>
+      )}
     </Dialog>
   );
 }
