@@ -98,6 +98,9 @@ const HIGH_PRIORITY_ROUTES = [
   "/viagens",
   "/financeiro",
   "/propostas",
+  "/operacao/inbox",
+  "/passengers",
+  "/pendencias",
 ];
 
 /**
@@ -121,7 +124,7 @@ export function prefetchAllRoutes(): void {
   let i = 0;
 
   const next = () => {
-    while (active < 1 && i < queue.length) {
+    while (active < 3 && i < queue.length) {
       const path = queue[i++];
       const loader = loaders[path];
       active++;
