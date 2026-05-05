@@ -53,6 +53,13 @@ serve(async (req) => {
 
     const sb = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    // Conversation meta (assignee, first/last activity)
+    const { data: conv } = await sb
+      .from("conversations")
+      .select("id, assigned_to, created_at, last_message_at, contact_name")
+      .eq("id", conversationId)
+      .maybeSingle();
+
     const { data: messages, error } = await sb
       .from("conversation_messages")
       .select("id, message_type, content, media_url, sender_type, direction, ai_media_transcript, metadata, created_at")
@@ -72,6 +79,55 @@ serve(async (req) => {
       (m) => mediaTypes.includes((m.message_type || "").toLowerCase()) && !m.ai_media_transcript
     );
 
+    // Attendant name
+    let attendantName: string | null = null;
+    if (conv?.assigned_to) {
+      const { data: prof } = await sb
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", conv.assigned_to)
+        .maybeSingle();
+      attendantName = prof?.full_name || prof?.email || null;
+    }
+
+    // Response time analysis (atendente replying to cliente)
+    const responseTimesMs: number[] = [];
+    let lastClientAt: number | null = null;
+    let firstResponseMs: number | null = null;
+    let pendingClient = false;
+    for (const m of ordered) {
+      const isClient = m.sender_type === "cliente" || m.direction === "received";
+      const isAgent = m.sender_type === "atendente" || m.direction === "sent";
+      const ts = new Date(m.created_at).getTime();
+      if (isClient) {
+        if (!pendingClient) lastClientAt = ts;
+        pendingClient = true;
+      } else if (isAgent && pendingClient && lastClientAt != null) {
+        const diff = ts - lastClientAt;
+        if (diff > 0 && diff < 1000 * 60 * 60 * 72) {
+          responseTimesMs.push(diff);
+          if (firstResponseMs == null) firstResponseMs = diff;
+        }
+        pendingClient = false;
+        lastClientAt = null;
+      }
+    }
+    const avgResponseMs = responseTimesMs.length
+      ? Math.round(responseTimesMs.reduce((a, b) => a + b, 0) / responseTimesMs.length)
+      : null;
+    const maxResponseMs = responseTimesMs.length ? Math.max(...responseTimesMs) : null;
+
+    // Conversation timeline
+    const firstAt = new Date(ordered[0].created_at).getTime();
+    const lastAt = new Date(ordered[ordered.length - 1].created_at).getTime();
+    const durationMs = lastAt - firstAt;
+
+    // Counts
+    const clientMsgs = ordered.filter((m) => m.sender_type === "cliente" || m.direction === "received").length;
+    const agentMsgs = ordered.filter((m) => m.sender_type === "atendente" || m.direction === "sent").length;
+    const lastSender = ordered[ordered.length - 1].sender_type === "cliente" ? "cliente" : "atendente";
+    const minutesSinceLast = Math.round((Date.now() - lastAt) / 60000);
+
     const stats: any = {
       total: ordered.length,
       texts: ordered.filter((m) => m.message_type === "text" || !m.message_type).length,
@@ -81,6 +137,20 @@ serve(async (req) => {
       processed: 0,
       cached: 0,
       failed: 0,
+      skipped: 0,
+      // Enriquecido
+      attendantName,
+      clientMsgs,
+      agentMsgs,
+      avgResponseMs,
+      maxResponseMs,
+      firstResponseMs,
+      durationMs,
+      firstAt,
+      lastAt,
+      lastSender,
+      minutesSinceLast,
+      responseSamples: responseTimesMs.length,
     };
 
     // Time budget: leave ~35s for AI streaming. Skip remaining media if budget exceeded.
@@ -88,7 +158,6 @@ serve(async (req) => {
     const MEDIA_BUDGET_MS = 25_000;
     const PER_MEDIA_TIMEOUT_MS = 12_000;
     const CHUNK_SIZE = 5;
-    stats.skipped = 0;
 
     for (let i = 0; i < toProcess.length; i += CHUNK_SIZE) {
       if (Date.now() - startedAt > MEDIA_BUDGET_MS) {
