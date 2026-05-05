@@ -1948,8 +1948,10 @@ function OperacaoInboxInner() {
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-1 pb-1.5 w-max">
                   {FILTERS.map(f => {
-                    const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0).length
-                      : f.key === "vip" ? conversations.filter(c => c.is_vip).length
+                    const count = f.key === "unread" ? conversations.filter(c => c.unread_count > 0 && !c.is_archived).length
+                      : f.key === "vip" ? conversations.filter(c => c.is_vip && !c.is_archived).length
+                      : f.key === "archived" ? conversations.filter(c => c.is_archived).length
+                      : f.key === "groups" ? conversations.filter(c => { const p = (c.phone||"").replace(/\D/g,""); return !c.is_archived && (p.startsWith("120363") || p.length > 15); }).length
                       : 0;
                     return (
                       <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
