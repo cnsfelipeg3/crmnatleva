@@ -12,7 +12,7 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
-  ChevronDown, UserPlus,
+  ChevronDown, UserPlus, MoreVertical,
 } from "lucide-react";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
@@ -2338,9 +2338,9 @@ function OperacaoInboxInner() {
                         >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
-                        <SelectTrigger className="h-8 text-xs w-[120px] md:w-[140px]">
+                        <SelectTrigger className="h-8 text-xs w-[110px] md:w-[140px]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -2363,10 +2363,65 @@ function OperacaoInboxInner() {
                           <TooltipContent><p className="text-xs">Painel do cliente</p></TooltipContent>
                         </Tooltip>
                       )}
+                      {isMobile && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais opções">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" side="bottom" className="w-60 p-1">
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowContactProfile(prev => !prev)}
+                            >
+                              <User className="h-4 w-4 text-primary" /> Painel do cliente
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowSummaryDialog(true)}
+                            >
+                              <Brain className="h-4 w-4 text-primary" /> Resumir com IA
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => {
+                                if (selectionMode) cancelSelection();
+                                else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
+                              }}
+                            >
+                              <Forward className="h-4 w-4" /> {selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}
+                            </button>
+                            <button
+                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              onClick={() => setShowLinkClient(true)}
+                            >
+                              <Link2 className="h-4 w-4" /> Vincular cliente
+                            </button>
+                            {selectedDbId && (
+                              <>
+                                <div className="my-1 h-px bg-border" />
+                                <button
+                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  onClick={() => setDelegateDialogOpen(true)}
+                                >
+                                  <UserPlus className="h-4 w-4" /> Atribuir / Delegar
+                                </button>
+                                <button
+                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  onClick={() => setAddParticipantsDialogOpen(true)}
+                                >
+                                  <UserPlus className="h-4 w-4" /> Participantes ({participants.length})
+                                </button>
+                              </>
+                            )}
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                   </div>
-                  {/* Row 1.5: Delegation */}
-                  {selectedDbId && (
+                  {/* Row 1.5: Delegation · oculto no mobile (vai pro menu de 3 pontinhos) */}
+                  {selectedDbId && !isMobile && (
                     <div className="flex items-center gap-3 px-3 md:px-4 pb-1.5 text-[11px] flex-wrap">
                       {(() => {
                         const ownerId = selected.assigned_to || null;
@@ -2437,52 +2492,50 @@ function OperacaoInboxInner() {
                       </div>
                     </div>
                   )}
-                  {/* Row 2: Action buttons */}
-                  <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
-                    {/* Ações IA — destaque */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
-                          <Brain className="h-3.5 w-3.5 text-primary" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Resumir conversa com IA</TooltipContent>
-                    </Tooltip>
-                    <NathOpinionButton
-                      messages={currentMessages.map(m => ({
-                        role: m.sender_type === "atendente" ? "agent" : "user",
-                        content: m.text || "",
-                        agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
-                        timestamp: m.created_at,
-                        mediaUrl: m.media_url,
-                        messageType: m.message_type,
-                      }))}
-                      context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
-                      variant="inline"
-                      conversationId={selectedDbId || undefined}
-                    />
+                  {/* Row 2 · Desktop: ações inline · Mobile: menu de 3 pontinhos */}
+                  {!isMobile ? (
+                    <div className="flex items-center gap-1 px-3 md:px-4 pb-2 flex-wrap">
+                      {/* Ações IA — destaque */}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
+                            <Brain className="h-3.5 w-3.5 text-primary" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Resumir conversa com IA</TooltipContent>
+                      </Tooltip>
+                      <NathOpinionButton
+                        messages={currentMessages.map(m => ({
+                          role: m.sender_type === "atendente" ? "agent" : "user",
+                          content: m.text || "",
+                          agentName: m.sender_type === "atendente" ? "Atendente" : selected?.contact_name || "Lead",
+                          timestamp: m.created_at,
+                          mediaUrl: m.media_url,
+                          messageType: m.message_type,
+                        }))}
+                        context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
+                        variant="inline"
+                        conversationId={selectedDbId || undefined}
+                      />
 
-                    {/* Separador visual */}
-                    <div className="h-4 w-px bg-border/60 mx-1" />
+                      <div className="h-4 w-px bg-border/60 mx-1" />
 
-                    {/* Ações secundárias — apenas ícones */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant={selectionMode ? "secondary" : "ghost"}
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() => {
-                            if (selectionMode) cancelSelection();
-                            else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
-                          }}
-                        >
-                          <Forward className="h-3.5 w-3.5" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
-                    </Tooltip>
-                    {!isMobile && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={selectionMode ? "secondary" : "ghost"}
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              if (selectionMode) cancelSelection();
+                              else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
+                            }}
+                          >
+                            <Forward className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}</p></TooltipContent>
+                      </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowLinkClient(true)}>
@@ -2491,14 +2544,14 @@ function OperacaoInboxInner() {
                         </TooltipTrigger>
                         <TooltipContent><p className="text-xs">Vincular conversa a um cliente cadastrado</p></TooltipContent>
                       </Tooltip>
-                    )}
 
-                    {activeFlowName && !isMobile && (
-                      <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-auto">
-                        <Workflow className="h-3 w-3" />{activeFlowName}
-                      </Badge>
-                    )}
-                  </div>
+                      {activeFlowName && (
+                        <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-auto">
+                          <Workflow className="h-3 w-3" />{activeFlowName}
+                        </Badge>
+                      )}
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Messages */}
