@@ -87,7 +87,7 @@ export function ForwardDialog({ open, onOpenChange, messages, candidates, exclud
     const results = await forwardMessages(messages, targets, caption, (done, total, snapshot) => {
       setProgress({ done, total });
       if (snapshot) setJobs(snapshot);
-    });
+    }, sourcePhone);
 
     const failures = results.filter(r => !r.ok);
     if (failures.length === 0) {
