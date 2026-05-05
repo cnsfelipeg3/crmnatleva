@@ -2713,25 +2713,59 @@ function OperacaoInboxInner() {
                                   </div>
                                 )}
                                 {/* Document */}
-                                {msg.message_type === "document" && (
-                                  <div className="flex items-center gap-2 py-1">
-                                    <FileText className="h-5 w-5 shrink-0" />
-                                    <div className="flex flex-col min-w-0">
-                                      {msg.media_url ? (
-                                        <a href={msg.media_url} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80 truncate max-w-[220px]">
-                                          {msg.media_filename || msg.text || "Documento"}
-                                        </a>
-                                      ) : (
-                                        <span className="text-sm truncate max-w-[220px]">{msg.media_filename || msg.text || "Documento"}</span>
-                                      )}
-                                      {(msg.media_size_bytes || msg.media_mimetype) && (
-                                        <span className="text-[10px] opacity-60">
-                                          {[msg.media_mimetype?.split("/").pop()?.toUpperCase(), msg.media_size_bytes ? formatBytes(msg.media_size_bytes) : null].filter(Boolean).join(" · ")}
-                                        </span>
-                                      )}
+                                {msg.message_type === "document" && (() => {
+                                  const bestUrl = msg.media_storage_url || msg.media_url;
+                                  const filename = msg.media_filename || "Documento";
+                                  const sizeLabel = msg.media_size_bytes ? formatBytes(msg.media_size_bytes) : null;
+                                  const mimetype = (msg.media_mimetype || "").toLowerCase();
+                                  const isPdf = mimetype.includes("pdf") || filename.toLowerCase().endsWith(".pdf");
+                                  const caption = msg.text && msg.text !== msg.media_filename ? stripQuotes(msg.text) : null;
+
+                                  if (isPdf && bestUrl) {
+                                    return (
+                                      <div className="flex flex-col gap-1.5 w-[min(240px,calc(100vw-96px))] max-w-full">
+                                        <PdfThumbnail
+                                          url={bestUrl}
+                                          filename={filename}
+                                          width={240}
+                                          onClick={() => window.open(bestUrl, "_blank", "noopener,noreferrer")}
+                                        />
+                                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-primary-foreground/10 min-w-0">
+                                          <FileText className="h-4 w-4 shrink-0 opacity-70" />
+                                          <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-xs font-medium truncate" title={filename}>{filename}</span>
+                                            <span className="text-[10px] opacity-70 truncate">{[sizeLabel, "PDF"].filter(Boolean).join(" · ")}</span>
+                                          </div>
+                                          <a href={bestUrl} download={filename} target="_blank" rel="noopener noreferrer" className="shrink-0 h-7 w-7 rounded-full flex items-center justify-center hover:bg-foreground/10" onClick={e => e.stopPropagation()} title="Baixar PDF">
+                                            <File className="h-3.5 w-3.5" />
+                                          </a>
+                                        </div>
+                                        {caption && <p className="text-sm leading-relaxed mt-0.5 break-words"><Linkify text={caption} /></p>}
+                                      </div>
+                                    );
+                                  }
+
+                                  return (
+                                    <div className="flex items-center gap-2 py-1 min-w-0">
+                                      <FileText className="h-5 w-5 shrink-0" />
+                                      <div className="flex flex-col min-w-0">
+                                        {bestUrl ? (
+                                          <a href={bestUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline hover:opacity-80 truncate max-w-[220px]">
+                                            {filename || msg.text || "Documento"}
+                                          </a>
+                                        ) : (
+                                          <span className="text-sm truncate max-w-[220px]">{filename || msg.text || "Documento"}</span>
+                                        )}
+                                        {(sizeLabel || msg.media_mimetype) && (
+                                          <span className="text-[10px] opacity-60">
+                                            {[msg.media_mimetype?.split("/").pop()?.toUpperCase(), sizeLabel].filter(Boolean).join(" · ")}
+                                          </span>
+                                        )}
+                                        {caption && <span className="text-sm leading-relaxed mt-1 break-words"><Linkify text={caption} /></span>}
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  );
+                                })()}
                                 {/* Text */}
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
                                 <div className="flex items-center justify-end gap-1 mt-1">
