@@ -30,16 +30,49 @@ export interface ForwardResult {
 
 /**
  * Encaminha uma mensagem para um destinatário via Z-API.
- * Retorna o externalMessageId (zaapId) quando disponível.
+ * Tenta primeiro o endpoint nativo /forward-message (preserva o selo
+ * "Encaminhada" no WhatsApp). Se faltar contexto ou falhar, cai no
+ * fallback de reenviar a mídia/texto como mensagem nova.
  */
 async function sendOneForward(
   msg: Message,
   target: ForwardTarget,
   caption: string | undefined,
-): Promise<{ ok: boolean; error?: string; externalMessageId?: string; sentAction?: string; sentPayload?: any }> {
+  sourcePhone: string | undefined,
+): Promise<{ ok: boolean; error?: string; externalMessageId?: string; sentAction?: string; sentPayload?: any; nativeForward?: boolean }> {
   const phone = target.phone;
   const finalCaption = (caption || "").trim();
 
+  // 1) Tentativa nativa: preserva selo "Encaminhada"
+  // Requer messageId original + telefone da conversa de origem.
+  // Não é possível anexar caption no forward nativo · se houver caption,
+  // enviamos primeiro o texto e depois o forward nativo do conteúdo.
+  if (sourcePhone && msg.external_message_id) {
+    try {
+      if (finalCaption && msg.message_type !== "text") {
+        // Envia comentário antes do encaminhamento
+        await callZapiProxy("send-text", { phone, message: finalCaption });
+      }
+      const fwdPayload = {
+        phone,
+        messageId: msg.external_message_id,
+        messagePhone: sourcePhone,
+      };
+      const data = await callZapiProxy("forward-message", fwdPayload);
+      return {
+        ok: true,
+        externalMessageId: data?.messageId || data?.zaapId,
+        sentAction: "forward-message",
+        sentPayload: fwdPayload,
+        nativeForward: true,
+      };
+    } catch (err) {
+      // Fallback abaixo
+      console.warn("[forward] native forward failed, falling back to resend", err);
+    }
+  }
+
+  // 2) Fallback: reenvia como mensagem nova (sem selo nativo, mas marcado is_forwarded localmente)
   try {
     if (msg.message_type === "text") {
       const body = finalCaption ? `${finalCaption}\n\n${msg.text}` : msg.text;
