@@ -162,6 +162,12 @@ export default function PassengerSelfSignup() {
       toast({ title: "Informe o nome completo", variant: "destructive" });
       return;
     }
+    // Telefone em E.164 (ex: +5511999999999) · entre 8 e 15 dígitos
+    const phoneDigits = (form.phone || "").replace(/\D/g, "");
+    if (!form.phone.startsWith("+") || phoneDigits.length < 8 || phoneDigits.length > 15) {
+      toast({ title: "Telefone inválido", description: "Confira o código do país e o número.", variant: "destructive" });
+      return;
+    }
     const hasDobInput = !!(dobParts.d || dobParts.m || dobParts.y);
     if (hasDobInput && !form.birth_date) {
       const err = "Informe a data completa no formato DD/MM/AAAA";
@@ -358,7 +364,7 @@ export default function PassengerSelfSignup() {
 
       <form onSubmit={onSubmit} className="w-full max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 [&_input]:h-11">
         {/* Dados pessoais */}
-        <Card className="p-5 sm:p-6 space-y-4">
+        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
           <div className="flex items-center gap-2">
             <Plane className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
@@ -451,7 +457,7 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Endereço */}
-        <Card className="p-5 sm:p-6 space-y-4">
+        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
           <div className="flex items-center gap-2">
             <Globe2 className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Endereço</h2>
@@ -522,7 +528,7 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Passaporte */}
-        <Card className="p-5 sm:p-6 space-y-4">
+        <Card className="p-5 sm:p-6 space-y-4 overflow-hidden">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-primary" />
             <h2 className="font-display text-base sm:text-lg">Passaporte</h2>

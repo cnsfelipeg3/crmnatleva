@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 export type Country = {
   code: string; // ISO2
   name: string;
-  dial: string; // e.g. "+55"
-  flag: string; // emoji
+  dial: string; // ex: "+55"
+  flag: string;
 };
 
 export const COUNTRIES: Country[] = [
@@ -39,31 +39,61 @@ export const COUNTRIES: Country[] = [
   { code: "ZA", name: "África do Sul", dial: "+27", flag: "🇿🇦" },
 ];
 
-function formatBR(d: string) {
-  d = d.slice(0, 11);
-  if (d.length <= 2) return d;
-  if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
-function formatGeneric(d: string) {
-  d = d.slice(0, 15);
+const MAX_NATIONAL: Record<string, number> = { BR: 11, US: 10, CA: 10, PT: 9 };
+
+function formatNational(country: Country, digits: string) {
+  const max = MAX_NATIONAL[country.code] ?? 15;
+  const d = digits.slice(0, max);
+  if (country.code === "BR") {
+    if (d.length <= 2) return d;
+    if (d.length <= 7) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+  if (country.code === "US" || country.code === "CA") {
+    if (d.length <= 3) return d;
+    if (d.length <= 6) return `(${d.slice(0, 3)}) ${d.slice(3)}`;
+    return `(${d.slice(0, 3)}) ${d.slice(3, 6)}-${d.slice(6)}`;
+  }
   if (d.length <= 4) return d;
   if (d.length <= 8) return `${d.slice(0, 4)} ${d.slice(4)}`;
   return `${d.slice(0, 4)} ${d.slice(4, 8)} ${d.slice(8)}`;
 }
 
+/** Extrai dígitos nacionais de um valor E.164 (+55119...) ignorando o dial code do país. */
+function extractNationalDigits(country: Country, e164: string): string {
+  const digits = (e164 || "").replace(/\D/g, "");
+  const dial = country.dial.replace(/\D/g, "");
+  if (digits.startsWith(dial)) return digits.slice(dial.length);
+  return digits;
+}
+
 interface PhoneInputProps {
+  /** Valor em E.164 (ex: "+5511999999999"). Pode estar vazio. */
   value: string;
   countryCode?: string;
-  onChange: (full: string, parts: { country: Country; national: string }) => void;
+  /**
+   * Callback com o telefone E.164 (ex: "+5511999999999").
+   * Também recebe o país atual e os dígitos nacionais.
+   */
+  onChange: (e164: string, parts: { country: Country; national: string; nationalDigits: string }) => void;
+  onCountryChange?: (country: Country) => void;
   placeholder?: string;
   required?: boolean;
   id?: string;
 }
 
-export function PhoneInput({ value, countryCode = "BR", onChange, placeholder, required, id }: PhoneInputProps) {
+export function PhoneInput({
+  value,
+  countryCode = "BR",
+  onChange,
+  onCountryChange,
+  placeholder,
+  required,
+  id,
+}: PhoneInputProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+
   const country = useMemo(
     () => COUNTRIES.find((c) => c.code === countryCode) || COUNTRIES[0],
     [countryCode]
@@ -80,26 +110,39 @@ export function PhoneInput({ value, countryCode = "BR", onChange, placeholder, r
     );
   }, [search]);
 
+  const nationalDigits = extractNationalDigits(country, value);
+  const display = formatNational(country, nationalDigits);
+
+  const emit = (digits: string, c: Country) => {
+    const dialDigits = c.dial.replace(/\D/g, "");
+    const e164 = digits ? `+${dialDigits}${digits}` : "";
+    onChange(e164, { country: c, national: formatNational(c, digits), nationalDigits: digits });
+  };
+
   const handleNational = (raw: string) => {
-    const digits = raw.replace(/\D/g, "");
-    const formatted = country.code === "BR" ? formatBR(digits) : formatGeneric(digits);
-    onChange(`${country.dial} ${formatted}`.trim(), { country, national: formatted });
+    let digits = raw.replace(/\D/g, "");
+    // Caso o usuário cole um número completo com país, normaliza
+    const dial = country.dial.replace(/\D/g, "");
+    if (digits.startsWith(dial) && digits.length > (MAX_NATIONAL[country.code] ?? 15)) {
+      digits = digits.slice(dial.length);
+    }
+    const max = MAX_NATIONAL[country.code] ?? 15;
+    digits = digits.slice(0, max);
+    emit(digits, country);
   };
 
   const selectCountry = (c: Country) => {
     setOpen(false);
     setSearch("");
-    // mantém só os dígitos atuais ao trocar país
-    const digits = (value || "").replace(/^\+\d+\s?/, "").replace(/\D/g, "");
-    const formatted = c.code === "BR" ? formatBR(digits) : formatGeneric(digits);
-    onChange(`${c.dial} ${formatted}`.trim(), { country: c, national: formatted });
+    // Mantém só os dígitos nacionais ao trocar país
+    const max = MAX_NATIONAL[c.code] ?? 15;
+    const digits = nationalDigits.slice(0, max);
+    emit(digits, c);
+    onCountryChange?.(c);
   };
 
-  // extrai parte nacional para exibir
-  const national = (value || "").replace(country.dial, "").trim();
-
   return (
-    <div className="flex items-stretch gap-2">
+    <div className="flex items-stretch gap-2 w-full">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
@@ -156,12 +199,20 @@ export function PhoneInput({ value, countryCode = "BR", onChange, placeholder, r
         type="tel"
         inputMode="tel"
         autoComplete="tel-national"
-        className="flex-1 h-11"
-        value={national}
+        className="flex-1 h-11 min-w-0"
+        value={display}
         onChange={(e) => handleNational(e.target.value)}
         placeholder={placeholder || (country.code === "BR" ? "(11) 99999-9999" : "Número")}
         required={required}
       />
     </div>
   );
+}
+
+/** Constrói um link wa.me a partir de um telefone E.164. */
+export function buildWhatsAppLink(e164: string, message?: string): string {
+  const digits = (e164 || "").replace(/\D/g, "");
+  if (!digits) return "";
+  const base = `https://wa.me/${digits}`;
+  return message ? `${base}?text=${encodeURIComponent(message)}` : base;
 }
