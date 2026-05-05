@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle } from "lucide-react";
+import { Loader2, Plane, CheckCircle2, ShieldCheck, Globe2, Check, AlertCircle, Camera, X, Upload } from "lucide-react";
 import logo from "@/assets/logo-natleva.png";
 import { useToast } from "@/hooks/use-toast";
 
@@ -32,6 +32,7 @@ function formatCep(v: string) {
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
   phone: "", passport_number: "", passport_expiry: "",
+  passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
   address_city: "", address_state: "",
@@ -49,6 +50,8 @@ export default function PassengerSelfSignup() {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepError, setCepError] = useState<string>("");
   const [cepFound, setCepFound] = useState(false);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [blockedMsg, setBlockedMsg] = useState<string>("");
 
   const fnUrl = useMemo(() => {
     const projectId = (import.meta as any).env.VITE_SUPABASE_PROJECT_ID;
@@ -57,7 +60,12 @@ export default function PassengerSelfSignup() {
 
   useEffect(() => {
     if (!slug) return;
-    fetch(`${fnUrl}?slug=${encodeURIComponent(slug)}`)
+    // Cache-bust with timestamp + no-store to evitar 404 antigo cacheado pelo navegador
+    const bust = Date.now();
+    fetch(`${fnUrl}?slug=${encodeURIComponent(slug)}&_=${bust}`, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache", Pragma: "no-cache" },
+    })
       .then((r) => r.json())
       .then((d) => {
         if (d.valid) setLinkState("valid");
@@ -73,7 +81,7 @@ export default function PassengerSelfSignup() {
     setCepError("");
     setCepFound(false);
     try {
-      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`);
+      const r = await fetch(`https://viacep.com.br/ws/${d}/json/`, { cache: "no-store" });
       const j = await r.json();
       if (j.erro) {
         setCepError("CEP não encontrado");
@@ -98,9 +106,32 @@ export default function PassengerSelfSignup() {
   const cepInvalid = cepDigits.length > 0 && cepDigits.length < 8;
   const stateInvalid = form.address_state.length > 0 && form.address_state.length !== 2;
 
+  const handlePhotoUpload = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) {
+      toast({ title: "Imagem muito grande", description: "Limite de 8MB.", variant: "destructive" });
+      return;
+    }
+    setPhotoUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "jpg";
+      const path = `passport/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("passenger-uploads").upload(path, file, {
+        cacheControl: "3600", upsert: false, contentType: file.type,
+      });
+      if (error) throw error;
+      const { data: pub } = supabase.storage.from("passenger-uploads").getPublicUrl(path);
+      setForm((f) => ({ ...f, passport_photo_url: pub.publicUrl }));
+    } catch (e: any) {
+      toast({ title: "Não foi possível enviar a foto", description: e?.message || "Tente de novo.", variant: "destructive" });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!slug) return;
+    setBlockedMsg("");
 
     if (!form.full_name.trim() || form.full_name.trim().length < 3) {
       toast({ title: "Informe o nome completo", variant: "destructive" });
@@ -115,18 +146,28 @@ export default function PassengerSelfSignup() {
     try {
       const r = await fetch(fnUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-cache",
+          Pragma: "no-cache",
+        },
         body: JSON.stringify({ slug, payload: form }),
       });
       const j = await r.json();
       if (!r.ok || j.error) {
-        toast({ title: "Erro ao enviar", description: j.error || "Tente novamente", variant: "destructive" });
+        // Bloqueio ou rate limit · exibe mensagem destacada acima do botão
+        if (r.status === 429 || r.status === 409 || j.code) {
+          setBlockedMsg(j.error || "Não foi possível concluir o cadastro agora.");
+        } else {
+          toast({ title: "Erro ao enviar", description: j.error || "Tente novamente", variant: "destructive" });
+        }
         setSubmitting(false);
         return;
       }
       setDone(true);
     } catch (err) {
-      toast({ title: "Erro de conexão", variant: "destructive" });
+      toast({ title: "Erro de conexão", description: "Verifique sua internet e tente novamente.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -149,7 +190,7 @@ export default function PassengerSelfSignup() {
     };
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-10 max-w-md w-full text-center space-y-4">
+        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-4">
           <img src={logo} alt="NatLeva" className="h-10 mx-auto" />
           <h1 className="text-xl font-display">Link indisponível</h1>
           <p className="text-sm text-muted-foreground">{map[reason] || "Não foi possível abrir este formulário."}</p>
@@ -161,8 +202,8 @@ export default function PassengerSelfSignup() {
   if (done) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-6">
-        <Card className="glass-card p-10 max-w-md w-full text-center space-y-5 relative overflow-hidden">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200" />
+        <Card className="glass-card p-8 sm:p-10 max-w-md w-full text-center space-y-5 relative overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-primary/70" />
           <CheckCircle2 className="w-14 h-14 text-primary mx-auto" />
           <img src={logo} alt="NatLeva" className="h-8 mx-auto opacity-80" />
           <h1 className="text-2xl font-display">Cadastro recebido!</h1>
@@ -174,70 +215,72 @@ export default function PassengerSelfSignup() {
     );
   }
 
+  const sectionAccent = "absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-primary/60 via-primary to-primary/60 rounded-t";
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col items-center">
       {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent">
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-amber-200 via-amber-400 to-amber-200" />
-        <div className="max-w-2xl mx-auto px-6 py-10 text-center space-y-3">
-          <img src={logo} alt="NatLeva" className="h-12 mx-auto" />
-          <h1 className="text-3xl md:text-4xl font-display tracking-tight">Seu cadastro de passageiro</h1>
+      <header className="w-full border-b border-border/40 bg-gradient-to-b from-primary/5 to-transparent">
+        <div className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-10 text-center space-y-3">
+          <img src={logo} alt="NatLeva" className="h-10 sm:h-12 mx-auto" />
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-display tracking-tight">Seu cadastro de passageiro</h1>
           <p className="text-sm md:text-base text-muted-foreground max-w-md mx-auto">
-            Preencha seus dados com calma. Levam só uns minutinhos e nos ajudam a deixar a sua viagem 100% redonda.
+            Preenche com calma. Leva só uns minutinhos e nos ajuda a deixar a sua viagem 100% redonda.
           </p>
         </div>
-      </div>
+      </header>
 
-      <form onSubmit={onSubmit} className="max-w-2xl mx-auto px-6 py-8 space-y-6">
+      <form onSubmit={onSubmit} className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-5 sm:space-y-6">
         {/* Dados pessoais */}
-        <Card className="glass-card p-6 space-y-4 relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-200 via-amber-400 to-amber-200 rounded-l" />
-          <div className="flex items-center gap-2">
+        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
+          <div className={sectionAccent} />
+          <div className="flex items-center gap-2 pt-1">
             <Plane className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-lg">Dados pessoais</h2>
+            <h2 className="font-display text-base sm:text-lg">Dados pessoais</h2>
           </div>
           <div className="space-y-2">
             <Label>Nome completo *</Label>
             <Input value={form.full_name} onChange={(e) => setForm(f => ({ ...f, full_name: e.target.value }))} required />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>CPF</Label>
-              <Input value={form.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
+              <Input inputMode="numeric" value={form.cpf} onChange={(e) => setForm(f => ({ ...f, cpf: formatCpf(e.target.value) }))} placeholder="000.000.000-00" />
             </div>
             <div className="space-y-2">
               <Label>Data de nascimento</Label>
               <Input type="date" value={form.birth_date} onChange={(e) => setForm(f => ({ ...f, birth_date: e.target.value }))} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>RG</Label>
               <Input value={form.rg} onChange={(e) => setForm(f => ({ ...f, rg: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>E-mail</Label>
-              <Input type="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="voce@email.com" />
+              <Input type="email" inputMode="email" value={form.email} onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))} placeholder="voce@email.com" />
             </div>
           </div>
           <div className="space-y-2">
             <Label>Telefone com WhatsApp *</Label>
-            <Input value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" required />
+            <Input inputMode="tel" value={form.phone} onChange={(e) => setForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" required />
           </div>
         </Card>
 
         {/* Endereço */}
-        <Card className="glass-card p-6 space-y-4 relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-200 via-amber-400 to-amber-200 rounded-l" />
-          <div className="flex items-center gap-2">
+        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
+          <div className={sectionAccent} />
+          <div className="flex items-center gap-2 pt-1">
             <Globe2 className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-lg">Endereço</h2>
+            <h2 className="font-display text-base sm:text-lg">Endereço</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>CEP</Label>
               <div className="relative">
                 <Input
+                  inputMode="numeric"
                   value={form.address_cep}
                   onChange={(e) => {
                     const v = formatCep(e.target.value);
@@ -259,15 +302,15 @@ export default function PassengerSelfSignup() {
                 <p className="text-xs text-destructive">{cepError || "CEP incompleto"}</p>
               )}
             </div>
-            <div className="space-y-2 md:col-span-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Rua</Label>
               <Input value={form.address_street} onChange={(e) => setForm(f => ({ ...f, address_street: e.target.value }))} placeholder="Preenchido pelo CEP" />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-2">
               <Label>Número</Label>
-              <Input value={form.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
+              <Input inputMode="numeric" value={form.address_number} onChange={(e) => setForm(f => ({ ...f, address_number: e.target.value }))} />
             </div>
             <div className="space-y-2">
               <Label>Complemento</Label>
@@ -278,8 +321,8 @@ export default function PassengerSelfSignup() {
               <Input value={form.address_neighborhood} onChange={(e) => setForm(f => ({ ...f, address_neighborhood: e.target.value }))} />
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="space-y-2 md:col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-2 sm:col-span-2">
               <Label>Cidade</Label>
               <Input value={form.address_city} onChange={(e) => setForm(f => ({ ...f, address_city: e.target.value }))} />
             </div>
@@ -298,11 +341,11 @@ export default function PassengerSelfSignup() {
         </Card>
 
         {/* Passaporte */}
-        <Card className="glass-card p-6 space-y-4 relative">
-          <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-200 via-amber-400 to-amber-200 rounded-l" />
-          <div className="flex items-center gap-2">
+        <Card className="glass-card p-5 sm:p-6 space-y-4 relative overflow-hidden">
+          <div className={sectionAccent} />
+          <div className="flex items-center gap-2 pt-1">
             <ShieldCheck className="w-4 h-4 text-primary" />
-            <h2 className="font-display text-lg">Passaporte</h2>
+            <h2 className="font-display text-base sm:text-lg">Passaporte</h2>
           </div>
           <div className="flex items-start justify-between gap-4 p-3 rounded-lg border border-border/50 bg-card/50">
             <div className="space-y-0.5">
@@ -311,7 +354,7 @@ export default function PassengerSelfSignup() {
             </div>
             <Switch checked={form.international_outside_sa} onCheckedChange={(v) => setForm(f => ({ ...f, international_outside_sa: v }))} />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label>Número do passaporte {form.international_outside_sa && "*"}</Label>
               <Input value={form.passport_number} onChange={(e) => setForm(f => ({ ...f, passport_number: e.target.value.toUpperCase() }))} required={form.international_outside_sa} />
@@ -321,9 +364,54 @@ export default function PassengerSelfSignup() {
               <Input type="date" value={form.passport_expiry} onChange={(e) => setForm(f => ({ ...f, passport_expiry: e.target.value }))} required={form.international_outside_sa} />
             </div>
           </div>
+
+          {/* Passport photo · optional */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Camera className="w-4 h-4" /> Foto do passaporte <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+            </Label>
+            {form.passport_photo_url ? (
+              <div className="relative inline-block">
+                <img src={form.passport_photo_url} alt="Passaporte" className="h-32 rounded-lg border border-border object-cover" />
+                <button type="button"
+                  onClick={() => setForm(f => ({ ...f, passport_photo_url: "" }))}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 shadow"
+                  aria-label="Remover foto">
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <label className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-dashed border-border bg-card/40 cursor-pointer hover:bg-card/60 transition text-sm text-muted-foreground">
+                {photoUploading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Enviando…</>
+                ) : (
+                  <><Upload className="w-4 h-4" /> Anexar foto do passaporte</>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                  disabled={photoUploading}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handlePhotoUpload(f);
+                    e.target.value = "";
+                  }}
+                />
+              </label>
+            )}
+          </div>
         </Card>
 
-        <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+        {blockedMsg && (
+          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+            <p className="text-sm text-destructive">{blockedMsg}</p>
+          </div>
+        )}
+
+        <Button type="submit" size="lg" className="w-full" disabled={submitting || photoUploading}>
           {submitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           Enviar meus dados
         </Button>
