@@ -26,6 +26,7 @@ export function VirtualConversationList({
   onSelect,
   onTogglePin,
   onToggleUnread,
+  onToggleArchive,
   isLoading,
   searchQuery,
 }: VirtualConversationListProps) {
