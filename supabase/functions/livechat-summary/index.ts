@@ -246,7 +246,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "openai/gpt-5-mini",
         messages: [
-          { role: "system", content: SUMMARY_PROMPT },
+          { role: "system", content: buildSummaryPrompt(attendantName, stats) },
           {
             role: "user",
             content: `[CONVERSA]\nCliente: ${contactName || "Desconhecido"}\nEtapa: ${stage || "novo_lead"}\n\nMensagens (cronológicas):\n${historyText}\n[FIM]`,
