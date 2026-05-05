@@ -754,18 +754,25 @@ export default function Sales() {
 
   return (
     <TooltipProvider>
-      <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in relative">
+      <div className="p-3 md:p-6 space-y-3 md:space-y-5 animate-fade-in relative">
         {exportProgress !== null && (
           <ProgressOverlay label="Exportando vendas..." progress={exportProgress} fullscreen />
         )}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-serif text-foreground">Vendas</h1>
-            <p className="text-sm text-muted-foreground">{filtered.length} de {sales.length} vendas</p>
+        <div className="flex flex-row items-center justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-2xl font-serif text-foreground leading-tight">Vendas</h1>
+            <p className="text-[11px] sm:text-sm text-muted-foreground truncate">{filtered.length} de {sales.length} vendas</p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleExport} className="text-xs"><Download className="w-4 h-4 mr-1" /> <span className="hidden sm:inline">Exportar</span></Button>
-            <Button size="sm" onClick={() => navigate("/sales/new")} className="text-xs"><Plus className="w-4 h-4 mr-1" /> Nova Venda</Button>
+          <div className="flex gap-1.5 shrink-0">
+            <Button variant="outline" size="sm" onClick={handleExport} className="h-9 px-2.5 text-xs">
+              <Download className="w-4 h-4 sm:mr-1" />
+              <span className="hidden sm:inline">Exportar</span>
+            </Button>
+            <Button size="sm" onClick={() => navigate("/sales/new")} className="h-9 px-2.5 text-xs">
+              <Plus className="w-4 h-4 sm:mr-1" />
+              <span className="hidden xs:inline sm:inline">Nova</span>
+              <span className="hidden sm:inline">&nbsp;Venda</span>
+            </Button>
           </div>
         </div>
 
