@@ -682,8 +682,37 @@ Retorne SOMENTE o JSON, sem markdown.`,
                   <div className="absolute inset-0 rounded-full animate-ping opacity-20"
                     style={{ background: "rgba(168,85,247,0.2)" }} />
                 </div>
-                <p className="text-[12px] font-medium" style={{ color: "#A78BFA" }}>Nath está analisando a conversa...</p>
+                <p className="text-[12px] font-medium" style={{ color: "#A78BFA" }}>
+                  {phase === "processing_media" ? "Processando áudios, imagens e documentos..." : "Nath está analisando a conversa..."}
+                </p>
                 <p className="text-[10px]" style={{ color: "#6B21A8" }}>Visão de CEO · Proteção da marca · Oportunidades</p>
+              </div>
+            )}
+            {stats && conversationId && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[10px]">
+                <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(168,85,247,0.08)", color: "#A78BFA", border: "1px solid rgba(168,85,247,0.15)" }}>
+                  {stats.texts} textos
+                </span>
+                {stats.audios > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(59,130,246,0.08)", color: "#60A5FA", border: "1px solid rgba(59,130,246,0.15)" }}>
+                    🎵 {stats.audios} áudios{stats.cached > 0 ? ` (${stats.cached} cache)` : ""}
+                  </span>
+                )}
+                {stats.images > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(16,185,129,0.08)", color: "#34D399", border: "1px solid rgba(16,185,129,0.15)" }}>
+                    📷 {stats.images} imagens
+                  </span>
+                )}
+                {stats.documents > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(245,158,11,0.08)", color: "#FBBF24", border: "1px solid rgba(245,158,11,0.15)" }}>
+                    📄 {stats.documents} docs
+                  </span>
+                )}
+                {stats.failed > 0 && (
+                  <span className="px-2 py-0.5 rounded-full" style={{ background: "rgba(239,68,68,0.08)", color: "#F87171", border: "1px solid rgba(239,68,68,0.15)" }}>
+                    ⚠ {stats.failed} falhas
+                  </span>
+                )}
               </div>
             )}
             {opinion && (
