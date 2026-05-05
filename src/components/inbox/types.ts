@@ -83,4 +83,5 @@ export const FILTERS = [
   { key: "pos_venda", label: "Pós-venda" },
   { key: "no_reply", label: "Sem resposta" },
   { key: "urgent", label: "Urgentes" },
+  { key: "archived", label: "Arquivadas" },
 ];
