@@ -12,6 +12,8 @@ import {
   Wifi, CircleDollarSign, PlaneTakeoff
 } from "lucide-react";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
+import { CepInput } from "@/components/ui/cep-input";
+import { Label } from "@/components/ui/label";
 
 interface ProfileData {
   full_name: string;
@@ -450,7 +452,28 @@ export default function PortalProfile() {
                       <ProfileField label="Estado" value={profile.state} field="state" editing={editing} onChange={updateField} />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <ProfileField label="CEP" value={profile.zip_code} field="zip_code" editing={editing} onChange={updateField} placeholder="00000-000" />
+                      {editing ? (
+                        <div className="space-y-1">
+                          <Label className="text-xs text-muted-foreground">CEP</Label>
+                          <CepInput
+                            value={profile.zip_code}
+                            onChange={(v) => updateField("zip_code", v)}
+                            onResolved={(r) => {
+                              setProfile(prev => ({
+                                ...prev,
+                                zip_code: prev.zip_code,
+                                address: prev.address || [r.street, r.neighborhood].filter(Boolean).join(", "),
+                                city: r.city || prev.city,
+                                state: r.state || prev.state,
+                                country: prev.country || "Brasil",
+                              }));
+                            }}
+                            placeholder="00000-000"
+                          />
+                        </div>
+                      ) : (
+                        <ProfileField label="CEP" value={profile.zip_code} field="zip_code" editing={editing} onChange={updateField} placeholder="00000-000" />
+                      )}
                       <ProfileField label="País" value={profile.country} field="country" editing={editing} onChange={updateField} />
                     </div>
                   </FieldGroup>
