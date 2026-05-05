@@ -927,6 +927,10 @@ function OperacaoInboxInner() {
       }
       if (activeFilter === "unread") return c.unread_count > 0;
       if (activeFilter === "vip") return c.is_vip;
+      if (activeFilter === "groups") {
+        const p = (c.phone || "").replace(/\D/g, "");
+        return p.startsWith("120363") || p.length > 15;
+      }
       if (activeFilter === "qualificacao") return c.stage === "qualificacao";
       if (activeFilter === "proposta_enviada") return c.stage === "proposta_enviada" || c.stage === "proposta_preparacao" || c.stage === "negociacao";
       if (activeFilter === "fechado") return c.stage === "fechado";
