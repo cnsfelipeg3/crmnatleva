@@ -203,11 +203,7 @@ export function DatePartsInput({
           onKeyDown={(e) => handleKeyDown("y", e)}
         />
       </div>
-      {error ? (
-        <p className="text-xs text-destructive">{error}</p>
-      ) : helperText ? (
-        <p className="text-xs text-muted-foreground">{helperText}</p>
-      ) : null}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
