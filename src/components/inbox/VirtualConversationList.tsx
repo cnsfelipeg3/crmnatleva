@@ -5,6 +5,12 @@ import type { Conversation } from "./types";
 import { ConversationItem } from "./ConversationItem";
 import { getActivePresence, type PresenceMap } from "@/hooks/usePresenceByPhone";
 
+interface OwnerInfo {
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+}
+
 interface VirtualConversationListProps {
   conversations: Conversation[];
   selectedId: string | null;
@@ -16,6 +22,8 @@ interface VirtualConversationListProps {
   onToggleArchive?: (conv: Conversation) => void;
   isLoading: boolean;
   searchQuery: string;
+  ownerMap?: Map<string, OwnerInfo>;
+  currentUserId?: string | null;
 }
 
 export function VirtualConversationList({
