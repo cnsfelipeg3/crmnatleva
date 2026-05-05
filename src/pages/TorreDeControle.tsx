@@ -86,16 +86,31 @@ export default function TorreDeControle() {
         // Build urgent items list
         const items: UrgentItem[] = [];
 
+        // Set of sale_ids visíveis ao usuário (para filtrar tarefas)
+        let visibleSaleIds: Set<string> | null = null;
+        if (!canViewAll && sellerId) {
+          const { data: visibleSales } = await supabase
+            .from("sales")
+            .select("id")
+            .eq("seller_id", sellerId);
+          visibleSaleIds = new Set((visibleSales || []).map((s: any) => s.id));
+        }
+
         // Upcoming checkins
-        const { data: checkins } = await supabase
+        let checkinsQuery = supabase
           .from("checkin_tasks")
           .select("id, sale_id, direction, departure_datetime_utc, status, priority_score")
           .eq("status", "PENDENTE")
           .order("departure_datetime_utc", { ascending: true })
-          .limit(5);
+          .limit(20);
+        if (visibleSaleIds) {
+          if (visibleSaleIds.size === 0) checkinsQuery = checkinsQuery.eq("sale_id", "00000000-0000-0000-0000-000000000000");
+          else checkinsQuery = checkinsQuery.in("sale_id", Array.from(visibleSaleIds));
+        }
+        const { data: checkins } = await checkinsQuery;
 
         if (checkins) {
-          for (const c of checkins) {
+          for (const c of checkins.slice(0, 5)) {
             const depDate = c.departure_datetime_utc ? parseISO(c.departure_datetime_utc) : null;
             const daysLeft = depDate && isValid(depDate) ? differenceInDays(depDate, new Date()) : null;
             items.push({
@@ -113,15 +128,20 @@ export default function TorreDeControle() {
         }
 
         // Pending lodging confirmations
-        const { data: lodgings } = await (supabase as any)
+        let lodgingsQuery = (supabase as any)
           .from("lodging_confirmation_tasks")
-          .select("id, milestone, status, scheduled_at_utc")
+          .select("id, sale_id, milestone, status, scheduled_at_utc")
           .eq("status", "PENDENTE")
           .order("scheduled_at_utc", { ascending: true })
-          .limit(3);
+          .limit(20);
+        if (visibleSaleIds) {
+          if (visibleSaleIds.size === 0) lodgingsQuery = lodgingsQuery.eq("sale_id", "00000000-0000-0000-0000-000000000000");
+          else lodgingsQuery = lodgingsQuery.in("sale_id", Array.from(visibleSaleIds));
+        }
+        const { data: lodgings } = await lodgingsQuery;
 
         if (lodgings) {
-          for (const l of lodgings) {
+          for (const l of lodgings.slice(0, 3)) {
             const scheduled = l.scheduled_at_utc ? parseISO(l.scheduled_at_utc) : null;
             const daysLeft = scheduled && isValid(scheduled) ? differenceInDays(scheduled, new Date()) : null;
             items.push({
@@ -170,7 +190,7 @@ export default function TorreDeControle() {
     };
 
     fetchData();
-  }, []);
+  }, [scopeLoading, canViewAll, sellerId]);
 
   const kpiCards = [
     {
