@@ -247,7 +247,6 @@ export function DatePartsInput({
               selected={selectedDate}
               defaultMonth={selectedDate}
               onSelect={handleCalendarSelect}
-              captionLayout="dropdown"
               fromYear={minY}
               toYear={maxY}
               disabled={(date) => {
