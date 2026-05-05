@@ -53,7 +53,7 @@ function validateDob(iso: string): string {
 
 const initialForm = {
   full_name: "", cpf: "", birth_date: "", rg: "", email: "",
-  phone: "", passport_number: "", passport_expiry: "",
+  phone: "", phone_country: "BR", passport_number: "", passport_expiry: "",
   passport_photo_url: "",
   address_cep: "", address_street: "", address_number: "",
   address_complement: "", address_neighborhood: "",
