@@ -202,7 +202,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
             </span>
           )}
           {item.to === "/cotacoes" && pendingBriefings > 0 && (
-            <span className="ml-auto shrink-0 min-w-5 h-5 flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[10px] font-bold px-1.5">
+            <span className="ml-auto shrink-0 min-w-[15px] h-[15px] flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[8px] font-bold px-1 leading-none">
               {pendingBriefings}
             </span>
           )}
