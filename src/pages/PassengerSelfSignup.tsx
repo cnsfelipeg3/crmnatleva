@@ -162,6 +162,12 @@ export default function PassengerSelfSignup() {
       toast({ title: "Informe o nome completo", variant: "destructive" });
       return;
     }
+    // Telefone em E.164 (ex: +5511999999999) · entre 8 e 15 dígitos
+    const phoneDigits = (form.phone || "").replace(/\D/g, "");
+    if (!form.phone.startsWith("+") || phoneDigits.length < 8 || phoneDigits.length > 15) {
+      toast({ title: "Telefone inválido", description: "Confira o código do país e o número.", variant: "destructive" });
+      return;
+    }
     const hasDobInput = !!(dobParts.d || dobParts.m || dobParts.y);
     if (hasDobInput && !form.birth_date) {
       const err = "Informe a data completa no formato DD/MM/AAAA";
