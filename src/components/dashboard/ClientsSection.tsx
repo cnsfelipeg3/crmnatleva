@@ -11,6 +11,7 @@ interface Client {
   id: string;
   display_name: string;
   created_at: string;
+  customer_since?: string | null;
 }
 
 interface Sale {
