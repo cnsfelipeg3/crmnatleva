@@ -1,18 +1,17 @@
 // ─── Galeria de mídias da conversa · estilo WhatsApp Web ───
 // Tabs: Mídia (imagens + vídeos), Documentos, Áudios.
-// Grid scrollável agrupado por mês · lightbox com navegação ← → e teclado.
+// Virtualizada (react-virtual) · suporta milhares de itens sem perda de performance.
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Image as ImageIcon, FileText, Mic, Play, Download,
-  ChevronLeft, ChevronRight, X, Video as VideoIcon,
+  ChevronLeft, ChevronRight, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { Message } from "./types";
 import { PdfThumbnail } from "./PdfThumbnail";
 
@@ -75,6 +74,17 @@ const fmtSize = (b?: number) => {
 
 const mediaUrl = (m: Message) => m.media_storage_url || m.media_url || "";
 
+// Tipos de linha para a lista virtualizada
+type Row =
+  | { kind: "header"; label: string }
+  | { kind: "media-row"; items: Message[]; baseIdx: number }
+  | { kind: "doc"; item: Message }
+  | { kind: "audio"; item: Message };
+
+const HEADER_H = 28;
+const DOC_H = 64;
+const AUDIO_H = 78;
+
 export function ConversationMediaGallery({ open, onOpenChange, messages, contactName }: Props) {
   const [tab, setTab] = useState<TabKey>("media");
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
@@ -99,15 +109,59 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
     };
   }, [messages]);
 
-  // Agrupa por mês
-  const groupByMonth = useCallback((list: Message[]) => {
-    const groups: Record<string, Message[]> = {};
-    for (const m of list) {
-      const k = monthLabel(m.created_at);
-      (groups[k] ||= []).push(m);
-    }
-    return Object.entries(groups);
-  }, []);
+  // Constrói linhas virtualizadas por tab
+  const mediaRows = useMemo<Row[]>(() => {
+    const rows: Row[] = [];
+    let currentMonth = "";
+    let buffer: Message[] = [];
+    let baseIdx = 0;
+    const flush = () => {
+      while (buffer.length) {
+        const chunk = buffer.splice(0, 3);
+        rows.push({ kind: "media-row", items: chunk, baseIdx });
+        baseIdx += chunk.length;
+      }
+    };
+    mediaItems.forEach((m) => {
+      const month = monthLabel(m.created_at);
+      if (month !== currentMonth) {
+        flush();
+        currentMonth = month;
+        rows.push({ kind: "header", label: month });
+      }
+      buffer.push(m);
+    });
+    flush();
+    return rows;
+  }, [mediaItems]);
+
+  const docRows = useMemo<Row[]>(() => {
+    const rows: Row[] = [];
+    let currentMonth = "";
+    docItems.forEach((m) => {
+      const month = monthLabel(m.created_at);
+      if (month !== currentMonth) {
+        currentMonth = month;
+        rows.push({ kind: "header", label: month });
+      }
+      rows.push({ kind: "doc", item: m });
+    });
+    return rows;
+  }, [docItems]);
+
+  const audioRows = useMemo<Row[]>(() => {
+    const rows: Row[] = [];
+    let currentMonth = "";
+    audioItems.forEach((m) => {
+      const month = monthLabel(m.created_at);
+      if (month !== currentMonth) {
+        currentMonth = month;
+        rows.push({ kind: "header", label: month });
+      }
+      rows.push({ kind: "audio", item: m });
+    });
+    return rows;
+  }, [audioItems]);
 
   // Reset ao fechar
   useEffect(() => {
@@ -161,71 +215,74 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
               </TabsTrigger>
             </TabsList>
 
-            {/* MÍDIA · grid 3 colunas */}
-            <TabsContent value="media" className="flex-1 min-h-0 mt-3 mx-0 px-0">
-              <ScrollArea className="h-full">
-                {mediaItems.length === 0 ? (
-                  <EmptyState icon={<ImageIcon className="h-8 w-8" />} text="Nenhuma foto ou vídeo nessa conversa" />
-                ) : (
-                  groupByMonth(mediaItems).map(([month, items]) => (
-                    <div key={month} className="mb-4">
-                      <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 sticky top-0 z-10">
-                        {month}
-                      </div>
-                      <div className="grid grid-cols-3 gap-0.5 px-0.5">
-                        {items.map((m) => {
-                          const idx = mediaItems.indexOf(m);
-                          return (
-                            <button
-                              key={m.id}
-                              onClick={() => setLightboxIdx(idx)}
-                              className="relative aspect-square bg-muted overflow-hidden group"
-                            >
-                              {m.message_type === "image" ? (
-                                <img
-                                  src={mediaUrl(m)}
-                                  alt=""
-                                  loading="lazy"
-                                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
-                                />
-                              ) : (
-                                <div className="w-full h-full relative">
-                                  <video
+            {/* MÍDIA · grid 3 colunas virtualizado */}
+            <TabsContent value="media" className="flex-1 min-h-0 mt-3 mx-0 px-0 overflow-hidden">
+              {mediaItems.length === 0 ? (
+                <EmptyState icon={<ImageIcon className="h-8 w-8" />} text="Nenhuma foto ou vídeo nessa conversa" />
+              ) : (
+                <VirtualList
+                  rows={mediaRows}
+                  estimateSize={(row) => row.kind === "header" ? HEADER_H : 120}
+                  renderRow={(row) => {
+                    if (row.kind === "header") return <MonthHeader label={row.label} />;
+                    if (row.kind === "media-row") {
+                      return (
+                        <div className="grid grid-cols-3 gap-0.5 px-0.5">
+                          {row.items.map((m, i) => {
+                            const idx = row.baseIdx + i;
+                            return (
+                              <button
+                                key={m.id}
+                                onClick={() => setLightboxIdx(idx)}
+                                className="relative aspect-square bg-muted overflow-hidden group"
+                              >
+                                {m.message_type === "image" ? (
+                                  <img
                                     src={mediaUrl(m)}
-                                    className="w-full h-full object-cover"
-                                    preload="metadata"
-                                    muted
+                                    alt=""
+                                    loading="lazy"
+                                    className="w-full h-full object-cover transition-transform group-hover:scale-105"
                                   />
-                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                                    <Play className="h-6 w-6 text-white drop-shadow fill-white" />
+                                ) : (
+                                  <div className="w-full h-full relative">
+                                    <video
+                                      src={mediaUrl(m)}
+                                      className="w-full h-full object-cover"
+                                      preload="metadata"
+                                      muted
+                                    />
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                                      <Play className="h-6 w-6 text-white drop-shadow fill-white" />
+                                    </div>
                                   </div>
-                                </div>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </ScrollArea>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              )}
             </TabsContent>
 
-            {/* DOCUMENTOS · lista */}
-            <TabsContent value="docs" className="flex-1 min-h-0 mt-3 mx-0 px-0">
-              <ScrollArea className="h-full">
-                {docItems.length === 0 ? (
-                  <EmptyState icon={<FileText className="h-8 w-8" />} text="Nenhum documento nessa conversa" />
-                ) : (
-                  groupByMonth(docItems).map(([month, items]) => (
-                    <div key={month} className="mb-3">
-                      <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 sticky top-0 z-10">
-                        {month}
-                      </div>
-                      <div className="px-2">
-                        {items.map(m => (
+            {/* DOCUMENTOS · lista virtualizada */}
+            <TabsContent value="docs" className="flex-1 min-h-0 mt-3 mx-0 px-0 overflow-hidden">
+              {docItems.length === 0 ? (
+                <EmptyState icon={<FileText className="h-8 w-8" />} text="Nenhum documento nessa conversa" />
+              ) : (
+                <VirtualList
+                  rows={docRows}
+                  estimateSize={(row) => row.kind === "header" ? HEADER_H : DOC_H}
+                  renderRow={(row) => {
+                    if (row.kind === "header") return <MonthHeader label={row.label} />;
+                    if (row.kind === "doc") {
+                      const m = row.item;
+                      return (
+                        <div className="px-2">
                           <a
-                            key={m.id}
                             href={mediaUrl(m)}
                             target="_blank"
                             rel="noreferrer"
@@ -250,28 +307,30 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
                             </div>
                             <Download className="h-4 w-4 text-muted-foreground shrink-0" />
                           </a>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </ScrollArea>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              )}
             </TabsContent>
 
-            {/* ÁUDIO · lista de players */}
-            <TabsContent value="audio" className="flex-1 min-h-0 mt-3 mx-0 px-0">
-              <ScrollArea className="h-full">
-                {audioItems.length === 0 ? (
-                  <EmptyState icon={<Mic className="h-8 w-8" />} text="Nenhum áudio nessa conversa" />
-                ) : (
-                  groupByMonth(audioItems).map(([month, items]) => (
-                    <div key={month} className="mb-3">
-                      <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/30 sticky top-0 z-10">
-                        {month}
-                      </div>
-                      <div className="px-3 space-y-2">
-                        {items.map(m => (
-                          <div key={m.id} className="p-2.5 rounded-lg border bg-card/40">
+            {/* ÁUDIO · lista virtualizada */}
+            <TabsContent value="audio" className="flex-1 min-h-0 mt-3 mx-0 px-0 overflow-hidden">
+              {audioItems.length === 0 ? (
+                <EmptyState icon={<Mic className="h-8 w-8" />} text="Nenhum áudio nessa conversa" />
+              ) : (
+                <VirtualList
+                  rows={audioRows}
+                  estimateSize={(row) => row.kind === "header" ? HEADER_H : AUDIO_H}
+                  renderRow={(row) => {
+                    if (row.kind === "header") return <MonthHeader label={row.label} />;
+                    if (row.kind === "audio") {
+                      const m = row.item;
+                      return (
+                        <div className="px-3">
+                          <div className="p-2.5 rounded-lg border bg-card/40">
                             <div className="text-[11px] text-muted-foreground mb-1.5 flex items-center gap-1.5">
                               <Mic className="h-3 w-3" />
                               {format(new Date(m.created_at), "dd MMM · HH:mm", { locale: ptBR })}
@@ -281,12 +340,13 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
                             </div>
                             <audio src={mediaUrl(m)} controls preload="none" className="w-full h-8" />
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </ScrollArea>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </SheetContent>
@@ -364,6 +424,59 @@ export function ConversationMediaGallery({ open, onOpenChange, messages, contact
         </div>
       )}
     </>
+  );
+}
+
+function MonthHeader({ label }: { label: string }) {
+  return (
+    <div className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground bg-muted/50">
+      {label}
+    </div>
+  );
+}
+
+// Lista virtualizada genérica · usa @tanstack/react-virtual
+function VirtualList({
+  rows,
+  estimateSize,
+  renderRow,
+}: {
+  rows: Row[];
+  estimateSize: (row: Row) => number;
+  renderRow: (row: Row) => React.ReactNode;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: (i) => estimateSize(rows[i]),
+    overscan: 6,
+  });
+
+  return (
+    <div ref={parentRef} className="h-full overflow-y-auto overscroll-contain">
+      <div style={{ height: virtualizer.getTotalSize(), position: "relative", width: "100%" }}>
+        {virtualizer.getVirtualItems().map((vi) => {
+          const row = rows[vi.index];
+          return (
+            <div
+              key={vi.key}
+              ref={virtualizer.measureElement}
+              data-index={vi.index}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                transform: `translateY(${vi.start}px)`,
+              }}
+            >
+              {renderRow(row)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
