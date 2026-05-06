@@ -135,7 +135,7 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("leaflet")) return "vendor-maps";
           if (id.includes("framer-motion")) return "vendor-motion";
           if (id.includes("three") || id.includes("@react-three")) return "vendor-three";
-          if (id.includes("@radix-ui")) return "vendor-radix";
+          if (id.includes("@radix-ui") || id.includes("react-remove-scroll") || id.includes("use-sidecar") || id.includes("react-style-singleton") || id.includes("use-callback-ref") || id.includes("aria-hidden") || id.includes("get-nonce") || id.includes("tslib")) return "vendor-radix";
           if (id.includes("lucide-react")) return "vendor-icons";
           if (id.includes("date-fns")) return "vendor-date";
           return "vendor";
