@@ -30,6 +30,9 @@ export interface Conversation {
   archived_at?: string | null;
   is_group?: boolean;
   group_subject?: string | null;
+  group_photo_url?: string | null;
+  group_description?: string | null;
+  group_participants?: any[] | null;
 }
 
 export interface Message {

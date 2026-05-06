@@ -50,14 +50,17 @@ export function GroupInfoDialog({
     if (!conversationDbId) return;
     const { data } = await (supabase as any)
       .from("conversations")
-      .select("group_metadata, group_description, group_subject, group_metadata_fetched_at")
+      .select("group_metadata, group_description, group_subject, group_metadata_fetched_at, group_photo_url, group_participants")
       .eq("id", conversationDbId)
       .maybeSingle();
-    if (data?.group_metadata) {
+    if (data) {
+      const m: GroupMetadata = (data.group_metadata && typeof data.group_metadata === "object") ? data.group_metadata : {};
       setMeta({
-        ...data.group_metadata,
-        subject: data.group_subject || data.group_metadata.subject || groupName,
-        description: data.group_description || data.group_metadata.description,
+        ...m,
+        subject: data.group_subject || m.subject || groupName,
+        description: data.group_description || m.description,
+        pictureUrl: data.group_photo_url || m.pictureUrl || null,
+        participants: Array.isArray(data.group_participants) ? data.group_participants : (m.participants || []),
       });
       setCachedAt(data.group_metadata_fetched_at || null);
     }
@@ -80,6 +83,8 @@ export function GroupInfoDialog({
             group_metadata: m,
             group_description: m.description || null,
             group_subject: m.subject || null,
+            group_photo_url: m.pictureUrl || null,
+            group_participants: Array.isArray(m.participants) ? m.participants : null,
             group_metadata_fetched_at: new Date().toISOString(),
             is_group: true,
           })

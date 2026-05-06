@@ -753,7 +753,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       initPersistence().catch(() => {});
-      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_photo_url", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
         cacheMs: 30_000,
@@ -765,11 +765,18 @@ function OperacaoInboxInner() {
         const mapConv = (c: any, fallbackPreview?: string) => {
           const cleanPhone = (c.phone || "").replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
+          const isGroup = !!(c as any).is_group || (cleanPhone.length >= 15);
+          // Pré-popula o cache de fotos com a foto do grupo (não a do membro)
+          if (isGroup && (c as any).group_photo_url && typeof (c as any).group_photo_url === "string" && (c as any).group_photo_url.startsWith("http")) {
+            profilePicsRef.current.set(canonicalId, (c as any).group_photo_url);
+          }
           return {
             id: canonicalId,
             db_id: c.id,
             phone: cleanPhone || c.phone || "",
-            contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
+            contact_name: isGroup
+              ? ((c as any).group_subject || c.contact_name || c.display_name || "Grupo")
+              : (c.contact_name || c.display_name || c.phone || "Sem nome"),
             stage: (c.stage || c.funnel_stage || "novo_lead") as Stage,
             tags: c.tags || [],
             source: c.source || "",
@@ -784,8 +791,9 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!(c as any).manually_marked_unread,
             is_archived: !!(c as any).is_archived,
             archived_at: (c as any).archived_at || null,
-            is_group: !!(c as any).is_group || ((c.phone || "").replace(/\D/g, "").length >= 15),
+            is_group: isGroup,
             group_subject: (c as any).group_subject || null,
+            group_photo_url: (c as any).group_photo_url || null,
           };
         };
 
@@ -833,7 +841,7 @@ function OperacaoInboxInner() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_description")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_description, group_photo_url, group_participants")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -855,18 +863,27 @@ function OperacaoInboxInner() {
           const cleanPhone = String(c.phone || "").replace(/\D/g, "");
           const convId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           const z = zapiByPhone.get(cleanPhone);
-          const chatPhoto = z?.imgUrl || z?.image || z?.photo || "";
+          const isGroup = !!c.is_group || (cleanPhone.length >= 15);
+          // Para grupos: prioriza group_photo_url. Para individuais: foto do contato.
+          const chatPhoto = isGroup
+            ? (c.group_photo_url || "")
+            : (z?.imgUrl || z?.image || z?.photo || "");
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
-          } else if (c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
+          } else if (!isGroup && c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
             if (!profilePicsRef.current.has(convId)) profilePicsRef.current.set(convId, c.profile_picture_url);
+          } else if (isGroup) {
+            // Grupo sem foto: garantir que não há foto residual de membro no cache
+            if (!c.group_photo_url) profilePicsRef.current.delete(convId);
           }
           return {
             id: convId,
             db_id: c.id,
             phone: cleanPhone || c.phone || "",
             zapi_phone: cleanPhone,
-            contact_name: c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone),
+            contact_name: isGroup
+              ? (c.group_subject || c.contact_name || c.display_name || "Grupo")
+              : (c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone)),
             stage: ((c.stage || c.funnel_stage) || "novo_lead") as Stage,
             tags: c.tags || [],
             source: c.source || "whatsapp",
@@ -881,8 +898,11 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!c.manually_marked_unread,
             is_archived: !!c.is_archived,
             archived_at: c.archived_at || null,
-            is_group: !!c.is_group || (cleanPhone.length >= 15),
+            is_group: isGroup,
             group_subject: c.group_subject || null,
+            group_photo_url: c.group_photo_url || null,
+            group_description: c.group_description || null,
+            group_participants: c.group_participants || null,
             _hasReliableActivity: true,
           };
         });
