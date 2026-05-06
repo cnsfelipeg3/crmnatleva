@@ -11,7 +11,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
