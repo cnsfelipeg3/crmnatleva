@@ -3233,6 +3233,7 @@ function OperacaoInboxInner() {
 
                       {inputText.trim() ? (
                         <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
                           <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} disabled={isSending}>
                             {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
