@@ -18,6 +18,8 @@ import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
 import { DelegateConversationDialog } from "@/components/inbox/DelegateConversationDialog";
 import { SlashCommandDropdown, type MessageShortcut } from "@/components/inbox/SlashCommandDropdown";
+import { ScheduleMessagePopover } from "@/components/inbox/ScheduleMessagePopover";
+import { ScheduledForConversationButton } from "@/components/inbox/ScheduledForConversationButton";
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -2467,6 +2469,7 @@ function OperacaoInboxInner() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
+                      <ScheduledForConversationButton conversationId={selected?.id || null} />
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
                         <SelectTrigger
                           className={isMobile
@@ -3138,9 +3141,12 @@ function OperacaoInboxInner() {
 
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
-                        <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
-                          {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                        </Button>
+                        <>
+                          <ScheduleMessagePopover compact phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
+                          <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
+                            {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                          </Button>
+                        </>
                       ) : (
                         <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
                           <Mic className="h-5 w-5" />
@@ -3207,9 +3213,12 @@ function OperacaoInboxInner() {
                       )}
 
                       {inputText.trim() ? (
-                        <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} disabled={isSending}>
-                          {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        </Button>
+                        <>
+                          <ScheduleMessagePopover phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
+                          <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} disabled={isSending}>
+                            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                          </Button>
+                        </>
                       ) : (
                         <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={startRecording}>
                           <Mic className="h-5 w-5 text-muted-foreground" />

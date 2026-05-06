@@ -7204,6 +7204,87 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_messages: {
+        Row: {
+          cancelled_at: string | null
+          caption: string | null
+          content: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string
+          failure_detail: string | null
+          failure_reason: string | null
+          id: string
+          media_filename: string | null
+          media_mimetype: string | null
+          media_size_bytes: number | null
+          media_url: string | null
+          message_id_after_sent: string | null
+          original_payload: Json | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          caption?: string | null
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by: string
+          failure_detail?: string | null
+          failure_reason?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_url?: string | null
+          message_id_after_sent?: string | null
+          original_payload?: Json | null
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          caption?: string | null
+          content?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string
+          failure_detail?: string | null
+          failure_reason?: string | null
+          id?: string
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_url?: string | null
+          message_id_after_sent?: string | null
+          original_payload?: Json | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "scheduled_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       simulated_leads: {
         Row: {
           context_summary: Json | null
@@ -8856,6 +8937,36 @@ export type Database = {
           last_message_at_atual: string
           last_message_at_real: string
         }[]
+      }
+      claim_scheduled_messages: {
+        Args: { p_limit?: number }
+        Returns: {
+          cancelled_at: string | null
+          caption: string | null
+          content: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string
+          failure_detail: string | null
+          failure_reason: string | null
+          id: string
+          media_filename: string | null
+          media_mimetype: string | null
+          media_size_bytes: number | null
+          media_url: string | null
+          message_id_after_sent: string | null
+          original_payload: Json | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "scheduled_messages"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       cleanup_booking_rapidapi_cache: { Args: never; Returns: number }
       cleanup_client_names: { Args: never; Returns: Json }
