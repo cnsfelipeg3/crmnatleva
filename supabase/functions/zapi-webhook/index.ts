@@ -707,7 +707,9 @@ Deno.serve(async (req) => {
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
     const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
-    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe);
+    const isGroupMsg = body.isGroup === true || /-group$/i.test(String(rawPhone || "")) || cleanPhone.length >= 15;
+    const groupSubject = isGroupMsg ? (body.chatName || null) : null;
+    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe, isGroupMsg, groupSubject);
 
     if (!conversationId) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_conversation" }).eq("id", rawEventId);
