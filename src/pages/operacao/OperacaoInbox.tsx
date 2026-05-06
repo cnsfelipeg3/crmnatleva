@@ -1030,14 +1030,43 @@ function OperacaoInboxInner() {
       if (!a.is_pinned && b.is_pinned) return 1;
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
-    const seen = new Set<string>();
-    return filtered.filter(c => {
+    // Dedup por telefone: quando há duplicatas (ex: chatguru + whatsapp_api),
+    // mantém a "melhor" (com preview/mensagem) e mescla preview/last_message_at/unread.
+    const byPhone = new Map<string, typeof filtered[number]>();
+    const standalone: typeof filtered = [];
+    for (const c of filtered) {
       const norm = (c.phone || "").replace(/\D/g, "");
-      if (!norm) return true;
-      if (seen.has(norm)) return false;
-      seen.add(norm);
-      return true;
+      if (!norm) { standalone.push(c); continue; }
+      const existing = byPhone.get(norm);
+      if (!existing) { byPhone.set(norm, c); continue; }
+      const existingHasPreview = !!(existing.last_message_preview && existing.last_message_preview.trim());
+      const currentHasPreview = !!(c.last_message_preview && c.last_message_preview.trim());
+      // Escolhe a "principal": prioriza a que tem preview; em empate, a mais recente (já está ordenada).
+      const primary = existingHasPreview && !currentHasPreview ? existing
+        : (!existingHasPreview && currentHasPreview ? c : existing);
+      const other = primary === existing ? c : existing;
+      // Mescla campos: pega o preview do que tiver, e o timestamp/unread mais recente.
+      const mergedPreview = (primary.last_message_preview && primary.last_message_preview.trim())
+        ? primary.last_message_preview
+        : (other.last_message_preview || "");
+      const primaryTime = new Date(primary.last_message_at || 0).getTime();
+      const otherTime = new Date(other.last_message_at || 0).getTime();
+      const mergedTime = otherTime > primaryTime ? other.last_message_at : primary.last_message_at;
+      const mergedUnread = Math.max(primary.unread_count || 0, other.unread_count || 0);
+      byPhone.set(norm, {
+        ...primary,
+        last_message_preview: mergedPreview,
+        last_message_at: mergedTime,
+        unread_count: mergedUnread,
+      });
+    }
+    const merged = [...standalone, ...byPhone.values()];
+    merged.sort((a, b) => {
+      if (a.is_pinned && !b.is_pinned) return -1;
+      if (!a.is_pinned && b.is_pinned) return 1;
+      return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
+    return merged;
   }, [conversations, searchQuery, activeFilter, ownerFilter, user, contentMatchIds]);
 
   // Execute flow engine
