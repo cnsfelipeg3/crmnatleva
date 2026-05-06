@@ -10,7 +10,7 @@ import {
   Image, Mic, Video, File, ArrowLeft, RefreshCw,
   ChevronRight, Bot,
   CheckCheck, Workflow, Brain, Loader2,
-  Trash2, WifiOff, Pin, PinOff, Pencil, Wand2,
+  Trash2, WifiOff, Pin, PinOff, Pencil,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
   ChevronDown, UserPlus, MoreVertical, Images,
 } from "lucide-react";
