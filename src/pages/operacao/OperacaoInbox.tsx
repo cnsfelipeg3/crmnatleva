@@ -2167,18 +2167,19 @@ function OperacaoInboxInner() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        aria-label="Visão Pipeline"
+                        className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
                         onClick={() => setViewMode("pipeline")}
                       >
-                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <LayoutGrid className="h-4 w-4 md:h-3.5 md:w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p className="text-xs">Visão Pipeline</p></TooltipContent>
                   </Tooltip>
                   <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" aria-label="Limpar conversas" className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-destructive active:scale-95 transition-transform">
+                        <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
@@ -2195,19 +2196,27 @@ function OperacaoInboxInner() {
                 </div>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Buscar nome, telefone ou conteúdo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-3.5 md:w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nome, telefone ou conteúdo..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  enterKeyHint="search"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className="pl-9 pr-8 h-10 md:h-8 text-sm md:text-xs bg-background/50 border-border/50"
+                />
                 {searchingContent && (
                   <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground animate-pulse">buscando…</span>
                 )}
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <X className="h-3 w-3" />
+                  <button onClick={() => setSearchQuery("")} aria-label="Limpar busca" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform">
+                    <X className="h-4 w-4 md:h-3 md:w-3" />
                   </button>
                 )}
               </div>
               {/* Owner filter pills */}
-              <div className="flex items-center gap-1 mb-1.5 text-[10px]">
+              <div className="flex items-center gap-1 mb-1.5 text-xs md:text-[10px]">
                 {([
                   { k: "all", label: "Todas" },
                   { k: "mine", label: "Minhas" },
@@ -2216,7 +2225,7 @@ function OperacaoInboxInner() {
                   <button
                     key={o.k}
                     onClick={() => setOwnerFilter(o.k)}
-                    className={`px-2 py-0.5 rounded-md font-medium transition ${
+                    className={`px-2.5 py-1.5 md:px-2 md:py-0.5 rounded-md font-medium transition active:scale-95 ${
                       ownerFilter === o.k
                         ? (o.k === "unassigned" ? "bg-amber-500/15 text-amber-600" : "bg-primary/15 text-primary")
                         : "text-muted-foreground hover:bg-muted"
@@ -2243,7 +2252,7 @@ function OperacaoInboxInner() {
                       : f.key === "groups" ? conversations.filter(c => { const p = (c.phone||"").replace(/\D/g,""); return !c.is_archived && (p.startsWith("120363") || p.length > 15); }).length
                       : 0;
                     return (
-                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-3 py-1.5 md:px-2.5 md:py-1 text-xs md:text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 active:scale-95 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
                         {f.label}
                         {count > 0 && <span className={`text-[9px] ${activeFilter === f.key ? "opacity-80" : "opacity-50"}`}>({count})</span>}
                       </button>
@@ -2290,7 +2299,7 @@ function OperacaoInboxInner() {
                   <div className="flex items-center justify-between px-3 md:px-4 py-2">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {isMobile && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setSelectedId(null)}>
+                        <Button variant="ghost" size="icon" aria-label="Voltar para conversas" className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform" onClick={() => setSelectedId(null)}>
                           <ArrowLeft className="h-5 w-5" />
                         </Button>
                       )}
@@ -2346,12 +2355,15 @@ function OperacaoInboxInner() {
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
                         <SelectTrigger
                           className={isMobile
-                            ? "h-8 w-8 p-0 justify-center [&>svg]:hidden rounded-full"
+                            ? "h-9 px-2.5 gap-1.5 rounded-full bg-secondary/70 border-border/60 [&>svg]:h-3 [&>svg]:w-3 text-[11px] font-medium max-w-[140px]"
                             : "h-8 text-xs w-[140px]"}
                           aria-label={isMobile ? `Etapa: ${getStageInfo(selected.stage).label}` : undefined}
                         >
                           {isMobile ? (
-                            <span className={`h-2.5 w-2.5 rounded-full ${getStageInfo(selected.stage).color || "bg-primary"}`} />
+                            <span className="flex items-center gap-1.5 min-w-0">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${getStageInfo(selected.stage).color || "bg-primary"}`} />
+                              <span className="truncate">{getStageInfo(selected.stage).label}</span>
+                            </span>
                           ) : (
                             <SelectValue />
                           )}
@@ -2379,25 +2391,25 @@ function OperacaoInboxInner() {
                       {isMobile && (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais opções">
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-10 w-10 active:scale-95 transition-transform" aria-label="Mais opções">
+                              <MoreVertical className="h-5 w-5" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent align="end" side="bottom" className="w-60 p-1">
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowContactProfile(prev => !prev)}
                             >
                               <User className="h-4 w-4 text-primary" /> Painel do cliente
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowSummaryDialog(true)}
                             >
                               <Brain className="h-4 w-4 text-primary" /> Resumir com IA
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => {
                                 if (selectionMode) cancelSelection();
                                 else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
@@ -2406,13 +2418,13 @@ function OperacaoInboxInner() {
                               <Forward className="h-4 w-4" /> {selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setGalleryOpen(true)}
                             >
                               <Images className="h-4 w-4" /> Mídias da conversa
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowLinkClient(true)}
                             >
                               <Link2 className="h-4 w-4" /> Vincular cliente
@@ -2421,13 +2433,13 @@ function OperacaoInboxInner() {
                               <>
                                 <div className="my-1 h-px bg-border" />
                                 <button
-                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                                   onClick={() => setDelegateDialogOpen(true)}
                                 >
                                   <UserPlus className="h-4 w-4" /> Atribuir / Delegar
                                 </button>
                                 <button
-                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                                   onClick={() => setAddParticipantsDialogOpen(true)}
                                 >
                                   <UserPlus className="h-4 w-4" /> Participantes ({participants.length})
@@ -2957,20 +2969,24 @@ function OperacaoInboxInner() {
                               <Plus className="h-5 w-5 text-muted-foreground" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-52 p-1" side="top" align="start">
+                          <PopoverContent className="w-60 p-1.5" side="top" align="start" sideOffset={8}>
                             <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Anexos</p>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <Image className="h-4 w-4 text-blue-400" /> Imagem
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0"><Image className="h-4 w-4 text-blue-500" /></span>
+                              <span className="font-medium">Imagem</span>
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <Video className="h-4 w-4 text-purple-400" /> Vídeo
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0"><Video className="h-4 w-4 text-purple-500" /></span>
+                              <span className="font-medium">Vídeo</span>
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <File className="h-4 w-4 text-amber-400" /> Documento
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0"><File className="h-4 w-4 text-amber-500" /></span>
+                              <span className="font-medium">Documento</span>
                             </button>
                             <Separator className="my-1" />
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
-                              <Sparkles className="h-4 w-4 text-primary" /> Sugestão IA
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></span>
+                              <span className="font-medium">Sugestão IA</span>
                             </button>
                           </PopoverContent>
                         </Popover>
@@ -2980,6 +2996,10 @@ function OperacaoInboxInner() {
                           onChange={e => { setInputText(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
                           onKeyDown={handleKeyDown} onPaste={handlePaste}
                           placeholder="Mensagem"
+                          enterKeyHint="send"
+                          autoCapitalize="sentences"
+                          autoCorrect="on"
+                          spellCheck
                           className="flex-1 min-w-0 min-h-[36px] max-h-[120px] resize-none text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 leading-snug placeholder:text-muted-foreground/60 shadow-none break-words"
                           style={{ height: "36px", wordBreak: "break-word", overflowWrap: "anywhere" }} rows={1}
                         />
