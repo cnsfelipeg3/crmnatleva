@@ -11,7 +11,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -372,6 +372,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {(() => {
           const items = filterItems([
             { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
+            { to: "/livechat/status", icon: Camera, label: "Status" },
             { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
             { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
             { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
