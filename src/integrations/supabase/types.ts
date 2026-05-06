@@ -4470,6 +4470,66 @@ export type Database = {
           },
         ]
       }
+      message_shortcuts: {
+        Row: {
+          caption: string | null
+          category: string
+          content: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          media_filename: string | null
+          media_mimetype: string | null
+          media_size_bytes: number | null
+          media_type: string | null
+          media_url: string | null
+          title: string
+          trigger: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          caption?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          title: string
+          trigger: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          caption?: string | null
+          category?: string
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          media_filename?: string | null
+          media_mimetype?: string | null
+          media_size_bytes?: number | null
+          media_type?: string | null
+          media_url?: string | null
+          title?: string
+          trigger?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           conversation_id: string | null
@@ -8825,6 +8885,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_shortcut_usage: { Args: { p_id: string }; Returns: undefined }
       recount_conversation_unread: {
         Args: { conv_id: string }
         Returns: number
