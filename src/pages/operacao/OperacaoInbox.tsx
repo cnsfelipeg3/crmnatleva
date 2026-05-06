@@ -2346,12 +2346,15 @@ function OperacaoInboxInner() {
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
                         <SelectTrigger
                           className={isMobile
-                            ? "h-8 w-8 p-0 justify-center [&>svg]:hidden rounded-full"
+                            ? "h-9 px-2.5 gap-1.5 rounded-full bg-secondary/70 border-border/60 [&>svg]:h-3 [&>svg]:w-3 text-[11px] font-medium max-w-[140px]"
                             : "h-8 text-xs w-[140px]"}
                           aria-label={isMobile ? `Etapa: ${getStageInfo(selected.stage).label}` : undefined}
                         >
                           {isMobile ? (
-                            <span className={`h-2.5 w-2.5 rounded-full ${getStageInfo(selected.stage).color || "bg-primary"}`} />
+                            <span className="flex items-center gap-1.5 min-w-0">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${getStageInfo(selected.stage).color || "bg-primary"}`} />
+                              <span className="truncate">{getStageInfo(selected.stage).label}</span>
+                            </span>
                           ) : (
                             <SelectValue />
                           )}
