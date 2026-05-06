@@ -875,6 +875,8 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!c.manually_marked_unread,
             is_archived: !!c.is_archived,
             archived_at: c.archived_at || null,
+            is_group: !!c.is_group || (cleanPhone.length >= 15),
+            group_subject: c.group_subject || null,
             _hasReliableActivity: true,
           };
         });
