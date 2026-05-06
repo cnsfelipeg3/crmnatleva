@@ -33,11 +33,23 @@ export function PostStatusDialog({ open, onOpenChange }: Props) {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const post = usePostStatus();
 
   function reset() {
     setText(""); setCaption(""); setImageFile(null); setVideoFile(null);
     setBg(BG_COLORS[0]); setFont(FONTS[0].value); setTab("text");
+  }
+
+  // URL de objeto local para preview de mídia (recriada quando arquivo muda)
+  const localImageUrl = imageFile ? URL.createObjectURL(imageFile) : null;
+  const localVideoUrl = videoFile ? URL.createObjectURL(videoFile) : null;
+
+  function openPreview() {
+    if (tab === "text" && !text.trim()) { toast.error("Digite o texto do status"); return; }
+    if (tab === "image" && !imageFile) { toast.error("Selecione uma imagem"); return; }
+    if (tab === "video" && !videoFile) { toast.error("Selecione um vídeo"); return; }
+    setPreviewOpen(true);
   }
 
   async function handleSubmit() {
