@@ -1434,9 +1434,119 @@ function OperacaoInboxInner() {
     textareaRef.current?.focus();
   }, []);
 
+  // Slash command shortcuts
+  const [shortcutOpen, setShortcutOpen] = useState(false);
+  const [shortcutQuery, setShortcutQuery] = useState("");
+
+  const expandPlaceholders = useCallback((template: string): string => {
+    const fullName = (selected?.contact_name || selected?.display_name || "").trim();
+    const firstName = fullName.split(/\s+/)[0] || "";
+    const consultorName = (user?.user_metadata as any)?.full_name || user?.email?.split("@")[0] || "Consultor";
+    const today = new Date().toLocaleDateString("pt-BR");
+    const vars: Record<string, string> = {
+      nome_cliente: fullName,
+      primeiro_nome: firstName,
+      nome_consultor: consultorName,
+      data_hoje: today,
+    };
+    return template.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
+  }, [selected, user]);
+
+  const handleSelectShortcut = useCallback(async (s: MessageShortcut) => {
+    setShortcutOpen(false);
+    setShortcutQuery("");
+    const expanded = expandPlaceholders(s.content || "");
+    if (s.media_type && s.media_url) {
+      // Envia mídia direto (atalho de mídia)
+      try {
+        setInputText("");
+        const phone = selectedId?.replace("wa_", "");
+        if (!phone || !selectedId) return;
+        const captionExpanded = expandPlaceholders(s.caption || expanded || "");
+        const isImage = s.media_type === "image";
+        const isVideo = s.media_type === "video";
+        const kind: MsgType = isImage ? "image" : isVideo ? "video" : "document";
+        const action = isImage ? "send-image" : isVideo ? "send-video" : "send-document";
+        const ext = (s.media_filename?.split(".").pop() || "bin").toLowerCase();
+        const sendPayload: any = isImage
+          ? { phone, image: s.media_url, caption: captionExpanded }
+          : isVideo
+          ? { phone, video: s.media_url, caption: captionExpanded }
+          : { phone, document: s.media_url, fileName: s.media_filename || `arquivo.${ext}`, extension: ext };
+        const tempId = `temp_shortcut_${Date.now()}`;
+        const text = isImage || isVideo ? captionExpanded : "";
+        setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
+          id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+          message_type: kind, text, status: "pending" as MsgStatus, created_at: new Date().toISOString(),
+          media_url: s.media_url, media_storage_url: s.media_url, media_mimetype: s.media_mimetype || "application/octet-stream",
+          media_filename: s.media_filename || "", media_size_bytes: s.media_size_bytes || 0, media_status: "downloaded",
+        }] }));
+        let messageDbId: string | null = null;
+        try {
+          messageDbId = await persistOutgoingMessage({
+            conversationId: selectedId,
+            messageType: kind,
+            text,
+            mediaUrl: s.media_url,
+            mediaStorageUrl: s.media_url,
+            mediaMimetype: s.media_mimetype || "application/octet-stream",
+            mediaFilename: s.media_filename || "",
+            mediaSizeBytes: s.media_size_bytes || 0,
+            mediaStatus: "downloaded",
+            externalMessageId: tempId,
+            createdAt: new Date().toISOString(),
+            status: "pending",
+            originalPayload: { action, payload: sendPayload },
+          });
+        } catch (e) { console.error("[SHORTCUT] persist failed", e); }
+        const outcome = await sendViaZapi(action, sendPayload);
+        const realId = outcome.data?.messageId || outcome.data?.id || tempId;
+        if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+        if (outcome.ok) {
+          lastMsgIdsRef.current.add(realId);
+          setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === tempId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+          ) }));
+          if (kind === "document" && captionExpanded.trim()) {
+            try { await sendViaZapi("send-text", { phone, message: captionExpanded }); } catch {}
+          }
+        } else {
+          setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+            m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+          ) }));
+          toast({ title: "Falha ao enviar atalho", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+        }
+      } catch (err) {
+        toast({ title: "Erro ao enviar atalho", description: String(err), variant: "destructive" });
+      }
+    } else {
+      // Texto puro · preenche input pra revisão
+      setInputText(expanded);
+      requestAnimationFrame(() => textareaRef.current?.focus());
+    }
+    // Incrementa uso (fire and forget)
+    supabase.rpc("increment_shortcut_usage" as any, { p_id: s.id }).then(() => {});
+  }, [expandPlaceholders, selectedId, selected, persistOutgoingMessage, finalizeMessageStatus]);
+
+  const handleInputChangeWithSlash = useCallback((value: string) => {
+    setInputText(value);
+    if (value.startsWith("/")) {
+      setShortcutQuery(value.slice(1));
+      setShortcutOpen(true);
+    } else if (shortcutOpen) {
+      setShortcutOpen(false);
+      setShortcutQuery("");
+    }
+  }, [shortcutOpen]);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Quando o dropdown está aberto, deixa ele tratar Enter/setas
+    if (shortcutOpen && (e.key === "Enter" || e.key === "ArrowUp" || e.key === "ArrowDown" || e.key === "Tab" || e.key === "Escape")) {
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
+
 
   // Upload to storage
   const uploadToStorage = useCallback(async (blob: Blob | File, folder: string, fileName: string): Promise<string> => {
