@@ -656,13 +656,19 @@ Deno.serve(async (req) => {
           raw_payload: body,
         };
 
-        const { error: stErr } = await supabase
+        const { data: stData, error: stErr } = await supabase
           .from("whatsapp_statuses")
-          .upsert(insertRow, { onConflict: "external_status_id", ignoreDuplicates: true });
+          .upsert(insertRow, { onConflict: "external_status_id", ignoreDuplicates: true })
+          .select("id")
+          .maybeSingle();
 
-        if (stErr) console.error("[Webhook][status] insert failed:", stErr.message);
+        if (stErr) {
+          console.error("[zapi-webhook] status insert failed", { error: stErr.message, code: stErr.code, details: stErr.details, phone: stPhone, messageId: stMessageId });
+        } else {
+          console.log("[zapi-webhook] status inserted", { id: stData?.id, phone: stPhone, type: stType, isMine: stIsMine });
+        }
       } catch (statusErr: any) {
-        console.error("[Webhook][status] handler crash:", statusErr?.message);
+        console.error("[zapi-webhook] status handler crash", { error: statusErr?.message, stack: statusErr?.stack });
       }
 
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString() }).eq("id", rawEventId);
