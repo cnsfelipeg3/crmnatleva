@@ -248,12 +248,10 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       onClick={toggle}
       className={cn(
         "flex items-center gap-3 px-3 py-[7px] rounded-lg text-[13px] font-medium transition-colors duration-200 w-full",
-        isOpen
-          ? "bg-sidebar-accent/40 text-foreground"
-          : "text-sidebar-foreground hover:bg-sidebar-accent/30 hover:text-foreground"
+        "text-sidebar-foreground hover:bg-sidebar-accent/30 hover:text-foreground"
       )}
     >
-      {React.createElement(icon, { className: cn("w-4 h-4 shrink-0", isOpen && "text-champagne") })}
+      {React.createElement(icon, { className: "w-4 h-4 shrink-0 text-sidebar-foreground" })}
       {!isCollapsed && (
         <>
           <span className="flex-1 text-left tracking-tight">{label}</span>
