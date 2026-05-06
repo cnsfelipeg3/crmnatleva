@@ -82,6 +82,7 @@ export function useInboxRealtime(
           sender_name: n.sender_name || null,
           sender_phone: n.sender_phone || null,
           sender_photo: n.sender_photo || null,
+          metadata: n.metadata || null,
         };
 
         // Fix 2: dual-write em ambas as keys (waKey calculada e UUID raw) pra blindar contra mismatch.
