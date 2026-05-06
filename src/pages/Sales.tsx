@@ -768,6 +768,7 @@ export default function Sales() {
 
   return (
     <TooltipProvider>
+      {isMobile && <PullToRefreshIndicator pullDistance={pullDistance} refreshing={refreshing} />}
       <div className="p-3 md:p-6 space-y-3 md:space-y-5 animate-fade-in relative">
         {exportProgress !== null && (
           <ProgressOverlay label="Exportando vendas..." progress={exportProgress} fullscreen />
