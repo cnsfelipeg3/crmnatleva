@@ -1,4 +1,4 @@
-// zapi-proxy v2 · supports group-metadata action
+// zapi-proxy v3 · group-metadata with debug logs
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
