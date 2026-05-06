@@ -79,6 +79,9 @@ export function useInboxRealtime(
           status: (n.status || "sent") as MsgStatus,
           created_at: toIsoTimestamp(n.timestamp || n.created_at),
           external_message_id: n.external_message_id || undefined,
+          sender_name: n.sender_name || null,
+          sender_phone: n.sender_phone || null,
+          sender_photo: n.sender_photo || null,
         };
 
         // Fix 2: dual-write em ambas as keys (waKey calculada e UUID raw) pra blindar contra mismatch.
