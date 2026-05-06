@@ -980,6 +980,41 @@ serve(async (req) => {
       }
     }
 
+    // ─── Persist outgoing status localmente (is_mine=true) ───
+    const isStatusAction =
+      action === "send-text-status" || action === "send-image-status" || action === "send-video-status";
+    if (isStatusAction && response.ok && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+      try {
+        const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const messageId = data?.messageId || data?.id || null;
+        const zaapId = data?.zaapId || null;
+        const row: Record<string, any> = {
+          phone: "me",
+          contact_name: "Você",
+          is_mine: true,
+          external_status_id: messageId,
+          external_zaap_id: zaapId,
+          raw_payload: data,
+          status_type:
+            action === "send-text-status" ? "text" : action === "send-image-status" ? "image" : "video",
+        };
+        if (action === "send-text-status") {
+          row.text_content = payload.text;
+          row.background_color = payload.backgroundColor || null;
+          row.font = payload.font || null;
+        } else if (action === "send-image-status") {
+          row.media_url = payload.imageUrl || null;
+          row.caption = payload.caption || null;
+        } else {
+          row.media_url = payload.videoUrl || null;
+          row.caption = payload.caption || null;
+        }
+        await sb.from("whatsapp_statuses").insert(row);
+      } catch (persistErr: any) {
+        console.error("[Z-API] persist own status failed:", persistErr?.message);
+      }
+    }
+
     return new Response(JSON.stringify(data), {
       status: response.ok ? 200 : response.status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
