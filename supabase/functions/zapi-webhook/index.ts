@@ -972,6 +972,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Metadata: marca quando a mensagem é uma resposta a um status nosso.
+    const messageMetadata: Record<string, any> = {};
+    if (body.isStatusReply === true) {
+      messageMetadata.reply_to_status = {
+        is_status_reply: true,
+        reference_message_id: body.referenceMessageId || null,
+      };
+    }
+
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
@@ -985,6 +994,7 @@ Deno.serve(async (req) => {
       status: msgStatusFinal,
       timestamp: timestampIso,
       created_at: timestampIso,
+      metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : null,
       sender_name: !fromMe && isGroupMsg
         ? (resolvedGroupSenderName || "Membro do Grupo")
         : (fromMe ? (body.senderName || "Atendente") : null),
