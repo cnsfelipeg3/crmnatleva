@@ -54,6 +54,7 @@ const AIIntegrations = lazy(() => import("@/pages/AIIntegrations"));
 const AIKnowledgeBase = lazy(() => import("@/pages/AIKnowledgeBase"));
 const ImportChatGuru = lazy(() => import("@/pages/ImportChatGuru"));
 const AnaliseAtendimento = lazy(() => import("@/pages/AnaliseAtendimento"));
+const WhatsAppStatus = lazy(() => import("@/pages/livechat/WhatsAppStatus"));
 const ApresentacaoGeral = lazy(() => import("@/pages/ApresentacaoGeral"));
 const TripDetail = lazy(() => import("@/pages/TripDetail"));
 const TripAlterations = lazy(() => import("@/pages/TripAlterations"));
@@ -274,6 +275,7 @@ function AppRoutes() {
           <Route path="/livechat/knowledge-base" element={<AIKnowledgeBase />} />
           <Route path="/livechat/import-chatguru" element={<ImportChatGuru />} />
           <Route path="/livechat/analise" element={<AnaliseAtendimento />} />
+          <Route path="/livechat/status" element={<WhatsAppStatus />} />
 
           {/* Financeiro */}
           <Route path="/financeiro" element={<FinanceiroIndex />} />

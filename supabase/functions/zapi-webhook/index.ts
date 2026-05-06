@@ -575,10 +575,97 @@ Deno.serve(async (req) => {
     // STEP 1: Quick exits for non-message events
     // ═══════════════════════════════════════════════════════════
 
-    // Skip Status/Story events
+    // Status/Story · grava em whatsapp_statuses (não polui a inbox)
     if (eventType === "status_story" || eventType === "status_broadcast") {
+      try {
+        const stPhone = (body.participantPhone || body.senderPhone || rawPhone || "").replace("status@broadcast", "").trim() || "unknown";
+        const stMessageId = String(body.messageId || body.id || body.referenceMessageId || "");
+        const stZaapId = body.zaapId ? String(body.zaapId) : null;
+        const stIsMine = body.fromMe === true;
+
+        // Tipo de mídia
+        let stType: "text" | "image" | "video" = "text";
+        let stMediaUrl: string | null = null;
+        let stThumb: string | null = null;
+        let stMime: string | null = null;
+        let stCaption: string | null = null;
+        let stTextContent: string | null = null;
+
+        if (body.image) {
+          stType = "image";
+          stMediaUrl = body.image.imageUrl || body.image.thumbnailUrl || null;
+          stThumb = body.image.thumbnailUrl || null;
+          stMime = body.image.mimeType || "image/jpeg";
+          stCaption = body.image.caption || body.caption || null;
+        } else if (body.video) {
+          stType = "video";
+          stMediaUrl = body.video.videoUrl || null;
+          stThumb = body.video.thumbnailUrl || null;
+          stMime = body.video.mimeType || "video/mp4";
+          stCaption = body.video.caption || body.caption || null;
+        } else {
+          stType = "text";
+          stTextContent = body.text?.message || (typeof body.text === "string" ? body.text : "") || body.message || "";
+        }
+
+        // Re-host de mídia: baixa e salva no bucket whatsapp-status
+        if (stMediaUrl) {
+          try {
+            const mediaRes = await fetch(stMediaUrl);
+            if (mediaRes.ok) {
+              const buf = new Uint8Array(await mediaRes.arrayBuffer());
+              const ext = stType === "image" ? "jpg" : "mp4";
+              const path = `${stPhone}/${stMessageId || crypto.randomUUID()}.${ext}`;
+              const { error: upErr } = await supabase.storage
+                .from("whatsapp-status")
+                .upload(path, buf, { contentType: stMime || undefined, upsert: true });
+              if (!upErr) {
+                const { data: pub } = supabase.storage.from("whatsapp-status").getPublicUrl(path);
+                if (pub?.publicUrl) stMediaUrl = pub.publicUrl;
+              }
+            }
+          } catch (mediaErr: any) {
+            console.error("[Webhook][status] media re-host failed:", mediaErr?.message);
+          }
+        }
+
+        // Lookup contact_name em zapi_contacts
+        let stContactName: string | null = null;
+        try {
+          const { data: ct } = await supabase
+            .from("zapi_contacts")
+            .select("name, push_name")
+            .eq("phone", stPhone)
+            .maybeSingle();
+          stContactName = ct?.name || ct?.push_name || null;
+        } catch { /* opcional */ }
+
+        const insertRow: Record<string, any> = {
+          phone: stPhone,
+          contact_name: sanitizeContactName(stContactName, stPhone),
+          is_mine: stIsMine,
+          status_type: stType,
+          text_content: stTextContent,
+          media_url: stMediaUrl,
+          media_thumbnail_url: stThumb,
+          media_mimetype: stMime,
+          caption: stCaption,
+          external_status_id: stMessageId || null,
+          external_zaap_id: stZaapId,
+          raw_payload: body,
+        };
+
+        const { error: stErr } = await supabase
+          .from("whatsapp_statuses")
+          .upsert(insertRow, { onConflict: "external_status_id", ignoreDuplicates: true });
+
+        if (stErr) console.error("[Webhook][status] insert failed:", stErr.message);
+      } catch (statusErr: any) {
+        console.error("[Webhook][status] handler crash:", statusErr?.message);
+      }
+
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString() }).eq("id", rawEventId);
-      return new Response(JSON.stringify({ success: true, type: "status_ignored" }), {
+      return new Response(JSON.stringify({ success: true, type: "status_processed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
