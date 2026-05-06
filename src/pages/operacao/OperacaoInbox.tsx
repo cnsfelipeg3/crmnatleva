@@ -2290,7 +2290,7 @@ function OperacaoInboxInner() {
                   <div className="flex items-center justify-between px-3 md:px-4 py-2">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {isMobile && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setSelectedId(null)}>
+                        <Button variant="ghost" size="icon" aria-label="Voltar para conversas" className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform" onClick={() => setSelectedId(null)}>
                           <ArrowLeft className="h-5 w-5" />
                         </Button>
                       )}
