@@ -104,13 +104,19 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
       <div className="flex gap-2.5">
         {/* Avatar */}
         <div className="relative shrink-0">
-          <WhatsAppAvatar
-            src={profilePic}
-            name={contactName}
-            phone={conv.phone}
-            className="h-10 w-10"
-            textClassName="text-xs"
-          />
+          {conv.is_group && !profilePic ? (
+            <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
+              <Users className="h-5 w-5 text-muted-foreground" />
+            </div>
+          ) : (
+            <WhatsAppAvatar
+              src={conv.is_group ? (conv.group_photo_url || profilePic) : profilePic}
+              name={contactName}
+              phone={conv.is_group ? null : conv.phone}
+              className="h-10 w-10"
+              textClassName="text-xs"
+            />
+          )}
           {conv.is_vip && (
             <div className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-amber-500 flex items-center justify-center shadow-sm">
               <Star className="h-2.5 w-2.5 text-white" />
