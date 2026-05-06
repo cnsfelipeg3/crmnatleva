@@ -288,6 +288,8 @@ export const ConversationItem = memo(ConversationItemInner, (prev, next) => {
     prev.owner?.full_name === next.owner?.full_name &&
     prev.owner?.avatar_url === next.owner?.avatar_url &&
     prev.searchTerm === next.searchTerm &&
-    prev.contentMatchSnippet === next.contentMatchSnippet
+    prev.contentMatchSnippet === next.contentMatchSnippet &&
+    prev.conv.is_group === next.conv.is_group &&
+    prev.conv.group_photo_url === next.conv.group_photo_url
   );
 });
