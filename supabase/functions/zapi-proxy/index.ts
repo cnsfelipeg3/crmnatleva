@@ -663,10 +663,11 @@ serve(async (req) => {
 
       case "get-profile-picture": {
         const rawPhone = payload?.phone ? normalizePhone(String(payload.phone)) : "";
-        if (!rawPhone) {
+        if (!rawPhone || rawPhone.includes("@") || rawPhone === "status" || rawPhone.length < 8) {
+          // Retorna 200 com link null para não quebrar UIs (ex.: status@broadcast)
           return new Response(
-            JSON.stringify({ error: "missing_phone", link: null }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({ link: null, skipped: true }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         url = `${BASE_URL}/profile-picture?phone=${encodeURIComponent(rawPhone)}`;
