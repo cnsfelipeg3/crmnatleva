@@ -3240,9 +3240,12 @@ function OperacaoInboxInner() {
                           </Button>
                         </>
                       ) : (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={startRecording}>
-                          <Mic className="h-5 w-5 text-muted-foreground" />
-                        </Button>
+                        <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={startRecording}>
+                            <Mic className="h-5 w-5 text-muted-foreground" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}
