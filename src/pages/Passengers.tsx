@@ -40,6 +40,7 @@ interface Passenger {
   address_city: string | null;
   address_state: string | null;
   address_notes: string | null;
+  created_at: string | null;
 }
 
 interface SaleLink {
