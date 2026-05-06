@@ -839,6 +839,73 @@ serve(async (req) => {
         break;
       }
 
+      // === STATUS (STORIES) ===
+      case "send-text-status": {
+        if (!payload?.text || typeof payload.text !== "string") {
+          return new Response(JSON.stringify({ error: "text required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        url = `${BASE_URL}/send-text-status`;
+        method = "POST";
+        body = JSON.stringify({ message: payload.text });
+        break;
+      }
+
+      case "send-image-status": {
+        const image = payload?.imageUrl || payload?.imageBase64;
+        if (!image) {
+          return new Response(JSON.stringify({ error: "imageUrl or imageBase64 required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        url = `${BASE_URL}/send-image-status`;
+        method = "POST";
+        body = JSON.stringify({ image, ...(payload.caption ? { caption: payload.caption } : {}) });
+        break;
+      }
+
+      case "send-video-status": {
+        const video = payload?.videoUrl || payload?.videoBase64;
+        if (!video) {
+          return new Response(JSON.stringify({ error: "videoUrl or videoBase64 required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (payload?.videoBase64 && payload.videoBase64.length * 0.75 > 10 * 1024 * 1024) {
+          return new Response(JSON.stringify({ error: "Video exceeds 10MB limit" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        url = `${BASE_URL}/send-video-status`;
+        method = "POST";
+        body = JSON.stringify({ video, ...(payload.caption ? { caption: payload.caption } : {}) });
+        break;
+      }
+
+      case "reply-status-text": {
+        if (!payload?.phone || !payload?.message || !payload?.statusMessageId) {
+          return new Response(JSON.stringify({ error: "phone, message, statusMessageId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        url = `${BASE_URL}/reply-status-text`;
+        method = "POST";
+        body = JSON.stringify({
+          phone: formatPhoneForSending(payload.phone),
+          message: payload.message,
+          statusMessageId: payload.statusMessageId,
+        });
+        break;
+      }
+
+      case "mark-status-as-viewed": {
+        if (!payload?.statusId) {
+          return new Response(JSON.stringify({ error: "statusId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+          return new Response(JSON.stringify({ error: "Missing service credentials" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const { error: upErr } = await sb
+          .from("whatsapp_status_seen_by_me")
+          .upsert({ status_id: payload.statusId }, { onConflict: "status_id" });
+        if (upErr) {
+          return new Response(JSON.stringify({ error: upErr.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        }
+        return new Response(JSON.stringify({ marked: true }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
