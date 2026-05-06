@@ -247,6 +247,44 @@ async function processStatusUpdate(supabase: any, body: any) {
       .eq("external_message_id", sid)
       .eq("direction", "outgoing");
   }
+
+  // ADIÇÃO: se o messageId pertence a um STATUS que postei, registra visualização.
+  // Z-API usa MessageStatusCallback com status READ/PLAYED também pra status posts.
+  if (mappedStatus === "READ") {
+    const viewerPhone = String(body.phone || body.participantPhone || "").replace(/\D/g, "");
+    if (viewerPhone) {
+      for (const sid of statusIds) {
+        if (!sid) continue;
+        try {
+          const { data: statusRow } = await supabase
+            .from("whatsapp_statuses")
+            .select("id")
+            .eq("external_status_id", sid)
+            .eq("is_mine", true)
+            .maybeSingle();
+          if (statusRow?.id) {
+            let viewerName: string | null = body.senderName || null;
+            if (!viewerName) {
+              const { data: contactRow } = await supabase
+                .from("zapi_contacts")
+                .select("name")
+                .eq("phone", viewerPhone)
+                .maybeSingle();
+              viewerName = contactRow?.name || null;
+            }
+            await supabase.from("whatsapp_status_views").upsert({
+              status_id: statusRow.id,
+              viewer_phone: viewerPhone,
+              viewer_name: viewerName,
+            }, { onConflict: "status_id,viewer_phone" });
+            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid });
+          }
+        } catch (err: any) {
+          console.error("[zapi-webhook] failed to record status view", { messageId: sid, viewerPhone, error: err?.message });
+        }
+      }
+    }
+  }
 }
 
 // ─── Helper: upsert conversation ───
