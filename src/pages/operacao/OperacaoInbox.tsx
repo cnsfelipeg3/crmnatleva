@@ -3278,6 +3278,17 @@ function OperacaoInboxInner() {
                 tags={selected.tags}
               />
             )}
+
+            {/* Group info dialog (description, participants, media) */}
+            {selected?.is_group && (
+              <GroupInfoDialog
+                open={showGroupInfo}
+                onOpenChange={setShowGroupInfo}
+                conversationDbId={selectedDbId || null}
+                conversationPhone={selected.phone || ""}
+                groupName={selected.contact_name || "Grupo"}
+              />
+            )}
           </div>
 
           {/* ─── Column 3: Client Context Panel ─── */}
