@@ -48,6 +48,7 @@ export function useInboxMessages(
       sender_photo: m.sender_photo || null,
       is_pinned: !!m.is_pinned,
       pinned_at: m.pinned_at || null,
+      metadata: m.metadata || null,
     }))
   ), []);
 
