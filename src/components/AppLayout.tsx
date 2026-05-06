@@ -77,9 +77,15 @@ export default function AppLayout() {
 
   if (isMobile) {
     return (
-      <div className="flex flex-col h-screen overflow-hidden bg-background">
+      <div
+        className="flex flex-col h-[100dvh] overflow-hidden bg-background"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
         {!isImmersive && (
-          <header className="flex items-center justify-between px-4 h-14 border-b border-border/20 bg-card/95 shrink-0 z-30">
+          <header
+            className="flex items-center justify-between gap-2 px-3 h-14 border-b border-border/20 bg-card/95 shrink-0 z-30 backdrop-blur-md"
+            style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(3.5rem + env(safe-area-inset-top))" }}
+          >
             <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-primary/5 transition-colors">
               <Menu className="w-5 h-5 text-foreground" />
             </button>
