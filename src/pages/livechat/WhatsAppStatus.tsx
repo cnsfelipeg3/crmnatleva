@@ -125,8 +125,18 @@ export default function WhatsAppStatus() {
       <section className="space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Status dos contatos</h2>
         {grouped.length === 0 ? (
-          <Card className="p-6">
-            <EmptyState icon={Camera} title="Nenhum contato postou status nas últimas 24h" />
+          <Card className="p-6 space-y-3">
+            <EmptyState
+              icon={Camera}
+              title="Nenhum status de contato recebido"
+              description="A Z-API ainda não enviou eventos de status (stories) para o webhook nas últimas 24h. Isso geralmente acontece quando o webhook 'Ao receber status' não está configurado no painel da Z-API."
+            />
+            <div className="text-xs text-muted-foreground border-t pt-3 space-y-1">
+              <p className="font-semibold text-foreground">Como ativar:</p>
+              <p>1. Acesse o painel da Z-API · sua instância · Webhooks</p>
+              <p>2. Em "Ao receber status", cole a mesma URL usada em "Ao receber mensagem" (zapi-webhook)</p>
+              <p>3. Salve · novos status de contatos passam a aparecer aqui automaticamente</p>
+            </div>
           </Card>
         ) : (
           <div className="space-y-2">
