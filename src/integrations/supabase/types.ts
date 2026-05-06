@@ -2547,6 +2547,9 @@ export type Database = {
           metadata: Json | null
           original_payload: Json | null
           retry_count: number
+          sender_name: string | null
+          sender_phone: string | null
+          sender_photo: string | null
           sender_type: string
           status: string | null
           timestamp: string | null
@@ -2580,6 +2583,9 @@ export type Database = {
           metadata?: Json | null
           original_payload?: Json | null
           retry_count?: number
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_photo?: string | null
           sender_type?: string
           status?: string | null
           timestamp?: string | null
@@ -2613,6 +2619,9 @@ export type Database = {
           metadata?: Json | null
           original_payload?: Json | null
           retry_count?: number
+          sender_name?: string | null
+          sender_phone?: string | null
+          sender_photo?: string | null
           sender_type?: string
           status?: string | null
           timestamp?: string | null
@@ -2795,9 +2804,14 @@ export type Database = {
           external_conversation_id: string | null
           external_id: string | null
           funnel_stage: string | null
+          group_description: string | null
+          group_metadata: Json | null
+          group_metadata_fetched_at: string | null
+          group_subject: string | null
           id: string
           interaction_count: number | null
           is_archived: boolean
+          is_group: boolean
           is_pinned: boolean | null
           is_vip: boolean | null
           last_message_at: string | null
@@ -2841,9 +2855,14 @@ export type Database = {
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
+          group_description?: string | null
+          group_metadata?: Json | null
+          group_metadata_fetched_at?: string | null
+          group_subject?: string | null
           id?: string
           interaction_count?: number | null
           is_archived?: boolean
+          is_group?: boolean
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
@@ -2887,9 +2906,14 @@ export type Database = {
           external_conversation_id?: string | null
           external_id?: string | null
           funnel_stage?: string | null
+          group_description?: string | null
+          group_metadata?: Json | null
+          group_metadata_fetched_at?: string | null
+          group_subject?: string | null
           id?: string
           interaction_count?: number | null
           is_archived?: boolean
+          is_group?: boolean
           is_pinned?: boolean | null
           is_vip?: boolean | null
           last_message_at?: string | null
