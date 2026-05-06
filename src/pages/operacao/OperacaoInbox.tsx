@@ -1106,14 +1106,21 @@ function OperacaoInboxInner() {
   }, []);
 
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [aiCorrectionEnabled, setAiCorrectionEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("inbox.aiCorrectionEnabled") === "true";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("inbox.aiCorrectionEnabled", aiCorrectionEnabled ? "true" : "false"); } catch {}
+  }, [aiCorrectionEnabled]);
   const handleCorrectText = useCallback(async () => {
-    if (!inputText.trim() || isCorrecting) return;
+    if (!inputText.trim() || isCorrecting || !aiCorrectionEnabled) return;
     setIsCorrecting(true);
     const corrected = await correctMessage(inputText.trim());
     setInputText(corrected);
     setIsCorrecting(false);
     textareaRef.current?.focus();
-  }, [inputText, isCorrecting, correctMessage]);
+  }, [inputText, isCorrecting, correctMessage, aiCorrectionEnabled]);
 
   const ensureWhatsAppWebhookSync = useCallback(async () => {
     const status = await callZapiProxy("check-status");
