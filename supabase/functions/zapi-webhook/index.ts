@@ -288,6 +288,10 @@ async function upsertConversation(
       last_message_preview: preview,
       updated_at: timestampIso,
     };
+    if (isGroup) {
+      updateData.is_group = true;
+      if (groupSubject) updateData.group_subject = groupSubject;
+    }
     if (!fromMe) {
       // Update contact name if it looks like a phone number or generic
       const existing = (existingConv.contact_name || "").trim();
@@ -316,6 +320,8 @@ async function upsertConversation(
       unread_count: fromMe ? 0 : 1,
       is_vip: false,
       external_conversation_id: convExternalId,
+      is_group: isGroup,
+      group_subject: isGroup ? (groupSubject || contactName) : null,
     })
     .select("id")
     .single();
