@@ -2953,7 +2953,7 @@ function OperacaoInboxInner() {
                       <div className="flex-1 min-w-0 flex items-end gap-1 flex-nowrap bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
                         <Popover open={showMobilePlusMenu} onOpenChange={setShowMobilePlusMenu}>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5">
+                            <Button variant="ghost" size="icon" aria-label="Anexar arquivo" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5 active:scale-95 transition-transform">
                               <Plus className="h-5 w-5 text-muted-foreground" />
                             </Button>
                           </PopoverTrigger>
@@ -2985,7 +2985,7 @@ function OperacaoInboxInner() {
                         />
 
                         {inputText.trim() && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5" onClick={handleCorrectText} disabled={isCorrecting}>
+                          <Button variant="ghost" size="icon" aria-label="Corrigir texto com IA" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5 active:scale-95 transition-transform" onClick={handleCorrectText} disabled={isCorrecting}>
                             {isCorrecting ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Wand2 className="h-4 w-4 text-primary" />}
                           </Button>
                         )}
@@ -2995,11 +2995,11 @@ function OperacaoInboxInner() {
 
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
-                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={handleSend} disabled={isSending}>
+                        <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
                           {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         </Button>
                       ) : (
-                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={startRecording}>
+                        <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
                           <Mic className="h-5 w-5" />
                         </Button>
                       )}

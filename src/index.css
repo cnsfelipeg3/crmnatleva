@@ -725,3 +725,42 @@ img:not([loading]) {
     max-width: none !important;
   }
 }
+
+/* ──────────────────────────────────────────────────────────
+   Mobile PWA polish · extras (focus, scroll, overscroll)
+   ────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Scrollbar invisível em listas horizontais (chips, filtros) */
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; -ms-overflow-style: none; }
+
+  /* Snap horizontal pra carrosséis simples */
+  .snap-x-mandatory { scroll-snap-type: x mandatory; }
+  .snap-start { scroll-snap-align: start; }
+}
+
+/* No PWA standalone, evita o "rubber band" do body que mostra fundo branco */
+@media (display-mode: standalone) {
+  html, body {
+    overscroll-behavior-y: none;
+    background-color: hsl(var(--background));
+  }
+}
+
+/* Focus visível mais nítido pra teclado/leitores */
+@media (max-width: 767px) {
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+}
+
+/* Imagens: fade-in sutil ao carregar (UX premium) */
+img[loading="lazy"] {
+  animation: img-fade-in 250ms ease-out;
+}
+@keyframes img-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
