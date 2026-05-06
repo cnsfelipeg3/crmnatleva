@@ -4,11 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Type, Image as ImageIcon, Video } from "lucide-react";
+import { Loader2, Type, Image as ImageIcon, Video, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
 import { supabase } from "@/integrations/supabase/client";
 import { usePostStatus } from "@/hooks/useWhatsAppStatus";
+import { StatusPreview } from "./StatusPreview";
 
 interface Props {
   open: boolean;
@@ -32,11 +33,23 @@ export function PostStatusDialog({ open, onOpenChange }: Props) {
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const post = usePostStatus();
 
   function reset() {
     setText(""); setCaption(""); setImageFile(null); setVideoFile(null);
     setBg(BG_COLORS[0]); setFont(FONTS[0].value); setTab("text");
+  }
+
+  // URL de objeto local para preview de mídia (recriada quando arquivo muda)
+  const localImageUrl = imageFile ? URL.createObjectURL(imageFile) : null;
+  const localVideoUrl = videoFile ? URL.createObjectURL(videoFile) : null;
+
+  function openPreview() {
+    if (tab === "text" && !text.trim()) { toast.error("Digite o texto do status"); return; }
+    if (tab === "image" && !imageFile) { toast.error("Selecione uma imagem"); return; }
+    if (tab === "video" && !videoFile) { toast.error("Selecione um vídeo"); return; }
+    setPreviewOpen(true);
   }
 
   async function handleSubmit() {
@@ -147,14 +160,28 @@ export function PostStatusDialog({ open, onOpenChange }: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="secondary" onClick={openPreview} disabled={busy}>
+            <Eye className="h-4 w-4 mr-2" /> Pré-visualizar
+          </Button>
           <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Publicar
           </Button>
         </div>
       </DialogContent>
+
+      <StatusPreview
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        kind={tab}
+        text={text}
+        backgroundColor={bg}
+        font={font}
+        mediaUrl={tab === "image" ? localImageUrl : tab === "video" ? localVideoUrl : null}
+        caption={caption}
+      />
     </Dialog>
   );
 }
