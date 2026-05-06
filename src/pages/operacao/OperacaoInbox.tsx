@@ -2960,20 +2960,24 @@ function OperacaoInboxInner() {
                               <Plus className="h-5 w-5 text-muted-foreground" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-52 p-1" side="top" align="start">
+                          <PopoverContent className="w-60 p-1.5" side="top" align="start" sideOffset={8}>
                             <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Anexos</p>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <Image className="h-4 w-4 text-blue-400" /> Imagem
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("image/*"); setFileInputMediaType("image"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-blue-500/10 flex items-center justify-center shrink-0"><Image className="h-4 w-4 text-blue-500" /></span>
+                              <span className="font-medium">Imagem</span>
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <Video className="h-4 w-4 text-purple-400" /> Vídeo
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("video/*"); setFileInputMediaType("video"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0"><Video className="h-4 w-4 text-purple-500" /></span>
+                              <span className="font-medium">Vídeo</span>
                             </button>
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
-                              <File className="h-4 w-4 text-amber-400" /> Documento
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center shrink-0"><File className="h-4 w-4 text-amber-500" /></span>
+                              <span className="font-medium">Documento</span>
                             </button>
                             <Separator className="my-1" />
-                            <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
-                              <Sparkles className="h-4 w-4 text-primary" /> Sugestão IA
+                            <button className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { handleAISuggest(); setShowMobilePlusMenu(false); }}>
+                              <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></span>
+                              <span className="font-medium">Sugestão IA</span>
                             </button>
                           </PopoverContent>
                         </Popover>
