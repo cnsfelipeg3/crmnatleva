@@ -18,6 +18,8 @@ import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
 import { DelegateConversationDialog } from "@/components/inbox/DelegateConversationDialog";
 import { SlashCommandDropdown, type MessageShortcut } from "@/components/inbox/SlashCommandDropdown";
+import { ScheduleMessagePopover } from "@/components/inbox/ScheduleMessagePopover";
+import { ScheduledForConversationButton } from "@/components/inbox/ScheduledForConversationButton";
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
