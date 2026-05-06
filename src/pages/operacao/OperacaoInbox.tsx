@@ -3197,8 +3197,9 @@ function OperacaoInboxInner() {
                           placeholder="Mensagem"
                           enterKeyHint="send"
                           autoCapitalize="sentences"
-                          autoCorrect="on"
-                          spellCheck
+                          autoCorrect="off"
+                          autoComplete="off"
+                          spellCheck={false}
                           className="flex-1 min-w-0 min-h-[36px] max-h-[120px] resize-none text-base bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-1.5 leading-snug placeholder:text-muted-foreground/60 shadow-none break-words"
                           style={{ height: "36px", wordBreak: "break-word", overflowWrap: "anywhere" }} rows={1}
                         />
@@ -3264,6 +3265,9 @@ function OperacaoInboxInner() {
                           onChange={e => { handleInputChangeWithSlash(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
                           onKeyDown={handleKeyDown} onPaste={handlePaste}
                           placeholder="Digite sua mensagem..."
+                          autoCorrect="off"
+                          autoComplete="off"
+                          spellCheck={false}
                           className="min-h-[40px] max-h-[120px] resize-none text-base overflow-y-auto"
                           style={{ height: "40px" }} rows={1}
                         />
