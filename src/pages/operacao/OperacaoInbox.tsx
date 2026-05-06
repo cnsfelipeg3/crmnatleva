@@ -682,6 +682,7 @@ function OperacaoInboxInner() {
   
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showProfileViewer, setShowProfileViewer] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
