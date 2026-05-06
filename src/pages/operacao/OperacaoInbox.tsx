@@ -1246,6 +1246,10 @@ function OperacaoInboxInner() {
       const replyExternalId = replyRef?.external_message_id
         || (replyRef?.id && !replyRef.id.startsWith("temp_") && !replyRef.id.startsWith("local_") && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(replyRef.id) ? replyRef.id : null);
       if (replyExternalId) sendPayload.messageId = replyExternalId;
+      if (replyRef) {
+        console.log("[REPLY] replyRef:", { id: replyRef.id, external_message_id: replyRef.external_message_id, sender_type: replyRef.sender_type });
+        console.log("[REPLY] sendPayload.messageId:", sendPayload.messageId, "(replyExternalId resolved:", replyExternalId, ")");
+      }
 
       let messageDbId: string | null = null;
       try {
