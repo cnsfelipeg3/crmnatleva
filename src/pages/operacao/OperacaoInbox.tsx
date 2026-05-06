@@ -2062,6 +2062,43 @@ function OperacaoInboxInner() {
     }
   }, [conversations]);
 
+  const handleTogglePinMessage = useCallback(async (msg: Message) => {
+    if (!selectedId) return;
+    const newPinned = !msg.is_pinned;
+    const nowIso = new Date().toISOString();
+    setMessages(prev => ({
+      ...prev,
+      [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === msg.id ? { ...m, is_pinned: newPinned, pinned_at: newPinned ? nowIso : null } : m
+      ),
+    }));
+    try {
+      const { error } = await supabase
+        .from("conversation_messages" as any)
+        .update({ is_pinned: newPinned, pinned_at: newPinned ? nowIso : null } as any)
+        .eq("id", msg.id);
+      if (error) throw error;
+      toast({ title: newPinned ? "Mensagem fixada" : "Mensagem desafixada" });
+    } catch (err: any) {
+      setMessages(prev => ({
+        ...prev,
+        [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === msg.id ? { ...m, is_pinned: !newPinned, pinned_at: msg.pinned_at ?? null } : m
+        ),
+      }));
+      toast({ title: "Erro ao fixar mensagem", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, [selectedId, setMessages]);
+
+  const handleCopyMessageText = useCallback(async (msg: Message) => {
+    try {
+      await navigator.clipboard.writeText(msg.text || "");
+      toast({ title: "Texto copiado" });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  }, []);
+
   const handleToggleArchive = useCallback(async (conv: Conversation) => {
     const next = !conv.is_archived;
     const nowIso = new Date().toISOString();
