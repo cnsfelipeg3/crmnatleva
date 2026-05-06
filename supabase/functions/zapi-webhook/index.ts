@@ -251,7 +251,8 @@ async function processStatusUpdate(supabase: any, body: any) {
 // ─── Helper: upsert conversation ───
 async function upsertConversation(
   supabase: any, cleanPhone: string, contactName: string,
-  preview: string, timestampIso: string, fromMe: boolean
+  preview: string, timestampIso: string, fromMe: boolean,
+  isGroup = false, groupSubject: string | null = null,
 ): Promise<string | null> {
   const convExternalId = `wa_${cleanPhone}`;
   const phoneE164 = `+${cleanPhone}`;
