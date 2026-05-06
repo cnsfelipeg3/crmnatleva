@@ -577,6 +577,7 @@ Deno.serve(async (req) => {
 
     // Status/Story · grava em whatsapp_statuses (não polui a inbox)
     if (eventType === "status_story" || eventType === "status_broadcast") {
+      console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId });
       try {
         const stPhone = (body.participantPhone || body.senderPhone || rawPhone || "").replace("status@broadcast", "").trim() || "unknown";
         const stMessageId = String(body.messageId || body.id || body.referenceMessageId || "");
