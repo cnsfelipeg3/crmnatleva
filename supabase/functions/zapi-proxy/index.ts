@@ -1,4 +1,4 @@
-// zapi-proxy v2 · supports group-metadata action
+// zapi-proxy v3 · group-metadata with debug logs
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -861,7 +861,11 @@ serve(async (req) => {
     console.log(`[Z-API] ${action} → ${method} ${url}`);
 
     const response = await fetch(url, fetchOpts);
-    let data = parseJsonSafely(await response.text());
+    const rawText = await response.text();
+    let data = parseJsonSafely(rawText);
+    if (!response.ok) {
+      console.error(`[Z-API] ${action} upstream ${response.status}: ${rawText.slice(0, 500)}`);
+    }
 
     if (action === "disconnect") {
       const statusResponse = await fetch(`${BASE_URL}/status`, {
