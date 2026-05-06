@@ -577,10 +577,24 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════════
 
     // Status/Story · grava em whatsapp_statuses (não polui a inbox)
-    if (eventType === "status_story" || eventType === "status_broadcast") {
-      console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId });
+    if (eventType === "status_broadcast") {
+      console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId, participantPhone: body.participantPhone });
       try {
-        const stPhone = (body.participantPhone || body.senderPhone || rawPhone || "").replace("status@broadcast", "").trim() || "unknown";
+        // Status postado por um contato. O phone real está em participantPhone.
+        // body.phone = "status@broadcast" é INÚTIL pra identificação do remetente.
+        const stPhone = String(body.participantPhone || "").replace(/\D/g, "");
+        if (!stPhone && body.fromMe !== true) {
+          console.warn("[zapi-webhook] status_broadcast without participantPhone, skipping", { eventId: rawEventId, phone: body.phone });
+          if (rawEventId) {
+            await supabase.from("whatsapp_events_raw")
+              .update({ processed: true, processed_at: new Date().toISOString(), error: "missing_participant_phone" })
+              .eq("id", rawEventId);
+          }
+          return new Response(JSON.stringify({ success: false, type: "status_skipped" }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         const stMessageId = String(body.messageId || body.id || body.referenceMessageId || "");
         const stZaapId = body.zaapId ? String(body.zaapId) : null;
         const stIsMine = body.fromMe === true;
