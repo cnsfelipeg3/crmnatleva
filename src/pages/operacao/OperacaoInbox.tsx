@@ -550,35 +550,52 @@ function OperacaoInboxInner() {
     }
   }, [currentMessages.length, currentMessages[currentMessages.length - 1]?.id, scrollToBottom]);
 
-  // Scroll to bottom when selecting a conversation
+  // Suppress scroll-position tracking during programmatic auto-scroll
+  // (smooth scrolls fire many "scroll" events that would otherwise be
+  // misread as the user manually scrolling up).
+  const suppressScrollTrackingRef = useRef(false);
+  const suppressTimeoutRef = useRef<number | null>(null);
+
+  const autoScrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
+    isUserScrolledUpRef.current = false;
+    suppressScrollTrackingRef.current = true;
+    if (suppressTimeoutRef.current) window.clearTimeout(suppressTimeoutRef.current);
+    // Release the lock once the smooth animation should be done.
+    suppressTimeoutRef.current = window.setTimeout(() => {
+      suppressScrollTrackingRef.current = false;
+    }, behavior === "smooth" ? 600 : 120);
+    scrollToBottom(behavior);
+  }, [scrollToBottom]);
+
+  // Reset position immediately on conversation switch (no awkward animation
+  // from the previous thread's scroll position).
   useEffect(() => {
     if (selectedId) {
-      isUserScrolledUpRef.current = false;
-      scrollToBottom("instant" as ScrollBehavior);
+      autoScrollToLatest("instant" as ScrollBehavior);
     }
-  }, [selectedId, scrollToBottom]);
+  }, [selectedId, autoScrollToLatest]);
 
-  // Scroll to bottom after messages finish loading
+  // After messages render for the opened conversation, smooth-scroll to the
+  // latest message so the arrival feels natural.
   const prevLoadingRef = useRef(false);
   useEffect(() => {
     if (prevLoadingRef.current && !loadingMessages && selectedId) {
-      isUserScrolledUpRef.current = false;
-      // Use double rAF to ensure DOM has rendered the messages
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          scrollToBottom("instant" as ScrollBehavior);
+          autoScrollToLatest("smooth");
         });
       });
     }
     prevLoadingRef.current = loadingMessages;
-  }, [loadingMessages, selectedId, scrollToBottom]);
+  }, [loadingMessages, selectedId, autoScrollToLatest]);
 
-  // Track user scroll position
+  // Track user scroll position (ignored while a programmatic scroll runs)
   useEffect(() => {
     const viewport = getMessagesViewport();
     if (!viewport) return;
 
     const handleScroll = () => {
+      if (suppressScrollTrackingRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = viewport;
       isUserScrolledUpRef.current = scrollHeight - scrollTop - clientHeight > 100;
     };
