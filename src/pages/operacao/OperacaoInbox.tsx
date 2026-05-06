@@ -778,6 +778,8 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!(c as any).manually_marked_unread,
             is_archived: !!(c as any).is_archived,
             archived_at: (c as any).archived_at || null,
+            is_group: !!(c as any).is_group || ((c.phone || "").replace(/\D/g, "").length >= 15),
+            group_subject: (c as any).group_subject || null,
           };
         };
 
