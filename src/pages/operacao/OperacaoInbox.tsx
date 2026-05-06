@@ -1257,7 +1257,12 @@ function OperacaoInboxInner() {
 
       // ─── 1. INSERT otimístico (status='pending', com original_payload) ───
       const sendPayload: any = { phone, message: text };
-      if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
+      // Z-API exige o ID EXTERNO do WhatsApp para que o quote apareça no celular do lead.
+      // O `replyRef.id` é o UUID interno do banco; usar isso faz a Z-API enviar a mensagem
+      // como comum (sem citação). Sempre preferir external_message_id quando existir.
+      const replyExternalId = replyRef?.external_message_id
+        || (replyRef?.id && !replyRef.id.startsWith("temp_") && !replyRef.id.startsWith("local_") && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(replyRef.id) ? replyRef.id : null);
+      if (replyExternalId) sendPayload.messageId = replyExternalId;
 
       let messageDbId: string | null = null;
       try {
