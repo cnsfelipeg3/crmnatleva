@@ -2216,7 +2216,7 @@ function OperacaoInboxInner() {
                 )}
               </div>
               {/* Owner filter pills */}
-              <div className="flex items-center gap-1 mb-1.5 text-[10px]">
+              <div className="flex items-center gap-1 mb-1.5 text-xs md:text-[10px]">
                 {([
                   { k: "all", label: "Todas" },
                   { k: "mine", label: "Minhas" },
@@ -2225,7 +2225,7 @@ function OperacaoInboxInner() {
                   <button
                     key={o.k}
                     onClick={() => setOwnerFilter(o.k)}
-                    className={`px-2 py-0.5 rounded-md font-medium transition ${
+                    className={`px-2.5 py-1.5 md:px-2 md:py-0.5 rounded-md font-medium transition active:scale-95 ${
                       ownerFilter === o.k
                         ? (o.k === "unassigned" ? "bg-amber-500/15 text-amber-600" : "bg-primary/15 text-primary")
                         : "text-muted-foreground hover:bg-muted"
