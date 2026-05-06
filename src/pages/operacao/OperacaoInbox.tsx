@@ -765,11 +765,18 @@ function OperacaoInboxInner() {
         const mapConv = (c: any, fallbackPreview?: string) => {
           const cleanPhone = (c.phone || "").replace(/\D/g, "");
           const canonicalId = cleanPhone ? `wa_${cleanPhone}` : c.id;
+          const isGroup = !!(c as any).is_group || (cleanPhone.length >= 15);
+          // Pré-popula o cache de fotos com a foto do grupo (não a do membro)
+          if (isGroup && (c as any).group_photo_url && typeof (c as any).group_photo_url === "string" && (c as any).group_photo_url.startsWith("http")) {
+            profilePicsRef.current.set(canonicalId, (c as any).group_photo_url);
+          }
           return {
             id: canonicalId,
             db_id: c.id,
             phone: cleanPhone || c.phone || "",
-            contact_name: c.contact_name || c.display_name || c.phone || "Sem nome",
+            contact_name: isGroup
+              ? ((c as any).group_subject || c.contact_name || c.display_name || "Grupo")
+              : (c.contact_name || c.display_name || c.phone || "Sem nome"),
             stage: (c.stage || c.funnel_stage || "novo_lead") as Stage,
             tags: c.tags || [],
             source: c.source || "",
@@ -784,8 +791,9 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!(c as any).manually_marked_unread,
             is_archived: !!(c as any).is_archived,
             archived_at: (c as any).archived_at || null,
-            is_group: !!(c as any).is_group || ((c.phone || "").replace(/\D/g, "").length >= 15),
+            is_group: isGroup,
             group_subject: (c as any).group_subject || null,
+            group_photo_url: (c as any).group_photo_url || null,
           };
         };
 
