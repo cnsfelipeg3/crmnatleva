@@ -1018,6 +1018,8 @@ function OperacaoInboxInner() {
       } else if (ownerFilter === "unassigned") {
         if (c.assigned_to) return false;
       }
+      // Filtro por responsável específico (vendedor)
+      if (assigneeFilter && c.assigned_to !== assigneeFilter) return false;
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
