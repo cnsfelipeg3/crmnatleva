@@ -18,7 +18,7 @@ export interface QueuedMessage {
   sendStatus: "queued" | "sending" | "sent" | "failed";
   errorMessage?: string;
   attemptCount: number;
-  replyTo?: { id: string; text: string; sender_type: string; message_type: string };
+  replyTo?: { id: string; text: string; sender_type: string; message_type: string; external_message_id?: string | null };
 }
 
 const STORAGE_KEY = "natleva_msg_queue";

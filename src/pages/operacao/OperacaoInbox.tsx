@@ -1233,7 +1233,7 @@ function OperacaoInboxInner() {
           text,
           messageType: "text",
           createdAt: msgCreatedAt,
-          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type, external_message_id: replyRef.external_message_id || null } : undefined,
         });
 
         toast({
@@ -1257,7 +1257,12 @@ function OperacaoInboxInner() {
 
       // ─── 1. INSERT otimístico (status='pending', com original_payload) ───
       const sendPayload: any = { phone, message: text };
-      if (replyRef?.id && !replyRef.id.startsWith("temp_")) sendPayload.messageId = replyRef.id;
+      // Z-API exige o ID EXTERNO do WhatsApp para que o quote apareça no celular do lead.
+      // O `replyRef.id` é o UUID interno do banco; usar isso faz a Z-API enviar a mensagem
+      // como comum (sem citação). Sempre preferir external_message_id quando existir.
+      const replyExternalId = replyRef?.external_message_id
+        || (replyRef?.id && !replyRef.id.startsWith("temp_") && !replyRef.id.startsWith("local_") && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(replyRef.id) ? replyRef.id : null);
+      if (replyExternalId) sendPayload.messageId = replyExternalId;
 
       let messageDbId: string | null = null;
       try {
@@ -1408,7 +1413,9 @@ function OperacaoInboxInner() {
           async (queuedMsg: QueuedMessage) => {
             try {
               const sendPayload: any = { phone: queuedMsg.phone, message: queuedMsg.text };
-              if (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_")) sendPayload.messageId = queuedMsg.replyTo.id;
+              const qExt = queuedMsg.replyTo?.external_message_id
+                || (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_") && !queuedMsg.replyTo.id.startsWith("local_") && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(queuedMsg.replyTo.id) ? queuedMsg.replyTo.id : null);
+              if (qExt) sendPayload.messageId = qExt;
               const sendResult = await callZapiProxy("send-text", sendPayload);
               const realId = sendResult?.messageId || sendResult?.id;
               return { success: true, realId };
