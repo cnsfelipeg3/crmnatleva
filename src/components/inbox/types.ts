@@ -28,6 +28,8 @@ export interface Conversation {
   manually_marked_unread?: boolean;
   is_archived?: boolean;
   archived_at?: string | null;
+  is_group?: boolean;
+  group_subject?: string | null;
 }
 
 export interface Message {
