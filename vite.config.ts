@@ -131,7 +131,7 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("react-dom") || id.includes("react/") || id.includes("react-router")) return "vendor-react";
           if (id.includes("@tanstack/react-query")) return "vendor-query";
           if (id.includes("@supabase")) return "vendor-supabase";
-          if (id.includes("recharts") || id.includes("d3-")) return "vendor-charts";
+          if (id.includes("recharts") || id.includes("d3-") || id.includes("victory-vendor") || id.includes("/lodash/") || id.includes("/lodash-es/") || id.includes("internmap") || id.includes("decimal.js-light") || id.includes("react-smooth") || id.includes("fast-equals") || id.includes("eventemitter3")) return "vendor-charts";
           if (id.includes("leaflet")) return "vendor-maps";
           if (id.includes("framer-motion")) return "vendor-motion";
           if (id.includes("three") || id.includes("@react-three")) return "vendor-three";
