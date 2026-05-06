@@ -58,6 +58,8 @@ export interface Message {
   sender_name?: string | null;
   sender_phone?: string | null;
   sender_photo?: string | null;
+  is_pinned?: boolean;
+  pinned_at?: string | null;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [

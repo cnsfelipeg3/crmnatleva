@@ -40,6 +40,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from "@/components/ui/context-menu";
 import { toast } from "@/hooks/use-toast";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
@@ -2061,6 +2062,43 @@ function OperacaoInboxInner() {
     }
   }, [conversations]);
 
+  const handleTogglePinMessage = useCallback(async (msg: Message) => {
+    if (!selectedId) return;
+    const newPinned = !msg.is_pinned;
+    const nowIso = new Date().toISOString();
+    setMessages(prev => ({
+      ...prev,
+      [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === msg.id ? { ...m, is_pinned: newPinned, pinned_at: newPinned ? nowIso : null } : m
+      ),
+    }));
+    try {
+      const { error } = await supabase
+        .from("conversation_messages" as any)
+        .update({ is_pinned: newPinned, pinned_at: newPinned ? nowIso : null } as any)
+        .eq("id", msg.id);
+      if (error) throw error;
+      toast({ title: newPinned ? "Mensagem fixada" : "Mensagem desafixada" });
+    } catch (err: any) {
+      setMessages(prev => ({
+        ...prev,
+        [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === msg.id ? { ...m, is_pinned: !newPinned, pinned_at: msg.pinned_at ?? null } : m
+        ),
+      }));
+      toast({ title: "Erro ao fixar mensagem", description: err?.message || "Falha ao atualizar", variant: "destructive" });
+    }
+  }, [selectedId, setMessages]);
+
+  const handleCopyMessageText = useCallback(async (msg: Message) => {
+    try {
+      await navigator.clipboard.writeText(msg.text || "");
+      toast({ title: "Texto copiado" });
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  }, []);
+
   const handleToggleArchive = useCallback(async (conv: Conversation) => {
     const next = !conv.is_archived;
     const nowIso = new Date().toISOString();
@@ -2764,19 +2802,12 @@ function OperacaoInboxInner() {
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
                         )}
+                        <ContextMenu>
+                          <ContextMenuTrigger asChild disabled={msg.sender_type === "sistema"}>
                         <div
                           data-message-id={msg.id}
-                          className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
+                          className={`flex items-center gap-2 select-text ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
                           onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
-                          onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}
-                          onPointerDown={(e) => {
-                            if (selectionMode || msg.sender_type === "sistema") return;
-                            if ((e.pointerType === "mouse" && e.button !== 0) || (e.target as HTMLElement).closest("a,button,video,audio,input,textarea")) return;
-                            longPressTimer.current && clearTimeout(longPressTimer.current);
-                            longPressTimer.current = setTimeout(() => enterSelectionWith(msg), 500);
-                          }}
-                          onPointerUp={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
-                          onPointerLeave={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
                         >
                           {selectionMode && msg.sender_type !== "sistema" && (
                             <Checkbox
@@ -2796,7 +2827,7 @@ function OperacaoInboxInner() {
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
-                            <div className="group relative max-w-[70%]">
+                            <div className={`group relative max-w-[70%] ${msg.is_pinned ? "ring-1 ring-amber-400/40 rounded-2xl" : ""}`}>
                               <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
                                 <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
@@ -2959,6 +2990,26 @@ function OperacaoInboxInner() {
                             </div>
                           )}
                         </div>
+                          </ContextMenuTrigger>
+                          {msg.sender_type !== "sistema" && (
+                            <ContextMenuContent className="w-56">
+                              <ContextMenuItem onClick={() => { setForwardSeed([msg]); setForwardOpen(true); }}>
+                                <Forward className="h-4 w-4 mr-2" /> Encaminhar mensagem
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => handleTogglePinMessage(msg)}>
+                                {msg.is_pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                                {msg.is_pinned ? "Desafixar mensagem" : "Fixar mensagem"}
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem onClick={() => handleCopyMessageText(msg)} disabled={!msg.text}>
+                                Copiar texto
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => { setSelectionMode(true); setSelectedMsgIds(new Set([msg.id])); }}>
+                                Selecionar várias
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          )}
+                        </ContextMenu>
                       </Fragment>
                     ))}
                     {currentMessages.length === 0 && !flowRunning && (

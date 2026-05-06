@@ -2533,6 +2533,7 @@ export type Database = {
           failure_reason: string | null
           id: string
           is_forwarded: boolean
+          is_pinned: boolean
           is_voice_note: boolean | null
           last_retry_at: string | null
           media_failure_reason: string | null
@@ -2546,6 +2547,7 @@ export type Database = {
           message_type: string
           metadata: Json | null
           original_payload: Json | null
+          pinned_at: string | null
           retry_count: number
           sender_name: string | null
           sender_phone: string | null
@@ -2569,6 +2571,7 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           is_forwarded?: boolean
+          is_pinned?: boolean
           is_voice_note?: boolean | null
           last_retry_at?: string | null
           media_failure_reason?: string | null
@@ -2582,6 +2585,7 @@ export type Database = {
           message_type?: string
           metadata?: Json | null
           original_payload?: Json | null
+          pinned_at?: string | null
           retry_count?: number
           sender_name?: string | null
           sender_phone?: string | null
@@ -2605,6 +2609,7 @@ export type Database = {
           failure_reason?: string | null
           id?: string
           is_forwarded?: boolean
+          is_pinned?: boolean
           is_voice_note?: boolean | null
           last_retry_at?: string | null
           media_failure_reason?: string | null
@@ -2618,6 +2623,7 @@ export type Database = {
           message_type?: string
           metadata?: Json | null
           original_payload?: Json | null
+          pinned_at?: string | null
           retry_count?: number
           sender_name?: string | null
           sender_phone?: string | null
