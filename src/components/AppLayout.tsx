@@ -86,49 +86,27 @@ export default function AppLayout() {
             className="flex items-center justify-between gap-2 px-3 h-14 border-b border-border/20 bg-card/95 shrink-0 z-30 backdrop-blur-md"
             style={{ paddingTop: "env(safe-area-inset-top)", height: "calc(3.5rem + env(safe-area-inset-top))" }}
           >
-            <button onClick={() => setMobileOpen(true)} className="p-2 -ml-2 rounded-xl hover:bg-primary/5 transition-colors">
-              <Menu className="w-5 h-5 text-foreground" />
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="p-2 -ml-1 rounded-xl hover:bg-primary/5 transition-colors shrink-0"
+              aria-label="Abrir menu"
+            >
+              <Menu className="w-6 h-6 text-foreground" />
             </button>
-            <DeferredRender fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
-              <Suspense fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
-                <GlobalSearch />
-              </Suspense>
-            </DeferredRender>
-            <div className="flex items-center gap-2">
+            <div className="flex-1 min-w-0">
+              <DeferredRender fallback={<div className="w-full h-9 rounded-lg border border-border/60 bg-muted/20" />}>
+                <Suspense fallback={<div className="w-full h-9 rounded-lg border border-border/60 bg-muted/20" />}>
+                  <GlobalSearch />
+                </Suspense>
+              </DeferredRender>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
               <FailedMessagesBadge />
               <DeferredRender>
                 <Suspense fallback={null}>
                   <AIPageSummaryButton />
                 </Suspense>
               </DeferredRender>
-              <TooltipProvider delayDuration={300}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={toggleFullscreen}
-                      className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-primary/5 transition-colors"
-                    >
-                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    {isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <div className="relative h-[17px] flex items-center">
-                <img
-                  src={logoNatleva}
-                  alt="NatLeva"
-                  className="h-full w-auto object-contain"
-                  style={{ filter: 'brightness(0) invert(1)' }}
-                  draggable={false}
-                />
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ backgroundColor: 'hsl(var(--champagne))', mixBlendMode: 'multiply' }}
-                />
-              </div>
             </div>
           </header>
         )}
