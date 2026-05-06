@@ -2767,6 +2767,33 @@ function OperacaoInboxInner() {
                     }}
                     className={`chat-thread flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 transition-opacity duration-150 ${selectionMode ? "pt-12" : ""} ${chatScroll.ready || !selectedId || currentMessages.length === 0 ? "opacity-100" : "opacity-0"}`}
                   >
+                    {/* Banner de mensagens fixadas */}
+                    {selectedId && (() => {
+                      const pinned = currentMessages.filter(m => m.is_pinned);
+                      if (pinned.length === 0) return null;
+                      const latest = pinned[pinned.length - 1];
+                      return (
+                        <div className="sticky top-0 z-20 -mx-2 md:-mx-4 px-3 md:px-4 py-2 bg-amber-500/10 backdrop-blur-md border-b border-amber-400/30 flex items-center gap-2.5">
+                          <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => {
+                            const el = document.querySelector(`[data-message-id="${latest.id}"]`);
+                            if (el) {
+                              el.scrollIntoView({ behavior: "smooth", block: "center" });
+                              setHighlightMsgId(latest.id);
+                              setTimeout(() => setHighlightMsgId(null), 1800);
+                            }
+                          }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 leading-tight">
+                              {pinned.length === 1 ? "Mensagem fixada" : `${pinned.length} mensagens fixadas`}
+                            </p>
+                            <p className="text-xs text-foreground/80 truncate">{stripQuotes(latest.text || "") || `📎 ${latest.message_type}`}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:bg-amber-500/20" onClick={() => handleTogglePinMessage(latest)} title="Desafixar última">
+                            <PinOff className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                          </Button>
+                        </div>
+                      );
+                    })()}
                     {selectedId && currentMessages.length > 0 && (
                       <div className="pt-3">
                         <BuyingMomentAlert
@@ -2817,7 +2844,12 @@ function OperacaoInboxInner() {
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
-                            <div className={`group relative max-w-[70%] ${msg.is_pinned ? "ring-1 ring-amber-400/40 rounded-2xl" : ""}`}>
+                            <div className={`group relative max-w-[70%] ${msg.is_pinned ? "ring-2 ring-amber-400/60 rounded-2xl shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : ""}`}>
+                              {msg.is_pinned && (
+                                <div className={`absolute -top-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm ${msg.sender_type === "atendente" ? "right-2" : "left-2"}`}>
+                                  <Pin className="h-2.5 w-2.5" /> Fixada
+                                </div>
+                              )}
                               <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
                                 <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
