@@ -112,7 +112,11 @@ export default function AppLayout() {
         )}
 
         <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-          <SheetContent side="left" className="p-0 w-[280px] border-r-0 bg-transparent">
+          <SheetContent
+            side="left"
+            className="p-0 w-[86vw] max-w-[320px] border-r-0 bg-transparent"
+            style={{ paddingTop: "env(safe-area-inset-top)", paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
             <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
             <AppSidebar mobile onNavigate={() => setMobileOpen(false)} />
           </SheetContent>
