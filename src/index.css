@@ -665,12 +665,25 @@ img:not([loading]) {
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* iOS: evita zoom auto quando input < 16px */
+  /* iOS: evita zoom auto ao focar input/select/textarea (precisa >=16px).
+     !important pra vencer utilitários Tailwind (text-xs, text-sm) que reduzem o tamanho. */
   @media (max-width: 767px) {
-    input:not([type="checkbox"]):not([type="radio"]),
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
     select,
-    textarea {
-      font-size: max(16px, 1rem);
+    textarea,
+    [contenteditable="true"],
+    [contenteditable="plaintext-only"] {
+      font-size: 16px !important;
+      line-height: 1.4;
+    }
+  }
+
+  /* Bloqueia zoom por gesto (double-tap/pinch) em PWA mobile */
+  @media (max-width: 767px) {
+    html {
+      touch-action: manipulation;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
     }
   }
 
