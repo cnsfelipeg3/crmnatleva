@@ -97,7 +97,7 @@ export default function DashboardFilters({
               </Button>
             )}
             <Button size="sm" className="h-8 glow-hover shadow-[0_2px_10px_hsl(154,56%,27%,0.15)]" onClick={() => navigate("/sales/new")}>
-              <Plus className="w-4 h-4 mr-1" /> Nova Venda
+              <Plus className="w-4 h-4 mr-1" /> Incluir
             </Button>
           </div>
         </div>

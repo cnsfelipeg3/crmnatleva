@@ -1116,7 +1116,7 @@ export default function NewSale() {
       {extracting && <ProgressOverlay label="Extraindo dados com IA..." />}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Nova Venda"}</h1>
+          <h1 className="text-2xl font-serif text-foreground">{isEditMode ? "Editar Venda" : "Incluir"}</h1>
           <p className="text-sm text-muted-foreground">{isEditMode ? "Edite os detalhes desta venda" : "Registre todos os detalhes da viagem de forma organizada"}</p>
         </div>
         {isEditMode && (

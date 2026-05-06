@@ -25,7 +25,7 @@ export const SYSTEM_MENUS: SystemMenuItem[] = [
   { key: "dashboard", label: "Dashboard", path: "/dashboard", group: "Principal", actions: READ_ONLY },
   { key: "sales", label: "Vendas", path: "/sales", group: "Principal", actions: ALL },
   { key: "sales.view_all", label: "Ver todas as vendas (não só as próprias)", path: "/sales", group: "Principal", actions: READ_ONLY },
-  { key: "sales.new", label: "Nova Venda", path: "/sales/new", group: "Principal", actions: ["view", "create"] },
+  { key: "sales.new", label: "Incluir", path: "/sales/new", group: "Principal", actions: ["view", "create"] },
   { key: "pendencias", label: "Pendências", path: "/pendencias", group: "Principal", actions: VIEW_EDIT },
   { key: "cotacoes", label: "Cotações", path: "/cotacoes", group: "Principal", actions: ALL },
   { key: "propostas", label: "Propostas", path: "/propostas", group: "Principal", actions: ALL },

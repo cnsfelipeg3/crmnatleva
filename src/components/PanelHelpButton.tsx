@@ -76,7 +76,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
   },
 
   "/sales/new": {
-    title: "Nova Venda",
+    title: "Incluir",
     subtitle: "Registro de venda completa",
     description:
       "Formulário completo para registro de uma nova venda. Preencha os dados do cliente, selecione passageiros, adicione voos, hospedagem, experiências e configure os valores e forma de pagamento. O sistema calcula automaticamente custos, margens e parcelas.",
@@ -136,7 +136,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
     steps: [
       { title: "Busque ou filtre", detail: "Use a barra de busca para encontrar por nome ou destino, ou os filtros para refinar por status e período." },
       { title: "Clique para detalhar", detail: "Clique em qualquer venda para abrir o painel completo com voos, hospedagem, passageiros, pagamentos e timeline." },
-      { title: "Crie nova venda", detail: "Use o botão '+ Nova Venda' no topo direito para iniciar o registro de uma venda." },
+      { title: "Incluir", detail: "Use o botão '+ Incluir' no topo direito para iniciar o registro de uma venda." },
     ],
     tips: [
       "Use a busca para encontrar vendas por nome do cliente, destino ou ID",
@@ -144,7 +144,7 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Filtre por 'pendentes' para focar no que precisa de ação",
     ],
     relatedPanels: [
-      { label: "Nova Venda", path: "/sales/new" },
+      { label: "Incluir", path: "/sales/new" },
       { label: "Dashboard", path: "/dashboard" },
       { label: "Contas a Receber", path: "/financeiro/receber" },
     ],

@@ -37,7 +37,7 @@ interface QuickAction {
 const QUICK_ACTIONS: QuickAction[] = [
   {
     menuKey: "sales.new",
-    title: "Registrar Nova Venda",
+    title: "Incluir",
     description: "Criar uma venda do zero ou a partir de uma cotação.",
     path: "/sales/new",
     icon: PlusCircle,
