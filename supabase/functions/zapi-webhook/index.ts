@@ -57,7 +57,8 @@ function normalizePhone(raw: string): string {
 // ─── Helper: classify event type ───
 function classifyEvent(body: any): string {
   if (body.type === "MessageStatusCallback") return "status";
-  if (body.isStatusReply === true) return "status_story";
+  // CORREÇÃO: isStatusReply é uma RESPOSTA a um status (mensagem normal),
+  // NÃO é um status postado pelo contato. Cai no fluxo normal de mensagens.
   if ((body.phone || "").includes("status@broadcast")) return "status_broadcast";
   if (body.status && body.ids?.length > 0 && !body.text && !body.image && !body.audio && !body.video && !body.document) return "status";
   if (body.fromMe) return "sent";
@@ -245,6 +246,44 @@ async function processStatusUpdate(supabase: any, body: any) {
       .update(updateRow)
       .eq("external_message_id", sid)
       .eq("direction", "outgoing");
+  }
+
+  // ADIÇÃO: se o messageId pertence a um STATUS que postei, registra visualização.
+  // Z-API usa MessageStatusCallback com status READ/PLAYED também pra status posts.
+  if (mappedStatus === "READ") {
+    const viewerPhone = String(body.phone || body.participantPhone || "").replace(/\D/g, "");
+    if (viewerPhone) {
+      for (const sid of statusIds) {
+        if (!sid) continue;
+        try {
+          const { data: statusRow } = await supabase
+            .from("whatsapp_statuses")
+            .select("id")
+            .eq("external_status_id", sid)
+            .eq("is_mine", true)
+            .maybeSingle();
+          if (statusRow?.id) {
+            let viewerName: string | null = body.senderName || null;
+            if (!viewerName) {
+              const { data: contactRow } = await supabase
+                .from("zapi_contacts")
+                .select("name")
+                .eq("phone", viewerPhone)
+                .maybeSingle();
+              viewerName = contactRow?.name || null;
+            }
+            await supabase.from("whatsapp_status_views").upsert({
+              status_id: statusRow.id,
+              viewer_phone: viewerPhone,
+              viewer_name: viewerName,
+            }, { onConflict: "status_id,viewer_phone" });
+            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid });
+          }
+        } catch (err: any) {
+          console.error("[zapi-webhook] failed to record status view", { messageId: sid, viewerPhone, error: err?.message });
+        }
+      }
+    }
   }
 }
 
@@ -576,10 +615,24 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════════
 
     // Status/Story · grava em whatsapp_statuses (não polui a inbox)
-    if (eventType === "status_story" || eventType === "status_broadcast") {
-      console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId });
+    if (eventType === "status_broadcast") {
+      console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId, participantPhone: body.participantPhone });
       try {
-        const stPhone = (body.participantPhone || body.senderPhone || rawPhone || "").replace("status@broadcast", "").trim() || "unknown";
+        // Status postado por um contato. O phone real está em participantPhone.
+        // body.phone = "status@broadcast" é INÚTIL pra identificação do remetente.
+        const stPhone = String(body.participantPhone || "").replace(/\D/g, "");
+        if (!stPhone && body.fromMe !== true) {
+          console.warn("[zapi-webhook] status_broadcast without participantPhone, skipping", { eventId: rawEventId, phone: body.phone });
+          if (rawEventId) {
+            await supabase.from("whatsapp_events_raw")
+              .update({ processed: true, processed_at: new Date().toISOString(), error: "missing_participant_phone" })
+              .eq("id", rawEventId);
+          }
+          return new Response(JSON.stringify({ success: false, type: "status_skipped" }), {
+            status: 200,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         const stMessageId = String(body.messageId || body.id || body.referenceMessageId || "");
         const stZaapId = body.zaapId ? String(body.zaapId) : null;
         const stIsMine = body.fromMe === true;
@@ -919,6 +972,15 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Metadata: marca quando a mensagem é uma resposta a um status nosso.
+    const messageMetadata: Record<string, any> = {};
+    if (body.isStatusReply === true) {
+      messageMetadata.reply_to_status = {
+        is_status_reply: true,
+        reference_message_id: body.referenceMessageId || null,
+      };
+    }
+
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
@@ -932,6 +994,7 @@ Deno.serve(async (req) => {
       status: msgStatusFinal,
       timestamp: timestampIso,
       created_at: timestampIso,
+      metadata: Object.keys(messageMetadata).length > 0 ? messageMetadata : null,
       sender_name: !fromMe && isGroupMsg
         ? (resolvedGroupSenderName || "Membro do Grupo")
         : (fromMe ? (body.senderName || "Atendente") : null),

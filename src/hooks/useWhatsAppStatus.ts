@@ -61,6 +61,7 @@ export function useContactStatuses() {
         .select("*")
         .eq("is_mine", false)
         .gt("expires_at", new Date().toISOString())
+        .not("phone", "in", '("unknown","status@broadcast","")')
         .order("posted_at", { ascending: false });
       if (error) throw error;
       return (data as any) || [];

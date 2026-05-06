@@ -1,5 +1,5 @@
 import { memo, Fragment } from "react";
-import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, FileSpreadsheet, FileImage, Clock, AlertCircle, RotateCcw, Loader2, Download, Forward } from "lucide-react";
+import { Check, CheckCheck, Bot, ChevronRight, Pencil, Mic, Image, Video, FileText, File, FileSpreadsheet, FileImage, Clock, AlertCircle, RotateCcw, Loader2, Download, Forward, Camera } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import type { Message, MsgStatus, MsgType } from "./types";
@@ -192,6 +192,14 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
               )}
             </div>
             <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "pending" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-90 ring-1 ring-destructive/40 bg-destructive/10" : ""}`}>
+              {(msg as any).metadata?.reply_to_status?.is_status_reply && (
+                <div className={`flex items-center gap-1.5 mb-2 px-2 py-1 rounded-md border ${msg.sender_type === "atendente" ? "bg-primary-foreground/10 border-primary-foreground/30" : "bg-primary/5 border-primary/30"}`}>
+                  <Camera className={`h-3 w-3 ${msg.sender_type === "atendente" ? "text-primary-foreground/80" : "text-primary"}`} />
+                  <span className={`text-[10px] font-medium ${msg.sender_type === "atendente" ? "text-primary-foreground/80" : "text-primary"}`}>
+                    Em resposta ao seu status
+                  </span>
+                </div>
+              )}
               {msg.is_forwarded && (
                 <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                   <Forward className="h-2.5 w-2.5" />

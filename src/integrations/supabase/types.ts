@@ -8932,6 +8932,72 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_statuses_quarantine: {
+        Row: {
+          background_color: string | null
+          caption: string | null
+          contact_name: string | null
+          created_at: string
+          expires_at: string
+          external_status_id: string | null
+          external_zaap_id: string | null
+          font: string | null
+          id: string
+          is_mine: boolean
+          media_mimetype: string | null
+          media_thumbnail_url: string | null
+          media_url: string | null
+          phone: string
+          posted_at: string
+          raw_payload: Json | null
+          status_type: string
+          text_content: string | null
+          view_count: number
+        }
+        Insert: {
+          background_color?: string | null
+          caption?: string | null
+          contact_name?: string | null
+          created_at?: string
+          expires_at?: string
+          external_status_id?: string | null
+          external_zaap_id?: string | null
+          font?: string | null
+          id?: string
+          is_mine?: boolean
+          media_mimetype?: string | null
+          media_thumbnail_url?: string | null
+          media_url?: string | null
+          phone: string
+          posted_at?: string
+          raw_payload?: Json | null
+          status_type: string
+          text_content?: string | null
+          view_count?: number
+        }
+        Update: {
+          background_color?: string | null
+          caption?: string | null
+          contact_name?: string | null
+          created_at?: string
+          expires_at?: string
+          external_status_id?: string | null
+          external_zaap_id?: string | null
+          font?: string | null
+          id?: string
+          is_mine?: boolean
+          media_mimetype?: string | null
+          media_thumbnail_url?: string | null
+          media_url?: string | null
+          phone?: string
+          posted_at?: string
+          raw_payload?: Json | null
+          status_type?: string
+          text_content?: string | null
+          view_count?: number
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           created_at: string
