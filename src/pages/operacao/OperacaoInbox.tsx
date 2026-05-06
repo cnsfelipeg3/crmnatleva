@@ -2382,8 +2382,8 @@ function OperacaoInboxInner() {
                       {isMobile && (
                         <Popover>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Mais opções">
-                              <MoreVertical className="h-4 w-4" />
+                            <Button variant="ghost" size="icon" className="h-10 w-10 active:scale-95 transition-transform" aria-label="Mais opções">
+                              <MoreVertical className="h-5 w-5" />
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent align="end" side="bottom" className="w-60 p-1">
