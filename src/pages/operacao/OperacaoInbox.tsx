@@ -2167,18 +2167,19 @@ function OperacaoInboxInner() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
+                        aria-label="Visão Pipeline"
+                        className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
                         onClick={() => setViewMode("pipeline")}
                       >
-                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <LayoutGrid className="h-4 w-4 md:h-3.5 md:w-3.5" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent><p className="text-xs">Visão Pipeline</p></TooltipContent>
                   </Tooltip>
                   <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" aria-label="Limpar conversas" className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-destructive active:scale-95 transition-transform">
+                        <Trash2 className="h-4 w-4 md:h-3.5 md:w-3.5" />
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
