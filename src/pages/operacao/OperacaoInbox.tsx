@@ -2252,7 +2252,7 @@ function OperacaoInboxInner() {
                       : f.key === "groups" ? conversations.filter(c => { const p = (c.phone||"").replace(/\D/g,""); return !c.is_archived && (p.startsWith("120363") || p.length > 15); }).length
                       : 0;
                     return (
-                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-2.5 py-1 text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
+                      <button key={f.key} onClick={() => setActiveFilter(f.key)} className={`px-3 py-1.5 md:px-2.5 md:py-1 text-xs md:text-[10px] rounded-full whitespace-nowrap font-medium transition-all flex items-center gap-1 shrink-0 active:scale-95 ${activeFilter === f.key ? "bg-primary text-primary-foreground shadow-sm" : "bg-secondary/60 text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
                         {f.label}
                         {count > 0 && <span className={`text-[9px] ${activeFilter === f.key ? "opacity-80" : "opacity-50"}`}>({count})</span>}
                       </button>
