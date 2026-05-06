@@ -25,6 +25,7 @@ import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { ConversationMediaGallery } from "@/components/inbox/ConversationMediaGallery";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileViewportHeight } from "@/hooks/useMobileViewportHeight";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
