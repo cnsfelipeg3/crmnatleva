@@ -2990,6 +2990,26 @@ function OperacaoInboxInner() {
                             </div>
                           )}
                         </div>
+                          </ContextMenuTrigger>
+                          {msg.sender_type !== "sistema" && (
+                            <ContextMenuContent className="w-56">
+                              <ContextMenuItem onClick={() => { setForwardSeed([msg]); setForwardOpen(true); }}>
+                                <Forward className="h-4 w-4 mr-2" /> Encaminhar mensagem
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => handleTogglePinMessage(msg)}>
+                                {msg.is_pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
+                                {msg.is_pinned ? "Desafixar mensagem" : "Fixar mensagem"}
+                              </ContextMenuItem>
+                              <ContextMenuSeparator />
+                              <ContextMenuItem onClick={() => handleCopyMessageText(msg)} disabled={!msg.text}>
+                                Copiar texto
+                              </ContextMenuItem>
+                              <ContextMenuItem onClick={() => { setSelectionMode(true); setSelectedMsgIds(new Set([msg.id])); }}>
+                                Selecionar várias
+                              </ContextMenuItem>
+                            </ContextMenuContent>
+                          )}
+                        </ContextMenu>
                       </Fragment>
                     ))}
                     {currentMessages.length === 0 && !flowRunning && (
