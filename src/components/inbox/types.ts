@@ -55,6 +55,9 @@ export interface Message {
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
   is_forwarded?: boolean;
+  sender_name?: string | null;
+  sender_phone?: string | null;
+  sender_photo?: string | null;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [
