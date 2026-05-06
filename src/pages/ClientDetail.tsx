@@ -24,6 +24,7 @@ import {
 import ClientTimeline from "@/components/ClientTimeline";
 import { LinkConversationDialog } from "@/components/LinkConversationDialog";
 import { CustomerSinceBadge } from "@/components/clients/CustomerSinceBadge";
+import { MobilePageHeader } from "@/components/MobilePageHeader";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
