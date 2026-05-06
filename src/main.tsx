@@ -2,6 +2,14 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
+// Marca <html> como standalone PWA assim que possível (esconde elementos browser-only via CSS)
+if (typeof window !== "undefined") {
+  const isStandalone =
+    window.matchMedia?.("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+  if (isStandalone) document.documentElement.classList.add("pwa-standalone");
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
 
 // Fade out the pre-React boot loader as soon as React mounts
