@@ -2985,7 +2985,7 @@ function OperacaoInboxInner() {
                         />
 
                         {inputText.trim() && (
-                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5" onClick={handleCorrectText} disabled={isCorrecting}>
+                          <Button variant="ghost" size="icon" aria-label="Corrigir texto com IA" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5 active:scale-95 transition-transform" onClick={handleCorrectText} disabled={isCorrecting}>
                             {isCorrecting ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Wand2 className="h-4 w-4 text-primary" />}
                           </Button>
                         )}
