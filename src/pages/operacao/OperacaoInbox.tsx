@@ -2196,14 +2196,22 @@ function OperacaoInboxInner() {
                 </div>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input placeholder="Buscar nome, telefone ou conteúdo..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="pl-9 pr-8 h-8 text-xs bg-background/50 border-border/50" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 md:h-3.5 md:w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nome, telefone ou conteúdo..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  enterKeyHint="search"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  className="pl-9 pr-8 h-10 md:h-8 text-sm md:text-xs bg-background/50 border-border/50"
+                />
                 {searchingContent && (
                   <span className="absolute right-7 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground animate-pulse">buscando…</span>
                 )}
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                    <X className="h-3 w-3" />
+                  <button onClick={() => setSearchQuery("")} aria-label="Limpar busca" className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform">
+                    <X className="h-4 w-4 md:h-3 md:w-3" />
                   </button>
                 )}
               </div>
