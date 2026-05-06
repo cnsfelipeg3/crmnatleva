@@ -306,10 +306,10 @@ export default function Passengers() {
       (docFilter === "passaporte-vencendo" && isPassportExpiringSoon(p.passport_expiry));
     return matchSearch && matchState && matchDoc;
   }).sort((a, b) => {
-    if (!sortBy) return 0;
-    const da = getPassengerSince(a.id) ? new Date(getPassengerSince(a.id)!).getTime() : 0;
-    const db = getPassengerSince(b.id) ? new Date(getPassengerSince(b.id)!).getTime() : 0;
-    return sortBy === "created_desc" ? db - da : da - db;
+    // Sempre ordena pela data real de cadastro (created_at). Default desc (mais recente primeiro).
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return sortBy === "created_asc" ? da - db : db - da;
   });
 
   const navigateToNewSaleWithPassengers = (paxIds: string[]) => {
