@@ -2830,6 +2830,7 @@ function OperacaoInboxInner() {
                     )}
                     <div ref={messagesEndRef} />
                   </div>
+                  <NewMessagesBadge count={chatScroll.unreadCount} onClick={chatScroll.goToBottom} />
                 </div>
                 </div>
 
