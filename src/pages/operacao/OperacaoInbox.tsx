@@ -1439,7 +1439,7 @@ function OperacaoInboxInner() {
   const [shortcutQuery, setShortcutQuery] = useState("");
 
   const expandPlaceholders = useCallback((template: string): string => {
-    const fullName = (selected?.contact_name || selected?.display_name || "").trim();
+    const fullName = (selected?.contact_name || (selected as any)?.display_name || "").trim();
     const firstName = fullName.split(/\s+/)[0] || "";
     const consultorName = (user?.user_metadata as any)?.full_name || user?.email?.split("@")[0] || "Consultor";
     const today = new Date().toLocaleDateString("pt-BR");
