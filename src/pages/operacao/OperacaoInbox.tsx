@@ -3194,6 +3194,13 @@ function OperacaoInboxInner() {
                               <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></span>
                               <span className="font-medium">Sugestão IA</span>
                             </button>
+                            <button className="w-full flex items-center justify-between gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setAiCorrectionEnabled(v => !v); setShowMobilePlusMenu(false); }}>
+                              <span className="flex items-center gap-3">
+                                <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Wand2 className={`h-4 w-4 ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground/50"}`} /></span>
+                                <span className="font-medium">Correção IA</span>
+                              </span>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground"}`}>{aiCorrectionEnabled ? "Ativa" : "Desativada"}</span>
+                            </button>
                           </PopoverContent>
                         </Popover>
 
