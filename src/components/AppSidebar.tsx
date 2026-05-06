@@ -372,6 +372,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {(() => {
           const items = filterItems([
             { to: "/operacao/inbox", icon: Inbox, label: "WhatsApp" },
+            { to: "/livechat/status", icon: Camera, label: "Status" },
             { to: "/operacao/integracoes", icon: Plug, label: "Integrações" },
             { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
             { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
