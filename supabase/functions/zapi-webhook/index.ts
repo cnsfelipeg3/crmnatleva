@@ -1003,10 +1003,61 @@ async function saveContact(supabase: any, phone: string, body: any, chatLid: str
   await supabase.from("zapi_contacts").upsert(upsertData, { onConflict: "phone" });
 
   // Also cache on conversation row for instant frontend display
-  if (incomingPhoto) {
+  // CORREÇÃO: não sobrescrever profile_picture_url quando for grupo,
+  // pois `incomingPhoto` é a foto do MEMBRO remetente, não do grupo.
+  // A foto real do grupo é obtida via /group-metadata em outro fluxo.
+  const isGroupContact = /-group$|@g\.us$/i.test(contactPhone) || contactPhone.replace(/\D/g, "").length >= 15;
+  if (incomingPhoto && !isGroupContact) {
     await supabase.from("conversations").update({
       profile_picture_url: incomingPhoto,
       profile_picture_fetched_at: new Date().toISOString(),
     }).eq("phone", contactPhone).is("profile_picture_url", null);
   }
+}
+
+// ─── Helper: fetch group metadata via zapi-proxy and cache it ───
+async function fetchGroupMetadataAndUpdate(
+  supabase: any,
+  groupId: string,
+  conversationId: string,
+): Promise<void> {
+  const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+  const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!SUPABASE_URL || !SERVICE_KEY) return;
+
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/zapi-proxy`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SERVICE_KEY}`,
+    },
+    body: JSON.stringify({
+      action: "group-metadata",
+      payload: { phone: groupId },
+    }),
+  });
+
+  if (!res.ok) {
+    console.warn("[zapi-webhook] group-metadata returned", res.status);
+    return;
+  }
+
+  const meta = await res.json().catch(() => null);
+  if (!meta || typeof meta !== "object") return;
+
+  await supabase.from("conversations").update({
+    is_group: true,
+    group_photo_url: (meta as any).pictureUrl || null,
+    group_subject: (meta as any).subject || null,
+    group_description: (meta as any).description || null,
+    group_participants: Array.isArray((meta as any).participants) ? (meta as any).participants : null,
+    group_metadata_fetched_at: new Date().toISOString(),
+  }).eq("id", conversationId);
+
+  console.log("[zapi-webhook] group metadata updated", {
+    conversationId,
+    groupId,
+    participants: (meta as any).participants?.length,
+    hasPicture: !!(meta as any).pictureUrl,
+  });
 }
