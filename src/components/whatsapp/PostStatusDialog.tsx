@@ -160,14 +160,28 @@ export function PostStatusDialog({ open, onOpenChange }: Props) {
           </TabsContent>
         </Tabs>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancelar</Button>
+          <Button variant="secondary" onClick={openPreview} disabled={busy}>
+            <Eye className="h-4 w-4 mr-2" /> Pré-visualizar
+          </Button>
           <Button onClick={handleSubmit} disabled={busy}>
             {busy && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Publicar
           </Button>
         </div>
       </DialogContent>
+
+      <StatusPreview
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        kind={tab}
+        text={text}
+        backgroundColor={bg}
+        font={font}
+        mediaUrl={tab === "image" ? localImageUrl : tab === "video" ? localVideoUrl : null}
+        caption={caption}
+      />
     </Dialog>
   );
 }
