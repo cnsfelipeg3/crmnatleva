@@ -2811,6 +2811,11 @@ function OperacaoInboxInner() {
                                 )}
                               </div>
                               <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                                {selected?.is_group && msg.sender_type === "cliente" && (msg.sender_name || msg.sender_phone) && (
+                                  <p className="text-[11px] font-semibold mb-0.5 text-primary leading-tight">
+                                    {msg.sender_name || formatPhoneDisplay(msg.sender_phone || "")}
+                                  </p>
+                                )}
                                 {(msg as any).is_forwarded && (
                                   <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                     <Forward className="h-2.5 w-2.5" />
