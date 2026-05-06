@@ -300,7 +300,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       {/* Logo area */}
       <div className="relative flex items-center justify-center px-5 h-[3.7rem] border-b border-sidebar-border/50">
         {!isCollapsed ? (
-          <div className="relative h-[2.47rem] w-full flex items-center justify-center">
+          <div className="relative h-[2.1rem] w-full flex items-center justify-center">
             <img
               src={logoNatleva}
               alt="NatLeva"
