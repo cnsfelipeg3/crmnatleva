@@ -24,6 +24,7 @@ import {
 import ClientTimeline from "@/components/ClientTimeline";
 import { LinkConversationDialog } from "@/components/LinkConversationDialog";
 import { CustomerSinceBadge } from "@/components/clients/CustomerSinceBadge";
+import { MobilePageHeader } from "@/components/MobilePageHeader";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -266,9 +267,11 @@ export default function ClientDetail() {
   );
 
   return (
-    <div className="p-6 space-y-5 animate-fade-in">
+    <>
+    <MobilePageHeader title={client.display_name || "Cliente"} subtitle={client.client_type === "pessoa_fisica" ? "Pessoa Física" : client.client_type === "familia" ? "Família" : "Empresa"} />
+    <div className="p-3 md:p-6 space-y-5 animate-fade-in">
       {/* Header */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="hidden md:flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate(-1)}><ArrowLeft className="w-4 h-4" /></Button>
           <div>
@@ -520,6 +523,7 @@ export default function ClientDetail() {
         }}
       />
     </div>
+    </>
   );
 }
 

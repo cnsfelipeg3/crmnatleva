@@ -32,6 +32,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { MobilePageHeader } from "@/components/MobilePageHeader";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
 import { useSalesScope } from "@/hooks/useSalesScope";
 
@@ -333,9 +334,11 @@ export default function SaleDetail() {
   );
 
   return (
-    <div className="p-6 space-y-5 animate-fade-in">
+    <>
+    <MobilePageHeader title={sale.name || "Venda"} subtitle={sale.display_id || sale.status || ""} onBack={() => navigate("/sales")} />
+    <div className="p-3 md:p-6 space-y-5 animate-fade-in">
       {/* ═══ HEADER ═══ */}
-      <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className="hidden md:flex items-start justify-between flex-wrap gap-3">
         <div className="flex items-start gap-3">
           <Button variant="ghost" size="sm" onClick={() => navigate("/sales")} className="mt-1"><ArrowLeft className="w-4 h-4" /></Button>
           <div>
@@ -946,5 +949,6 @@ export default function SaleDetail() {
         saleName={sale?.name}
       />
     </div>
+    </>
   );
 }

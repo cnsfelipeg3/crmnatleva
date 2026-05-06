@@ -21,6 +21,8 @@ import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/ui/pull-to-refresh-indicator";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
@@ -558,19 +560,31 @@ export default function Sales() {
 
   const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
 
+  const loadSales = useCallback(async () => {
+    const eqFilters = !canViewAll && sellerId ? { seller_id: sellerId } : undefined;
+    try {
+      const data = await fetchAllRows(
+        "sales",
+        "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name",
+        { order: { column: "created_at", ascending: false }, eqFilters },
+      );
+      setSales(data as SaleRow[]);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, [canViewAll, sellerId]);
+
   useEffect(() => {
     if (authLoading || scopeLoading) return;
-    // Se o usuário não pode ver todas as vendas, restringe no servidor por seller_id
-    const eqFilters = !canViewAll && sellerId ? { seller_id: sellerId } : undefined;
-    fetchAllRows(
-      "sales",
-      "id, display_id, name, close_date, status, emission_status, origin_iata, destination_iata, origin_city, destination_city, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, score, airline, locators, seller_id, external_seller_id, created_at, client_id, lead_type, hotel_name",
-      { order: { column: "created_at", ascending: false }, eqFilters },
-    ).then((data) => {
-      setSales(data as SaleRow[]);
-      setLoading(false);
-    }).catch(err => { console.error(err); setLoading(false); });
-  }, [authLoading, scopeLoading, canViewAll, sellerId]);
+    loadSales();
+  }, [authLoading, scopeLoading, loadSales]);
+
+  const { pullDistance, refreshing } = usePullToRefresh({
+    onRefresh: loadSales,
+    enabled: isMobile,
+  });
 
   const statuses = useMemo(() => {
     const ALWAYS_SHOW = ["Aguardando Emissão"];
@@ -754,6 +768,7 @@ export default function Sales() {
 
   return (
     <TooltipProvider>
+      {isMobile && <PullToRefreshIndicator pullDistance={pullDistance} refreshing={refreshing} />}
       <div className="p-3 md:p-6 space-y-3 md:space-y-5 animate-fade-in relative">
         {exportProgress !== null && (
           <ProgressOverlay label="Exportando vendas..." progress={exportProgress} fullscreen />

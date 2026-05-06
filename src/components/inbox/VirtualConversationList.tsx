@@ -80,7 +80,7 @@ export function VirtualConversationList({
   }
 
   return (
-    <div ref={parentRef} className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
+    <div ref={parentRef} className="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent" style={{ WebkitOverflowScrolling: "touch" }}>
       <div
         style={{
           height: `${virtualizer.getTotalSize()}px`,
