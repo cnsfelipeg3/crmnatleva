@@ -53,17 +53,29 @@ export default defineConfig(({ mode }) => ({
         ],
       },
       workbox: {
-        // Precache só o essencial · evita travar o publish com 13MB+ de assets.
-        // Chunks de rota carregam sob demanda via runtimeCaching abaixo.
-        globPatterns: ["index.html", "assets/index-*.{js,css}", "favicon.png", "icons/*.png"],
+        // Precache MÍNIMO · só ícones e favicon. NUNCA precachear index.html
+        // ou JS com hash · Workbox resolveria o hash em build-time e serviria
+        // versão velha mesmo após deploy novo. HTML/JS vão via NetworkFirst.
+        globPatterns: ["favicon.png", "icons/*.png"],
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
-        skipWaiting: false,
-        navigateFallback: "/index.html",
-        navigateFallbackDenylist: [/^\/api\//, /^\/auth\//, /\.[a-z0-9]+$/i],
+        skipWaiting: true, // força ativar nova versão imediatamente · evita ficar preso em bundle quebrado
+        navigateFallback: null, // sem fallback estático · navegação sempre tenta rede primeiro
         runtimeCaching: [
           {
+            // HTML/navegações · sempre rede primeiro pra pegar deploy novo
+            urlPattern: ({ request }) => request.mode === "navigate",
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "html-cache",
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // JS/CSS com hash · CacheFirst é seguro (hash garante invalidação)
             urlPattern: ({ url, sameOrigin }) => sameOrigin && url.pathname.startsWith("/assets/"),
             handler: "CacheFirst",
             options: {
