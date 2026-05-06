@@ -20,6 +20,7 @@ import { DelegateConversationDialog } from "@/components/inbox/DelegateConversat
 import { SlashCommandDropdown, type MessageShortcut } from "@/components/inbox/SlashCommandDropdown";
 import { ScheduleMessagePopover } from "@/components/inbox/ScheduleMessagePopover";
 import { ScheduledForConversationButton } from "@/components/inbox/ScheduledForConversationButton";
+import { GroupInfoDialog } from "@/components/inbox/GroupInfoDialog";
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -682,6 +683,7 @@ function OperacaoInboxInner() {
   
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showProfileViewer, setShowProfileViewer] = useState(false);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
   const [showClientContext, setShowClientContext] = useState(true);
   const [showFlowMenu, setShowFlowMenu] = useState(false);
   const [showMobilePlusMenu, setShowMobilePlusMenu] = useState(false);
@@ -747,7 +749,7 @@ function OperacaoInboxInner() {
   useEffect(() => {
     const loadDbConversations = async () => {
       initPersistence().catch(() => {});
-      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at", {
+      const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
         cacheMs: 30_000,
@@ -778,6 +780,8 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!(c as any).manually_marked_unread,
             is_archived: !!(c as any).is_archived,
             archived_at: (c as any).archived_at || null,
+            is_group: !!(c as any).is_group || ((c.phone || "").replace(/\D/g, "").length >= 15),
+            group_subject: (c as any).group_subject || null,
           };
         };
 
@@ -825,7 +829,7 @@ function OperacaoInboxInner() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_description")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -873,6 +877,8 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!c.manually_marked_unread,
             is_archived: !!c.is_archived,
             archived_at: c.archived_at || null,
+            is_group: !!c.is_group || (cleanPhone.length >= 15),
+            group_subject: c.group_subject || null,
             _hasReliableActivity: true,
           };
         });
@@ -2464,8 +2470,12 @@ function OperacaoInboxInner() {
                         </div>
                         <p
                           className="text-[11px] text-muted-foreground truncate cursor-pointer hover:opacity-80"
-                          onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}
-                        >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}</p>
+                          onClick={() => {
+                            if (selected.is_group) { setShowGroupInfo(true); return; }
+                            if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev);
+                          }}
+                          title={selected.is_group ? "Ver detalhes do grupo" : undefined}
+                        >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}{selected.is_group && <span className="ml-1 opacity-60">· toque para detalhes</span>}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
@@ -2801,6 +2811,11 @@ function OperacaoInboxInner() {
                                 )}
                               </div>
                               <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                                {selected?.is_group && msg.sender_type === "cliente" && (msg.sender_name || msg.sender_phone) && (
+                                  <p className="text-[11px] font-semibold mb-0.5 text-primary leading-tight">
+                                    {msg.sender_name || formatPhoneDisplay(msg.sender_phone || "")}
+                                  </p>
+                                )}
                                 {(msg as any).is_forwarded && (
                                   <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                                     <Forward className="h-2.5 w-2.5" />
@@ -3261,6 +3276,17 @@ function OperacaoInboxInner() {
                 isVip={selected.is_vip}
                 source={selected.source}
                 tags={selected.tags}
+              />
+            )}
+
+            {/* Group info dialog (description, participants, media) */}
+            {selected?.is_group && (
+              <GroupInfoDialog
+                open={showGroupInfo}
+                onOpenChange={setShowGroupInfo}
+                conversationDbId={selectedDbId || null}
+                conversationPhone={selected.phone || ""}
+                groupName={selected.contact_name || "Grupo"}
               />
             )}
           </div>

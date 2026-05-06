@@ -28,6 +28,8 @@ export interface Conversation {
   manually_marked_unread?: boolean;
   is_archived?: boolean;
   archived_at?: string | null;
+  is_group?: boolean;
+  group_subject?: string | null;
 }
 
 export interface Message {
@@ -53,6 +55,9 @@ export interface Message {
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
   is_forwarded?: boolean;
+  sender_name?: string | null;
+  sender_phone?: string | null;
+  sender_photo?: string | null;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [

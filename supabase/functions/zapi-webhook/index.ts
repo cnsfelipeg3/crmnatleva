@@ -251,7 +251,8 @@ async function processStatusUpdate(supabase: any, body: any) {
 // ─── Helper: upsert conversation ───
 async function upsertConversation(
   supabase: any, cleanPhone: string, contactName: string,
-  preview: string, timestampIso: string, fromMe: boolean
+  preview: string, timestampIso: string, fromMe: boolean,
+  isGroup = false, groupSubject: string | null = null,
 ): Promise<string | null> {
   const convExternalId = `wa_${cleanPhone}`;
   const phoneE164 = `+${cleanPhone}`;
@@ -287,6 +288,10 @@ async function upsertConversation(
       last_message_preview: preview,
       updated_at: timestampIso,
     };
+    if (isGroup) {
+      updateData.is_group = true;
+      if (groupSubject) updateData.group_subject = groupSubject;
+    }
     if (!fromMe) {
       // Update contact name if it looks like a phone number or generic
       const existing = (existingConv.contact_name || "").trim();
@@ -315,6 +320,8 @@ async function upsertConversation(
       unread_count: fromMe ? 0 : 1,
       is_vip: false,
       external_conversation_id: convExternalId,
+      is_group: isGroup,
+      group_subject: isGroup ? (groupSubject || contactName) : null,
     })
     .select("id")
     .single();
@@ -700,7 +707,9 @@ Deno.serve(async (req) => {
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
     const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
-    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe);
+    const isGroupMsg = body.isGroup === true || /-group$/i.test(String(rawPhone || "")) || cleanPhone.length >= 15;
+    const groupSubject = isGroupMsg ? (body.chatName || null) : null;
+    const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe, isGroupMsg, groupSubject);
 
     if (!conversationId) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_conversation" }).eq("id", rawEventId);
@@ -769,6 +778,9 @@ Deno.serve(async (req) => {
       status: msgStatusFinal,
       timestamp: timestampIso,
       created_at: timestampIso,
+      sender_name: !fromMe && isGroupMsg ? (body.senderName || null) : (fromMe ? (body.senderName || "Atendente") : null),
+      sender_phone: !fromMe && isGroupMsg ? (body.participantPhone ? String(body.participantPhone).replace(/\D/g, "") : null) : null,
+      sender_photo: !fromMe ? (body.senderPhoto || body.photo || null) : null,
       ...audioMeta,
     });
 
