@@ -2388,19 +2388,19 @@ function OperacaoInboxInner() {
                           </PopoverTrigger>
                           <PopoverContent align="end" side="bottom" className="w-60 p-1">
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowContactProfile(prev => !prev)}
                             >
                               <User className="h-4 w-4 text-primary" /> Painel do cliente
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowSummaryDialog(true)}
                             >
                               <Brain className="h-4 w-4 text-primary" /> Resumir com IA
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => {
                                 if (selectionMode) cancelSelection();
                                 else { setSelectionMode(true); setSelectedMsgIds(new Set()); }
@@ -2409,13 +2409,13 @@ function OperacaoInboxInner() {
                               <Forward className="h-4 w-4" /> {selectionMode ? "Cancelar seleção" : "Encaminhar mensagens"}
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setGalleryOpen(true)}
                             >
                               <Images className="h-4 w-4" /> Mídias da conversa
                             </button>
                             <button
-                              className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                              className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                               onClick={() => setShowLinkClient(true)}
                             >
                               <Link2 className="h-4 w-4" /> Vincular cliente
@@ -2424,13 +2424,13 @@ function OperacaoInboxInner() {
                               <>
                                 <div className="my-1 h-px bg-border" />
                                 <button
-                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                                   onClick={() => setDelegateDialogOpen(true)}
                                 >
                                   <UserPlus className="h-4 w-4" /> Atribuir / Delegar
                                 </button>
                                 <button
-                                  className="w-full flex items-center gap-2 px-2 py-2 text-sm rounded hover:bg-muted transition-colors text-left"
+                                  className="w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg hover:bg-muted active:scale-[0.98] transition-all text-left"
                                   onClick={() => setAddParticipantsDialogOpen(true)}
                                 >
                                   <UserPlus className="h-4 w-4" /> Participantes ({participants.length})
