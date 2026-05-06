@@ -882,6 +882,43 @@ Deno.serve(async (req) => {
       audioMeta.media_filename = `sticker-${messageId}.webp`;
     }
 
+    // Resolve melhor nome para o remetente em grupos:
+    // priorizamos contatos conhecidos no nosso banco (clients > zapi_contacts)
+    // sobre o senderName cru do Z-API (que vem do pushName/contato salvo no celular conectado
+    // e pode ser um nome genérico/errado tipo "Compra E Venda").
+    let resolvedGroupSenderName: string | null = null;
+    const participantDigits = body.participantPhone ? String(body.participantPhone).replace(/\D/g, "") : null;
+    if (!fromMe && isGroupMsg && participantDigits) {
+      try {
+        const { data: clientRow } = await supabase
+          .from("clients")
+          .select("display_name")
+          .eq("phone", participantDigits)
+          .maybeSingle();
+        if (clientRow?.display_name && !isAgencyOrGenericName(clientRow.display_name)) {
+          resolvedGroupSenderName = clientRow.display_name;
+        }
+        if (!resolvedGroupSenderName) {
+          const { data: zapiRow } = await supabase
+            .from("zapi_contacts")
+            .select("name")
+            .eq("phone", participantDigits)
+            .maybeSingle();
+          if (zapiRow?.name && !isAgencyOrGenericName(zapiRow.name)) {
+            resolvedGroupSenderName = zapiRow.name;
+          }
+        }
+      } catch (err) {
+        console.warn("[Webhook] group sender name lookup failed:", err);
+      }
+      if (!resolvedGroupSenderName) {
+        const rawSender = (body.senderName || "").trim();
+        resolvedGroupSenderName = rawSender && !isAgencyOrGenericName(rawSender)
+          ? rawSender
+          : formatPhoneDisplay(participantDigits);
+      }
+    }
+
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
@@ -896,9 +933,9 @@ Deno.serve(async (req) => {
       timestamp: timestampIso,
       created_at: timestampIso,
       sender_name: !fromMe && isGroupMsg
-        ? (body.senderName || (body.participantPhone ? formatPhoneDisplay(String(body.participantPhone)) : "Membro do Grupo"))
+        ? (resolvedGroupSenderName || "Membro do Grupo")
         : (fromMe ? (body.senderName || "Atendente") : null),
-      sender_phone: !fromMe && isGroupMsg ? (body.participantPhone ? String(body.participantPhone).replace(/\D/g, "") : null) : null,
+      sender_phone: !fromMe && isGroupMsg ? participantDigits : null,
       sender_photo: !fromMe ? (body.senderPhoto || body.photo || null) : null,
       ...audioMeta,
     });
