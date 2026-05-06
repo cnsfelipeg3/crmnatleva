@@ -812,6 +812,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // FETCH DE METADATA DO GRUPO (fire-and-forget · refetch a cada 6h)
+    if (isGroupMsg && conversationId) {
+      try {
+        const { data: convData } = await supabase
+          .from("conversations")
+          .select("group_metadata_fetched_at")
+          .eq("id", conversationId)
+          .maybeSingle();
+
+        const fetchedAt = convData?.group_metadata_fetched_at
+          ? new Date(convData.group_metadata_fetched_at).getTime()
+          : 0;
+        const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+
+        if (!fetchedAt || fetchedAt < sixHoursAgo) {
+          fetchGroupMetadataAndUpdate(supabase, String(rawPhone || cleanPhone), conversationId)
+            .catch((err) => console.error("[zapi-webhook] group-metadata fetch failed:", err?.message || err));
+        }
+      } catch (err) {
+        console.error("[zapi-webhook] failed to check group_metadata_fetched_at:", err);
+      }
+    }
+
     // ═══════════════════════════════════════════════════════════
     // STEP 7: Insert message with IDEMPOTENCY
     // ═══════════════════════════════════════════════════════════
