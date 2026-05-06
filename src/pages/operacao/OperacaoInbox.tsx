@@ -3157,12 +3157,15 @@ function OperacaoInboxInner() {
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
                         <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover compact phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
                           <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
                             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                           </Button>
                         </>
                       ) : (
+                        <ScheduledForConversationButton inline conversationId={selected?.id || null} />
+                      ) && (
                         <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
                           <Mic className="h-5 w-5" />
                         </Button>
