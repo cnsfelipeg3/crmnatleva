@@ -3178,7 +3178,7 @@ function OperacaoInboxInner() {
                       <div className="flex-1">
                         <Textarea
                           ref={textareaRef} value={inputText}
-                          onChange={e => { setInputText(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
+                          onChange={e => { handleInputChangeWithSlash(e.target.value); const ta = e.target; ta.style.height = "auto"; ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; }}
                           onKeyDown={handleKeyDown} onPaste={handlePaste}
                           placeholder="Digite sua mensagem..."
                           className="min-h-[40px] max-h-[120px] resize-none text-base overflow-y-auto"
