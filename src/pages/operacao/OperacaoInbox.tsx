@@ -2285,12 +2285,24 @@ function OperacaoInboxInner() {
             {selected ? (
               <>
                 {/* Chat header */}
-                <div className="border-b border-border bg-card/50 shrink-0">
+                <div className="border-b border-border bg-card/85 backdrop-blur-md shrink-0 sticky top-0 z-10">
                   {/* Row 1: Contact info + stage */}
                   <div className="flex items-center justify-between px-3 md:px-4 py-2">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {isMobile && (
-                        <Button variant="ghost" size="icon" aria-label="Voltar para conversas" className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform" onClick={() => setSelectedId(null)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Voltar para conversas"
+                          className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform"
+                          onClick={() => {
+                            setSelectedId(null);
+                            requestAnimationFrame(() => {
+                              const list = document.querySelector("[data-conversation-list]");
+                              list?.scrollTo({ top: 0, behavior: "auto" });
+                            });
+                          }}
+                        >
                           <ArrowLeft className="h-5 w-5" />
                         </Button>
                       )}
