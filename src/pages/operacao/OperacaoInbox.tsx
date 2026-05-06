@@ -2995,11 +2995,11 @@ function OperacaoInboxInner() {
 
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
-                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={handleSend} disabled={isSending}>
+                        <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
                           {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                         </Button>
                       ) : (
-                        <Button size="icon" className="h-11 w-11 shrink-0 rounded-full shadow-sm" onClick={startRecording}>
+                        <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
                           <Mic className="h-5 w-5" />
                         </Button>
                       )}
