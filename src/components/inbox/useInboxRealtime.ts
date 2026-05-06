@@ -96,7 +96,7 @@ export function useInboxRealtime(
               const tempIdx = existing.findIndex(m => m.id.startsWith("temp_") && m.text === msg.text && m.sender_type === "atendente");
               if (tempIdx >= 0) {
                 const updated = [...existing];
-                updated[tempIdx] = { ...updated[tempIdx], id: msgId, media_url: msg.media_url || updated[tempIdx].media_url };
+                updated[tempIdx] = { ...updated[tempIdx], id: msgId, external_message_id: n.external_message_id || updated[tempIdx].external_message_id, media_url: msg.media_url || updated[tempIdx].media_url };
                 next[k] = updated;
                 continue;
               }
