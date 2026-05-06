@@ -2391,11 +2391,6 @@ function OperacaoInboxInner() {
                   </button>
                 ))}
               </div>
-              <ScrollArea className="w-full whitespace-nowrap">
-                <div className="flex gap-1 pb-1.5 w-max">
-                  })}
-                </div>
-              </div>
               {/* Filtro inteligente por responsável (vendedor) */}
               <div className="flex items-center gap-1 mb-1.5">
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
