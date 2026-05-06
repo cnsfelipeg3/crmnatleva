@@ -2844,7 +2844,12 @@ function OperacaoInboxInner() {
                               <span className="text-[9px] text-muted-foreground">{formatMsgTime(msg.created_at)}</span>
                             </div>
                           ) : (
-                            <div className={`group relative max-w-[70%] ${msg.is_pinned ? "ring-1 ring-amber-400/40 rounded-2xl" : ""}`}>
+                            <div className={`group relative max-w-[70%] ${msg.is_pinned ? "ring-2 ring-amber-400/60 rounded-2xl shadow-[0_0_0_1px_rgba(251,191,36,0.15)]" : ""}`}>
+                              {msg.is_pinned && (
+                                <div className={`absolute -top-2 z-10 flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[9px] font-bold uppercase tracking-wider shadow-sm ${msg.sender_type === "atendente" ? "right-2" : "left-2"}`}>
+                                  <Pin className="h-2.5 w-2.5" /> Fixada
+                                </div>
+                              )}
                               <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
                                 <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
