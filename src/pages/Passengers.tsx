@@ -520,7 +520,6 @@ export default function Passengers() {
                   {filtered.slice(0, visibleCount).map((p) => {
                     const expiring = isPassportExpiringSoon(p.passport_expiry);
                     const tripCount = saleLinks[p.id]?.length || 0;
-                    const passengerSince = getPassengerSince(p.id);
                     return (
                       <TableRow
                         key={p.id}
