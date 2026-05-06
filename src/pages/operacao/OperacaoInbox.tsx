@@ -2607,7 +2607,7 @@ function OperacaoInboxInner() {
                       }}
                     />
                   )}
-                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
                     {selectedId && currentMessages.length > 0 && (
                       <div className="pt-3">
                         <BuyingMomentAlert
