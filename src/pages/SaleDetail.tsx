@@ -949,5 +949,6 @@ export default function SaleDetail() {
         saleName={sale?.name}
       />
     </div>
+    </>
   );
 }
