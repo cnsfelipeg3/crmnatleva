@@ -591,34 +591,24 @@ function OperacaoInboxInner() {
     if (!inputText && textareaRef.current) textareaRef.current.style.height = "40px";
   }, [inputText]);
 
-  // iOS keyboard fix
+  // Container ref (para overlays internos)
   const livechatContainerRef = useRef<HTMLDivElement>(null);
-  const [mobileHeight, setMobileHeight] = useState<string>("100dvh");
-  
+
+  // Mantém --app-vh atualizado conforme teclado virtual abre/fecha.
+  // NÃO bloqueia body, NÃO força scroll. Só atualiza CSS var.
+  useMobileViewportHeight(isMobile);
+
+  // Trava scroll do body APENAS no mobile, com técnica leve
+  // (overflow hidden, sem position fixed que causa layout shift).
   useEffect(() => {
     if (!isMobile) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = (document.body.style as any).overscrollBehavior;
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
-    document.body.style.height = "100%";
-    document.body.style.top = "0";
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const syncHeight = () => {
-      setMobileHeight(`${vv.height}px`);
-      window.scrollTo(0, 0);
-      requestAnimationFrame(() => { messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); });
-    };
-    syncHeight();
-    vv.addEventListener("resize", syncHeight);
-    vv.addEventListener("scroll", () => window.scrollTo(0, 0));
+    (document.body.style as any).overscrollBehavior = "none";
     return () => {
-      vv.removeEventListener("resize", syncHeight);
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.width = "";
-      document.body.style.height = "";
-      document.body.style.top = "";
+      document.body.style.overflow = previousOverflow;
+      (document.body.style as any).overscrollBehavior = previousOverscroll;
     };
   }, [isMobile]);
 
