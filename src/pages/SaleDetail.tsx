@@ -32,6 +32,7 @@ import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { iataToLabel } from "@/lib/iataUtils";
 import { routeLabel, routeCode } from "@/lib/cityExtract";
 import { DetailPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
+import { MobilePageHeader } from "@/components/MobilePageHeader";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
 import { useSalesScope } from "@/hooks/useSalesScope";
 
