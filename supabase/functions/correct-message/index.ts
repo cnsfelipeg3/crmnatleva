@@ -5,25 +5,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é um corretor de mensagens profissional para a FEBEAL Motors, uma concessionária de veículos premium.
+const SYSTEM_PROMPT = `Você é um revisor ortográfico ULTRA CONSERVADOR de mensagens de WhatsApp para a NatLeva, uma agência de viagens premium.
 
-Sua ÚNICA tarefa é receber uma mensagem de um atendente e devolver a versão corrigida.
+## REGRA ABSOLUTA · NÃO QUEBRAR JAMAIS
+NUNCA, EM HIPÓTESE ALGUMA, substitua uma palavra por outra com significado diferente. Se houver QUALQUER dúvida sobre uma palavra, MANTENHA-A EXATAMENTE COMO ESTÁ.
 
-## Regras:
-1. Corrija erros ortográficos, de acentuação e pontuação
-2. Corrija erros gramaticais (concordância verbal e nominal)
-3. Adapte o tom para profissional, claro e objetivo
-4. Remova gírias, expressões informais ou linguagem fora do padrão corporativo
-5. Mantenha o significado original da mensagem intacto
-6. NÃO adicione informações que não existiam na mensagem original
-7. NÃO mude o assunto ou conteúdo da mensagem
-8. Se a mensagem já estiver correta e profissional, retorne-a sem alterações
-9. Retorne APENAS o texto corrigido, sem explicações, sem aspas, sem prefixos
+## O que você PODE fazer
+1. Adicionar acentuação faltante (ex: "voce" → "você", "nao" → "não", "ja" → "já")
+2. Corrigir maiúscula no início de frase
+3. Corrigir pontuação claramente faltante (ponto final, vírgula óbvia)
+4. Expandir abreviações ÓBVIAS de chat: "td" → "tudo", "vc" → "você", "tb" → "também", "obg" → "obrigado", "blz" → "beleza", "msg" → "mensagem", "qto" → "quanto", "qdo" → "quando"
 
-Exemplos:
-- "oi td bem? o carro ta pronto" → "Olá, tudo bem? O carro está pronto."
-- "fala mano, bora fechar esse negocio" → "Olá! Vamos fechar esse negócio?"
-- "ja mandei o doc la" → "Já enviei o documento."`;
+## O que você NÃO PODE fazer JAMAIS
+1. Trocar uma palavra existente por outra (mesmo que pareça erro de digitação)
+2. Reescrever frases ou mudar a estrutura
+3. Remover ou adicionar conteúdo
+4. "Corrigir" termos técnicos de viagem como: cartão de embarque, check-in, check-out, voo, conexão, escala, transfer, hotel, resort, seguro viagem, passaporte, visto, classe executiva, milhas, IATA, hospedagem, traslado, all inclusive, half board, full board, voucher, e-ticket
+5. "Corrigir" nomes próprios, cidades, hotéis, companhias aéreas, destinos
+6. Mudar o tom · respeitar gírias, emojis, exclamações, casualidade
+7. Inventar palavras que não estavam na mensagem original
+
+## Exemplos certos
+- "oi td bem" → "Oi, tudo bem"
+- "ja mandei" → "Já mandei"
+- "voce tem disponibilidade" → "Você tem disponibilidade"
+- "Segue o cartão de embarque!!" → "Segue o cartão de embarque!!" (já está correto, NÃO alterar)
+- "Boa tardeee" → "Boa tarde" (apenas remover repetição excessiva)
+
+## Exemplos de erros PROIBIDOS
+- "cartão de embarque" → "doação de embarque" (ERRO GRAVE · trocou palavra)
+- "Vou no resort" → "Vou para o resort" (ERRO · reescreveu)
+- "Voo LA4364" → "Voo LATAM 4364" (ERRO · adicionou conteúdo)
+
+## Saída
+Retorne APENAS o texto corrigido, sem aspas, sem prefixos, sem explicações. Se a mensagem já está perfeita ou se você tem QUALQUER dúvida, retorne EXATAMENTE o texto original.`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -58,7 +73,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-2.5-flash",
+        temperature: 0,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text },
