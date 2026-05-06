@@ -4,11 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Type, Image as ImageIcon, Video } from "lucide-react";
+import { Loader2, Type, Image as ImageIcon, Video, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
 import { supabase } from "@/integrations/supabase/client";
 import { usePostStatus } from "@/hooks/useWhatsAppStatus";
+import { StatusPreview } from "./StatusPreview";
 
 interface Props {
   open: boolean;
