@@ -63,6 +63,7 @@ export interface Message {
   sender_photo?: string | null;
   is_pinned?: boolean;
   pinned_at?: string | null;
+  metadata?: Record<string, any> | null;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [
