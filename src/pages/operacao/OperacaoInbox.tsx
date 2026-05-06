@@ -25,6 +25,7 @@ import { SelectionToolbar } from "@/components/inbox/forward/SelectionToolbar";
 import { ForwardDialog, type ForwardCandidate } from "@/components/inbox/forward/ForwardDialog";
 import { ConversationMediaGallery } from "@/components/inbox/ConversationMediaGallery";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useMobileViewportHeight } from "@/hooks/useMobileViewportHeight";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -590,34 +591,24 @@ function OperacaoInboxInner() {
     if (!inputText && textareaRef.current) textareaRef.current.style.height = "40px";
   }, [inputText]);
 
-  // iOS keyboard fix
+  // Container ref (para overlays internos)
   const livechatContainerRef = useRef<HTMLDivElement>(null);
-  const [mobileHeight, setMobileHeight] = useState<string>("100dvh");
-  
+
+  // Mantém --app-vh atualizado conforme teclado virtual abre/fecha.
+  // NÃO bloqueia body, NÃO força scroll. Só atualiza CSS var.
+  useMobileViewportHeight(isMobile);
+
+  // Trava scroll do body APENAS no mobile, com técnica leve
+  // (overflow hidden, sem position fixed que causa layout shift).
   useEffect(() => {
     if (!isMobile) return;
+    const previousOverflow = document.body.style.overflow;
+    const previousOverscroll = (document.body.style as any).overscrollBehavior;
     document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
-    document.body.style.height = "100%";
-    document.body.style.top = "0";
-    const vv = window.visualViewport;
-    if (!vv) return;
-    const syncHeight = () => {
-      setMobileHeight(`${vv.height}px`);
-      window.scrollTo(0, 0);
-      requestAnimationFrame(() => { messagesEndRef.current?.scrollIntoView({ behavior: "auto" }); });
-    };
-    syncHeight();
-    vv.addEventListener("resize", syncHeight);
-    vv.addEventListener("scroll", () => window.scrollTo(0, 0));
+    (document.body.style as any).overscrollBehavior = "none";
     return () => {
-      vv.removeEventListener("resize", syncHeight);
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.width = "";
-      document.body.style.height = "";
-      document.body.style.top = "";
+      document.body.style.overflow = previousOverflow;
+      (document.body.style as any).overscrollBehavior = previousOverscroll;
     };
   }, [isMobile]);
 
@@ -2110,8 +2101,8 @@ function OperacaoInboxInner() {
   return (
     <div
       ref={livechatContainerRef}
-      className={`flex flex-col bg-background overflow-hidden overscroll-none ${isMobile ? "fixed inset-0 z-50 min-h-0 w-full" : "h-full min-h-0"}`}
-      style={isMobile ? { height: mobileHeight } : { height: "100%" }}
+      className={`flex flex-col bg-background overflow-hidden ${isMobile ? "fixed inset-0 z-40 min-h-0 w-full h-app-vh pt-safe overscroll-contain-y" : "h-full min-h-0"}`}
+      style={isMobile ? undefined : { height: "100%" }}
     >
       {/* Content */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -2147,7 +2138,7 @@ function OperacaoInboxInner() {
         ) : (
         <div className="flex h-full w-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+          <div data-conversation-list className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             {/* Sidebar Header */}
             <div className="px-3 pt-3 pb-2 space-y-2.5 shrink-0 border-b border-border/50">
               <div className="flex items-center justify-between gap-2 min-w-0">
@@ -2294,12 +2285,24 @@ function OperacaoInboxInner() {
             {selected ? (
               <>
                 {/* Chat header */}
-                <div className="border-b border-border bg-card/50 shrink-0">
+                <div className="border-b border-border bg-card/85 backdrop-blur-md shrink-0 sticky top-0 z-10">
                   {/* Row 1: Contact info + stage */}
                   <div className="flex items-center justify-between px-3 md:px-4 py-2">
                     <div className="flex items-center gap-2.5 min-w-0 flex-1">
                       {isMobile && (
-                        <Button variant="ghost" size="icon" aria-label="Voltar para conversas" className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform" onClick={() => setSelectedId(null)}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Voltar para conversas"
+                          className="h-10 w-10 -ml-1 shrink-0 active:scale-95 transition-transform"
+                          onClick={() => {
+                            setSelectedId(null);
+                            requestAnimationFrame(() => {
+                              const list = document.querySelector("[data-conversation-list]");
+                              list?.scrollTo({ top: 0, behavior: "auto" });
+                            });
+                          }}
+                        >
                           <ArrowLeft className="h-5 w-5" />
                         </Button>
                       )}
@@ -2604,7 +2607,7 @@ function OperacaoInboxInner() {
                       }}
                     />
                   )}
-                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
+                  <div ref={scrollAreaRef} className={`flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 ${selectionMode ? "pt-12" : ""}`}>
                     {selectedId && currentMessages.length > 0 && (
                       <div className="pt-3">
                         <BuyingMomentAlert
@@ -2936,7 +2939,7 @@ function OperacaoInboxInner() {
 
                 {/* Input area */}
                 <div
-                  className={`border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20 ${isMobile ? "sticky bottom-0 left-0 right-0" : ""}`}
+                  className={`border-t border-border px-2 md:px-4 py-2 md:py-3 bg-card shrink-0 z-20 ${isMobile ? "pb-safe pl-safe pr-safe" : ""}`}
                   style={isMobile ? { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)", paddingLeft: "calc(env(safe-area-inset-left) + 0.5rem)", paddingRight: "calc(env(safe-area-inset-right) + 0.5rem)" } : undefined}
                 >
                   {isRecording ? (
