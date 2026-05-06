@@ -2469,6 +2469,7 @@ function OperacaoInboxInner() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
+                      <ScheduledForConversationButton conversationId={selected?.id || null} />
                       <Select value={selected.stage} onValueChange={s => handleStageChange(selected.id, s as Stage)}>
                         <SelectTrigger
                           className={isMobile
