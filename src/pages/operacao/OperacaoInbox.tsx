@@ -3082,7 +3082,8 @@ function OperacaoInboxInner() {
                     </div>
                   ) : isMobile ? (
                     /* ─── WhatsApp-style mobile composer ─── */
-                    <div className="flex items-end gap-2 w-full flex-nowrap">
+                    <div className="relative flex items-end gap-2 w-full flex-nowrap">
+                      <SlashCommandDropdown open={shortcutOpen} query={shortcutQuery} onSelect={handleSelectShortcut} onClose={() => { setShortcutOpen(false); setShortcutQuery(""); }} />
                       {/* Pill input with embedded actions */}
                       <div className="flex-1 min-w-0 flex items-end gap-1 flex-nowrap bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
                         <Popover open={showMobilePlusMenu} onOpenChange={setShowMobilePlusMenu}>
