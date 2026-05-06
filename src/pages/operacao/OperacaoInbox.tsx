@@ -2138,7 +2138,7 @@ function OperacaoInboxInner() {
         ) : (
         <div className="flex h-full w-full min-h-0">
           {/* ─── Column 1: Conversations List ─── */}
-          <div className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
+          <div data-conversation-list className={`md:w-[360px] w-full border-r border-border flex flex-col h-full overflow-hidden bg-card/20 md:shrink-0 ${isMobile && selectedId ? "hidden" : ""}`}>
             {/* Sidebar Header */}
             <div className="px-3 pt-3 pb-2 space-y-2.5 shrink-0 border-b border-border/50">
               <div className="flex items-center justify-between gap-2 min-w-0">
