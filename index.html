@@ -74,8 +74,44 @@
     <div id="root"></div>
     <script>
       // Safety net: if React fails to mount (e.g. chunk error), hide loader after 12s
-      // so the user isn't stuck on an infinite spinner.
       setTimeout(function(){var el=document.getElementById('boot-loader');if(el){el.classList.add('hide');setTimeout(function(){el.remove()},400)}},12000);
+
+      // Auto-heal: SW velho servindo bundle quebrado (TDZ / ChunkLoadError) ·
+      // limpa SW + caches e recarrega. Rescata usuários presos pós-deploy.
+      (function(){
+        var healed = false;
+        function heal(reason){
+          if (healed) return; healed = true;
+          var lastHeal = 0;
+          try { lastHeal = parseInt(sessionStorage.getItem('__healed_at') || '0', 10); } catch(e){}
+          if (Date.now() - lastHeal < 30000) return; // evita loop
+          try { console.warn('[auto-heal]', reason); } catch(e){}
+          try { sessionStorage.setItem('__healed_at', String(Date.now())); } catch(e){}
+          var done = function(){ location.reload(); };
+          var tasks = [];
+          if ('serviceWorker' in navigator) {
+            tasks.push(navigator.serviceWorker.getRegistrations().then(function(rs){
+              return Promise.all(rs.map(function(r){return r.unregister();}));
+            }).catch(function(){}));
+          }
+          if (typeof caches !== 'undefined' && caches.keys) {
+            tasks.push(caches.keys().then(function(ks){
+              return Promise.all(ks.map(function(k){return caches.delete(k);}));
+            }).catch(function(){}));
+          }
+          Promise.all(tasks).then(done, done);
+          setTimeout(done, 2500);
+        }
+        var BAD = /(Cannot access|before initialization|ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed)/i;
+        window.addEventListener('error', function(e){
+          var msg = (e && (e.message || (e.error && e.error.message))) || '';
+          if (BAD.test(msg)) heal('error: ' + msg);
+        });
+        window.addEventListener('unhandledrejection', function(e){
+          var r = e && e.reason; var msg = (r && (r.message || String(r))) || '';
+          if (BAD.test(msg)) heal('rejection: ' + msg);
+        });
+      })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
