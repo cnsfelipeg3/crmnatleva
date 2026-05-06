@@ -376,6 +376,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
             { to: "/operacao/pipeline", icon: Tag, label: "Tags & Pipeline" },
             { to: "/operacao/simulador", icon: TestTube, label: "Simulador" },
             { to: "/operacao/atalhos", icon: BookOpen, label: "Atalhos" },
+            { to: "/operacao/agendadas", icon: Clock, label: "Agendadas" },
             { to: "/operacao/logs", icon: ScrollText, label: "Logs & Auditoria" },
           ]);
           if (items.length === 0) return null;
