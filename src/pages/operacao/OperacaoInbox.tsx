@@ -3148,7 +3148,8 @@ function OperacaoInboxInner() {
                       )}
                     </div>
                   ) : (
-                    <div className="flex items-end gap-2">
+                    <div className="relative flex items-end gap-2">
+                      <SlashCommandDropdown open={shortcutOpen} query={shortcutQuery} onSelect={handleSelectShortcut} onClose={() => { setShortcutOpen(false); setShortcutQuery(""); }} />
                       <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
                         <PopoverTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Smile className="h-5 w-5 text-muted-foreground" /></Button>
