@@ -55,7 +55,7 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         // Precache só o essencial · evita travar o publish com 13MB+ de assets.
         // Chunks de rota carregam sob demanda via runtimeCaching abaixo.
-        globPatterns: ["index.html", "assets/index-*.{js,css}", "assets/vendor-react-*.js", "favicon.png", "icons/*.png"],
+        globPatterns: ["index.html", "assets/index-*.{js,css}", "favicon.png", "icons/*.png"],
         maximumFileSizeToCacheInBytes: 2 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         clientsClaim: true,
