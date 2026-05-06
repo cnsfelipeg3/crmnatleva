@@ -162,7 +162,8 @@ const OperacaoAgendadas = lazy(() => import("@/pages/operacao/OperacaoAgendadas"
 const OperacaoIntegracoes = lazy(() => import("@/pages/operacao/OperacaoIntegracoes"));
 
 const OperacaoTagsPipeline = lazy(() => import("@/pages/operacao/OperacaoTagsPipeline"));
-const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
+// Tela "Logs & Auditoria" ocultada em 06/05/2026 (sem dados gravados). Para reativar, descomentar abaixo e a rota correspondente.
+// const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
