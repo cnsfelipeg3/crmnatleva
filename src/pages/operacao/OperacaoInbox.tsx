@@ -2802,19 +2802,12 @@ function OperacaoInboxInner() {
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
                         )}
+                        <ContextMenu>
+                          <ContextMenuTrigger asChild disabled={msg.sender_type === "sistema"}>
                         <div
                           data-message-id={msg.id}
-                          className={`flex items-center gap-2 ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
+                          className={`flex items-center gap-2 select-text ${selectionMode ? "cursor-pointer rounded-md px-1 -mx-1 hover:bg-muted/40" : ""} ${selectedMsgIds.has(msg.id) ? "bg-primary/5" : ""} ${msg.sender_type === "atendente" ? "justify-end" : msg.sender_type === "sistema" ? "justify-center" : "justify-start"}`}
                           onClick={() => { if (selectionMode && msg.sender_type !== "sistema") toggleMsgSelected(msg.id); }}
-                          onContextMenu={(e) => { if (msg.sender_type !== "sistema") { e.preventDefault(); enterSelectionWith(msg); } }}
-                          onPointerDown={(e) => {
-                            if (selectionMode || msg.sender_type === "sistema") return;
-                            if ((e.pointerType === "mouse" && e.button !== 0) || (e.target as HTMLElement).closest("a,button,video,audio,input,textarea")) return;
-                            longPressTimer.current && clearTimeout(longPressTimer.current);
-                            longPressTimer.current = setTimeout(() => enterSelectionWith(msg), 500);
-                          }}
-                          onPointerUp={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
-                          onPointerLeave={() => { if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; } }}
                         >
                           {selectionMode && msg.sender_type !== "sistema" && (
                             <Checkbox
