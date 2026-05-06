@@ -2953,7 +2953,7 @@ function OperacaoInboxInner() {
                       <div className="flex-1 min-w-0 flex items-end gap-1 flex-nowrap bg-secondary/60 border border-border/60 rounded-3xl px-1.5 py-1 focus-within:border-primary/60 transition-colors">
                         <Popover open={showMobilePlusMenu} onOpenChange={setShowMobilePlusMenu}>
                           <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5">
+                            <Button variant="ghost" size="icon" aria-label="Anexar arquivo" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5 active:scale-95 transition-transform">
                               <Plus className="h-5 w-5 text-muted-foreground" />
                             </Button>
                           </PopoverTrigger>
