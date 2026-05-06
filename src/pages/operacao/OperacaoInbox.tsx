@@ -3157,15 +3157,19 @@ function OperacaoInboxInner() {
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
                         <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover compact phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
                           <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
                             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                           </Button>
                         </>
                       ) : (
-                        <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
-                          <Mic className="h-5 w-5" />
-                        </Button>
+                        <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
+                          <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
+                            <Mic className="h-5 w-5" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   ) : (
@@ -3229,15 +3233,19 @@ function OperacaoInboxInner() {
 
                       {inputText.trim() ? (
                         <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
                           <Button size="icon" className="h-9 w-9 shrink-0" onClick={handleSend} disabled={isSending}>
                             {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                           </Button>
                         </>
                       ) : (
-                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={startRecording}>
-                          <Mic className="h-5 w-5 text-muted-foreground" />
-                        </Button>
+                        <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={startRecording}>
+                            <Mic className="h-5 w-5 text-muted-foreground" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}
