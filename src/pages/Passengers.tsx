@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
-import { formatDateBR } from "@/lib/dateFormat";
+import { formatDateBR, formatDateTimeBR } from "@/lib/dateFormat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
