@@ -2470,8 +2470,12 @@ function OperacaoInboxInner() {
                         </div>
                         <p
                           className="text-[11px] text-muted-foreground truncate cursor-pointer hover:opacity-80"
-                          onClick={() => { if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev); }}
-                        >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}</p>
+                          onClick={() => {
+                            if (selected.is_group) { setShowGroupInfo(true); return; }
+                            if (!isMobile) setShowClientContext(prev => !prev); else setShowContactProfile(prev => !prev);
+                          }}
+                          title={selected.is_group ? "Ver detalhes do grupo" : undefined}
+                        >{formatPhoneDisplay(selected.phone || "", { groupName: selected.contact_name })}{selected.is_group && <span className="ml-1 opacity-60">· toque para detalhes</span>}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
