@@ -264,6 +264,9 @@ function OperacaoInboxInner() {
     return () => { cancelled = true; };
   }, []);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
   // ─── Extracted hooks: messages + realtime ───
   const {
