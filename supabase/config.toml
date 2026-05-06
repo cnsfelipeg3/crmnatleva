@@ -164,19 +164,22 @@ verify_jwt = false  # Job batch (sem sessão)
 verify_jwt = false  # Proxy Google Places (público para mapas)
 
 [functions.scrape-hotel-photos]
-verify_jwt = false  # Scraper público
+verify_jwt = true  # paid Firecrawl + AI · só admin logado
 
 [functions.classify-hotel-photos]
-verify_jwt = false  # Job batch
+verify_jwt = true  # paid AI vision · só admin logado
 
 [functions.image-proxy]
 verify_jwt = false  # Proxy de imagens públicas
 
 [functions.extract-from-url]
-verify_jwt = false  # Extrator chamado de portal e admin
+verify_jwt = true  # paid Firecrawl + AI · só usuário logado
 
 [functions.execute-flow]
-verify_jwt = false  # Flow runner cron-like
+verify_jwt = true  # envia WhatsApp + muta CRM · só usuário logado
+
+[functions.bootstrap-employee-user]
+verify_jwt = true  # cria contas admin · só admin logado (checagem extra in-code)
 
 # ---- Módulos PROTEGIDOS (HARD STOP — não tocar) ----
 [functions.google-flights-rapidapi]
