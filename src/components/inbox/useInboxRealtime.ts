@@ -143,6 +143,34 @@ export function useInboxRealtime(
           }));
         }
       })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_messages' }, (payload) => {
+        const n = payload.new as any;
+        if (!n?.id || !n?.conversation_id) return;
+        const conv = conversationsRef.current.find(c => c.db_id === n.conversation_id || c.id === n.conversation_id);
+        const waKey = conv?.id || n.conversation_id;
+        const writeKeys = waKey !== n.conversation_id ? [waKey, n.conversation_id] : [waKey];
+        setMessages(prev => {
+          let touched = false;
+          const next = { ...prev };
+          for (const k of writeKeys) {
+            const list = next[k];
+            if (!list) continue;
+            const idx = list.findIndex(m => m.id === n.id);
+            if (idx < 0) continue;
+            const updated = [...list];
+            updated[idx] = {
+              ...updated[idx],
+              is_pinned: !!n.is_pinned,
+              pinned_at: n.pinned_at || null,
+              status: (n.status || updated[idx].status) as MsgStatus,
+              text: n.content != null ? stripQuotes(n.content) : updated[idx].text,
+            };
+            next[k] = updated;
+            touched = true;
+          }
+          return touched ? next : prev;
+        });
+      })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
         if (payload.eventType === 'DELETE') {
           const old = payload.old as any;
