@@ -83,6 +83,8 @@ export function GroupInfoDialog({
             group_metadata: m,
             group_description: m.description || null,
             group_subject: m.subject || null,
+            group_photo_url: m.pictureUrl || null,
+            group_participants: Array.isArray(m.participants) ? m.participants : null,
             group_metadata_fetched_at: new Date().toISOString(),
             is_group: true,
           })
