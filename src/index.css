@@ -706,6 +706,20 @@ img:not([loading]) {
   .pb-safe { padding-bottom: max(env(safe-area-inset-bottom), 0px); }
   .pl-safe { padding-left: max(env(safe-area-inset-left), 0px); }
   .pr-safe { padding-right: max(env(safe-area-inset-right), 0px); }
+
+  /* Altura responsiva ao teclado virtual mobile (set por useMobileViewportHeight) */
+  .h-app-vh { height: var(--app-vh, 100dvh); }
+  .min-h-app-vh { min-height: var(--app-vh, 100dvh); }
+  .max-h-app-vh { max-height: var(--app-vh, 100dvh); }
+
+  /* Bounce/overscroll contido (não arrasta página inteira) */
+  .overscroll-contain-y { overscroll-behavior-y: contain; }
+
+  /* Scroll momentum iOS */
+  .scroll-momentum {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
   .px-safe { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
   .mt-safe { margin-top: env(safe-area-inset-top); }
   .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
