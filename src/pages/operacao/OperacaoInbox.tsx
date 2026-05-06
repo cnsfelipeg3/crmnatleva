@@ -1413,7 +1413,9 @@ function OperacaoInboxInner() {
           async (queuedMsg: QueuedMessage) => {
             try {
               const sendPayload: any = { phone: queuedMsg.phone, message: queuedMsg.text };
-              if (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_")) sendPayload.messageId = queuedMsg.replyTo.id;
+              const qExt = queuedMsg.replyTo?.external_message_id
+                || (queuedMsg.replyTo?.id && !queuedMsg.replyTo.id.startsWith("temp_") && !queuedMsg.replyTo.id.startsWith("local_") && !/^[0-9a-f]{8}-[0-9a-f]{4}/i.test(queuedMsg.replyTo.id) ? queuedMsg.replyTo.id : null);
+              if (qExt) sendPayload.messageId = qExt;
               const sendResult = await callZapiProxy("send-text", sendPayload);
               const realId = sendResult?.messageId || sendResult?.id;
               return { success: true, realId };
