@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAll";
-import { formatDateBR } from "@/lib/dateFormat";
+import { formatDateBR, formatDateTimeBR } from "@/lib/dateFormat";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +40,7 @@ interface Passenger {
   address_city: string | null;
   address_state: string | null;
   address_notes: string | null;
+  created_at: string | null;
 }
 
 interface SaleLink {
@@ -305,10 +306,10 @@ export default function Passengers() {
       (docFilter === "passaporte-vencendo" && isPassportExpiringSoon(p.passport_expiry));
     return matchSearch && matchState && matchDoc;
   }).sort((a, b) => {
-    if (!sortBy) return 0;
-    const da = getPassengerSince(a.id) ? new Date(getPassengerSince(a.id)!).getTime() : 0;
-    const db = getPassengerSince(b.id) ? new Date(getPassengerSince(b.id)!).getTime() : 0;
-    return sortBy === "created_desc" ? db - da : da - db;
+    // Sempre ordena pela data real de cadastro (created_at). Default desc (mais recente primeiro).
+    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+    return sortBy === "created_asc" ? da - db : db - da;
   });
 
   const navigateToNewSaleWithPassengers = (paxIds: string[]) => {
@@ -508,9 +509,9 @@ export default function Passengers() {
                     <TableHead
                       className="cursor-pointer select-none hover:text-foreground transition-colors"
                       onClick={() => setSortBy(sortBy === "created_desc" ? "created_asc" : "created_desc")}
-                      title="Ordenar pela primeira venda vinculada"
+                      title="Ordenar pela data de cadastro"
                     >
-                      Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : ""}
+                      Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : "↓"}
                     </TableHead>
                     <TableHead className="text-center">Viagens</TableHead>
                   </TableRow>
@@ -519,7 +520,6 @@ export default function Passengers() {
                   {filtered.slice(0, visibleCount).map((p) => {
                     const expiring = isPassportExpiringSoon(p.passport_expiry);
                     const tripCount = saleLinks[p.id]?.length || 0;
-                    const passengerSince = getPassengerSince(p.id);
                     return (
                       <TableRow
                         key={p.id}
@@ -562,8 +562,8 @@ export default function Passengers() {
                         <TableCell className="text-sm text-muted-foreground">
                           {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {passengerSince ? formatDateBR(passengerSince) : "—"}
+                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                          {p.created_at ? formatDateTimeBR(p.created_at) : "—"}
                         </TableCell>
                         <TableCell className="text-center">
                           {tripCount > 0 ? (
