@@ -8799,6 +8799,127 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_status_seen_by_me: {
+        Row: {
+          seen_at: string
+          status_id: string
+        }
+        Insert: {
+          seen_at?: string
+          status_id: string
+        }
+        Update: {
+          seen_at?: string
+          status_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_status_seen_by_me_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: true
+            referencedRelation: "whatsapp_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_status_views: {
+        Row: {
+          id: string
+          status_id: string
+          viewed_at: string
+          viewer_name: string | null
+          viewer_phone: string
+        }
+        Insert: {
+          id?: string
+          status_id: string
+          viewed_at?: string
+          viewer_name?: string | null
+          viewer_phone: string
+        }
+        Update: {
+          id?: string
+          status_id?: string
+          viewed_at?: string
+          viewer_name?: string | null
+          viewer_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_status_views_status_id_fkey"
+            columns: ["status_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_statuses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_statuses: {
+        Row: {
+          background_color: string | null
+          caption: string | null
+          contact_name: string | null
+          created_at: string
+          expires_at: string
+          external_status_id: string | null
+          external_zaap_id: string | null
+          font: string | null
+          id: string
+          is_mine: boolean
+          media_mimetype: string | null
+          media_thumbnail_url: string | null
+          media_url: string | null
+          phone: string
+          posted_at: string
+          raw_payload: Json | null
+          status_type: string
+          text_content: string | null
+          view_count: number
+        }
+        Insert: {
+          background_color?: string | null
+          caption?: string | null
+          contact_name?: string | null
+          created_at?: string
+          expires_at?: string
+          external_status_id?: string | null
+          external_zaap_id?: string | null
+          font?: string | null
+          id?: string
+          is_mine?: boolean
+          media_mimetype?: string | null
+          media_thumbnail_url?: string | null
+          media_url?: string | null
+          phone: string
+          posted_at?: string
+          raw_payload?: Json | null
+          status_type: string
+          text_content?: string | null
+          view_count?: number
+        }
+        Update: {
+          background_color?: string | null
+          caption?: string | null
+          contact_name?: string | null
+          created_at?: string
+          expires_at?: string
+          external_status_id?: string | null
+          external_zaap_id?: string | null
+          font?: string | null
+          id?: string
+          is_mine?: boolean
+          media_mimetype?: string | null
+          media_thumbnail_url?: string | null
+          media_url?: string | null
+          phone?: string
+          posted_at?: string
+          raw_payload?: Json | null
+          status_type?: string
+          text_content?: string | null
+          view_count?: number
+        }
+        Relationships: []
+      }
       whatsapp_templates: {
         Row: {
           created_at: string
