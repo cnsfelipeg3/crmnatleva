@@ -509,9 +509,9 @@ export default function Passengers() {
                     <TableHead
                       className="cursor-pointer select-none hover:text-foreground transition-colors"
                       onClick={() => setSortBy(sortBy === "created_desc" ? "created_asc" : "created_desc")}
-                      title="Ordenar pela primeira venda vinculada"
+                      title="Ordenar pela data de cadastro"
                     >
-                      Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : ""}
+                      Cliente desde {sortBy === "created_desc" ? "↓" : sortBy === "created_asc" ? "↑" : "↓"}
                     </TableHead>
                     <TableHead className="text-center">Viagens</TableHead>
                   </TableRow>
