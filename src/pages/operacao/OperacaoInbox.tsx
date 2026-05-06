@@ -1106,14 +1106,21 @@ function OperacaoInboxInner() {
   }, []);
 
   const [isCorrecting, setIsCorrecting] = useState(false);
+  const [aiCorrectionEnabled, setAiCorrectionEnabled] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("inbox.aiCorrectionEnabled") === "true";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("inbox.aiCorrectionEnabled", aiCorrectionEnabled ? "true" : "false"); } catch {}
+  }, [aiCorrectionEnabled]);
   const handleCorrectText = useCallback(async () => {
-    if (!inputText.trim() || isCorrecting) return;
+    if (!inputText.trim() || isCorrecting || !aiCorrectionEnabled) return;
     setIsCorrecting(true);
     const corrected = await correctMessage(inputText.trim());
     setInputText(corrected);
     setIsCorrecting(false);
     textareaRef.current?.focus();
-  }, [inputText, isCorrecting, correctMessage]);
+  }, [inputText, isCorrecting, correctMessage, aiCorrectionEnabled]);
 
   const ensureWhatsAppWebhookSync = useCallback(async () => {
     const status = await callZapiProxy("check-status");
@@ -3187,6 +3194,13 @@ function OperacaoInboxInner() {
                               <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Sparkles className="h-4 w-4 text-primary" /></span>
                               <span className="font-medium">Sugestão IA</span>
                             </button>
+                            <button className="w-full flex items-center justify-between gap-3 px-3 py-3 text-sm rounded-lg hover:bg-secondary active:scale-[0.98] transition-all" onClick={() => { setAiCorrectionEnabled(v => !v); setShowMobilePlusMenu(false); }}>
+                              <span className="flex items-center gap-3">
+                                <span className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0"><Wand2 className={`h-4 w-4 ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground/50"}`} /></span>
+                                <span className="font-medium">Correção IA</span>
+                              </span>
+                              <span className={`text-[10px] font-bold uppercase tracking-wider ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground"}`}>{aiCorrectionEnabled ? "Ativa" : "Desativada"}</span>
+                            </button>
                           </PopoverContent>
                         </Popover>
 
@@ -3204,7 +3218,7 @@ function OperacaoInboxInner() {
                           style={{ height: "36px", wordBreak: "break-word", overflowWrap: "anywhere" }} rows={1}
                         />
 
-                        {inputText.trim() && (
+                        {inputText.trim() && aiCorrectionEnabled && (
                           <Button variant="ghost" size="icon" aria-label="Corrigir texto com IA" className="h-9 w-9 shrink-0 rounded-full hover:bg-foreground/5 active:scale-95 transition-transform" onClick={handleCorrectText} disabled={isCorrecting}>
                             {isCorrecting ? <Loader2 className="h-4 w-4 animate-spin text-primary" /> : <Wand2 className="h-4 w-4 text-primary" />}
                           </Button>
@@ -3282,7 +3296,7 @@ function OperacaoInboxInner() {
                         <TooltipContent><p className="text-xs">Sugestão IA</p></TooltipContent>
                       </Tooltip>
 
-                      {inputText.trim() && (
+                      {inputText.trim() && aiCorrectionEnabled && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={handleCorrectText} disabled={isCorrecting}>
@@ -3292,6 +3306,14 @@ function OperacaoInboxInner() {
                           <TooltipContent><p className="text-xs">Corretor automático</p></TooltipContent>
                         </Tooltip>
                       )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label={aiCorrectionEnabled ? "Desativar correção IA" : "Ativar correção IA"} className="h-9 w-9 shrink-0" onClick={() => setAiCorrectionEnabled(v => !v)}>
+                            <Wand2 className={`h-5 w-5 ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground/40"}`} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{aiCorrectionEnabled ? "Correção IA ativa · clique para desativar" : "Correção IA desativada · clique para ativar"}</p></TooltipContent>
+                      </Tooltip>
 
                       {inputText.trim() ? (
                         <>
