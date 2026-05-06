@@ -21,6 +21,8 @@ import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
 import type { SmartFilterConfig } from "@/components/smart-filters";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { PullToRefreshIndicator } from "@/components/ui/pull-to-refresh-indicator";
 import { useProductTypes, getProductMeta, normalizeProductsToSlugs } from "@/lib/productTypes";
 import DeleteSaleButton from "@/components/DeleteSaleButton";
 import { ListPageSkeleton, ProgressOverlay } from "@/components/skeletons/PageSkeletons";
