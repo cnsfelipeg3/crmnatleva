@@ -348,6 +348,7 @@ function AppRoutes() {
           {/* Operação Diária */}
           <Route path="/operacao/inbox" element={<OperacaoInbox />} />
           <Route path="/operacao/atalhos" element={<OperacaoAtalhos />} />
+          <Route path="/operacao/agendadas" element={<OperacaoAgendadas />} />
           <Route path="/operacao/flows" element={<Navigate to="/ai-team/workflow" replace />} />
           <Route path="/operacao/integracoes" element={<OperacaoIntegracoes />} />
           
