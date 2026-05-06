@@ -264,6 +264,9 @@ function OperacaoInboxInner() {
     return () => { cancelled = true; };
   }, []);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
+  const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [assigneeSearch, setAssigneeSearch] = useState("");
+  const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
   // ─── Extracted hooks: messages + realtime ───
   const {
@@ -1015,6 +1018,8 @@ function OperacaoInboxInner() {
       } else if (ownerFilter === "unassigned") {
         if (c.assigned_to) return false;
       }
+      // Filtro por responsável específico (vendedor)
+      if (assigneeFilter && c.assigned_to !== assigneeFilter) return false;
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
@@ -1077,7 +1082,7 @@ function OperacaoInboxInner() {
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return merged;
-  }, [conversations, searchQuery, activeFilter, ownerFilter, user, contentMatchIds]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, assigneeFilter, user, contentMatchIds]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
@@ -2385,6 +2390,85 @@ function OperacaoInboxInner() {
                     })()}
                   </button>
                 ))}
+              </div>
+              {/* Filtro inteligente por responsável (vendedor) */}
+              <div className="flex items-center gap-1 mb-1.5">
+                <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 md:px-2 md:py-1 rounded-md text-xs md:text-[10px] font-medium transition active:scale-95 border ${
+                        assigneeFilter
+                          ? "bg-primary/10 text-primary border-primary/30"
+                          : "bg-background text-muted-foreground border-border/60 hover:bg-muted"
+                      }`}
+                    >
+                      <User className="h-3 w-3" />
+                      {assigneeFilter
+                        ? (profileMap.get(assigneeFilter)?.full_name || profileMap.get(assigneeFilter)?.email || "Responsável")
+                        : "Filtrar por responsável"}
+                      {assigneeFilter && (
+                        <X
+                          className="h-3 w-3 ml-1 hover:text-foreground"
+                          onClick={(e) => { e.stopPropagation(); setAssigneeFilter(null); }}
+                        />
+                      )}
+                      <ChevronDown className="h-3 w-3 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-72 p-0">
+                    <div className="p-2 border-b">
+                      <Input
+                        placeholder="Buscar vendedor..."
+                        value={assigneeSearch}
+                        onChange={(e) => setAssigneeSearch(e.target.value)}
+                        className="h-8 text-xs"
+                        autoFocus
+                      />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto py-1">
+                      {(() => {
+                        // Coleta IDs de assigned_to únicos das conversas
+                        const counts = new Map<string, number>();
+                        for (const c of conversations) {
+                          if (c.is_archived) continue;
+                          if (!c.assigned_to) continue;
+                          counts.set(c.assigned_to, (counts.get(c.assigned_to) || 0) + 1);
+                        }
+                        const items = Array.from(counts.entries())
+                          .map(([id, count]) => ({ id, count, profile: profileMap.get(id) }))
+                          .filter(({ profile }) => {
+                            if (!assigneeSearch) return true;
+                            const q = assigneeSearch.toLowerCase();
+                            return (profile?.full_name || "").toLowerCase().includes(q)
+                              || (profile?.email || "").toLowerCase().includes(q);
+                          })
+                          .sort((a, b) => (a.profile?.full_name || a.profile?.email || "").localeCompare(b.profile?.full_name || b.profile?.email || ""));
+                        if (items.length === 0) {
+                          return <div className="px-3 py-4 text-xs text-muted-foreground text-center">Nenhum responsável encontrado</div>;
+                        }
+                        return items.map(({ id, count, profile }) => (
+                          <button
+                            key={id}
+                            onClick={() => { setAssigneeFilter(id); setAssigneePopoverOpen(false); setAssigneeSearch(""); }}
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-2 text-xs hover:bg-muted text-left ${assigneeFilter === id ? "bg-primary/10 text-primary" : ""}`}
+                          >
+                            <span className="flex items-center gap-2 min-w-0">
+                              {profile?.avatar_url ? (
+                                <img src={profile.avatar_url} alt="" className="h-5 w-5 rounded-full object-cover" />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center">
+                                  <User className="h-3 w-3 text-muted-foreground" />
+                                </div>
+                              )}
+                              <span className="truncate">{profile?.full_name || profile?.email || "Sem nome"}</span>
+                            </span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{count}</span>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </PopoverContent>
+                </Popover>
               </div>
               <ScrollArea className="w-full whitespace-nowrap">
                 <div className="flex gap-1 pb-1.5 w-max">
