@@ -43,6 +43,9 @@ export function useInboxMessages(
       status: normalizeDbStatus(m.status),
       created_at: toIsoTimestamp(m.timestamp || m.created_at),
       external_message_id: m.external_message_id || undefined,
+      sender_name: m.sender_name || null,
+      sender_phone: m.sender_phone || null,
+      sender_photo: m.sender_photo || null,
     }))
   ), []);
 
