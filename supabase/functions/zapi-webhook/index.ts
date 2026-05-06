@@ -57,7 +57,8 @@ function normalizePhone(raw: string): string {
 // ─── Helper: classify event type ───
 function classifyEvent(body: any): string {
   if (body.type === "MessageStatusCallback") return "status";
-  if (body.isStatusReply === true) return "status_story";
+  // CORREÇÃO: isStatusReply é uma RESPOSTA a um status (mensagem normal),
+  // NÃO é um status postado pelo contato. Cai no fluxo normal de mensagens.
   if ((body.phone || "").includes("status@broadcast")) return "status_broadcast";
   if (body.status && body.ids?.length > 0 && !body.text && !body.image && !body.audio && !body.video && !body.document) return "status";
   if (body.fromMe) return "sent";
