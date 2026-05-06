@@ -1,3 +1,11 @@
+/**
+ * @deprecated 06/05/2026 — tela ocultada do menu por estar vazia (nenhuma automação grava em ai_execution_logs).
+ * Para reativar:
+ *   1. Descomentar a entrada de menu em src/components/AppSidebar.tsx
+ *   2. Descomentar o lazy import e a <Route> em src/App.tsx
+ *   3. Garantir que automações/IA estão gravando em `ai_execution_logs`
+ * Arquivo, componentes e tabela preservados intencionalmente.
+ */
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";

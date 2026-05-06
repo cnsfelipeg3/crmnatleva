@@ -162,7 +162,8 @@ const OperacaoAgendadas = lazy(() => import("@/pages/operacao/OperacaoAgendadas"
 const OperacaoIntegracoes = lazy(() => import("@/pages/operacao/OperacaoIntegracoes"));
 
 const OperacaoTagsPipeline = lazy(() => import("@/pages/operacao/OperacaoTagsPipeline"));
-const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
+// Tela "Logs & Auditoria" ocultada em 06/05/2026 (sem dados gravados). Para reativar, descomentar abaixo e a rota correspondente.
+// const OperacaoLogs = lazy(() => import("@/pages/operacao/OperacaoLogs"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -356,7 +357,8 @@ function AppRoutes() {
           
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
           <Route path="/operacao/simulador" element={<Navigate to="/ai-team/simulador" replace />} />
-          <Route path="/operacao/logs" element={<OperacaoLogs />} />
+          {/* Rota /operacao/logs ocultada em 06/05/2026 (tela sem dados). Para reativar, descomentar import em src/App.tsx e item de menu em AppSidebar.tsx. */}
+          {/* <Route path="/operacao/logs" element={<OperacaoLogs />} /> */}
 
           {/* Mídias */}
           <Route path="/midias" element={<MediaLibrary />} />
