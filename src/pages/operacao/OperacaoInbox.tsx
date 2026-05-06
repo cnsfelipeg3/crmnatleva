@@ -2767,6 +2767,33 @@ function OperacaoInboxInner() {
                     }}
                     className={`chat-thread flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 transition-opacity duration-150 ${selectionMode ? "pt-12" : ""} ${chatScroll.ready || !selectedId || currentMessages.length === 0 ? "opacity-100" : "opacity-0"}`}
                   >
+                    {/* Banner de mensagens fixadas */}
+                    {selectedId && (() => {
+                      const pinned = currentMessages.filter(m => m.is_pinned);
+                      if (pinned.length === 0) return null;
+                      const latest = pinned[pinned.length - 1];
+                      return (
+                        <div className="sticky top-0 z-20 -mx-2 md:-mx-4 px-3 md:px-4 py-2 bg-amber-500/10 backdrop-blur-md border-b border-amber-400/30 flex items-center gap-2.5">
+                          <Pin className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                          <div className="min-w-0 flex-1 cursor-pointer" onClick={() => {
+                            const el = document.querySelector(`[data-message-id="${latest.id}"]`);
+                            if (el) {
+                              el.scrollIntoView({ behavior: "smooth", block: "center" });
+                              setHighlightMsgId(latest.id);
+                              setTimeout(() => setHighlightMsgId(null), 1800);
+                            }
+                          }}>
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 leading-tight">
+                              {pinned.length === 1 ? "Mensagem fixada" : `${pinned.length} mensagens fixadas`}
+                            </p>
+                            <p className="text-xs text-foreground/80 truncate">{stripQuotes(latest.text || "") || `📎 ${latest.message_type}`}</p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 hover:bg-amber-500/20" onClick={() => handleTogglePinMessage(latest)} title="Desafixar última">
+                            <PinOff className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                          </Button>
+                        </div>
+                      );
+                    })()}
                     {selectedId && currentMessages.length > 0 && (
                       <div className="pt-3">
                         <BuyingMomentAlert
