@@ -3289,7 +3289,7 @@ function OperacaoInboxInner() {
                         <TooltipContent><p className="text-xs">Sugestão IA</p></TooltipContent>
                       </Tooltip>
 
-                      {inputText.trim() && (
+                      {inputText.trim() && aiCorrectionEnabled && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={handleCorrectText} disabled={isCorrecting}>
@@ -3299,6 +3299,14 @@ function OperacaoInboxInner() {
                           <TooltipContent><p className="text-xs">Corretor automático</p></TooltipContent>
                         </Tooltip>
                       )}
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" aria-label={aiCorrectionEnabled ? "Desativar correção IA" : "Ativar correção IA"} className="h-9 w-9 shrink-0" onClick={() => setAiCorrectionEnabled(v => !v)}>
+                            <Wand2 className={`h-5 w-5 ${aiCorrectionEnabled ? "text-primary" : "text-muted-foreground/40"}`} />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent><p className="text-xs">{aiCorrectionEnabled ? "Correção IA ativa · clique para desativar" : "Correção IA desativada · clique para ativar"}</p></TooltipContent>
+                      </Tooltip>
 
                       {inputText.trim() ? (
                         <>
