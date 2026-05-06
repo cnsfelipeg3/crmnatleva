@@ -855,18 +855,27 @@ function OperacaoInboxInner() {
           const cleanPhone = String(c.phone || "").replace(/\D/g, "");
           const convId = cleanPhone ? `wa_${cleanPhone}` : c.id;
           const z = zapiByPhone.get(cleanPhone);
-          const chatPhoto = z?.imgUrl || z?.image || z?.photo || "";
+          const isGroup = !!c.is_group || (cleanPhone.length >= 15);
+          // Para grupos: prioriza group_photo_url. Para individuais: foto do contato.
+          const chatPhoto = isGroup
+            ? (c.group_photo_url || "")
+            : (z?.imgUrl || z?.image || z?.photo || "");
           if (chatPhoto && typeof chatPhoto === "string" && chatPhoto.startsWith("http")) {
             profilePicsRef.current.set(convId, chatPhoto);
-          } else if (c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
+          } else if (!isGroup && c.profile_picture_url && typeof c.profile_picture_url === "string" && c.profile_picture_url.startsWith("http")) {
             if (!profilePicsRef.current.has(convId)) profilePicsRef.current.set(convId, c.profile_picture_url);
+          } else if (isGroup) {
+            // Grupo sem foto: garantir que não há foto residual de membro no cache
+            if (!c.group_photo_url) profilePicsRef.current.delete(convId);
           }
           return {
             id: convId,
             db_id: c.id,
             phone: cleanPhone || c.phone || "",
             zapi_phone: cleanPhone,
-            contact_name: c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone),
+            contact_name: isGroup
+              ? (c.group_subject || c.contact_name || c.display_name || "Grupo")
+              : (c.contact_name || c.display_name || z?.name || z?.chatName || formatPhoneDisplay(cleanPhone)),
             stage: ((c.stage || c.funnel_stage) || "novo_lead") as Stage,
             tags: c.tags || [],
             source: c.source || "whatsapp",
@@ -881,8 +890,11 @@ function OperacaoInboxInner() {
             manually_marked_unread: !!c.manually_marked_unread,
             is_archived: !!c.is_archived,
             archived_at: c.archived_at || null,
-            is_group: !!c.is_group || (cleanPhone.length >= 15),
+            is_group: isGroup,
             group_subject: c.group_subject || null,
+            group_photo_url: c.group_photo_url || null,
+            group_description: c.group_description || null,
+            group_participants: c.group_participants || null,
             _hasReliableActivity: true,
           };
         });
