@@ -872,7 +872,9 @@ Deno.serve(async (req) => {
       status: msgStatusFinal,
       timestamp: timestampIso,
       created_at: timestampIso,
-      sender_name: !fromMe && isGroupMsg ? (body.senderName || null) : (fromMe ? (body.senderName || "Atendente") : null),
+      sender_name: !fromMe && isGroupMsg
+        ? (body.senderName || (body.participantPhone ? formatPhoneDisplay(String(body.participantPhone)) : "Membro do Grupo"))
+        : (fromMe ? (body.senderName || "Atendente") : null),
       sender_phone: !fromMe && isGroupMsg ? (body.participantPhone ? String(body.participantPhone).replace(/\D/g, "") : null) : null,
       sender_photo: !fromMe ? (body.senderPhoto || body.photo || null) : null,
       ...audioMeta,
