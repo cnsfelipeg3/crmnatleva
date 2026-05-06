@@ -3164,11 +3164,12 @@ function OperacaoInboxInner() {
                           </Button>
                         </>
                       ) : (
-                        <ScheduledForConversationButton inline conversationId={selected?.id || null} />
-                      ) && (
-                        <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
-                          <Mic className="h-5 w-5" />
-                        </Button>
+                        <>
+                          <ScheduledForConversationButton inline conversationId={selected?.id || null} />
+                          <Button size="icon" aria-label="Gravar áudio" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={startRecording}>
+                            <Mic className="h-5 w-5" />
+                          </Button>
+                        </>
                       )}
                     </div>
                   ) : (
