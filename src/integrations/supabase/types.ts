@@ -2813,6 +2813,8 @@ export type Database = {
           group_description: string | null
           group_metadata: Json | null
           group_metadata_fetched_at: string | null
+          group_participants: Json | null
+          group_photo_url: string | null
           group_subject: string | null
           id: string
           interaction_count: number | null
@@ -2864,6 +2866,8 @@ export type Database = {
           group_description?: string | null
           group_metadata?: Json | null
           group_metadata_fetched_at?: string | null
+          group_participants?: Json | null
+          group_photo_url?: string | null
           group_subject?: string | null
           id?: string
           interaction_count?: number | null
@@ -2915,6 +2919,8 @@ export type Database = {
           group_description?: string | null
           group_metadata?: Json | null
           group_metadata_fetched_at?: string | null
+          group_participants?: Json | null
+          group_photo_url?: string | null
           group_subject?: string | null
           id?: string
           interaction_count?: number | null
