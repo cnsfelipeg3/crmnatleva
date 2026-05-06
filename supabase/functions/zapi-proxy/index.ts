@@ -861,7 +861,11 @@ serve(async (req) => {
     console.log(`[Z-API] ${action} → ${method} ${url}`);
 
     const response = await fetch(url, fetchOpts);
-    let data = parseJsonSafely(await response.text());
+    const rawText = await response.text();
+    let data = parseJsonSafely(rawText);
+    if (!response.ok) {
+      console.error(`[Z-API] ${action} upstream ${response.status}: ${rawText.slice(0, 500)}`);
+    }
 
     if (action === "disconnect") {
       const statusResponse = await fetch(`${BASE_URL}/status`, {
