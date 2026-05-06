@@ -357,7 +357,8 @@ function AppRoutes() {
           
           <Route path="/operacao/pipeline" element={<OperacaoTagsPipeline />} />
           <Route path="/operacao/simulador" element={<Navigate to="/ai-team/simulador" replace />} />
-          <Route path="/operacao/logs" element={<OperacaoLogs />} />
+          {/* Rota /operacao/logs ocultada em 06/05/2026 (tela sem dados). Para reativar, descomentar import em src/App.tsx e item de menu em AppSidebar.tsx. */}
+          {/* <Route path="/operacao/logs" element={<OperacaoLogs />} /> */}
 
           {/* Mídias */}
           <Route path="/midias" element={<MediaLibrary />} />
