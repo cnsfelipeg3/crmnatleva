@@ -830,6 +830,14 @@ serve(async (req) => {
         });
         break;
 
+      // Metadados do grupo (descrição, assunto, participantes, foto)
+      case "group-metadata": {
+        const gid = formatPhoneForSending(payload.phone);
+        url = `${BASE_URL}/group-metadata/${encodeURIComponent(gid)}`;
+        method = "GET";
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: `Unknown action: ${action}` }),
