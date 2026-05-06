@@ -1233,7 +1233,7 @@ function OperacaoInboxInner() {
           text,
           messageType: "text",
           createdAt: msgCreatedAt,
-          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type } : undefined,
+          replyTo: replyRef ? { id: replyRef.id, text: replyRef.text || "", sender_type: replyRef.sender_type, message_type: replyRef.message_type, external_message_id: replyRef.external_message_id || null } : undefined,
         });
 
         toast({
