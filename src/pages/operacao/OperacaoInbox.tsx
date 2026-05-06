@@ -1082,7 +1082,7 @@ function OperacaoInboxInner() {
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return merged;
-  }, [conversations, searchQuery, activeFilter, ownerFilter, user, contentMatchIds]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, assigneeFilter, user, contentMatchIds]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
