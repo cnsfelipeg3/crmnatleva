@@ -161,9 +161,7 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
           <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
             <Section title="Lida por" icon={<CheckCheck className="h-4 w-4 text-primary" />} items={read} dateKey="read_at" />
             <Section title="Entregue para" icon={<CheckCheck className="h-4 w-4 text-muted-foreground" />} items={delivered} dateKey="delivered_at" />
-            {isGroup && (
-              <Section title="Pendente" icon={<Check className="h-4 w-4 text-muted-foreground" />} items={pending} dateKey={null} />
-            )}
+            <Section title="Pendente" icon={<Check className="h-4 w-4 text-muted-foreground" />} items={pending} dateKey={null} />
             {merged.length === 0 && (
               <p className="text-sm text-muted-foreground text-center py-4">
                 Sem informações de entrega ainda. Os dados aparecem conforme cada destinatário recebe e lê a mensagem.
