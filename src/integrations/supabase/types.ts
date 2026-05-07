@@ -14,6 +14,291 @@ export type Database = {
   }
   public: {
     Tables: {
+      _backup_proposals_pre_migration_2026_05: {
+        Row: {
+          children_ages: number[] | null
+          client_id: string | null
+          client_name: string | null
+          consultant_name: string | null
+          cover_image_url: string | null
+          created_at: string | null
+          created_by: string | null
+          destinations: string[] | null
+          id: string | null
+          intro_text: string | null
+          last_viewed_at: string | null
+          origin: string | null
+          passenger_count: number | null
+          passengers_adults: number | null
+          passengers_children: number | null
+          payment_conditions: Json | null
+          proposal_outcome: string | null
+          proposal_strategy: string | null
+          quote_request_id: string | null
+          sale_id: string | null
+          simulator_mode: string | null
+          simulator_session_id: string | null
+          slug: string | null
+          source: string | null
+          source_briefing_id: string | null
+          status: string | null
+          template_id: string | null
+          title: string | null
+          total_value: number | null
+          travel_end_date: string | null
+          travel_start_date: string | null
+          updated_at: string | null
+          value_per_person: number | null
+          views_count: number | null
+          visual_overrides: Json | null
+        }
+        Insert: {
+          children_ages?: number[] | null
+          client_id?: string | null
+          client_name?: string | null
+          consultant_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          destinations?: string[] | null
+          id?: string | null
+          intro_text?: string | null
+          last_viewed_at?: string | null
+          origin?: string | null
+          passenger_count?: number | null
+          passengers_adults?: number | null
+          passengers_children?: number | null
+          payment_conditions?: Json | null
+          proposal_outcome?: string | null
+          proposal_strategy?: string | null
+          quote_request_id?: string | null
+          sale_id?: string | null
+          simulator_mode?: string | null
+          simulator_session_id?: string | null
+          slug?: string | null
+          source?: string | null
+          source_briefing_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string | null
+          total_value?: number | null
+          travel_end_date?: string | null
+          travel_start_date?: string | null
+          updated_at?: string | null
+          value_per_person?: number | null
+          views_count?: number | null
+          visual_overrides?: Json | null
+        }
+        Update: {
+          children_ages?: number[] | null
+          client_id?: string | null
+          client_name?: string | null
+          consultant_name?: string | null
+          cover_image_url?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          destinations?: string[] | null
+          id?: string | null
+          intro_text?: string | null
+          last_viewed_at?: string | null
+          origin?: string | null
+          passenger_count?: number | null
+          passengers_adults?: number | null
+          passengers_children?: number | null
+          payment_conditions?: Json | null
+          proposal_outcome?: string | null
+          proposal_strategy?: string | null
+          quote_request_id?: string | null
+          sale_id?: string | null
+          simulator_mode?: string | null
+          simulator_session_id?: string | null
+          slug?: string | null
+          source?: string | null
+          source_briefing_id?: string | null
+          status?: string | null
+          template_id?: string | null
+          title?: string | null
+          total_value?: number | null
+          travel_end_date?: string | null
+          travel_start_date?: string | null
+          updated_at?: string | null
+          value_per_person?: number | null
+          views_count?: number | null
+          visual_overrides?: Json | null
+        }
+        Relationships: []
+      }
+      _backup_quotation_briefings_pre_migration_2026_05: {
+        Row: {
+          adults: number | null
+          ai_recommendation: string | null
+          assigned_to: string | null
+          behavioral_notes: string | null
+          budget_behavioral_reading: string | null
+          budget_range: string | null
+          cabin_class: string | null
+          children: number | null
+          children_ages: string[] | null
+          client_id: string | null
+          conversation_id: string | null
+          conversation_summary: string | null
+          created_at: string | null
+          created_by: string | null
+          departure_airport: string | null
+          departure_date: string | null
+          desired_experiences: string[] | null
+          destination: string | null
+          duration_days: number | null
+          experience_notes: string | null
+          flexible_dates: boolean | null
+          flight_preference: string | null
+          group_details: string | null
+          hotel_location: string | null
+          hotel_needs: string[] | null
+          hotel_notes: string | null
+          hotel_preference: string | null
+          hotel_stars: string | null
+          id: string | null
+          lead_name: string | null
+          lead_origin: string | null
+          lead_phone: string | null
+          lead_score: number | null
+          lead_sentiment: string | null
+          lead_type: string | null
+          lead_urgency: string | null
+          must_have_experiences: string[] | null
+          next_steps: string | null
+          preferred_airline: string | null
+          price_sensitivity: string | null
+          rental_car: boolean | null
+          return_date: string | null
+          return_to_ai_reason: string | null
+          returned_at: string | null
+          status: string | null
+          total_people: number | null
+          transfer_needed: boolean | null
+          transport_notes: string | null
+          travel_experience: string | null
+          travel_pace: string | null
+          trip_motivation: string | null
+          updated_at: string | null
+          updated_fields: string[] | null
+          urgency: string | null
+        }
+        Insert: {
+          adults?: number | null
+          ai_recommendation?: string | null
+          assigned_to?: string | null
+          behavioral_notes?: string | null
+          budget_behavioral_reading?: string | null
+          budget_range?: string | null
+          cabin_class?: string | null
+          children?: number | null
+          children_ages?: string[] | null
+          client_id?: string | null
+          conversation_id?: string | null
+          conversation_summary?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          departure_airport?: string | null
+          departure_date?: string | null
+          desired_experiences?: string[] | null
+          destination?: string | null
+          duration_days?: number | null
+          experience_notes?: string | null
+          flexible_dates?: boolean | null
+          flight_preference?: string | null
+          group_details?: string | null
+          hotel_location?: string | null
+          hotel_needs?: string[] | null
+          hotel_notes?: string | null
+          hotel_preference?: string | null
+          hotel_stars?: string | null
+          id?: string | null
+          lead_name?: string | null
+          lead_origin?: string | null
+          lead_phone?: string | null
+          lead_score?: number | null
+          lead_sentiment?: string | null
+          lead_type?: string | null
+          lead_urgency?: string | null
+          must_have_experiences?: string[] | null
+          next_steps?: string | null
+          preferred_airline?: string | null
+          price_sensitivity?: string | null
+          rental_car?: boolean | null
+          return_date?: string | null
+          return_to_ai_reason?: string | null
+          returned_at?: string | null
+          status?: string | null
+          total_people?: number | null
+          transfer_needed?: boolean | null
+          transport_notes?: string | null
+          travel_experience?: string | null
+          travel_pace?: string | null
+          trip_motivation?: string | null
+          updated_at?: string | null
+          updated_fields?: string[] | null
+          urgency?: string | null
+        }
+        Update: {
+          adults?: number | null
+          ai_recommendation?: string | null
+          assigned_to?: string | null
+          behavioral_notes?: string | null
+          budget_behavioral_reading?: string | null
+          budget_range?: string | null
+          cabin_class?: string | null
+          children?: number | null
+          children_ages?: string[] | null
+          client_id?: string | null
+          conversation_id?: string | null
+          conversation_summary?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          departure_airport?: string | null
+          departure_date?: string | null
+          desired_experiences?: string[] | null
+          destination?: string | null
+          duration_days?: number | null
+          experience_notes?: string | null
+          flexible_dates?: boolean | null
+          flight_preference?: string | null
+          group_details?: string | null
+          hotel_location?: string | null
+          hotel_needs?: string[] | null
+          hotel_notes?: string | null
+          hotel_preference?: string | null
+          hotel_stars?: string | null
+          id?: string | null
+          lead_name?: string | null
+          lead_origin?: string | null
+          lead_phone?: string | null
+          lead_score?: number | null
+          lead_sentiment?: string | null
+          lead_type?: string | null
+          lead_urgency?: string | null
+          must_have_experiences?: string[] | null
+          next_steps?: string | null
+          preferred_airline?: string | null
+          price_sensitivity?: string | null
+          rental_car?: boolean | null
+          return_date?: string | null
+          return_to_ai_reason?: string | null
+          returned_at?: string | null
+          status?: string | null
+          total_people?: number | null
+          transfer_needed?: boolean | null
+          transport_notes?: string | null
+          travel_experience?: string | null
+          travel_pace?: string | null
+          trip_motivation?: string | null
+          updated_at?: string | null
+          updated_fields?: string[] | null
+          urgency?: string | null
+        }
+        Relationships: []
+      }
       accounts_payable: {
         Row: {
           category_id: string | null
@@ -6752,6 +7037,7 @@ export type Database = {
           destinations: string[] | null
           id: string
           intro_text: string | null
+          is_fictional: boolean
           last_viewed_at: string | null
           origin: string | null
           passenger_count: number | null
@@ -6789,6 +7075,7 @@ export type Database = {
           destinations?: string[] | null
           id?: string
           intro_text?: string | null
+          is_fictional?: boolean
           last_viewed_at?: string | null
           origin?: string | null
           passenger_count?: number | null
@@ -6826,6 +7113,7 @@ export type Database = {
           destinations?: string[] | null
           id?: string
           intro_text?: string | null
+          is_fictional?: boolean
           last_viewed_at?: string | null
           origin?: string | null
           passenger_count?: number | null
@@ -6921,6 +7209,7 @@ export type Database = {
           hotel_preference: string | null
           hotel_stars: string | null
           id: string
+          is_fictional: boolean
           lead_name: string
           lead_origin: string | null
           lead_phone: string | null
@@ -6977,6 +7266,7 @@ export type Database = {
           hotel_preference?: string | null
           hotel_stars?: string | null
           id?: string
+          is_fictional?: boolean
           lead_name: string
           lead_origin?: string | null
           lead_phone?: string | null
@@ -7033,6 +7323,7 @@ export type Database = {
           hotel_preference?: string | null
           hotel_stars?: string | null
           id?: string
+          is_fictional?: boolean
           lead_name?: string
           lead_origin?: string | null
           lead_phone?: string | null
