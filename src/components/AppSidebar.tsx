@@ -150,7 +150,8 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         const { count, error } = await (supabase as any)
           .from("quotation_briefings")
           .select("*", { count: "exact", head: true })
-          .eq("status", "pendente");
+          .eq("status", "pendente")
+          .eq("is_fictional", false);
         if (!error && !cancelled) setPendingBriefings(count || 0);
       } catch {
         // Silently handle 503 or connection errors
