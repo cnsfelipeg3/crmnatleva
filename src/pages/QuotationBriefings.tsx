@@ -170,11 +170,21 @@ export default function QuotationBriefings() {
             Demandas qualificadas pela IA, prontas para cotação humana
           </p>
         </div>
-        {pendingCount > 0 && (
-          <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-sm px-3 py-1 animate-pulse">
-            {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && (
+            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-sm px-3 py-1 animate-pulse">
+              {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
+            </Badge>
+          )}
+          <Button
+            variant={showFictional ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFictional(v => !v)}
+            className="text-xs"
+          >
+            {showFictional ? "Ocultar fictícias" : `Mostrar fictícias${fictionalCount ? ` (${fictionalCount})` : ""}`}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
