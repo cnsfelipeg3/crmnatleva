@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { motion } from "framer-motion";
-import { Mic, Image, Video, FileText, Pin, PinOff, Star, AlertTriangle, MailX, MailOpen, Archive, ArchiveRestore, Users } from "lucide-react";
+import { Mic, Image, Video, FileText, Pin, PinOff, Star, AlertTriangle, MailX, MailOpen, Archive, ArchiveRestore, Users, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuTrigger } from "@/components/ui/context-menu";
