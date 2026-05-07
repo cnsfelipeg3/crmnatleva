@@ -42,6 +42,7 @@ const viagensItems = [
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
+  { to: "/produtos", icon: PackageOpen, label: "Produtos", alwaysVisible: true },
   { to: "/booking-search", icon: Hotel, label: "Busca Booking", showBeta: true },
   { to: "/flights-search", icon: PlaneTakeoff, label: "Busca de Voos", showBeta: true },
   { to: "/google-flights-search", icon: PlaneTakeoff, label: "Google Flights", showBeta: true },
