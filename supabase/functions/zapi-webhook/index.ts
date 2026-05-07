@@ -591,6 +591,26 @@ Deno.serve(async (req) => {
     const messageId = body.messageId || null;
     const eventType = classifyEvent(body);
 
+    // Observabilidade permanente: log estruturado de TODO evento que chega.
+    console.log("[zapi-webhook] event arrived", {
+      type: body.type, phone: body.phone, chat: body.chat, isGroup: body.isGroup,
+      isStatusReply: body.isStatusReply, fromMe: body.fromMe,
+      hasMedia: !!(body.image || body.video || body.audio),
+      participant: body.participant, participantPhone: body.participantPhone,
+    });
+    console.log("[zapi-webhook] event classified", { eventType, phone: body.phone });
+
+    // Logar payloads suspeitos não classificados como status (ajuda diagnóstico Z-API).
+    if (eventType !== "status_broadcast" && eventType !== "status" &&
+        ((body.phone || "").toLowerCase().includes("status") ||
+         (body.chat || "").toLowerCase().includes("status") ||
+         body.isStatusReply || body.statusMessageId)) {
+      console.log("[zapi-webhook] suspicious status-like payload not classified", {
+        eventType, phone: body.phone, chat: body.chat,
+        isStatusReply: body.isStatusReply, type: body.type,
+      });
+    }
+
     // ═══════════════════════════════════════════════════════════
     // FAST-PATH: Eventos de conexão Z-API (disconnect/connect)
     // ═══════════════════════════════════════════════════════════
