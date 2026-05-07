@@ -547,7 +547,7 @@ export default function Dashboard() {
   }
 
   // Use RPC data for KPI cards when simple filters are active, fall back when complex client-side filters are used
-  const hasClientOnlyFilters = product !== "all" || valueRange !== "all" || marginRange !== "all" || region !== "all" || period === "yesterday";
+  const hasClientOnlyFilters = product !== "all" || valueRange !== "all" || marginRange !== "all" || region !== "all" || period === "yesterday" || period === "custom" || !!hourFrom || !!hourTo || liveMode;
   const useRpcForKpis = !hasClientOnlyFilters && kpiData;
 
   return (
