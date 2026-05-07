@@ -283,6 +283,7 @@ function OperacaoInboxInner() {
   }, []);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<import("@/components/inbox/DateFilterPopover").DateFilterValue>({ field: "last_message_at", preset: "all" });
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
