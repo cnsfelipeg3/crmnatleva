@@ -33,6 +33,7 @@ export interface Conversation {
   group_photo_url?: string | null;
   group_description?: string | null;
   group_participants?: any[] | null;
+  created_at?: string | null;
 }
 
 export interface Message {
