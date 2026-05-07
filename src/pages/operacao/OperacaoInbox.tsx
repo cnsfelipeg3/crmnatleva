@@ -1062,6 +1062,25 @@ function OperacaoInboxInner() {
       }
       // Filtro por responsável específico (vendedor)
       if (assigneeFilter && c.assigned_to !== assigneeFilter) return false;
+      // Filtro por data (última mensagem ou criação da conversa)
+      if (dateFilter.preset !== "all") {
+        const raw = dateFilter.field === "created_at" ? (c as any).created_at : c.last_message_at;
+        const ts = raw ? new Date(raw).getTime() : 0;
+        if (!ts) return false;
+        const now = new Date();
+        const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x.getTime(); };
+        const endOfDay = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x.getTime(); };
+        let from = 0, to = Date.now();
+        if (dateFilter.preset === "today") { from = startOfDay(now); to = endOfDay(now); }
+        else if (dateFilter.preset === "yesterday") { const y = new Date(now); y.setDate(y.getDate()-1); from = startOfDay(y); to = endOfDay(y); }
+        else if (dateFilter.preset === "7d") { const s = new Date(now); s.setDate(s.getDate()-7); from = startOfDay(s); to = endOfDay(now); }
+        else if (dateFilter.preset === "30d") { const s = new Date(now); s.setDate(s.getDate()-30); from = startOfDay(s); to = endOfDay(now); }
+        else if (dateFilter.preset === "custom") {
+          if (dateFilter.from) { const [y,m,d] = dateFilter.from.split("-").map(Number); from = startOfDay(new Date(y, m-1, d)); }
+          if (dateFilter.to) { const [y,m,d] = dateFilter.to.split("-").map(Number); to = endOfDay(new Date(y, m-1, d)); }
+        }
+        if (ts < from || ts > to) return false;
+      }
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
