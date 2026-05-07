@@ -163,6 +163,8 @@ export function useInboxRealtime(
               ...updated[idx],
               is_pinned: !!n.is_pinned,
               pinned_at: n.pinned_at || null,
+              is_deleted: !!n.is_deleted,
+              deleted_at: n.deleted_at || null,
               status: (n.status || updated[idx].status) as MsgStatus,
               text: n.content != null ? stripQuotes(n.content) : updated[idx].text,
             };

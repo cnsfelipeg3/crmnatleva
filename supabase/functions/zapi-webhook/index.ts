@@ -738,6 +738,31 @@ Deno.serve(async (req) => {
     // STEP 1: Quick exits for non-message events
     // ═══════════════════════════════════════════════════════════
 
+    // REVOKE = mensagem apagada no WhatsApp (pelo cliente OU pelo atendente).
+    // A Z-API envia ReceivedCallback com notification="REVOKE" e messageId
+    // apontando pra mensagem original. Marcamos in-place sem deletar (mantemos
+    // o conteúdo visível com indicador "apagada").
+    if (body?.notification === "REVOKE" && messageId) {
+      try {
+        const nowIso = new Date().toISOString();
+        const upd = { is_deleted: true, deleted_at: nowIso } as any;
+        const { data: updRows } = await supabase
+          .from("conversation_messages")
+          .update(upd)
+          .eq("external_message_id", String(messageId))
+          .select("id");
+        await supabase.from("messages").update(upd).eq("external_message_id", String(messageId));
+        console.log(`[Webhook] REVOKE applied | msgId=${messageId} | rows=${(updRows || []).length}`);
+        if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: nowIso }).eq("id", rawEventId);
+      } catch (e: any) {
+        console.error("[Webhook] REVOKE update failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "message_revoked" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
     // Status/Story · grava em whatsapp_statuses (não polui a inbox)
     if (eventType === "status_broadcast") {
       console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId, participantPhone: body.participantPhone });

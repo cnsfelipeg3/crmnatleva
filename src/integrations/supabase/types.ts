@@ -2583,12 +2583,14 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          deleted_at: string | null
           direction: string
           external_message_id: string | null
           failure_acknowledged_at: string | null
           failure_detail: string | null
           failure_reason: string | null
           id: string
+          is_deleted: boolean
           is_forwarded: boolean
           is_pinned: boolean
           is_voice_note: boolean | null
@@ -2621,12 +2623,14 @@ export type Database = {
           content?: string
           conversation_id: string
           created_at?: string
+          deleted_at?: string | null
           direction?: string
           external_message_id?: string | null
           failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_deleted?: boolean
           is_forwarded?: boolean
           is_pinned?: boolean
           is_voice_note?: boolean | null
@@ -2659,12 +2663,14 @@ export type Database = {
           content?: string
           conversation_id?: string
           created_at?: string
+          deleted_at?: string | null
           direction?: string
           external_message_id?: string | null
           failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_deleted?: boolean
           is_forwarded?: boolean
           is_pinned?: boolean
           is_voice_note?: boolean | null
@@ -4765,11 +4771,13 @@ export type Database = {
         Row: {
           conversation_id: string | null
           created_at: string
+          deleted_at: string | null
           external_message_id: string | null
           failure_acknowledged_at: string | null
           failure_detail: string | null
           failure_reason: string | null
           id: string
+          is_deleted: boolean
           is_forwarded: boolean
           last_retry_at: string | null
           media_failure_reason: string | null
@@ -4789,11 +4797,13 @@ export type Database = {
         Insert: {
           conversation_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           external_message_id?: string | null
           failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_deleted?: boolean
           is_forwarded?: boolean
           last_retry_at?: string | null
           media_failure_reason?: string | null
@@ -4813,11 +4823,13 @@ export type Database = {
         Update: {
           conversation_id?: string | null
           created_at?: string
+          deleted_at?: string | null
           external_message_id?: string | null
           failure_acknowledged_at?: string | null
           failure_detail?: string | null
           failure_reason?: string | null
           id?: string
+          is_deleted?: boolean
           is_forwarded?: boolean
           last_retry_at?: string | null
           media_failure_reason?: string | null
