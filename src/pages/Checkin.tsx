@@ -195,13 +195,17 @@ const CHECKIN_FILTER_CONFIG: SmartFilterConfig = {
   defaultSortKey: "departure_datetime_utc",
   defaultSortDirection: "asc",
   dateField: "departure_datetime_utc",
+  dateFieldOptions: [
+    { key: "departure_datetime_utc", label: "Data do voo" },
+    { key: "checkin_opens_at_utc", label: "Abertura do check-in" },
+  ],
   searchPlaceholder: "Buscar passageiro, PNR, destino...",
   searchFields: ["sale.name", "sale.display_id", "sale.origin_iata", "sale.destination_iata", "sale.locators", "segment.flight_number"],
   selectFilters: [
     { key: "status", label: "Status", options: ["PENDENTE", "FAZER_CHECKIN", "URGENTE", "CRITICO", "BLOQUEADO", "CONCLUIDO"] },
     { key: "direction", label: "Direção", options: ["ida", "volta"] },
   ],
-  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_month", "all"],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_week", "this_month", "next_month", "all"],
 };
 
 export default function Checkin() {

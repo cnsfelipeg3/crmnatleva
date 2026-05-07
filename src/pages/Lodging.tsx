@@ -22,6 +22,8 @@ import {
   XCircle, Phone, Calendar, List, LayoutGrid,
 } from "lucide-react";
 import TaskCalendarView from "@/components/TaskCalendarView";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 interface LodgingTask {
   id: string;
@@ -98,13 +100,34 @@ function getDateKey(dateStr: string | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const LODGING_FILTER_CONFIG: SmartFilterConfig = {
+  sortOptions: [
+    { key: "scheduled_at_utc", label: "Data agendada", type: "date" },
+    { key: "hotel_checkin_datetime_utc", label: "Data do check-in", type: "date" },
+    { key: "status", label: "Status", type: "string" },
+  ],
+  defaultSortKey: "scheduled_at_utc",
+  defaultSortDirection: "asc",
+  dateField: "hotel_checkin_datetime_utc",
+  dateFieldOptions: [
+    { key: "hotel_checkin_datetime_utc", label: "Data do check-in" },
+    { key: "scheduled_at_utc", label: "Data agendada" },
+  ],
+  searchPlaceholder: "Buscar hotel, hóspede, reserva...",
+  searchFields: ["hotel_name", "hotel_reservation_code", "sale.name", "sale.display_id"],
+  selectFilters: [
+    { key: "status", label: "Status", options: ["PENDENTE", "EM_ANDAMENTO", "PROBLEMA", "CONFIRMADO", "BLOQUEADO", "CANCELADO"] },
+    { key: "milestone", label: "Etapa", options: ["D14", "D7", "H24"] },
+  ],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_week", "this_month", "next_month", "all"],
+};
+
 export default function Lodging() {
   const [tasks, setTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterMilestone, setFilterMilestone] = useState("all");
+  // Tab-pre-filtered (active/history) data goes into useSmartFilters
+  // (state below)
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
   const [viewMode, setViewMode] = useState<"agenda" | "cards" | "calendar">("agenda");
 
@@ -208,30 +231,21 @@ export default function Lodging() {
     toast({ title: "Copiado!" });
   };
 
-  const filtered = useMemo(() => {
-    let result = tasks;
+  // Pre-filter by tab (active vs history) before SmartFilters
+  const tabData = useMemo(() => {
     if (mainTab === "active") {
-      result = result.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
-    } else {
-      result = result.filter(t => ["CONFIRMADO", "CANCELADO"].includes(t.status));
+      return tasks.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
     }
-    if (filterStatus !== "all") result = result.filter(t => t.status === filterStatus);
-    if (filterMilestone !== "all") result = result.filter(t => t.milestone === filterMilestone);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(t => {
-        const paxNames = t.passengers?.map((p: any) => p.full_name?.toLowerCase()).join(" ") || "";
-        return (
-          t.hotel_name?.toLowerCase().includes(q) ||
-          t.hotel_reservation_code?.toLowerCase().includes(q) ||
-          t.sale?.name?.toLowerCase().includes(q) ||
-          t.sale?.display_id?.toLowerCase().includes(q) ||
-          paxNames.includes(q)
-        );
-      });
-    }
-    return result;
-  }, [tasks, mainTab, filterStatus, filterMilestone, search]);
+    return tasks.filter(t => ["CONFIRMADO", "CANCELADO"].includes(t.status));
+  }, [tasks, mainTab]);
+
+  const {
+    filtered,
+    state: filterState,
+    setState: setFilterState,
+    activeFilterCount,
+    clearAll: clearFilters,
+  } = useSmartFilters(tabData, LODGING_FILTER_CONFIG);
 
   // Group by scheduled date (when confirmation should happen)
   const groupedByDate = useMemo(() => {
@@ -495,7 +509,7 @@ export default function Lodging() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="flex gap-1 bg-muted rounded-lg p-0.5">
           <button onClick={() => setMainTab("active")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
             Ativos ({activeTasks.length})
@@ -505,48 +519,27 @@ export default function Lodging() {
           </button>
         </div>
 
-        <div className="flex-1" />
-
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar hotel, hóspede, reserva..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs w-[200px]" />
-        </div>
-
-        {mainTab === "active" && (
-          <>
-            <Select value={filterMilestone} onValueChange={setFilterMilestone}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas etapas</SelectItem>
-                <SelectItem value="H24">24 horas</SelectItem>
-                <SelectItem value="D7">7 dias</SelectItem>
-                <SelectItem value="D14">14 dias</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="EM_ANDAMENTO">Em andamento</SelectItem>
-                <SelectItem value="PROBLEMA">Problema</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        )}
-
         <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
-          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
             <List className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
             <Calendar className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+
+      {/* Smart filters: search + date pills + specific date + range + select filters */}
+      <SmartFilters
+        config={LODGING_FILTER_CONFIG}
+        state={filterState}
+        setState={setFilterState}
+        activeFilterCount={activeFilterCount}
+        clearAll={clearFilters}
+      />
 
       {/* Content */}
       {loading ? (
