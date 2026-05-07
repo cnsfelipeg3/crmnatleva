@@ -233,6 +233,7 @@ function OperacaoInboxInner() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [showLinkClient, setShowLinkClient] = useState(false);
+  const [showGenerateQuotation, setShowGenerateQuotation] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
