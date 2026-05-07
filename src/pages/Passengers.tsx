@@ -551,60 +551,77 @@ export default function Passengers() {
                     const expiring = isPassportExpiringSoon(p.passport_expiry);
                     const tripCount = saleLinks[p.id]?.length || 0;
                     return (
-                      <TableRow
-                        key={p.id}
-                        className={`cursor-pointer ${bulkMode && bulkSelection.has(p.id) ? "bg-primary/5" : ""}`}
-                        onClick={() => bulkMode ? toggleBulk(p.id) : navigate(`/passengers/${p.id}`)}
-                      >
-                        {bulkMode && (
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            <input
-                              type="checkbox"
-                              checked={bulkSelection.has(p.id)}
-                              onChange={() => toggleBulk(p.id)}
-                              className="rounded border-input"
-                            />
-                          </TableCell>
-                        )}
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <User className="w-4 h-4 text-primary" />
-                            </div>
-                            <span className="font-medium text-foreground">{p.full_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{p.cpf || "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{p.birth_date ? formatDateBR(p.birth_date) : "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{p.phone ? formatPhoneDisplay(p.phone) : "—"}</TableCell>
-                        <TableCell className="font-mono text-xs text-muted-foreground">{p.passport_number || "—"}</TableCell>
-                        <TableCell className="text-sm">
-                          {p.passport_expiry ? (
-                            expiring ? (
-                              <Badge variant="destructive" className="text-[10px] flex items-center gap-1 w-fit">
-                                <AlertTriangle className="w-3 h-3" /> {formatDateBR(p.passport_expiry)}
-                              </Badge>
-                            ) : (
-                              <span className="text-muted-foreground">{formatDateBR(p.passport_expiry)}</span>
-                            )
-                          ) : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                          {p.created_at ? formatDateTimeBR(p.created_at) : "—"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {tripCount > 0 ? (
-                            <Badge variant="secondary" className="text-[10px]">
-                              <Plane className="w-3 h-3 mr-0.5" /> {tripCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
+                      <ContextMenu key={p.id}>
+                        <ContextMenuTrigger asChild>
+                          <TableRow
+                            className={`cursor-pointer ${bulkMode && bulkSelection.has(p.id) ? "bg-primary/5" : ""}`}
+                            onClick={() => bulkMode ? toggleBulk(p.id) : navigate(`/passengers/${p.id}`)}
+                          >
+                            {bulkMode && (
+                              <TableCell onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="checkbox"
+                                  checked={bulkSelection.has(p.id)}
+                                  onChange={() => toggleBulk(p.id)}
+                                  className="rounded border-input"
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                  <User className="w-4 h-4 text-primary" />
+                                </div>
+                                <span className="font-medium text-foreground">{p.full_name}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{p.cpf || "—"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{p.birth_date ? formatDateBR(p.birth_date) : "—"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{p.phone ? formatPhoneDisplay(p.phone) : "—"}</TableCell>
+                            <TableCell className="font-mono text-xs text-muted-foreground">{p.passport_number || "—"}</TableCell>
+                            <TableCell className="text-sm">
+                              {p.passport_expiry ? (
+                                expiring ? (
+                                  <Badge variant="destructive" className="text-[10px] flex items-center gap-1 w-fit">
+                                    <AlertTriangle className="w-3 h-3" /> {formatDateBR(p.passport_expiry)}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-muted-foreground">{formatDateBR(p.passport_expiry)}</span>
+                                )
+                              ) : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {p.address_city ? `${p.address_city}/${p.address_state || ""}` : "—"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                              {p.created_at ? formatDateTimeBR(p.created_at) : "—"}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {tripCount > 0 ? (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  <Plane className="w-3 h-3 mr-0.5" /> {tripCount}
+                                </Badge>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        </ContextMenuTrigger>
+                        <ContextMenuContent className="w-56">
+                          <ContextMenuItem onClick={() => copyPassengers([p.id])}>
+                            <Copy className="w-4 h-4 mr-2" /> Copiar dados
+                          </ContextMenuItem>
+                          {bulkMode && bulkSelection.size > 1 && bulkSelection.has(p.id) && (
+                            <ContextMenuItem onClick={() => copyPassengers([...bulkSelection])}>
+                              <Copy className="w-4 h-4 mr-2" /> Copiar selecionados ({bulkSelection.size})
+                            </ContextMenuItem>
                           )}
-                        </TableCell>
-                      </TableRow>
+                          <ContextMenuSeparator />
+                          <ContextMenuItem onClick={() => navigate(`/passengers/${p.id}`)}>
+                            <User className="w-4 h-4 mr-2" /> Abrir perfil
+                          </ContextMenuItem>
+                        </ContextMenuContent>
+                      </ContextMenu>
                     );
                   })}
                 </TableBody>
