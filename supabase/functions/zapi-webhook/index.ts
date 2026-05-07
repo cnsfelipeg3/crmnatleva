@@ -742,6 +742,38 @@ Deno.serve(async (req) => {
     // A Z-API envia ReceivedCallback com notification="REVOKE" e messageId
     // apontando pra mensagem original. Marcamos in-place sem deletar (mantemos
     // o conteúdo visível com indicador "apagada").
+    // EDIT = mensagem editada no WhatsApp. A Z-API envia ReceivedCallback com
+    // isEdit=true e editMessageId apontando para a mensagem original.
+    // Atualizamos o conteúdo da mensagem original e marcamos is_edited=true.
+    const editedTargetId = body?.isEdit === true
+      ? String(body?.editMessageId || body?.referenceMessageId || "")
+      : "";
+    if (body?.isEdit === true && editedTargetId) {
+      try {
+        const nowIso = new Date().toISOString();
+        const newText =
+          (body.text && (body.text.message || (typeof body.text === "string" ? body.text : ""))) ||
+          body.message || body.caption || "";
+        const upd: any = { is_edited: true, edited_at: nowIso };
+        if (newText) upd.content = newText;
+        const { data: cmRows } = await supabase
+          .from("conversation_messages")
+          .update(upd)
+          .eq("external_message_id", editedTargetId)
+          .select("id");
+        const updMsgs: any = { is_edited: true, edited_at: nowIso };
+        if (newText) updMsgs.text = newText;
+        await supabase.from("messages").update(updMsgs).eq("external_message_id", editedTargetId);
+        console.log(`[Webhook] EDIT applied | targetId=${editedTargetId} | rows=${(cmRows || []).length}`);
+        if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: nowIso }).eq("id", rawEventId);
+      } catch (e: any) {
+        console.error("[Webhook] EDIT update failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "message_edited" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (body?.notification === "REVOKE" && messageId) {
       try {
         const nowIso = new Date().toISOString();
