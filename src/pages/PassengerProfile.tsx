@@ -518,7 +518,7 @@ export default function PassengerProfile() {
         <TabsContent value="dados" className="mt-4">
           <Card className="p-5">
             {!editing ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
                     <Copy className="w-4 h-4 mr-1" /> Copiar dados
@@ -527,37 +527,74 @@ export default function PassengerProfile() {
                     <Pencil className="w-4 h-4 mr-1" /> Editar
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DataField label="Nome Completo" value={passenger.full_name} />
+
+                <Section title="Identificação">
+                  <DataField label="Nome Completo" value={titleCase(passenger.full_name)} />
+                  <DataField label="Categoria" value={passenger.categoria} />
                   <DataField label="CPF" value={passenger.cpf} mono />
                   <DataField label="RG" value={passenger.rg} mono />
                   <DataField label="Data de Nascimento" value={passenger.birth_date ? formatDateBR(passenger.birth_date) : null} />
-                  <DataField label="Telefone" value={formatPhoneDisplay(passenger.phone)} />
-                  <DataField label="Passaporte" value={passenger.passport_number} mono />
-                  <DataField label="Validade Passaporte" value={passenger.passport_expiry ? formatDateBR(passenger.passport_expiry) : null}
-                    alert={isPassportExpiringSoon(passenger.passport_expiry)} />
-                  <DataField label="Categoria" value={passenger.categoria} />
-                </div>
+                </Section>
 
-                {/* Address */}
-                {(passenger.address_street || passenger.address_city) && (
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold text-foreground mb-3">Endereço</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <DataField label="CEP" value={passenger.address_cep} />
-                      <DataField label="Rua" value={passenger.address_street} />
-                      <DataField label="Número" value={passenger.address_number} />
-                      <DataField label="Complemento" value={passenger.address_complement} />
-                      <DataField label="Bairro" value={passenger.address_neighborhood} />
-                      <DataField label="Cidade/UF" value={passenger.address_city ? `${passenger.address_city}/${passenger.address_state}` : null} />
-                      {passenger.address_notes && (
-                        <div className="md:col-span-2">
-                          <DataField label="Observações" value={passenger.address_notes} />
-                        </div>
-                      )}
-                    </div>
+                <Section title="Contato">
+                  <DataField
+                    label="Telefone"
+                    value={formatPhoneDisplay(passenger.phone)}
+                    icon={<Phone className="w-3 h-3" />}
+                    href={passenger.phone ? `https://wa.me/${(passenger.phone || "").replace(/\D/g, "")}` : undefined}
+                  />
+                  <DataField
+                    label="E-mail"
+                    value={passenger.email}
+                    icon={<Mail className="w-3 h-3" />}
+                    href={passenger.email ? `mailto:${passenger.email}` : undefined}
+                  />
+                </Section>
+
+                <Section title="Documentos de Viagem">
+                  <DataField label="Passaporte" value={passenger.passport_number} mono />
+                  <DataField
+                    label="Validade Passaporte"
+                    value={passenger.passport_expiry ? formatDateBR(passenger.passport_expiry) : null}
+                    alert={isPassportExpiringSoon(passenger.passport_expiry)}
+                  />
+                </Section>
+
+                <div className="border-t pt-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" /> Endereço
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <DataField label="CEP" value={passenger.address_cep} mono />
+                    <DataField label="Rua" value={titleCase(passenger.address_street)} />
+                    <DataField label="Número" value={passenger.address_number} />
+                    <DataField label="Complemento" value={titleCase(passenger.address_complement)} />
+                    <DataField label="Bairro" value={titleCase(passenger.address_neighborhood)} />
+                    <DataField
+                      label="Cidade/UF"
+                      value={passenger.address_city ? `${titleCase(passenger.address_city)}/${(passenger.address_state || "").toUpperCase()}` : null}
+                    />
+                    {passenger.address_notes && (
+                      <div className="md:col-span-2">
+                        <DataField label="Observações" value={passenger.address_notes} />
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {(passenger.address_street || passenger.address_city || passenger.address_cep) && (
+                    <div className="mt-4">
+                      <AddressMapCard
+                        query={[
+                          [titleCase(passenger.address_street), passenger.address_number].filter(Boolean).join(", "),
+                          titleCase(passenger.address_neighborhood),
+                          [titleCase(passenger.address_city), (passenger.address_state || "").toUpperCase()].filter(Boolean).join("/"),
+                          passenger.address_cep,
+                          "Brasil",
+                        ].filter(Boolean).join(" · ")}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
