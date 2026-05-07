@@ -207,6 +207,7 @@ function OperacaoInboxInner() {
 
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [newConversationOpen, setNewConversationOpen] = useState(false);
   const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
   const [contentMatchInfo, setContentMatchInfo] = useState<Map<string, { msgId: string; snippet: string }>>(new Map());
   const [searchingContent, setSearchingContent] = useState(false);
