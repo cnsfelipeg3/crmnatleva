@@ -2012,6 +2012,106 @@ function OperacaoInboxInner() {
     setMediaPendingFile(null); setMediaCaption("" ); setIsSending(false);
   }, [mediaPendingFile, mediaCaption, selectedId, uploadToStorage, isSending, persistOutgoingMessage, finalizeMessageStatus]);
 
+  // ─── Send location ───
+  const handleSendLocation = useCallback(async (params: { latitude: number; longitude: number; title?: string; address?: string }) => {
+    if (!selectedId) { toast({ title: "Selecione uma conversa", variant: "destructive" }); return; }
+    const phone = selectedId.replace("wa_", "");
+    const tempId = `temp_loc_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const createdAt = new Date().toISOString();
+    const previewText = params.title || params.address || `${params.latitude}, ${params.longitude}`;
+
+    // Optimistic UI
+    setMessages(prev => ({
+      ...prev,
+      [selectedId]: [...(prev[selectedId] || []), {
+        id: tempId,
+        conversation_id: selectedId,
+        sender_type: "atendente" as const,
+        message_type: "location" as MsgType,
+        text: previewText,
+        status: "pending" as MsgStatus,
+        created_at: createdAt,
+        metadata: {
+          location: {
+            latitude: params.latitude,
+            longitude: params.longitude,
+            title: params.title || null,
+            address: params.address || null,
+          },
+        },
+      }],
+    }));
+    lastMsgIdsRef.current.add(tempId);
+    scrollToBottom();
+
+    const sendPayload = {
+      phone,
+      latitude: params.latitude,
+      longitude: params.longitude,
+      title: params.title || "",
+      address: params.address || "",
+    };
+
+    // Persist pending
+    let messageDbId: string | null = null;
+    try {
+      messageDbId = await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: "location",
+        text: previewText,
+        externalMessageId: tempId,
+        createdAt,
+        status: "pending",
+        originalPayload: { action: "send-message-location", payload: sendPayload },
+      });
+      // Persist location metadata into the message row (separate update because base persist doesn't handle it)
+      if (messageDbId) {
+        await supabase.from("conversation_messages").update({
+          metadata: {
+            location: {
+              latitude: params.latitude,
+              longitude: params.longitude,
+              title: params.title || null,
+              address: params.address || null,
+            },
+          },
+        }).eq("id", messageDbId);
+        // Better preview on conversation list
+        const dbConvId = await resolveDbConversationId(selectedId);
+        if (dbConvId) {
+          await supabase.from("conversations").update({
+            last_message_preview: `📍 Localização${params.title || params.address ? `: ${params.title || params.address}` : ""}`,
+          }).eq("id", dbConvId);
+        }
+      }
+    } catch (err: any) {
+      console.error("[SEND-LOCATION] persist failed:", err);
+    }
+
+    const outcome = await sendViaZapi("send-message-location", sendPayload);
+    const realId = outcome.data?.messageId || outcome.data?.id || null;
+    if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+    if (outcome.ok) {
+      if (realId) lastMsgIdsRef.current.add(realId);
+      setMessages(prev => ({
+        ...prev,
+        [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempId ? { ...m, id: realId || m.id, external_message_id: realId || m.external_message_id, status: "sent" as MsgStatus } : m
+        ),
+      }));
+      toast({ title: "Localização enviada" });
+    } else {
+      setMessages(prev => ({
+        ...prev,
+        [selectedId]: (prev[selectedId] || []).map(m =>
+          m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+        ),
+      }));
+      throw new Error(humanizeFailureReason(outcome.reason));
+    }
+  }, [selectedId, persistOutgoingMessage, finalizeMessageStatus, resolveDbConversationId, scrollToBottom]);
+
   // Generic send for drag&drop / preview dialog
   const sendOneFileWithCaption = useCallback(async (file: File, caption: string) => {
     if (!selectedId) return;
