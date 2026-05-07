@@ -3588,6 +3588,22 @@ function OperacaoInboxInner() {
         isGroup={!!selected?.is_group}
         groupParticipants={(selected as any)?.group_participants || null}
       />
+      <NewConversationDialog
+        open={newConversationOpen}
+        onOpenChange={setNewConversationOpen}
+        conversations={conversations as any}
+        waConnected={waConnected}
+        onSelectConversation={(id) => {
+          setSelectedId(id);
+          if (isMobile) {
+            // já fica visível pelo selectedId
+          }
+          setTimeout(() => {
+            const inputEl = document.querySelector<HTMLTextAreaElement>('[data-message-input]');
+            inputEl?.focus();
+          }, 300);
+        }}
+      />
     </div>
   );
 }
