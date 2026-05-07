@@ -56,10 +56,19 @@ function normalizePhone(raw: string): string {
 
 // ─── Helper: classify event type ───
 function classifyEvent(body: any): string {
+  // MessageStatusCallback = recibo de entrega/leitura (de mensagens normais OU status posts).
   if (body.type === "MessageStatusCallback") return "status";
-  // CORREÇÃO: isStatusReply é uma RESPOSTA a um status (mensagem normal),
-  // NÃO é um status postado pelo contato. Cai no fluxo normal de mensagens.
-  if ((body.phone || "").includes("status@broadcast")) return "status_broadcast";
+
+  // Detecção ROBUSTA de status_broadcast (post de status de contato).
+  // Cobre múltiplos formatos da Z-API. NÃO confundir com isStatusReply (reply é msg normal).
+  const phone = String(body.phone || "");
+  const chat = String(body.chat || "");
+  const isStatusEvent =
+    (phone.includes("status@broadcast") && body.type !== "MessageStatusCallback") ||
+    chat.includes("status@broadcast") ||
+    body.broadcast === true;
+  if (isStatusEvent) return "status_broadcast";
+
   if (body.status && body.ids?.length > 0 && !body.text && !body.image && !body.audio && !body.video && !body.document) return "status";
   if (body.fromMe) return "sent";
   return "received";
@@ -302,9 +311,13 @@ async function processStatusUpdate(supabase: any, body: any) {
   }
 
   // ADIÇÃO: se o messageId pertence a um STATUS que postei, registra visualização.
-  // Z-API usa MessageStatusCallback com status READ/PLAYED também pra status posts.
-  if (mappedStatus === "READ") {
-    const viewerPhone = String(body.phone || body.participantPhone || "").replace(/\D/g, "");
+  // Z-API usa MessageStatusCallback com phone="status@broadcast" e o viewer real
+  // vem em body.participant (não em body.phone, que é literal "status@broadcast").
+  if (mappedStatus === "READ" || rawStatus === "PLAYED") {
+    const isStatusReceipt = String(body.phone || "").includes("status@broadcast");
+    const viewerPhone = String(
+      (isStatusReceipt ? (body.participant || body.participantPhone) : (body.participantPhone || body.phone)) || ""
+    ).replace(/\D/g, "");
     if (viewerPhone) {
       for (const sid of statusIds) {
         if (!sid) continue;
@@ -330,7 +343,7 @@ async function processStatusUpdate(supabase: any, body: any) {
               viewer_phone: viewerPhone,
               viewer_name: viewerName,
             }, { onConflict: "status_id,viewer_phone" });
-            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid });
+            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid, rawStatus });
           }
         } catch (err: any) {
           console.error("[zapi-webhook] failed to record status view", { messageId: sid, viewerPhone, error: err?.message });
@@ -578,6 +591,26 @@ Deno.serve(async (req) => {
     const messageId = body.messageId || null;
     const eventType = classifyEvent(body);
 
+    // Observabilidade permanente: log estruturado de TODO evento que chega.
+    console.log("[zapi-webhook] event arrived", {
+      type: body.type, phone: body.phone, chat: body.chat, isGroup: body.isGroup,
+      isStatusReply: body.isStatusReply, fromMe: body.fromMe,
+      hasMedia: !!(body.image || body.video || body.audio),
+      participant: body.participant, participantPhone: body.participantPhone,
+    });
+    console.log("[zapi-webhook] event classified", { eventType, phone: body.phone });
+
+    // Logar payloads suspeitos não classificados como status (ajuda diagnóstico Z-API).
+    if (eventType !== "status_broadcast" && eventType !== "status" &&
+        ((body.phone || "").toLowerCase().includes("status") ||
+         (body.chat || "").toLowerCase().includes("status") ||
+         body.isStatusReply || body.statusMessageId)) {
+      console.log("[zapi-webhook] suspicious status-like payload not classified", {
+        eventType, phone: body.phone, chat: body.chat,
+        isStatusReply: body.isStatusReply, type: body.type,
+      });
+    }
+
     // ═══════════════════════════════════════════════════════════
     // FAST-PATH: Eventos de conexão Z-API (disconnect/connect)
     // ═══════════════════════════════════════════════════════════
@@ -671,9 +704,11 @@ Deno.serve(async (req) => {
     if (eventType === "status_broadcast") {
       console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId, participantPhone: body.participantPhone });
       try {
-        // Status postado por um contato. O phone real está em participantPhone.
+        // Status postado por um contato. O phone real está em participantPhone (ou fallbacks).
         // body.phone = "status@broadcast" é INÚTIL pra identificação do remetente.
-        const stPhone = String(body.participantPhone || "").replace(/\D/g, "");
+        const stPhone = String(
+          body.participantPhone || body.participant || body.author || body.senderPhone || ""
+        ).replace(/\D/g, "");
         if (!stPhone && body.fromMe !== true) {
           console.warn("[zapi-webhook] status_broadcast without participantPhone, skipping", { eventId: rawEventId, phone: body.phone });
           if (rawEventId) {
