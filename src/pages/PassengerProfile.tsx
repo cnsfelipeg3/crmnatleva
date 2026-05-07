@@ -21,7 +21,7 @@ import {
   User, Pencil, Save, X, ShoppingCart, Plane, AlertTriangle,
   FileText, Upload, Download, Loader2, MessageCircle, ArrowLeft,
   Calendar, DollarSign, TrendingUp, MapPin, BarChart3, Brain,
-  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone,
+  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
@@ -108,6 +108,67 @@ function isPassportExpiringSoon(expiry: string | null): boolean {
 function isPassportExpired(expiry: string | null): boolean {
   if (!expiry) return false;
   return new Date(expiry) < new Date();
+}
+
+async function copyPassengerData(p: Passenger) {
+  const lines: string[] = [];
+  const push = (label: string, value: string | null | undefined) => {
+    if (value && String(value).trim()) lines.push(`${label}: ${value}`);
+  };
+
+  lines.push("📋 DADOS DO PASSAGEIRO");
+  lines.push("");
+  push("Nome", p.full_name);
+  push("Data de Nascimento", p.birth_date ? formatDateBR(p.birth_date) : null);
+  push("CPF", p.cpf);
+  push("RG", p.rg);
+  push("Telefone", formatPhoneDisplay(p.phone));
+  push("E-mail", (p as any).email);
+  if (p.categoria) push("Categoria", p.categoria);
+
+  if (p.passport_number || p.passport_expiry) {
+    lines.push("");
+    lines.push("🛂 PASSAPORTE");
+    push("Número", p.passport_number);
+    push("Validade", p.passport_expiry ? formatDateBR(p.passport_expiry) : null);
+  }
+
+  const hasAddress = p.address_cep || p.address_street || p.address_city;
+  if (hasAddress) {
+    lines.push("");
+    lines.push("📍 ENDEREÇO");
+    push("CEP", p.address_cep);
+    const ruaNum = [p.address_street, p.address_number].filter(Boolean).join(", ");
+    push("Rua", ruaNum || null);
+    push("Complemento", p.address_complement);
+    push("Bairro", p.address_neighborhood);
+    push(
+      "Cidade/UF",
+      p.address_city ? `${p.address_city}${p.address_state ? "/" + p.address_state : ""}` : null
+    );
+    push("País", p.address_country);
+  }
+
+  const text = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.success("Dados copiados para a área de transferência");
+  } catch {
+    // Fallback para contextos sem clipboard API
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+      toast.success("Dados copiados para a área de transferência");
+    } catch {
+      toast.error("Não foi possível copiar. Copie manualmente.");
+    }
+    document.body.removeChild(ta);
+  }
 }
 
 export default function PassengerProfile() {
@@ -347,6 +408,9 @@ export default function PassengerProfile() {
           <Button variant="outline" size="sm" onClick={startEdit}>
             <Pencil className="w-4 h-4 mr-1" /> Editar cadastro
           </Button>
+          <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
+            <Copy className="w-4 h-4 mr-1" /> Copiar dados
+          </Button>
         </div>
       </Card>
 
@@ -495,7 +559,10 @@ export default function PassengerProfile() {
           <Card className="p-5">
             {!editing ? (
               <div className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
+                    <Copy className="w-4 h-4 mr-1" /> Copiar dados
+                  </Button>
                   <Button variant="outline" size="sm" onClick={startEdit}>
                     <Pencil className="w-4 h-4 mr-1" /> Editar
                   </Button>
