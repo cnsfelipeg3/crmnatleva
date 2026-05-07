@@ -57,6 +57,7 @@ export interface Message {
   raw_message?: any;
   quoted_msg?: { text: string; sender_type: "cliente" | "atendente" | "sistema"; message_type: MsgType };
   edited?: boolean;
+  edited_at?: string | null;
   is_forwarded?: boolean;
   sender_name?: string | null;
   sender_phone?: string | null;
