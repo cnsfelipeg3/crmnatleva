@@ -647,6 +647,7 @@ function OperacaoInboxInner() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [showMediaMenu, setShowMediaMenu] = useState(false);
+  const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
