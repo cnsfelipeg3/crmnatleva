@@ -12,8 +12,9 @@ import {
   CheckCheck, Workflow, Brain, Loader2,
   Trash2, WifiOff, Pin, PinOff, Pencil,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
-  ChevronDown, UserPlus, MoreVertical, Images,
+  ChevronDown, UserPlus, MoreVertical, Images, MapPin,
 } from "lucide-react";
+import { SendLocationDialog } from "@/components/inbox/SendLocationDialog";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
 import { useMyDelegations } from "@/hooks/useMyDelegations";
 import { DelegateConversationDialog } from "@/components/inbox/DelegateConversationDialog";
