@@ -6,13 +6,15 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Gift, MessageCircle, Cake, PartyPopper, Download, Filter } from "lucide-react";
+import { Search, Gift, MessageCircle, Cake, PartyPopper, Download, Filter, Mail } from "lucide-react";
+import { BirthdayMessageDialog } from "@/components/birthdays/BirthdayMessageDialog";
 
 interface BirthdayPassenger {
   id: string;
   full_name: string;
   birth_date: string;
   phone: string | null;
+  email: string | null;
   cpf: string | null;
 }
 
@@ -67,12 +69,13 @@ export default function Birthdays() {
   const [loading, setLoading] = useState(true);
   const [monthFilter, setMonthFilter] = useState("all");
   const [proximityFilter, setProximityFilter] = useState("all");
+  const [openMessage, setOpenMessage] = useState<{ passenger: BirthdayPassenger; age: number } | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
       const data = await fetchAllRows(
         "passengers",
-        "id, full_name, birth_date, phone, cpf"
+        "id, full_name, birth_date, phone, email, cpf"
       );
       setPassengers(((data as any[]) || []).filter(p => p.birth_date) as BirthdayPassenger[]);
       setLoading(false);
@@ -204,19 +207,23 @@ export default function Birthdays() {
                     </div>
                   </div>
 
-                  {p.phone ? (
+                  {(p.phone || p.email) ? (
                     <Button
                       size="sm"
                       variant={isToday ? "default" : "outline"}
                       className="shrink-0 gap-1.5"
-                      onClick={() => window.open(buildWhatsAppUrl(p.phone!, p.full_name), "_blank")}
+                      onClick={() => setOpenMessage({ passenger: p, age: age + (isToday ? 1 : days <= 0 ? 1 : 0) })}
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <PartyPopper className="w-4 h-4" />
                       <span className="hidden sm:inline">Parabéns</span>
+                      <span className="hidden md:flex items-center gap-1 ml-1 opacity-70">
+                        {p.phone && <MessageCircle className="w-3 h-3" />}
+                        {p.email && <Mail className="w-3 h-3" />}
+                      </span>
                     </Button>
                   ) : (
                     <Badge variant="outline" className="text-[10px] text-muted-foreground shrink-0">
-                      Sem telefone
+                      Sem contato
                     </Badge>
                   )}
                 </div>
@@ -225,6 +232,13 @@ export default function Birthdays() {
           })}
         </div>
       )}
+
+      <BirthdayMessageDialog
+        open={!!openMessage}
+        onOpenChange={(v) => { if (!v) setOpenMessage(null); }}
+        passenger={openMessage?.passenger || null}
+        age={openMessage?.age}
+      />
     </div>
   );
 }
