@@ -1,11 +1,19 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Activity, X, Filter, SlidersHorizontal, Crown } from "lucide-react";
+import { Plus, Activity, X, Filter, SlidersHorizontal, Crown, CalendarIcon, Clock, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { useProductTypes } from "@/lib/productTypes";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import type { DateRange } from "react-day-picker";
 
 interface Props {
   period: string; setPeriod: (v: string) => void;
@@ -16,6 +24,10 @@ interface Props {
   valueRange: string; setValueRange: (v: string) => void;
   marginRange: string; setMarginRange: (v: string) => void;
   region: string; setRegion: (v: string) => void;
+  customRange: DateRange | undefined; setCustomRange: (v: DateRange | undefined) => void;
+  hourFrom: string; setHourFrom: (v: string) => void;
+  hourTo: string; setHourTo: (v: string) => void;
+  liveMode: boolean; setLiveMode: (v: boolean) => void;
   sellers: string[]; destinations: string[]; statuses: string[];
   activeFilterCount: number;
   onClearAll: () => void;
@@ -33,16 +45,30 @@ const STRATEGIC_PRESETS = [
   { label: "🏖 Caribe", filters: { region: "Caribe" } },
 ];
 
+function periodLabel(period: string, customRange: DateRange | undefined): string {
+  if (period === "custom") {
+    if (customRange?.from && customRange?.to) {
+      return `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} · ${format(customRange.to, "dd/MM/yy", { locale: ptBR })}`;
+    }
+    if (customRange?.from) return format(customRange.from, "dd/MM/yyyy", { locale: ptBR });
+    return "Escolher datas";
+  }
+  return "";
+}
+
 export default function DashboardFilters({
   period, setPeriod, seller, setSeller, destination, setDestination,
   product, setProduct, status, setStatus, valueRange, setValueRange,
   marginRange, setMarginRange, region, setRegion,
+  customRange, setCustomRange, hourFrom, setHourFrom, hourTo, setHourTo,
+  liveMode, setLiveMode,
   sellers, destinations, statuses,
   activeFilterCount, onClearAll, totalSales, filteredCount,
   ceoMode, onToggleCeoMode,
 }: Props) {
   const navigate = useNavigate();
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [dateOpen, setDateOpen] = useState(false);
   const { catalog: productCatalog } = useProductTypes();
 
   const applyPreset = (preset: typeof STRATEGIC_PRESETS[0]) => {
@@ -53,9 +79,11 @@ export default function DashboardFilters({
     if (f.region) setRegion(f.region);
   };
 
+  const customLabel = periodLabel(period, customRange);
+
   return (
     <div className="space-y-4">
-      {/* ── Hero Header — NatLeva Power Strip ── */}
+      {/* ── Hero Header ── */}
       <div className="relative overflow-hidden rounded-2xl border border-primary/10">
         <div className="absolute inset-0 bg-gradient-to-r from-[hsl(152,44%,7%)] via-[hsl(153,38%,11%)] to-[hsl(152,32%,14%)]" />
         <div className="absolute inset-0" style={{
@@ -63,23 +91,44 @@ export default function DashboardFilters({
         }} />
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-champagne/25 to-transparent" />
 
-        <div className="relative flex items-center justify-between gap-4 px-5 py-3.5">
+        <div className="relative flex items-center justify-between gap-4 px-5 py-3.5 flex-wrap">
           <div className="flex items-center gap-3">
             <div className="relative w-9 h-9 rounded-xl bg-gradient-to-br from-champagne/20 to-champagne/5 border border-champagne/15 flex items-center justify-center">
               <Activity className="w-4 h-4 text-champagne" />
-              <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <div className={cn("absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full", liveMode ? "bg-red-500 animate-pulse" : "bg-emerald-400 animate-pulse")} />
             </div>
             <div>
-              <h1 className="text-lg font-display font-bold tracking-tight leading-none text-primary-foreground">
+              <h1 className="text-lg font-display font-bold tracking-tight leading-none text-primary-foreground flex items-center gap-2">
                 {ceoMode ? "Visão CEO" : "Dashboard"}
+                {liveMode && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/30">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> LIVE
+                  </span>
+                )}
               </h1>
-              <span className="text-[10px] mt-0.5 block text-primary-foreground">
-                Operação em tempo real
+              <span className="text-[10px] mt-0.5 block text-primary-foreground/80">
+                {liveMode ? "Atualizando em tempo real · hoje" : "Operação em tempo real"}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Live Toggle */}
+            <button
+              type="button"
+              onClick={() => setLiveMode(!liveMode)}
+              className={cn(
+                "inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-xs font-medium border transition-all",
+                liveMode
+                  ? "bg-red-500/15 border-red-500/40 text-red-300 hover:bg-red-500/25"
+                  : "border-champagne/20 text-champagne/70 hover:bg-champagne/10 hover:text-champagne",
+              )}
+              title="Modo Live · resultado do dia em tempo real"
+            >
+              <Radio className={cn("w-3.5 h-3.5", liveMode && "animate-pulse")} />
+              Live
+            </button>
+
             {onToggleCeoMode && (
               <Button
                 variant={ceoMode ? "default" : "outline"}
@@ -106,8 +155,8 @@ export default function DashboardFilters({
       {/* Primary Filters Row */}
       {!ceoMode && (
         <div className="flex gap-2 items-center flex-wrap">
-          <Select value={period} onValueChange={setPeriod}>
-            <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue /></SelectTrigger>
+          <Select value={period} onValueChange={(v) => { setPeriod(v); if (v !== "custom") setCustomRange(undefined); }} disabled={liveMode}>
+            <SelectTrigger className="w-[150px] h-8 text-xs glass-card"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todo período</SelectItem>
               <SelectItem value="today">Hoje</SelectItem>
@@ -118,12 +167,101 @@ export default function DashboardFilters({
               <SelectItem value="this_month">Este mês</SelectItem>
               <SelectItem value="last_month">Mês anterior</SelectItem>
               <SelectItem value="12m">Último ano</SelectItem>
+              <SelectItem value="custom">Período personalizado…</SelectItem>
             </SelectContent>
           </Select>
 
+          {/* Custom Date Range */}
+          {period === "custom" && !liveMode && (
+            <Popover open={dateOpen} onOpenChange={setDateOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "h-8 text-xs gap-1.5 glass-card",
+                    !customRange?.from && "text-muted-foreground",
+                  )}
+                >
+                  <CalendarIcon className="w-3.5 h-3.5" />
+                  {customLabel || "Escolher datas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={customRange}
+                  onSelect={(r) => {
+                    setCustomRange(r);
+                    if (r?.from && r?.to) setTimeout(() => setDateOpen(false), 200);
+                  }}
+                  numberOfMonths={2}
+                  locale={ptBR}
+                  initialFocus
+                  className="pointer-events-auto"
+                />
+                <div className="flex justify-between p-2 border-t border-border">
+                  <Button variant="ghost" size="sm" className="text-xs" onClick={() => { setCustomRange(undefined); }}>
+                    Limpar
+                  </Button>
+                  <Button size="sm" className="text-xs" onClick={() => setDateOpen(false)}>
+                    Fechar
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
+          {/* Hour range */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={cn(
+                  "h-8 text-xs gap-1.5 glass-card",
+                  (hourFrom || hourTo) ? "border-primary/40 text-foreground" : "text-muted-foreground",
+                )}
+                title="Filtrar por horário do dia"
+              >
+                <Clock className="w-3.5 h-3.5" />
+                {(hourFrom || hourTo)
+                  ? `${hourFrom || "00:00"} – ${hourTo || "23:59"}`
+                  : "Horário"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 p-3" align="start">
+              <div className="space-y-3">
+                <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                  Filtrar por horário (close_date)
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">De</label>
+                    <Input type="time" value={hourFrom} onChange={(e) => setHourFrom(e.target.value)} className="h-8 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-muted-foreground">Até</label>
+                    <Input type="time" value={hourTo} onChange={(e) => setHourTo(e.target.value)} className="h-8 text-xs" />
+                  </div>
+                </div>
+                <div className="flex justify-between pt-1">
+                  <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => { setHourFrom(""); setHourTo(""); }}>
+                    Limpar
+                  </Button>
+                  <div className="flex gap-1">
+                    <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => { setHourFrom("09:00"); setHourTo("18:00"); }}>
+                      Comercial
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {sellers.length > 0 && (
             <Select value={seller} onValueChange={setSeller}>
-              <SelectTrigger className="w-[140px] h-8 text-xs glass-card"><SelectValue placeholder="Vendedor" /></SelectTrigger>
+              <SelectTrigger className="w-[150px] h-8 text-xs glass-card"><SelectValue placeholder="Vendedor" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos vendedores</SelectItem>
                 {sellers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -226,6 +364,14 @@ export default function DashboardFilters({
                       <SelectItem value="30+">30%+</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="pt-3 border-t border-border flex items-center justify-between">
+                  <div>
+                    <div className="text-xs font-medium">Modo Live</div>
+                    <div className="text-[10px] text-muted-foreground">Atualiza o dia em tempo real</div>
+                  </div>
+                  <Switch checked={liveMode} onCheckedChange={setLiveMode} />
                 </div>
 
                 <div className="pt-3 border-t border-border">
