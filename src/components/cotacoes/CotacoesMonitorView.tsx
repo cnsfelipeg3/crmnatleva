@@ -317,6 +317,7 @@ export default function CotacoesMonitorView() {
   const [briefings, setBriefings] = useState<BriefingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const [showFictional, setShowFictional] = useState(false);
   const prevIdsRef = useRef<Set<string>>(new Set());
 
   const fetchBriefings = useCallback(async () => {
