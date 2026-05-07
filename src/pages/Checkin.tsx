@@ -19,7 +19,7 @@ import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
   ExternalLink, Eye, Plane, User, Upload, X, FileText,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
-  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock, ChevronRight,
+  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock, ChevronRight, Plus,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
