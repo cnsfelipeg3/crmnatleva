@@ -253,6 +253,11 @@ export default function QuotationBriefings() {
                           <span className="text-muted-foreground">→</span>
                           <span className="font-medium text-accent">{b.destination || "Destino indefinido"}</span>
                           <Badge variant="outline" className={cn("text-[10px] border", st.color)}>{st.label}</Badge>
+                          {(b as any).is_fictional && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/40 bg-amber-500/10 text-amber-500">
+                              FICTÍCIA
+                            </Badge>
+                          )}
                           {b.updated_fields && b.updated_fields.length > 0 && (
                             <Badge variant="outline" className="text-[10px] border-purple-500/20 text-purple-400">Atualizado</Badge>
                           )}
