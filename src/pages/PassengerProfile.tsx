@@ -498,7 +498,10 @@ export default function PassengerProfile() {
           <Card className="p-5">
             {!editing ? (
               <div className="space-y-4">
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
+                    <Copy className="w-4 h-4 mr-1" /> Copiar dados
+                  </Button>
                   <Button variant="outline" size="sm" onClick={startEdit}>
                     <Pencil className="w-4 h-4 mr-1" /> Editar
                   </Button>
