@@ -267,17 +267,7 @@ export function NewConversationDialog({ open, onOpenChange, conversations, waCon
 
       toast.success(`Conversa criada com ${finalName}`);
 
-      // Trigger media-downloader async to persist profile picture
-      if (profilePic && data?.id) {
-        supabase.functions.invoke("media-downloader", {
-          body: {
-            url: profilePic,
-            conversation_id: data.id,
-            type: "profile_picture",
-            phone: normalizedE164,
-          },
-        }).catch(() => { /* fire and forget */ });
-      }
+      // Foto de perfil já gravada via URL · persistência em background é feita pelo job backfill-profile-pics
 
       onSelectConversation(data!.id);
       onOpenChange(false);
