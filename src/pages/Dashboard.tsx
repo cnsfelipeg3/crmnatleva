@@ -336,8 +336,18 @@ export default function Dashboard() {
       const [min, max] = ranges[marginRange] || [-Infinity, Infinity];
       result = result.filter(s => (s.margin || 0) >= min && (s.margin || 0) < max);
     }
+    if (hourFromMin !== null || hourToMin !== null) {
+      const lo = hourFromMin ?? 0;
+      const hi = hourToMin ?? 24 * 60;
+      result = result.filter(s => {
+        if (!s.close_date) return false;
+        const d = new Date(s.close_date);
+        const min = d.getHours() * 60 + d.getMinutes();
+        return min >= lo && min <= hi;
+      });
+    }
     return result;
-  }, [sales, periodCutoff, periodEnd, seller, destination, product, profiles, status, region, valueRange, marginRange, getRegion]);
+  }, [sales, periodCutoff, periodEnd, seller, destination, product, profiles, status, region, valueRange, marginRange, getRegion, hourFromMin, hourToMin]);
 
   const previous = useMemo(() => {
     if (!periodCutoff) return [];
