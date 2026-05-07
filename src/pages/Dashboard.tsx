@@ -579,6 +579,10 @@ export default function Dashboard() {
         valueRange={valueRange} setValueRange={setValueRange}
         marginRange={marginRange} setMarginRange={setMarginRange}
         region={region} setRegion={setRegion}
+        customRange={customRange} setCustomRange={setCustomRange}
+        hourFrom={hourFrom} setHourFrom={setHourFrom}
+        hourTo={hourTo} setHourTo={setHourTo}
+        liveMode={liveMode} setLiveMode={setLiveMode}
         sellers={sellersList} destinations={destinationsList} statuses={statusList}
         activeFilterCount={activeFilterCount}
         onClearAll={clearAllFilters}
