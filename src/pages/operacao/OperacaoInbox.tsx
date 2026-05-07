@@ -208,6 +208,21 @@ function OperacaoInboxInner() {
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [newConversationOpen, setNewConversationOpen] = useState(false);
+
+  // Cmd/Ctrl+N → abre Nova conversa
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+        e.preventDefault();
+        setNewConversationOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
   const [contentMatchInfo, setContentMatchInfo] = useState<Map<string, { msgId: string; snippet: string }>>(new Map());
   const [searchingContent, setSearchingContent] = useState(false);
