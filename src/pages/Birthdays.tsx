@@ -75,7 +75,7 @@ export default function Birthdays() {
     const fetch = async () => {
       const data = await fetchAllRows(
         "passengers",
-        "id, full_name, birth_date, phone, cpf"
+        "id, full_name, birth_date, phone, email, cpf"
       );
       setPassengers(((data as any[]) || []).filter(p => p.birth_date) as BirthdayPassenger[]);
       setLoading(false);
