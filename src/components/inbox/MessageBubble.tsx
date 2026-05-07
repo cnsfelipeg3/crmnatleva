@@ -379,6 +379,15 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
                   );
                 }
               })()}
+              {/* Location */}
+              {msg.message_type === "location" && msg.metadata?.location && (
+                <LocationBubble
+                  latitude={Number(msg.metadata.location.latitude)}
+                  longitude={Number(msg.metadata.location.longitude)}
+                  title={msg.metadata.location.title}
+                  address={msg.metadata.location.address}
+                />
+              )}
               {/* Text */}
               {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(displayText)} /></p>}
               <div className="flex items-center justify-end gap-1 mt-1">
