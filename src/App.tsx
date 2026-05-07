@@ -258,6 +258,10 @@ function AppRoutes() {
           <Route path="/checkin" element={<Checkin />} />
           <Route path="/hospedagem" element={<Lodging />} />
           <Route path="/alteracoes" element={<TripAlterations />} />
+          <Route path="/produtos" element={<Produtos />} />
+          <Route path="/produtos/novo" element={<ProdutoEditor />} />
+          <Route path="/produtos/:slug" element={<ProdutoDetalhe />} />
+          <Route path="/produtos/:slug/editar" element={<ProdutoEditor />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerProfile />} />
