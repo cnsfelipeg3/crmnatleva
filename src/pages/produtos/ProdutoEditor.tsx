@@ -239,6 +239,90 @@ export default function ProdutoEditor() {
           <Label>Resumo curto</Label>
           <Textarea rows={2} value={form.short_description} onChange={(e) => set("short_description", e.target.value)} placeholder="Frase de impacto para a prateleira" />
         </div>
+      <h1 className="font-serif text-3xl">{isEdit ? "Editar produto" : "Novo produto"}</h1>
+
+      {!isEdit && (
+        <Card className="p-6 space-y-3 border-champagne/40 bg-gradient-to-br from-champagne/5 to-transparent">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-champagne/15 flex items-center justify-center shrink-0">
+              <Youtube className="w-5 h-5 text-champagne" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-[15px] flex items-center gap-2">
+                Criar a partir de um vídeo do YouTube
+                <Sparkles className="w-3.5 h-3.5 text-champagne" />
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Cole a URL de um vídeo sobre o passeio. A IA assiste o vídeo e preenche os campos abaixo.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              value={ytUrl}
+              onChange={(e) => setYtUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              disabled={ytLoading}
+              className="flex-1"
+            />
+            <Button
+              onClick={importFromYouTube}
+              disabled={ytLoading || !ytUrl.trim()}
+              className="bg-champagne text-champagne-foreground hover:bg-champagne/90 shrink-0"
+            >
+              {ytLoading ? (
+                <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Analisando…</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-1.5" /> Gerar com IA</>
+              )}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Os campos serão preenchidos automaticamente. Você pode revisar e ajustar tudo antes de salvar.
+          </p>
+        </Card>
+      )}
+
+      <Card className="p-6 space-y-4">
+        <h2 className="font-semibold text-[15px]">Informações principais</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label>Título *</Label>
+            <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Isla Saona · Dia Completo" />
+          </div>
+          <div>
+            <Label>Slug (URL)</Label>
+            <Input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="auto a partir do título" />
+          </div>
+          <div>
+            <Label>Destino *</Label>
+            <Input value={form.destination} onChange={(e) => set("destination", e.target.value)} placeholder="Punta Cana" />
+          </div>
+          <div>
+            <Label>País</Label>
+            <Input value={form.destination_country} onChange={(e) => set("destination_country", e.target.value)} placeholder="República Dominicana" />
+          </div>
+          <div>
+            <Label>Categoria</Label>
+            <Input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="passeio" />
+          </div>
+          <div>
+            <Label>Duração</Label>
+            <Input value={form.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Dia inteiro · ~9h" />
+          </div>
+          <div>
+            <Label>Preço a partir de</Label>
+            <Input type="number" value={form.price_from} onChange={(e) => set("price_from", e.target.value)} placeholder="120" />
+          </div>
+          <div>
+            <Label>Moeda</Label>
+            <Input value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase())} placeholder="USD" />
+          </div>
+        </div>
+        <div>
+          <Label>Resumo curto</Label>
+          <Textarea rows={2} value={form.short_description} onChange={(e) => set("short_description", e.target.value)} placeholder="Frase de impacto para a prateleira" />
+        </div>
         <div className="flex items-center gap-3 pt-2">
           <Switch checked={form.is_active} onCheckedChange={(v) => set("is_active", v)} />
           <Label className="!m-0">Ativo (aparece na prateleira)</Label>
