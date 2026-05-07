@@ -2503,8 +2503,9 @@ function OperacaoInboxInner() {
                   </button>
                 ))}
               </div>
-              {/* Filtro inteligente por responsável (vendedor) */}
-              <div className="flex items-center gap-1 mb-1.5">
+              {/* Filtro inteligente por responsável (vendedor) + Data */}
+              <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+                <DateFilterPopover value={dateFilter} onChange={setDateFilter} />
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
                     <button
