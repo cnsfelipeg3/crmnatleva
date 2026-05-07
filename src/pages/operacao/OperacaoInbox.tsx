@@ -3479,6 +3479,9 @@ function OperacaoInboxInner() {
                           <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setFileInputAccept("*/*"); setFileInputMediaType("document"); fileInputRef.current?.click(); }}>
                             <File className="h-4 w-4 text-amber-400" /> Documento
                           </button>
+                          <button className="w-full flex items-center gap-2 px-3 py-2 text-xs rounded-md hover:bg-secondary transition-colors" onClick={() => { setShowMediaMenu(false); setLocationDialogOpen(true); }}>
+                            <MapPin className="h-4 w-4 text-emerald-500" /> Localização
+                          </button>
                         </PopoverContent>
                       </Popover>
                       <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
