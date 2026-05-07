@@ -231,6 +231,19 @@ async function processStatusUpdate(supabase: any, body: any) {
   const mappedStatus = isKnown ? statusMap[rawStatus] : 'FAILED';
   const failureReason = isKnown ? null : `zapi_unknown_status:${rawStatus || 'EMPTY'}`;
 
+  // Per-recipient receipts (estilo "Dados da mensagem" do WhatsApp)
+  // Em grupos, o Z-API envia um evento de status por participante, com body.participantPhone preenchido.
+  const isGroupStatus = body.isGroup === true || !!body.participantPhone;
+  const recipientPhone = body.participantPhone
+    ? String(body.participantPhone).replace(/\D/g, "")
+    : (body.phone ? String(body.phone).replace(/\D/g, "") : "");
+  const recipientTsMs = (() => {
+    const m = Number(body.momment);
+    if (!Number.isFinite(m) || m <= 0) return Date.now();
+    return m > 1_000_000_000_000 ? m : m * 1000;
+  })();
+  const recipientIso = new Date(recipientTsMs).toISOString();
+
   for (const sid of statusIds) {
     if (!sid) continue;
 
@@ -246,6 +259,46 @@ async function processStatusUpdate(supabase: any, body: any) {
       .update(updateRow)
       .eq("external_message_id", sid)
       .eq("direction", "outgoing");
+
+    // Registro por destinatário (entrega/leitura por membro)
+    if (recipientPhone && (mappedStatus === "DELIVERED" || mappedStatus === "READ" || mappedStatus === "SENT")) {
+      try {
+        const { data: convRow } = await supabase
+          .from("conversation_messages")
+          .select("conversation_id")
+          .eq("external_message_id", sid)
+          .maybeSingle();
+
+        let participantName: string | null = body.senderName || null;
+        if (!participantName) {
+          const { data: zc } = await supabase
+            .from("zapi_contacts").select("name").eq("phone", recipientPhone).maybeSingle();
+          participantName = zc?.name || null;
+        }
+
+        const patch: Record<string, any> = {
+          external_message_id: String(sid),
+          conversation_id: convRow?.conversation_id || null,
+          participant_phone: recipientPhone,
+          participant_name: participantName,
+          is_group: isGroupStatus,
+          updated_at: new Date().toISOString(),
+        };
+        if (mappedStatus === "DELIVERED") patch.delivered_at = recipientIso;
+        if (mappedStatus === "READ") {
+          patch.read_at = recipientIso;
+          // garante delivered_at também (read implica delivered)
+          patch.delivered_at = patch.delivered_at || recipientIso;
+        }
+        if (rawStatus === "PLAYED") patch.played_at = recipientIso;
+
+        await supabase
+          .from("message_recipient_status")
+          .upsert(patch, { onConflict: "external_message_id,participant_phone" });
+      } catch (err: any) {
+        console.error("[zapi-webhook] message_recipient_status upsert failed", { sid, recipientPhone, err: err?.message });
+      }
+    }
   }
 
   // ADIÇÃO: se o messageId pertence a um STATUS que postei, registra visualização.
