@@ -44,6 +44,7 @@ export function LocationBubble({ latitude, longitude, title, address }: Props) {
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <Marker position={[lat, lng]} icon={markerIcon} />
+          <InvalidateOnMount />
         </MapContainer>
         <a
           href={googleMapsUrl}
