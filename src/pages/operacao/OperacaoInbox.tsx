@@ -3132,6 +3132,11 @@ function OperacaoInboxInner() {
                                 {msg.is_pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
                                 {msg.is_pinned ? "Desafixar mensagem" : "Fixar mensagem"}
                               </ContextMenuItem>
+                              {msg.sender_type === "atendente" && msg.external_message_id && (
+                                <ContextMenuItem onClick={() => setMessageInfoId(msg.external_message_id!)}>
+                                  <Eye className="h-4 w-4 mr-2" /> Dados da mensagem
+                                </ContextMenuItem>
+                              )}
                               <ContextMenuSeparator />
                               <ContextMenuItem onClick={() => handleCopyMessageText(msg)} disabled={!msg.text}>
                                 Copiar texto
