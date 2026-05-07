@@ -69,6 +69,7 @@ export default function Birthdays() {
   const [loading, setLoading] = useState(true);
   const [monthFilter, setMonthFilter] = useState("all");
   const [proximityFilter, setProximityFilter] = useState("all");
+  const [openMessage, setOpenMessage] = useState<{ passenger: BirthdayPassenger; age: number } | null>(null);
 
   useEffect(() => {
     const fetch = async () => {
