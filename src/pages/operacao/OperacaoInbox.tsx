@@ -60,6 +60,7 @@ import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
+import { MessageInfoDialog } from "@/components/inbox/MessageInfoDialog";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
@@ -637,6 +638,7 @@ function OperacaoInboxInner() {
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardSeed, setForwardSeed] = useState<Message[] | null>(null);
+  const [messageInfoId, setMessageInfoId] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggleMsgSelected = useCallback((id: string) => {
@@ -3130,6 +3132,11 @@ function OperacaoInboxInner() {
                                 {msg.is_pinned ? <PinOff className="h-4 w-4 mr-2" /> : <Pin className="h-4 w-4 mr-2" />}
                                 {msg.is_pinned ? "Desafixar mensagem" : "Fixar mensagem"}
                               </ContextMenuItem>
+                              {msg.sender_type === "atendente" && msg.external_message_id && (
+                                <ContextMenuItem onClick={() => setMessageInfoId(msg.external_message_id!)}>
+                                  <Eye className="h-4 w-4 mr-2" /> Dados da mensagem
+                                </ContextMenuItem>
+                              )}
                               <ContextMenuSeparator />
                               <ContextMenuItem onClick={() => handleCopyMessageText(msg)} disabled={!msg.text}>
                                 Copiar texto
@@ -3542,6 +3549,13 @@ function OperacaoInboxInner() {
         onOpenChange={setGalleryOpen}
         messages={currentMessages as any}
         contactName={selected?.contact_name || selected?.phone || ""}
+      />
+      <MessageInfoDialog
+        open={!!messageInfoId}
+        onOpenChange={(v) => { if (!v) setMessageInfoId(null); }}
+        externalMessageId={messageInfoId}
+        isGroup={!!selected?.is_group}
+        groupParticipants={(selected as any)?.group_participants || null}
       />
     </div>
   );
