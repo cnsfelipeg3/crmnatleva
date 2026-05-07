@@ -21,11 +21,17 @@ import {
   User, Pencil, Save, X, ShoppingCart, Plane, AlertTriangle,
   FileText, Upload, Download, Loader2, MessageCircle, ArrowLeft,
   Calendar, DollarSign, TrendingUp, MapPin, BarChart3, Brain,
-  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone, Copy,
+  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone, Copy, Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
 import { copyPassengersToClipboard } from "@/lib/passengerCopy";
+import AddressMapCard from "@/components/passenger/AddressMapCard";
+
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.toLowerCase().replace(/(^|[\s\-/])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
+}
 
 interface Passenger {
   id: string;
@@ -35,6 +41,7 @@ interface Passenger {
   passport_number: string | null;
   passport_expiry: string | null;
   phone: string | null;
+  email: string | null;
   rg: string | null;
   address_cep: string | null;
   address_street: string | null;
@@ -247,6 +254,7 @@ export default function PassengerProfile() {
       passport_number: editForm.passport_number || null,
       passport_expiry: editForm.passport_expiry || null,
       phone: editForm.phone || null,
+      email: editForm.email || null,
       rg: editForm.rg || null,
       address_cep: editForm.address_cep || null,
       address_street: editForm.address_street || null,
@@ -511,7 +519,7 @@ export default function PassengerProfile() {
         <TabsContent value="dados" className="mt-4">
           <Card className="p-5">
             {!editing ? (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
                     <Copy className="w-4 h-4 mr-1" /> Copiar dados
@@ -520,37 +528,74 @@ export default function PassengerProfile() {
                     <Pencil className="w-4 h-4 mr-1" /> Editar
                   </Button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <DataField label="Nome Completo" value={passenger.full_name} />
+
+                <Section title="Identificação">
+                  <DataField label="Nome Completo" value={titleCase(passenger.full_name)} />
+                  <DataField label="Categoria" value={passenger.categoria} />
                   <DataField label="CPF" value={passenger.cpf} mono />
                   <DataField label="RG" value={passenger.rg} mono />
                   <DataField label="Data de Nascimento" value={passenger.birth_date ? formatDateBR(passenger.birth_date) : null} />
-                  <DataField label="Telefone" value={formatPhoneDisplay(passenger.phone)} />
-                  <DataField label="Passaporte" value={passenger.passport_number} mono />
-                  <DataField label="Validade Passaporte" value={passenger.passport_expiry ? formatDateBR(passenger.passport_expiry) : null}
-                    alert={isPassportExpiringSoon(passenger.passport_expiry)} />
-                  <DataField label="Categoria" value={passenger.categoria} />
-                </div>
+                </Section>
 
-                {/* Address */}
-                {(passenger.address_street || passenger.address_city) && (
-                  <div className="border-t pt-4">
-                    <h4 className="text-sm font-semibold text-foreground mb-3">Endereço</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <DataField label="CEP" value={passenger.address_cep} />
-                      <DataField label="Rua" value={passenger.address_street} />
-                      <DataField label="Número" value={passenger.address_number} />
-                      <DataField label="Complemento" value={passenger.address_complement} />
-                      <DataField label="Bairro" value={passenger.address_neighborhood} />
-                      <DataField label="Cidade/UF" value={passenger.address_city ? `${passenger.address_city}/${passenger.address_state}` : null} />
-                      {passenger.address_notes && (
-                        <div className="md:col-span-2">
-                          <DataField label="Observações" value={passenger.address_notes} />
-                        </div>
-                      )}
-                    </div>
+                <Section title="Contato">
+                  <DataField
+                    label="Telefone"
+                    value={formatPhoneDisplay(passenger.phone)}
+                    icon={<Phone className="w-3 h-3" />}
+                    href={passenger.phone ? `https://wa.me/${(passenger.phone || "").replace(/\D/g, "")}` : undefined}
+                  />
+                  <DataField
+                    label="E-mail"
+                    value={passenger.email}
+                    icon={<Mail className="w-3 h-3" />}
+                    href={passenger.email ? `mailto:${passenger.email}` : undefined}
+                  />
+                </Section>
+
+                <Section title="Documentos de Viagem">
+                  <DataField label="Passaporte" value={passenger.passport_number} mono />
+                  <DataField
+                    label="Validade Passaporte"
+                    value={passenger.passport_expiry ? formatDateBR(passenger.passport_expiry) : null}
+                    alert={isPassportExpiringSoon(passenger.passport_expiry)}
+                  />
+                </Section>
+
+                <div className="border-t pt-5">
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-primary" /> Endereço
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <DataField label="CEP" value={passenger.address_cep} mono />
+                    <DataField label="Rua" value={titleCase(passenger.address_street)} />
+                    <DataField label="Número" value={passenger.address_number} />
+                    <DataField label="Complemento" value={titleCase(passenger.address_complement)} />
+                    <DataField label="Bairro" value={titleCase(passenger.address_neighborhood)} />
+                    <DataField
+                      label="Cidade/UF"
+                      value={passenger.address_city ? `${titleCase(passenger.address_city)}/${(passenger.address_state || "").toUpperCase()}` : null}
+                    />
+                    {passenger.address_notes && (
+                      <div className="md:col-span-2">
+                        <DataField label="Observações" value={passenger.address_notes} />
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {(passenger.address_street || passenger.address_city || passenger.address_cep) && (
+                    <div className="mt-4">
+                      <AddressMapCard
+                        query={[
+                          [titleCase(passenger.address_street), passenger.address_number].filter(Boolean).join(", "),
+                          titleCase(passenger.address_neighborhood),
+                          [titleCase(passenger.address_city), (passenger.address_state || "").toUpperCase()].filter(Boolean).join("/"),
+                          passenger.address_cep,
+                          "Brasil",
+                        ].filter(Boolean).join(" · ")}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -577,6 +622,10 @@ export default function PassengerProfile() {
                     <Label>Telefone</Label>
                     <Input value={editForm.phone || ""} onChange={e => setEditForm(f => ({ ...f, phone: formatPhone(e.target.value) }))} placeholder="(11) 99999-9999" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>E-mail</Label>
+                  <Input type="email" value={editForm.email || ""} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} placeholder="cliente@email.com" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
@@ -676,18 +725,36 @@ function MetricCard({ icon, label, value, subtitle }: { icon: React.ReactNode; l
   );
 }
 
-function DataField({ label, value, mono, alert: isAlert }: { label: string; value: string | null; mono?: boolean; alert?: boolean }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-      {value ? (
-        <p className={`text-sm text-foreground ${mono ? "font-mono" : ""} ${isAlert ? "text-destructive" : ""}`}>
-          {value}
-          {isAlert && <AlertTriangle className="w-3 h-3 inline ml-1" />}
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground/50 italic">atualizar campo</p>
-      )}
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">{title}</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {children}
+      </div>
     </div>
   );
 }
+
+function DataField({ label, value, mono, alert: isAlert, icon, href }: { label: string; value: string | null; mono?: boolean; alert?: boolean; icon?: React.ReactNode; href?: string }) {
+  const content = value ? (
+    <p className={`text-sm text-foreground flex items-center gap-1.5 ${mono ? "font-mono" : ""} ${isAlert ? "text-destructive" : ""}`}>
+      {icon}
+      <span className="break-all">{value}</span>
+      {isAlert && <AlertTriangle className="w-3 h-3 inline ml-1" />}
+    </p>
+  ) : (
+    <p className="text-xs text-muted-foreground/50 italic">atualizar campo</p>
+  );
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</p>
+      {value && href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+          {content}
+        </a>
+      ) : content}
+    </div>
+  );
+}
+
