@@ -3730,7 +3730,16 @@ function OperacaoInboxInner() {
         />
       )}
 
-      {/* Forward Dialog */}
+      {/* Generate Quotation Dialog */}
+      {selected && (
+        <GenerateQuotationDialog
+          open={showGenerateQuotation}
+          onOpenChange={setShowGenerateQuotation}
+          conversationId={selected.db_id || selected.id}
+          contactName={selected.contact_name || selected.phone}
+          messageCount={currentMessages?.length}
+        />
+      )}
       <ForwardDialog
         open={forwardOpen}
         onOpenChange={(v) => { setForwardOpen(v); if (!v) setForwardSeed(null); }}
