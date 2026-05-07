@@ -54,8 +54,25 @@ export default function PassengerLinkDialog({ open, onOpenChange }: Props) {
   }, [open, user?.id, toast]);
 
   const copy = async () => {
-    await navigator.clipboard.writeText(url);
-    toast({ title: "Link copiado!", description: "Cole no WhatsApp do cliente." });
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(ta);
+        if (!ok) throw new Error("execCommand falhou");
+      }
+      toast({ title: "Link copiado!", description: "Cole no WhatsApp do cliente." });
+    } catch (e: any) {
+      toast({ title: "Não foi possível copiar", description: "Selecione e copie manualmente.", variant: "destructive" });
+    }
   };
 
   return (
