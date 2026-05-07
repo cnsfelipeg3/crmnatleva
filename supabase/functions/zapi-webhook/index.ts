@@ -1166,6 +1166,16 @@ Deno.serve(async (req) => {
         reference_message_id: body.referenceMessageId || null,
       };
     }
+    if (msgType === "location" && body.location) {
+      messageMetadata.location = {
+        latitude: Number(body.location.latitude),
+        longitude: Number(body.location.longitude),
+        title: body.location.name || null,
+        address: body.location.address || null,
+        url: body.location.url || null,
+        thumbnail_url: body.location.thumbnailUrl || null,
+      };
+    }
 
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
