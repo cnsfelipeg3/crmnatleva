@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCheck, Check, Eye, Users, Loader2 } from "lucide-react";
+import { CheckCheck, Check, Users, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatPhoneDisplay } from "@/components/inbox/helpers";
 
 interface RecipientStatus {
@@ -23,6 +24,8 @@ interface Props {
   contactName?: string | null;
   /** Status atual da mensagem (sent/delivered/read) — usado pra estimar estado quando o receipt detalhado ainda não chegou. */
   messageStatus?: string | null;
+  /** ID da conversa no DB · usado para buscar/cachear participantes do grupo. */
+  conversationDbId?: string | null;
 }
 
 function fmtDateTime(iso: string | null): string {
@@ -31,9 +34,24 @@ function fmtDateTime(iso: string | null): string {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup, contactPhone, contactName, messageStatus }: Props) {
+function normalizeParticipants(raw: any): Array<{ phone: string; name: string | null }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p: any) => {
+      const phone = String(p?.phone || p?.id || p?.participant || "")
+        .replace(/@(c\.us|s\.whatsapp\.net|lid|g\.us)/gi, "")
+        .replace(/\D/g, "");
+      const name = p?.short || p?.name || p?.pushname || p?.notify || p?.shortName || p?.contactName || null;
+      return phone ? { phone, name } : null;
+    })
+    .filter(Boolean) as Array<{ phone: string; name: string | null }>;
+}
+
+export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup, contactPhone, contactName, messageStatus, conversationDbId }: Props) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<RecipientStatus[]>([]);
+  const [resolvedParticipants, setResolvedParticipants] = useState<Array<{ phone: string; name: string | null }>>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   useEffect(() => {
     if (!open || !externalMessageId) return;
@@ -50,7 +68,6 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
       }
     })();
 
-    // Realtime: atualiza ao receber novo receipt
     const channel = supabase
       .channel(`mrs-${externalMessageId}`)
       .on(
@@ -68,6 +85,66 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
 
     return () => { cancel = true; supabase.removeChannel(channel); };
   }, [open, externalMessageId]);
+
+  // ── Auto-resolve participantes do grupo ──
+  const fetchGroupParticipants = async (forceFresh = false) => {
+    if (!isGroup) return;
+    // 1. Prop (cache do conversations.group_participants já vindo da página)
+    if (!forceFresh) {
+      const fromProp = normalizeParticipants(groupParticipants);
+      if (fromProp.length > 0) { setResolvedParticipants(fromProp); return; }
+    }
+
+    // 2. DB (cache existente)
+    let groupPhone: string | null = contactPhone || null;
+    if (conversationDbId) {
+      const { data: conv } = await (supabase as any)
+        .from("conversations")
+        .select("group_participants, phone")
+        .eq("id", conversationDbId)
+        .maybeSingle();
+      groupPhone = (conv?.phone as string) || groupPhone;
+      if (!forceFresh) {
+        const fromDb = normalizeParticipants(conv?.group_participants);
+        if (fromDb.length > 0) { setResolvedParticipants(fromDb); return; }
+      }
+    }
+
+    // 3. Fetch fresh via Z-API
+    if (!groupPhone) return;
+    setLoadingParticipants(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("zapi-proxy", {
+        body: { action: "group-metadata", payload: { phone: groupPhone } },
+      });
+      if (error) throw error;
+      const fresh = normalizeParticipants((data as any)?.participants);
+      setResolvedParticipants(fresh);
+      if (fresh.length > 0 && conversationDbId) {
+        await (supabase as any)
+          .from("conversations")
+          .update({
+            group_participants: (data as any)?.participants || fresh,
+            group_subject: (data as any)?.subject || null,
+            group_description: (data as any)?.description || null,
+            group_photo_url: (data as any)?.pictureUrl || null,
+            group_metadata_fetched_at: new Date().toISOString(),
+            is_group: true,
+          })
+          .eq("id", conversationDbId);
+      }
+    } catch (e) {
+      console.error("[MessageInfoDialog] group-metadata failed:", e);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !isGroup) { setResolvedParticipants([]); return; }
+    fetchGroupParticipants(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isGroup, conversationDbId]);
 
   // Mescla participantes (grupo) ou cria recipient sintético (1:1)
   const merged = (() => {
