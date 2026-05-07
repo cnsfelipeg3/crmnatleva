@@ -227,10 +227,32 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Dados da mensagem
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Dados da mensagem
+            </span>
+            {isGroup && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => fetchGroupParticipants(true)}
+                disabled={loadingParticipants}
+                title="Atualizar lista de membros do grupo"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingParticipants ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            )}
           </DialogTitle>
+          {isGroup && (
+            <p className="text-xs text-muted-foreground">
+              {resolvedParticipants.length > 0
+                ? `${resolvedParticipants.length} membros no grupo`
+                : loadingParticipants ? "Buscando membros do grupo…" : "Sem membros carregados"}
+            </p>
+          )}
         </DialogHeader>
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -241,10 +263,17 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
             <Section title="Lida por" icon={<CheckCheck className="h-4 w-4 text-primary" />} items={read} dateKey="read_at" />
             <Section title="Entregue para" icon={<CheckCheck className="h-4 w-4 text-muted-foreground" />} items={delivered} dateKey="delivered_at" />
             <Section title="Pendente" icon={<Check className="h-4 w-4 text-muted-foreground" />} items={pending} dateKey={null} />
-            {merged.length === 0 && (
+            {merged.length === 0 && !loadingParticipants && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Sem informações de entrega ainda. Os dados aparecem conforme cada destinatário recebe e lê a mensagem.
+                {isGroup
+                  ? "Não foi possível listar os membros do grupo. Toque em Atualizar para tentar de novo."
+                  : "Sem informações de entrega ainda. Os dados aparecem conforme cada destinatário recebe e lê a mensagem."}
               </p>
+            )}
+            {isGroup && loadingParticipants && merged.length === 0 && (
+              <div className="flex items-center justify-center py-4 gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Carregando membros…
+              </div>
             )}
           </div>
         )}
