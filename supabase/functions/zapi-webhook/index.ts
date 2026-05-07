@@ -56,10 +56,19 @@ function normalizePhone(raw: string): string {
 
 // ─── Helper: classify event type ───
 function classifyEvent(body: any): string {
+  // MessageStatusCallback = recibo de entrega/leitura (de mensagens normais OU status posts).
   if (body.type === "MessageStatusCallback") return "status";
-  // CORREÇÃO: isStatusReply é uma RESPOSTA a um status (mensagem normal),
-  // NÃO é um status postado pelo contato. Cai no fluxo normal de mensagens.
-  if ((body.phone || "").includes("status@broadcast")) return "status_broadcast";
+
+  // Detecção ROBUSTA de status_broadcast (post de status de contato).
+  // Cobre múltiplos formatos da Z-API. NÃO confundir com isStatusReply (reply é msg normal).
+  const phone = String(body.phone || "");
+  const chat = String(body.chat || "");
+  const isStatusEvent =
+    (phone.includes("status@broadcast") && body.type !== "MessageStatusCallback") ||
+    chat.includes("status@broadcast") ||
+    body.broadcast === true;
+  if (isStatusEvent) return "status_broadcast";
+
   if (body.status && body.ids?.length > 0 && !body.text && !body.image && !body.audio && !body.video && !body.document) return "status";
   if (body.fromMe) return "sent";
   return "received";
