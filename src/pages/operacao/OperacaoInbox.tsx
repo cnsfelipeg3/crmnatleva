@@ -3550,6 +3550,13 @@ function OperacaoInboxInner() {
         messages={currentMessages as any}
         contactName={selected?.contact_name || selected?.phone || ""}
       />
+      <MessageInfoDialog
+        open={!!messageInfoId}
+        onOpenChange={(v) => { if (!v) setMessageInfoId(null); }}
+        externalMessageId={messageInfoId}
+        isGroup={!!selected?.is_group}
+        groupParticipants={(selected as any)?.group_participants || null}
+      />
     </div>
   );
 }
