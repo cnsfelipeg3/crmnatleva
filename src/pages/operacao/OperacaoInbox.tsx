@@ -3041,7 +3041,13 @@ function OperacaoInboxInner() {
                                   </button>
                                 )}
                               </div>
-                              <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                              <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${(msg as any).is_deleted ? "opacity-50 ring-1 ring-dashed ring-muted-foreground/40 grayscale" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                                {(msg as any).is_deleted && (
+                                  <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                                    <Trash2 className="h-2.5 w-2.5" />
+                                    <span>Mensagem apagada no WhatsApp</span>
+                                  </div>
+                                )}
                                 {selected?.is_group && msg.sender_type === "cliente" && (msg.sender_name || msg.sender_phone) && (
                                   <p className="text-[11px] font-semibold mb-0.5 text-primary leading-tight">
                                     {msg.sender_name || formatPhoneDisplay(msg.sender_phone || "")}
