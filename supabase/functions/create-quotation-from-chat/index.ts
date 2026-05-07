@@ -27,10 +27,39 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const conversationId: string | undefined = body?.conversationId;
     const mode: "auto" | "manual_review" = body?.mode === "auto" ? "auto" : "manual_review";
+    const force: boolean = body?.force === true;
 
     if (!conversationId) return jsonResponse({ error: "conversationId obrigatório" }, 400);
 
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+    // ─── IDEMPOTÊNCIA ───
+    // Se já existe briefing real recente (últimas 24h) em status não-terminal pra essa
+    // conversa, retorna ele ao invés de criar duplicado. Use force=true pra forçar novo.
+    if (!force) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await sb
+        .from("quotation_briefings")
+        .select("id, status, created_at")
+        .eq("conversation_id", conversationId)
+        .eq("is_fictional", false)
+        .in("status", ["pendente", "extraindo", "em_analise", "aprovado"])
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (existing?.id) {
+        console.log(`[create-quotation-from-chat] reused existing briefing ${existing.id} for conversation ${conversationId}`);
+        return jsonResponse({
+          briefingId: existing.id,
+          proposalId: null,
+          reused: true,
+          existingStatus: existing.status,
+          messagesAnalyzed: 0,
+        });
+      }
+    }
 
     // 1. Conversa
     const { data: conv, error: convErr } = await sb
