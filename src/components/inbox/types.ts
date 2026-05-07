@@ -63,6 +63,8 @@ export interface Message {
   sender_photo?: string | null;
   is_pinned?: boolean;
   pinned_at?: string | null;
+  is_deleted?: boolean;
+  deleted_at?: string | null;
   metadata?: Record<string, any> | null;
 }
 
