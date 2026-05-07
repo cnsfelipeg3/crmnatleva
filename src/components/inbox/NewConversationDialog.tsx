@@ -169,27 +169,42 @@ export function NewConversationDialog({ open, onOpenChange, conversations, waCon
       setExistingConvId(existing.id);
     }
 
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("timeout")), 8000)
-    );
+    const callProxy = (action: string, payload: any, timeoutMs = 15000) => {
+      const invocation = supabase.functions.invoke("zapi-proxy", { body: { action, payload } });
+      const timeout = new Promise<{ data: null; error: { message: string } }>((resolve) =>
+        setTimeout(() => resolve({ data: null, error: { message: "timeout" } }), timeoutMs)
+      );
+      return Promise.race([invocation, timeout]) as Promise<{ data: any; error: any }>;
+    };
 
     try {
-      const callProxy = (action: string, payload: any) =>
-        supabase.functions.invoke("zapi-proxy", { body: { action, payload } });
+      // Critical: only check-number must succeed. Pic + contact are best-effort.
+      const [existsRes, picRes, contactRes] = await Promise.all([
+        callProxy("check-number", { phone }, 15000),
+        callProxy("get-profile-picture", { phone }, 10000).catch(() => ({ data: null, error: null })),
+        callProxy("get-contact", { phone }, 10000).catch(() => ({ data: null, error: null })),
+      ]);
 
-      const [existsRes, picRes, contactRes] = await Promise.race([
-        Promise.all([
-          callProxy("check-number", { phone }),
-          callProxy("get-profile-picture", { phone }),
-          callProxy("get-contact", { phone }),
-        ]),
-        timeout,
-      ]) as any[];
+      if (existsRes?.error?.message === "timeout") {
+        setErrorMsg("Z-API não respondeu · tente novamente em alguns segundos");
+        setStage("input");
+        toast.error("Z-API não respondeu");
+        return;
+      }
+      if (existsRes?.error) {
+        console.error("[NewConversation] check-number error:", existsRes.error);
+        setErrorMsg("Erro ao verificar número · tente novamente");
+        setStage("input");
+        toast.error("Erro ao verificar número");
+        return;
+      }
 
       const existsData = existsRes?.data;
-      // Z-API returns { exists: true/false } or similar
-      const hasWhats = existsData?.exists === true || existsData?.exists === "true" ||
-                       (existsData && typeof existsData === "object" && (existsData.numberExists === true));
+      const hasWhats =
+        existsData?.exists === true ||
+        existsData?.exists === "true" ||
+        existsData?.numberExists === true ||
+        (typeof existsData === "object" && existsData?.success !== false && (existsData?.exists ?? existsData?.numberExists) !== false && !!(existsData?.phone || existsData?.contactName || existsData?.name));
 
       if (!hasWhats) {
         setStage("not_found");
@@ -200,18 +215,23 @@ export function NewConversationDialog({ open, onOpenChange, conversations, waCon
       setProfilePic(picUrl);
 
       const contactData = contactRes?.data;
-      const fetchedName = contactData?.name || contactData?.displayName || contactData?.short || null;
+      const fetchedName =
+        contactData?.name ||
+        contactData?.displayName ||
+        contactData?.short ||
+        existsData?.contactName ||
+        existsData?.name ||
+        null;
       setWaName(fetchedName);
       setCrmName(fetchedName || "");
 
       setStage("found");
       setTimeout(() => nameInputRef.current?.focus(), 100);
     } catch (err: any) {
-      setErrorMsg(err?.message === "timeout"
-        ? "Z-API não respondeu · tente novamente em alguns segundos"
-        : "Erro ao verificar número · tente novamente");
+      console.error("[NewConversation] verify failed:", err);
+      setErrorMsg("Erro ao verificar número · tente novamente");
       setStage("input");
-      toast.error(errorMsg || "Erro ao verificar número");
+      toast.error("Erro ao verificar número");
     }
   }
 
