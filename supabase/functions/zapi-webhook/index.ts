@@ -225,7 +225,8 @@ async function processStatusUpdate(supabase: any, body: any) {
 
   const statusMap: Record<string, string> = {
     'SENT': 'SENT',
-    'RECEIVED': 'RECEIVED',
+    // Z-API "RECEIVED" = entregue ao device do destinatário (= DELIVERED no WhatsApp).
+    'RECEIVED': 'DELIVERED',
     'DELIVERY_ACK': 'DELIVERED',
     'DELIVERED': 'DELIVERED',
     'READ': 'READ',
