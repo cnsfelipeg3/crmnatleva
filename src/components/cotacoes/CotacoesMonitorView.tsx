@@ -317,6 +317,7 @@ export default function CotacoesMonitorView() {
   const [briefings, setBriefings] = useState<BriefingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [newIds, setNewIds] = useState<Set<string>>(new Set());
+  const [showFictional, setShowFictional] = useState(false);
   const prevIdsRef = useRef<Set<string>>(new Set());
 
   const fetchBriefings = useCallback(async () => {
@@ -357,12 +358,18 @@ export default function CotacoesMonitorView() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchBriefings]);
 
-  // KPIs
-  const extracting = briefings.filter(b => b.status === "extraindo").length;
-  const totalFields = briefings.reduce((s, b) => s + countFilledFields(b as any), 0);
-  const maxFields = briefings.length * MONITOR_TOTAL_FIELDS;
+  // Filtra fictícias por padrão (toggle dinâmico no header)
+  const visibleBriefings = showFictional
+    ? briefings
+    : briefings.filter((b: any) => !b.is_fictional);
+  const fictionalCount = briefings.filter((b: any) => b.is_fictional).length;
+
+  // KPIs (calculados sobre o set visível)
+  const extracting = visibleBriefings.filter(b => b.status === "extraindo").length;
+  const totalFields = visibleBriefings.reduce((s, b) => s + countFilledFields(b as any), 0);
+  const maxFields = visibleBriefings.length * MONITOR_TOTAL_FIELDS;
   const completionPct = maxFields > 0 ? Math.round((totalFields / maxFields) * 100) : 0;
-  const completed = briefings.filter(b => {
+  const completed = visibleBriefings.filter(b => {
     const f = countFilledFields(b as any);
     return f >= Math.floor(MONITOR_TOTAL_FIELDS * 0.9);
   }).length;
@@ -411,7 +418,13 @@ export default function CotacoesMonitorView() {
 
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
             <Activity className="w-3.5 h-3.5 text-accent" />
-            {briefings.length} operações rastreadas
+            {visibleBriefings.length} operações rastreadas
+            <button
+              onClick={() => setShowFictional(v => !v)}
+              className="ml-2 px-2 py-1 rounded text-[10px] uppercase tracking-wider border border-border hover:bg-accent/10 transition-colors"
+            >
+              {showFictional ? "Ocultar fictícias" : `Fictícias (${fictionalCount})`}
+            </button>
           </div>
         </div>
       </div>
@@ -432,7 +445,7 @@ export default function CotacoesMonitorView() {
             <span className="text-xs text-muted-foreground">Conectando ao monitor...</span>
           </div>
         </div>
-      ) : briefings.length === 0 ? (
+      ) : visibleBriefings.length === 0 ? (
         <div className="text-center py-20 rounded-xl" style={{
           background: "hsl(var(--card))",
           border: "1px solid hsl(var(--border))",
@@ -443,13 +456,13 @@ export default function CotacoesMonitorView() {
           </div>
           <p className="text-muted-foreground mt-4 font-medium">Monitor aguardando sinais</p>
           <p className="text-xs text-muted-foreground/60 mt-1 max-w-md mx-auto">
-            Inicie uma simulação no modo Automático ou Camaleão. As cotações aparecerão aqui em tempo real conforme as conversas avançarem.
+            Cotações reais aparecerão aqui conforme conversas do WhatsApp avançarem. {fictionalCount > 0 && "Ative \"Fictícias\" para ver as do simulador."}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           <AnimatePresence>
-            {briefings.map(b => (
+            {visibleBriefings.map(b => (
               <MonitorCard key={b.id} briefing={b} isNew={newIds.has(b.id)} />
             ))}
           </AnimatePresence>

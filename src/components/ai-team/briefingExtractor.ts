@@ -162,6 +162,7 @@ export async function extractAndSaveBriefing(
         lead_origin: source === "auto" ? "Simulador Automático" : "Simulador Manual",
         urgency,
         status: "pendente",
+        is_fictional: true,
       })
       .select("id")
       .single();

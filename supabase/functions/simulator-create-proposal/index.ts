@@ -256,6 +256,7 @@ Deno.serve(async (req: Request) => {
         intro_text: introText,
         template_id: templateId,
         source: "simulator",
+        is_fictional: true,
         simulator_session_id: sessionId,
         simulator_mode: mode,
       })

@@ -97,6 +97,7 @@ export default function QuotationBriefings() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [returnDialogId, setReturnDialogId] = useState<string | null>(null);
+  const [showFictional, setShowFictional] = useState(false);
 
   const fetchBriefings = async () => {
     setLoading(true);
@@ -140,7 +141,8 @@ export default function QuotationBriefings() {
     toast({ title: "Status atualizado", description: STATUS_CONFIG[status]?.label });
   };
 
-  const filtered = briefings.filter((b) => {
+  const filtered = briefings.filter((b: any) => {
+    if (!showFictional && b.is_fictional) return false;
     if (statusFilter !== "all" && b.status !== statusFilter) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -153,7 +155,8 @@ export default function QuotationBriefings() {
     return true;
   });
 
-  const pendingCount = briefings.filter(b => b.status === "pendente").length;
+  const pendingCount = filtered.filter(b => b.status === "pendente").length;
+  const fictionalCount = briefings.filter((b: any) => b.is_fictional).length;
 
   return (
     <div className="space-y-6">
@@ -167,11 +170,21 @@ export default function QuotationBriefings() {
             Demandas qualificadas pela IA, prontas para cotação humana
           </p>
         </div>
-        {pendingCount > 0 && (
-          <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-sm px-3 py-1 animate-pulse">
-            {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
-          </Badge>
-        )}
+        <div className="flex items-center gap-2">
+          {pendingCount > 0 && (
+            <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-sm px-3 py-1 animate-pulse">
+              {pendingCount} pendente{pendingCount > 1 ? "s" : ""}
+            </Badge>
+          )}
+          <Button
+            variant={showFictional ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowFictional(v => !v)}
+            className="text-xs"
+          >
+            {showFictional ? "Ocultar fictícias" : `Mostrar fictícias${fictionalCount ? ` (${fictionalCount})` : ""}`}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -240,6 +253,11 @@ export default function QuotationBriefings() {
                           <span className="text-muted-foreground">→</span>
                           <span className="font-medium text-accent">{b.destination || "Destino indefinido"}</span>
                           <Badge variant="outline" className={cn("text-[10px] border", st.color)}>{st.label}</Badge>
+                          {(b as any).is_fictional && (
+                            <Badge variant="outline" className="text-[10px] border-amber-500/40 bg-amber-500/10 text-amber-500">
+                              FICTÍCIA
+                            </Badge>
+                          )}
                           {b.updated_fields && b.updated_fields.length > 0 && (
                             <Badge variant="outline" className="text-[10px] border-purple-500/20 text-purple-400">Atualizado</Badge>
                           )}

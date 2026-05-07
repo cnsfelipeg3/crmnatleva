@@ -58,6 +58,7 @@ import { AttachmentDropOverlay } from "@/components/livechat/AttachmentDropOverl
 import { AttachmentPreviewDialog } from "@/components/livechat/AttachmentPreviewDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
+import { GenerateQuotationDialog } from "@/components/inbox/GenerateQuotationDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
@@ -232,6 +233,7 @@ function OperacaoInboxInner() {
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [showSummaryDialog, setShowSummaryDialog] = useState(false);
   const [showLinkClient, setShowLinkClient] = useState(false);
+  const [showGenerateQuotation, setShowGenerateQuotation] = useState(false);
   const [reloadVersion, setReloadVersion] = useState(0);
   const [chatSyncVersion, setChatSyncVersion] = useState(0);
   const [rebuildingHistoryAll, setRebuildingHistoryAll] = useState(false);
@@ -3039,6 +3041,14 @@ function OperacaoInboxInner() {
                           </TooltipTrigger>
                           <TooltipContent><p className="text-xs">Vincular cliente</p></TooltipContent>
                         </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => setShowGenerateQuotation(true)}>
+                              <Sparkles className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Gerar cotação a partir desta conversa</p></TooltipContent>
+                        </Tooltip>
                         {activeFlowName && (
                           <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-1">
                             <Workflow className="h-3 w-3" />{activeFlowName}
@@ -3720,7 +3730,16 @@ function OperacaoInboxInner() {
         />
       )}
 
-      {/* Forward Dialog */}
+      {/* Generate Quotation Dialog */}
+      {selected && (
+        <GenerateQuotationDialog
+          open={showGenerateQuotation}
+          onOpenChange={setShowGenerateQuotation}
+          conversationId={selected.db_id || selected.id}
+          contactName={selected.contact_name || selected.phone}
+          messageCount={currentMessages?.length}
+        />
+      )}
       <ForwardDialog
         open={forwardOpen}
         onOpenChange={(v) => { setForwardOpen(v); if (!v) setForwardSeed(null); }}
