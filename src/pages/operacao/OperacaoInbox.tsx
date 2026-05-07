@@ -3633,6 +3633,7 @@ function OperacaoInboxInner() {
         contactPhone={selected?.phone || null}
         contactName={selected?.contact_name || (selected as any)?.display_name || null}
         messageStatus={(currentMessages as any[])?.find?.((m: any) => m.external_message_id === messageInfoId)?.status || null}
+        conversationDbId={selected?.id || null}
       />
       <NewConversationDialog
         open={newConversationOpen}
