@@ -311,9 +311,13 @@ async function processStatusUpdate(supabase: any, body: any) {
   }
 
   // ADIÇÃO: se o messageId pertence a um STATUS que postei, registra visualização.
-  // Z-API usa MessageStatusCallback com status READ/PLAYED também pra status posts.
-  if (mappedStatus === "READ") {
-    const viewerPhone = String(body.phone || body.participantPhone || "").replace(/\D/g, "");
+  // Z-API usa MessageStatusCallback com phone="status@broadcast" e o viewer real
+  // vem em body.participant (não em body.phone, que é literal "status@broadcast").
+  if (mappedStatus === "READ" || rawStatus === "PLAYED") {
+    const isStatusReceipt = String(body.phone || "").includes("status@broadcast");
+    const viewerPhone = String(
+      (isStatusReceipt ? (body.participant || body.participantPhone) : (body.participantPhone || body.phone)) || ""
+    ).replace(/\D/g, "");
     if (viewerPhone) {
       for (const sid of statusIds) {
         if (!sid) continue;
@@ -339,7 +343,7 @@ async function processStatusUpdate(supabase: any, body: any) {
               viewer_phone: viewerPhone,
               viewer_name: viewerName,
             }, { onConflict: "status_id,viewer_phone" });
-            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid });
+            console.log("[zapi-webhook] status view recorded", { statusId: statusRow.id, viewer: viewerPhone, messageId: sid, rawStatus });
           }
         } catch (err: any) {
           console.error("[zapi-webhook] failed to record status view", { messageId: sid, viewerPhone, error: err?.message });
