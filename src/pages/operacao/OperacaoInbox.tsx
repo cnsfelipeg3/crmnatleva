@@ -21,6 +21,7 @@ import { SlashCommandDropdown, type MessageShortcut } from "@/components/inbox/S
 import { ScheduleMessagePopover } from "@/components/inbox/ScheduleMessagePopover";
 import { ScheduledForConversationButton } from "@/components/inbox/ScheduledForConversationButton";
 import { GroupInfoDialog } from "@/components/inbox/GroupInfoDialog";
+import { DateFilterPopover } from "@/components/inbox/DateFilterPopover";
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -283,6 +284,7 @@ function OperacaoInboxInner() {
   }, []);
   const [ownerFilter, setOwnerFilter] = useState<"all" | "mine" | "unassigned">("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
+  const [dateFilter, setDateFilter] = useState<import("@/components/inbox/DateFilterPopover").DateFilterValue>({ field: "last_message_at", preset: "all" });
   const [assigneeSearch, setAssigneeSearch] = useState("");
   const [assigneePopoverOpen, setAssigneePopoverOpen] = useState(false);
 
@@ -860,7 +862,7 @@ function OperacaoInboxInner() {
         // Source of truth: tabela conversations no banco (inclui outgoing-only)
         const { data: dbConvs, error: dbErr } = await supabase
           .from("conversations")
-          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_description, group_photo_url, group_participants")
+          .select("id, phone, contact_name, display_name, last_message_at, last_message_preview, unread_count, stage, funnel_stage, tags, source, is_vip, assigned_to, score_potential, score_risk, is_pinned, profile_picture_url, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_description, group_photo_url, group_participants, created_at")
           .is("excluded_at", null)
           .order("is_pinned", { ascending: false, nullsFirst: false })
           .order("last_message_at", { ascending: false, nullsFirst: false })
@@ -922,6 +924,7 @@ function OperacaoInboxInner() {
             group_photo_url: c.group_photo_url || null,
             group_description: c.group_description || null,
             group_participants: c.group_participants || null,
+            created_at: c.created_at || null,
             _hasReliableActivity: true,
           };
         });
@@ -1059,6 +1062,25 @@ function OperacaoInboxInner() {
       }
       // Filtro por responsável específico (vendedor)
       if (assigneeFilter && c.assigned_to !== assigneeFilter) return false;
+      // Filtro por data (última mensagem ou criação da conversa)
+      if (dateFilter.preset !== "all") {
+        const raw = dateFilter.field === "created_at" ? (c as any).created_at : c.last_message_at;
+        const ts = raw ? new Date(raw).getTime() : 0;
+        if (!ts) return false;
+        const now = new Date();
+        const startOfDay = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); return x.getTime(); };
+        const endOfDay = (d: Date) => { const x = new Date(d); x.setHours(23,59,59,999); return x.getTime(); };
+        let from = 0, to = Date.now();
+        if (dateFilter.preset === "today") { from = startOfDay(now); to = endOfDay(now); }
+        else if (dateFilter.preset === "yesterday") { const y = new Date(now); y.setDate(y.getDate()-1); from = startOfDay(y); to = endOfDay(y); }
+        else if (dateFilter.preset === "7d") { const s = new Date(now); s.setDate(s.getDate()-7); from = startOfDay(s); to = endOfDay(now); }
+        else if (dateFilter.preset === "30d") { const s = new Date(now); s.setDate(s.getDate()-30); from = startOfDay(s); to = endOfDay(now); }
+        else if (dateFilter.preset === "custom") {
+          if (dateFilter.from) { const [y,m,d] = dateFilter.from.split("-").map(Number); from = startOfDay(new Date(y, m-1, d)); }
+          if (dateFilter.to) { const [y,m,d] = dateFilter.to.split("-").map(Number); to = endOfDay(new Date(y, m-1, d)); }
+        }
+        if (ts < from || ts > to) return false;
+      }
       // Arquivadas só aparecem quando o filtro "archived" está ativo
       if (activeFilter === "archived") return !!c.is_archived;
       if (c.is_archived) return false;
@@ -1121,7 +1143,7 @@ function OperacaoInboxInner() {
       return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
     });
     return merged;
-  }, [conversations, searchQuery, activeFilter, ownerFilter, assigneeFilter, user, contentMatchIds]);
+  }, [conversations, searchQuery, activeFilter, ownerFilter, assigneeFilter, dateFilter, user, contentMatchIds]);
 
   // Execute flow engine
   const executeFlow = useCallback(async (conversationId: string, messageText: string) => {
@@ -2481,8 +2503,9 @@ function OperacaoInboxInner() {
                   </button>
                 ))}
               </div>
-              {/* Filtro inteligente por responsável (vendedor) */}
-              <div className="flex items-center gap-1 mb-1.5">
+              {/* Filtro inteligente por responsável (vendedor) + Data */}
+              <div className="flex items-center gap-1 mb-1.5 flex-wrap">
+                <DateFilterPopover value={dateFilter} onChange={setDateFilter} />
                 <Popover open={assigneePopoverOpen} onOpenChange={setAssigneePopoverOpen}>
                   <PopoverTrigger asChild>
                     <button
