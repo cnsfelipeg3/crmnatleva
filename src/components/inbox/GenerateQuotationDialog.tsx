@@ -21,7 +21,7 @@ export function GenerateQuotationDialog({ open, onOpenChange, conversationId, co
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleConfirm = async () => {
+  const runGeneration = async (force: boolean) => {
     if (!conversationId) {
       toast({ title: "Conversa inválida", variant: "destructive" });
       return;
@@ -29,15 +29,19 @@ export function GenerateQuotationDialog({ open, onOpenChange, conversationId, co
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-quotation-from-chat", {
-        body: { conversationId, mode },
+        body: { conversationId, mode, force },
       });
       if (error) throw new Error(error.message || "Falha ao chamar função");
       if ((data as any)?.error) throw new Error((data as any).error);
 
       const briefingId = (data as any)?.briefingId;
+      const reused = (data as any)?.reused === true;
+
       toast({
-        title: "Cotação criada",
-        description: `${(data as any)?.messagesAnalyzed || 0} mensagens analisadas.`,
+        title: reused ? "Cotação já existe" : "Cotação criada",
+        description: reused
+          ? "Reaproveitamos o briefing recente desta conversa."
+          : `${(data as any)?.messagesAnalyzed || 0} mensagens analisadas.`,
       });
       onOpenChange(false);
       if (briefingId) {
@@ -54,6 +58,8 @@ export function GenerateQuotationDialog({ open, onOpenChange, conversationId, co
       setLoading(false);
     }
   };
+
+  const handleConfirm = () => runGeneration(false);
 
   return (
     <Dialog open={open} onOpenChange={(v) => !loading && onOpenChange(v)}>
