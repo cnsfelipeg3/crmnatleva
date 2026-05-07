@@ -1182,7 +1182,9 @@ Deno.serve(async (req) => {
       external_message_id: messageId,
       direction,
       sender_type: senderType,
-      content: textContent || "",
+      content: msgType === "location"
+        ? (body.location?.name || body.location?.address || `${body.location?.latitude}, ${body.location?.longitude}`)
+        : (textContent || ""),
       message_type: msgType,
       media_url: mediaUrl,
       media_original_url: mediaUrl,
