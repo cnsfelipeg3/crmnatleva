@@ -14,6 +14,15 @@ const markerIcon = L.icon({
   shadowSize: [41, 41],
 });
 
+function InvalidateOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(t);
+  }, [map]);
+  return null;
+}
+
 interface Props {
   latitude: number;
   longitude: number;
