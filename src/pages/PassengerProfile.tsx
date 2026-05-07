@@ -21,7 +21,7 @@ import {
   User, Pencil, Save, X, ShoppingCart, Plane, AlertTriangle,
   FileText, Upload, Download, Loader2, MessageCircle, ArrowLeft,
   Calendar, DollarSign, TrendingUp, MapPin, BarChart3, Brain,
-  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone,
+  Clock, ExternalLink, Paperclip, Eye, Trash2, Phone, Copy,
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
