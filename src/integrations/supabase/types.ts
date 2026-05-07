@@ -3410,6 +3410,87 @@ export type Database = {
           },
         ]
       }
+      experience_products: {
+        Row: {
+          category: string | null
+          cover_image_url: string | null
+          created_at: string
+          currency: string | null
+          description: string | null
+          destination: string
+          destination_country: string | null
+          display_order: number
+          duration: string | null
+          excludes: Json
+          gallery: Json
+          highlights: Json
+          how_it_works: string | null
+          id: string
+          includes: Json
+          is_active: boolean
+          meta: Json
+          pickup_info: string | null
+          price_from: number | null
+          recommendations: string | null
+          short_description: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          destination: string
+          destination_country?: string | null
+          display_order?: number
+          duration?: string | null
+          excludes?: Json
+          gallery?: Json
+          highlights?: Json
+          how_it_works?: string | null
+          id?: string
+          includes?: Json
+          is_active?: boolean
+          meta?: Json
+          pickup_info?: string | null
+          price_from?: number | null
+          recommendations?: string | null
+          short_description?: string | null
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          currency?: string | null
+          description?: string | null
+          destination?: string
+          destination_country?: string | null
+          display_order?: number
+          duration?: string | null
+          excludes?: Json
+          gallery?: Json
+          highlights?: Json
+          how_it_works?: string | null
+          id?: string
+          includes?: Json
+          is_active?: boolean
+          meta?: Json
+          pickup_info?: string | null
+          price_from?: number | null
+          recommendations?: string | null
+          short_description?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       external_sellers: {
         Row: {
           active: boolean
