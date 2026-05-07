@@ -2354,6 +2354,20 @@ function OperacaoInboxInner() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="Nova conversa"
+                        className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
+                        onClick={() => setNewConversationOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p className="text-xs">Nova conversa (⌘N)</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         aria-label="Visão Pipeline"
                         className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
                         onClick={() => setViewMode("pipeline")}
