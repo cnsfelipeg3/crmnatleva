@@ -26,6 +26,12 @@ import {
 import { toast } from "sonner";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
 import { copyPassengersToClipboard } from "@/lib/passengerCopy";
+import AddressMapCard from "@/components/passenger/AddressMapCard";
+
+function titleCase(s: string | null | undefined): string {
+  if (!s) return "";
+  return s.toLowerCase().replace(/(^|[\s\-/])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
+}
 
 interface Passenger {
   id: string;
