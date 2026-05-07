@@ -72,6 +72,7 @@ import {
   normalizeDbMessageType, normalizeDbStatus, safeUnreadCount,
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
+import { NewConversationDialog } from "@/components/inbox/NewConversationDialog";
 import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { useChatScrollAnchor } from "@/hooks/useChatScrollAnchor";
@@ -206,6 +207,22 @@ function OperacaoInboxInner() {
 
   const [inputText, setInputText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [newConversationOpen, setNewConversationOpen] = useState(false);
+
+  // Cmd/Ctrl+N → abre Nova conversa
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+        const target = e.target as HTMLElement | null;
+        const tag = target?.tagName?.toLowerCase();
+        if (tag === "input" || tag === "textarea" || target?.isContentEditable) return;
+        e.preventDefault();
+        setNewConversationOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
   const [contentMatchIds, setContentMatchIds] = useState<Set<string> | null>(null);
   const [contentMatchInfo, setContentMatchInfo] = useState<Map<string, { msgId: string; snippet: string }>>(new Map());
   const [searchingContent, setSearchingContent] = useState(false);
@@ -2337,6 +2354,20 @@ function OperacaoInboxInner() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        aria-label="Nova conversa"
+                        className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
+                        onClick={() => setNewConversationOpen(true)}
+                      >
+                        <Plus className="h-4 w-4 md:h-3.5 md:w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent><p className="text-xs">Nova conversa (⌘N)</p></TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         aria-label="Visão Pipeline"
                         className="h-9 w-9 md:h-7 md:w-7 text-muted-foreground hover:text-primary active:scale-95 transition-transform"
                         onClick={() => setViewMode("pipeline")}
@@ -3556,6 +3587,22 @@ function OperacaoInboxInner() {
         externalMessageId={messageInfoId}
         isGroup={!!selected?.is_group}
         groupParticipants={(selected as any)?.group_participants || null}
+      />
+      <NewConversationDialog
+        open={newConversationOpen}
+        onOpenChange={setNewConversationOpen}
+        conversations={conversations as any}
+        waConnected={waConnected}
+        onSelectConversation={(id) => {
+          setSelectedId(id);
+          if (isMobile) {
+            // já fica visível pelo selectedId
+          }
+          setTimeout(() => {
+            const inputEl = document.querySelector<HTMLTextAreaElement>('[data-message-input]');
+            inputEl?.focus();
+          }, 300);
+        }}
       />
     </div>
   );
