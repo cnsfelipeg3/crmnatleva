@@ -3588,7 +3588,7 @@ function OperacaoInboxInner() {
         isGroup={!!selected?.is_group}
         groupParticipants={(selected as any)?.group_participants || null}
         contactPhone={selected?.phone || null}
-        contactName={selected?.contact_name || selected?.display_name || null}
+        contactName={selected?.contact_name || (selected as any)?.display_name || null}
         messageStatus={(currentMessages as any[])?.find?.((m: any) => m.external_message_id === messageInfoId)?.status || null}
       />
       <NewConversationDialog
