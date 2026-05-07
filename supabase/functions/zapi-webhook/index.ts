@@ -978,7 +978,7 @@ Deno.serve(async (req) => {
     }
 
     // Skip if no phone or no content
-    if (!phone || (!textContent && !body.image && !body.audio && !body.video && !body.document)) {
+    if (!phone || (!textContent && !body.image && !body.audio && !body.video && !body.document && !body.location)) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_phone_or_content" }).eq("id", rawEventId);
       // Still save contact info
       if (phone && (body.senderName || body.chatName)) {
