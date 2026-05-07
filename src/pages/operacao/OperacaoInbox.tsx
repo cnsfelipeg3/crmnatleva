@@ -1219,14 +1219,51 @@ function OperacaoInboxInner() {
 
     if (editingMsg) {
       const msgToEdit = editingMsg;
+      // Z-API exige o messageId do WhatsApp (external_message_id), NÃO o UUID interno.
+      // Sem ele, o editMessageId é ignorado e a chamada vira um envio novo (duplicidade).
+      const waMessageId = msgToEdit.external_message_id;
+      if (!waMessageId) {
+        toast({
+          title: "Não é possível editar",
+          description: "Esta mensagem ainda não foi confirmada pelo WhatsApp. Aguarde alguns segundos e tente novamente.",
+          variant: "destructive",
+        });
+        setIsSending(false);
+        return;
+      }
+      // Bloqueio extra: WhatsApp só permite editar nos últimos 15 minutos (limite do app é ~15min, Z-API aceita até 7 dias mas o WhatsApp recusa).
+      const ageMs = Date.now() - new Date(msgToEdit.created_at).getTime();
+      if (ageMs > 15 * 60 * 1000) {
+        toast({
+          title: "Não é possível editar",
+          description: "O WhatsApp só permite editar mensagens enviadas há menos de 15 minutos.",
+          variant: "destructive",
+        });
+        setIsSending(false);
+        return;
+      }
       setInputText(""); setEditingMsg(null);
       textareaRef.current?.focus();
+      // Otimista: atualiza UI
       setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === msgToEdit.id ? { ...m, text, edited: true } : m) }));
-      if (selectedId.startsWith("wa_") && msgToEdit.id && !msgToEdit.id.startsWith("temp_")) {
+      if (selectedId.startsWith("wa_")) {
         try {
-          const phone = selectedId.replace("wa_", "");
-          await callZapiProxy("edit-message", { phone, messageId: msgToEdit.id, text });
-        } catch (err) { toast({ title: "Erro ao editar", description: "Não foi possível editar no WhatsApp", variant: "destructive" }); }
+          const phone = selected?.zapi_phone || selectedId.replace("wa_", "");
+          const resp: any = await callZapiProxy("edit-message", { phone, messageId: waMessageId, text });
+          if (resp?.error || resp?.value === false) {
+            throw new Error(resp?.message || resp?.error || "Falha ao editar");
+          }
+          // Persiste edição no banco (não cria nova linha)
+          try {
+            const tableName = (msgToEdit as any).source_table || "conversation_messages";
+            await supabase.from(tableName as any).update({ content: text, edited: true, edited_at: new Date().toISOString() } as any).eq("id", msgToEdit.id);
+          } catch {}
+          toast({ title: "Mensagem editada" });
+        } catch (err: any) {
+          // Reverte UI
+          setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m => m.id === msgToEdit.id ? { ...m, text: msgToEdit.text, edited: msgToEdit.edited } : m) }));
+          toast({ title: "Erro ao editar", description: err?.message || "Não foi possível editar no WhatsApp", variant: "destructive" });
+        }
       }
       setIsSending(false);
       return;
