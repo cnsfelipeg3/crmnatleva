@@ -509,7 +509,7 @@ export default function Lodging() {
       </div>
 
       {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
         <div className="flex gap-1 bg-muted rounded-lg p-0.5">
           <button onClick={() => setMainTab("active")} className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${mainTab === "active" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}>
             Ativos ({activeTasks.length})
@@ -519,48 +519,27 @@ export default function Lodging() {
           </button>
         </div>
 
-        <div className="flex-1" />
-
-        <div className="relative">
-          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar hotel, hóspede, reserva..." value={search} onChange={e => setSearch(e.target.value)} className="pl-8 h-8 text-xs w-[200px]" />
-        </div>
-
-        {mainTab === "active" && (
-          <>
-            <Select value={filterMilestone} onValueChange={setFilterMilestone}>
-              <SelectTrigger className="w-[110px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas etapas</SelectItem>
-                <SelectItem value="H24">24 horas</SelectItem>
-                <SelectItem value="D7">7 dias</SelectItem>
-                <SelectItem value="D14">14 dias</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-[120px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                <SelectItem value="PENDENTE">Pendente</SelectItem>
-                <SelectItem value="EM_ANDAMENTO">Em andamento</SelectItem>
-                <SelectItem value="PROBLEMA">Problema</SelectItem>
-              </SelectContent>
-            </Select>
-          </>
-        )}
-
         <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
-          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("agenda")} className={`p-1.5 rounded ${viewMode === "agenda" ? "bg-background shadow-sm" : ""}`} title="Lista">
             <List className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("cards")} className={`p-1.5 rounded ${viewMode === "cards" ? "bg-background shadow-sm" : ""}`} title="Cards">
             <LayoutGrid className="w-3.5 h-3.5" />
           </button>
-          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`}>
+          <button onClick={() => setViewMode("calendar")} className={`p-1.5 rounded ${viewMode === "calendar" ? "bg-background shadow-sm" : ""}`} title="Calendário">
             <Calendar className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
+
+      {/* Smart filters: search + date pills + specific date + range + select filters */}
+      <SmartFilters
+        config={LODGING_FILTER_CONFIG}
+        state={filterState}
+        setState={setFilterState}
+        activeFilterCount={activeFilterCount}
+        clearAll={clearFilters}
+      />
 
       {/* Content */}
       {loading ? (
