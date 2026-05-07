@@ -485,13 +485,50 @@ export default function Dashboard() {
     if (valueRange !== "all") c++;
     if (marginRange !== "all") c++;
     if (region !== "all") c++;
+    if (hourFrom || hourTo) c++;
+    if (liveMode) c++;
     return c;
-  }, [period, seller, destination, product, status, valueRange, marginRange, region]);
+  }, [period, seller, destination, product, status, valueRange, marginRange, region, hourFrom, hourTo, liveMode]);
 
   const clearAllFilters = useCallback(() => {
     setPeriod("all"); setSeller("all"); setDestination("all"); setProduct("all");
     setStatus("all"); setValueRange("all"); setMarginRange("all"); setRegion("all");
+    setCustomRange(undefined); setHourFrom(""); setHourTo(""); setLiveMode(false);
   }, []);
+
+  // ── LIVE MODE ──
+  // Force "today" period and refresh sales every 20s + on realtime sales changes.
+  const refetchSales = useCallback(async () => {
+    const { data } = await supabase
+      .from("sales")
+      .select("id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id")
+      .order("close_date", { ascending: false })
+      .limit(5000);
+    if (data) setSales(data as Sale[]);
+  }, []);
+
+  const liveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!liveMode) return;
+    setPeriod("today");
+    setCustomRange(undefined);
+    // Tick clock every 30s so periodCutoff stays fresh as the day progresses
+    const tick = window.setInterval(() => forceTick(t => t + 1), 30000);
+    // Refetch sales every 20s
+    const poll = window.setInterval(() => { refetchSales(); }, 20000);
+    liveTimerRef.current = poll;
+    // Also subscribe to realtime sales changes
+    const channel = supabase
+      .channel("dashboard-live-sales")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => refetchSales())
+      .subscribe();
+    refetchSales();
+    return () => {
+      window.clearInterval(tick);
+      window.clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [liveMode, refetchSales]);
 
   // Show skeleton only while KPIs are loading (fast path)
   if (kpiLoading && !kpiData) {
