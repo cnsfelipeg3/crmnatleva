@@ -1,0 +1,1 @@
+DELETE FROM public.experience_products WHERE id = 'b07644f8-0491-4e22-934e-51e2c88adee7';
