@@ -7,6 +7,7 @@ import { formatMsgTime, formatDateSeparator, shouldShowDateSeparator, stripQuote
 import { formatBytes } from "@/lib/format";
 import { humanizeMediaFailure } from "@/lib/zapiFailureClassifier";
 import { PdfThumbnail } from "./PdfThumbnail";
+import { LocationBubble } from "./LocationBubble";
 
 const URL_REGEX = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
 function Linkify({ text }: { text: string }) {
