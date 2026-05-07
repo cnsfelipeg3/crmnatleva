@@ -128,6 +128,7 @@ export function normalizeDbMessageType(value: string | null | undefined): MsgTyp
   const raw = (value || "text").toLowerCase();
   if (raw === "ptt") return "audio";
   if (raw === "sticker") return "sticker";
+  if (raw === "location") return "location";
   if (raw === "image" || raw === "audio" || raw === "video" || raw === "document") return raw as MsgType;
   return "text";
 }

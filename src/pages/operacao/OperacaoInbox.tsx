@@ -1446,8 +1446,7 @@ function OperacaoInboxInner() {
       const { data } = await (supabase.from("conversation_messages" as any).select("*").eq("conversation_id", selectedId).order("created_at") as any);
       if (data && (data as any[]).length > 0) {
         setMessages(prev => ({ ...prev, [selectedId]: (data as any[]).map((m: any) => {
-          const rawType = (m.message_type || "text").toLowerCase();
-          const mType: MsgType = rawType === "ptt" ? "audio" : (["image","audio","video","document"].includes(rawType) ? rawType as MsgType : "text");
+          const mType: MsgType = normalizeDbMessageType(m.message_type);
           const rawStatus = (m.status || "sent").toLowerCase();
           const mStatus: MsgStatus = ["read","lido","seen","played"].includes(rawStatus) ? "read" : ["delivered","entregue","received","delivery_ack"].includes(rawStatus) ? "delivered" : "sent";
           return {
@@ -1455,7 +1454,8 @@ function OperacaoInboxInner() {
             sender_type: (m.sender_type || "cliente") as "cliente" | "atendente" | "sistema",
             message_type: mType,
             text: stripQuotes(m.content || ""), status: mStatus, created_at: toIsoTimestamp(m.created_at),
-          };
+            metadata: m.metadata || null,
+          } as any;
         }) }));
         isUserScrolledUpRef.current = false;
         scrollToBottom();

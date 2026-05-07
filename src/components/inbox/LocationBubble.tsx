@@ -1,5 +1,6 @@
+import { useEffect, useRef } from "react";
 import { MapPin, ExternalLink, Navigation } from "lucide-react";
-import { MapContainer, TileLayer, Marker } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -12,6 +13,15 @@ const markerIcon = L.icon({
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
 });
+
+function InvalidateOnMount() {
+  const map = useMap();
+  useEffect(() => {
+    const t = setTimeout(() => map.invalidateSize(), 100);
+    return () => clearTimeout(t);
+  }, [map]);
+  return null;
+}
 
 interface Props {
   latitude: number;
@@ -43,6 +53,7 @@ export function LocationBubble({ latitude, longitude, title, address }: Props) {
         >
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <Marker position={[lat, lng]} icon={markerIcon} />
+          <InvalidateOnMount />
         </MapContainer>
         <a
           href={googleMapsUrl}
