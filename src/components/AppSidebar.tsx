@@ -42,6 +42,7 @@ const viagensItems = [
   { to: "/checkin", icon: ClipboardCheck, label: "Fazer Check-in" },
   { to: "/hospedagem", icon: Hotel, label: "Confirmar Hospedagens" },
   { to: "/alteracoes", icon: RotateCcw, label: "Alterações de Viagem" },
+  { to: "/produtos", icon: PackageOpen, label: "Produtos", alwaysVisible: true },
   { to: "/booking-search", icon: Hotel, label: "Busca Booking", showBeta: true },
   { to: "/flights-search", icon: PlaneTakeoff, label: "Busca de Voos", showBeta: true },
   { to: "/google-flights-search", icon: PlaneTakeoff, label: "Google Flights", showBeta: true },
@@ -186,7 +187,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
 
   useEffect(() => {
     const p = window.location.pathname;
-    if (p.startsWith("/viagens") || p.startsWith("/checkin") || p.startsWith("/hospedagem") || p.startsWith("/alteracoes")) setViagensOpen(true);
+    if (p.startsWith("/viagens") || p.startsWith("/checkin") || p.startsWith("/hospedagem") || p.startsWith("/alteracoes") || p.startsWith("/produtos")) setViagensOpen(true);
     if (p.startsWith("/passengers") || p.startsWith("/inteligencia-clientes") || p.startsWith("/natleva-intelligence") || p.startsWith("/birthdays")) setClientesOpen(true);
     if (p.startsWith("/financeiro")) setFinanceOpen(true);
     if (p.startsWith("/rh")) setRhOpen(true);

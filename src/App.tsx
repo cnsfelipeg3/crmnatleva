@@ -155,6 +155,11 @@ const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const PassengerSelfSignup = lazy(() => import("@/pages/PassengerSelfSignup"));
 const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
+// Produtos / Experiências
+const Produtos = lazy(() => import("@/pages/produtos/Produtos"));
+const ProdutoDetalhe = lazy(() => import("@/pages/produtos/ProdutoDetalhe"));
+const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
+
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
 const OperacaoAtalhos = lazy(() => import("@/pages/operacao/OperacaoAtalhos"));
@@ -253,6 +258,10 @@ function AppRoutes() {
           <Route path="/checkin" element={<Checkin />} />
           <Route path="/hospedagem" element={<Lodging />} />
           <Route path="/alteracoes" element={<TripAlterations />} />
+          <Route path="/produtos" element={<Produtos />} />
+          <Route path="/produtos/novo" element={<ProdutoEditor />} />
+          <Route path="/produtos/:slug" element={<ProdutoDetalhe />} />
+          <Route path="/produtos/:slug/editar" element={<ProdutoEditor />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerProfile />} />
