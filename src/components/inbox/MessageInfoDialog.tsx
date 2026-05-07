@@ -151,9 +151,9 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
     const byPhone = new Map<string, RecipientStatus>();
     rows.forEach(r => byPhone.set(String(r.participant_phone).replace(/\D/g, ""), r));
 
-    if (isGroup && groupParticipants?.length) {
-      groupParticipants.forEach(p => {
-        const phone = String(p.phone || "").replace(/\D/g, "");
+    if (isGroup && resolvedParticipants.length > 0) {
+      resolvedParticipants.forEach(p => {
+        const phone = p.phone;
         if (!phone) return;
         if (!byPhone.has(phone)) {
           byPhone.set(phone, {
@@ -167,6 +167,8 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
           byPhone.get(phone)!.participant_name = p.name;
         }
       });
+    } else if (isGroup) {
+      // Sem lista resolvida ainda · placeholder vazio (o effect vai popular)
     } else if (!isGroup && contactPhone) {
       // 1:1 — sintetiza recipient com o contato; estima estado pelo messageStatus
       const phone = String(contactPhone).replace(/\D/g, "");
