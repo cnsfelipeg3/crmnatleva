@@ -244,9 +244,18 @@ async function processStatusUpdate(supabase: any, body: any) {
   // Per-recipient receipts (estilo "Dados da mensagem" do WhatsApp)
   // Em grupos, o Z-API envia um evento de status por participante, com body.participantPhone preenchido.
   const isGroupStatus = body.isGroup === true || !!body.participantPhone;
-  const recipientPhone = body.participantPhone
-    ? String(body.participantPhone).replace(/\D/g, "")
-    : (body.phone ? String(body.phone).replace(/\D/g, "") : "");
+
+  // Phone bruto do evento (pode ser LID ou status@broadcast).
+  const rawEventPhone = body.participantPhone
+    ? String(body.participantPhone)
+    : (body.phone ? String(body.phone) : "");
+  const rawEventDigits = rawEventPhone.replace(/\D/g, "");
+  const isLidOrSpecial =
+    rawEventPhone.includes("@lid") ||
+    rawEventPhone.includes("status@broadcast") ||
+    rawEventPhone.includes("@g.us") ||
+    !rawEventDigits;
+
   const recipientTsMs = (() => {
     const m = Number(body.momment);
     if (!Number.isFinite(m) || m <= 0) return Date.now();
@@ -263,7 +272,6 @@ async function processStatusUpdate(supabase: any, body: any) {
     if (failureReason) updateRow.failure_reason = failureReason;
 
     // Filtro defensivo: status updates só fazem sentido para mensagens outgoing.
-    // Se conversation_messages não tem direction='outgoing', simplesmente não casa nada (no-op seguro).
     await supabase
       .from("conversation_messages")
       .update(updateRow)
@@ -271,13 +279,42 @@ async function processStatusUpdate(supabase: any, body: any) {
       .eq("direction", "outgoing");
 
     // Registro por destinatário (entrega/leitura por membro)
-    if (recipientPhone && (mappedStatus === "DELIVERED" || mappedStatus === "READ" || mappedStatus === "SENT")) {
+    if (mappedStatus === "DELIVERED" || mappedStatus === "READ" || mappedStatus === "SENT") {
       try {
+        // Busca conversa da mensagem (necessário tanto pra resolver phone real
+        // em chats 1:1 quanto pra preencher conversation_id do receipt).
         const { data: convRow } = await supabase
           .from("conversation_messages")
-          .select("conversation_id")
+          .select("conversation_id, conversations!inner(phone, is_group)")
           .eq("external_message_id", sid)
           .maybeSingle();
+
+        const conv = (convRow as any)?.conversations || null;
+        const convPhone = conv?.phone ? String(conv.phone).replace(/\D/g, "") : "";
+        const convIsGroup = !!conv?.is_group;
+
+        // Resolve recipientPhone:
+        //  - 1:1: usa phone da conversa (LID/status@broadcast NÃO bate com nada útil)
+        //  - Grupo: tenta participantPhone real; se for LID, resolve via helper
+        let recipientPhone = "";
+        if (!convIsGroup && !isGroupStatus) {
+          recipientPhone = convPhone || (isLidOrSpecial ? "" : rawEventDigits);
+        } else if (isLidOrSpecial && rawEventPhone.includes("@lid")) {
+          const lid = rawEventDigits;
+          try {
+            const { data: contact } = await supabase
+              .from("zapi_contacts").select("phone").eq("lid", lid).maybeSingle();
+            recipientPhone = contact?.phone ? String(contact.phone).replace(/\D/g, "") : "";
+          } catch { /* ignore */ }
+          if (!recipientPhone) recipientPhone = lid; // último recurso
+        } else {
+          recipientPhone = rawEventDigits;
+        }
+
+        if (!recipientPhone) {
+          console.warn("[zapi-webhook] receipt skipped: no recipient phone", { sid, rawEventPhone, convPhone });
+          continue;
+        }
 
         let participantName: string | null = body.senderName || null;
         if (!participantName) {
@@ -291,14 +328,14 @@ async function processStatusUpdate(supabase: any, body: any) {
           conversation_id: convRow?.conversation_id || null,
           participant_phone: recipientPhone,
           participant_name: participantName,
-          is_group: isGroupStatus,
+          is_group: isGroupStatus || convIsGroup,
           updated_at: new Date().toISOString(),
         };
         if (mappedStatus === "DELIVERED") patch.delivered_at = recipientIso;
         if (mappedStatus === "READ") {
           patch.read_at = recipientIso;
           // garante delivered_at também (read implica delivered)
-          patch.delivered_at = patch.delivered_at || recipientIso;
+          patch.delivered_at = recipientIso;
         }
         if (rawStatus === "PLAYED") patch.played_at = recipientIso;
 
@@ -306,7 +343,7 @@ async function processStatusUpdate(supabase: any, body: any) {
           .from("message_recipient_status")
           .upsert(patch, { onConflict: "external_message_id,participant_phone" });
       } catch (err: any) {
-        console.error("[zapi-webhook] message_recipient_status upsert failed", { sid, recipientPhone, err: err?.message });
+        console.error("[zapi-webhook] message_recipient_status upsert failed", { sid, err: err?.message });
       }
     }
   }
