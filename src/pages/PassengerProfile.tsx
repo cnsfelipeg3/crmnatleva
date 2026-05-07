@@ -347,6 +347,9 @@ export default function PassengerProfile() {
           <Button variant="outline" size="sm" onClick={startEdit}>
             <Pencil className="w-4 h-4 mr-1" /> Editar cadastro
           </Button>
+          <Button variant="outline" size="sm" onClick={() => copyPassengerData(passenger)}>
+            <Copy className="w-4 h-4 mr-1" /> Copiar dados
+          </Button>
         </div>
       </Card>
 
