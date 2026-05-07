@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import KpiCards from "@/components/dashboard/KpiCards";
 import DeferredRender from "@/components/DeferredRender";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hasProduct } from "@/lib/productTypes";
+import type { DateRange } from "react-day-picker";
 
 const FinancialSection = lazy(() => import("@/components/dashboard/FinancialSection"));
 const CommercialSection = lazy(() => import("@/components/dashboard/CommercialSection"));
