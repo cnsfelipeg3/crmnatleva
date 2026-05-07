@@ -50,6 +50,8 @@ export function useInboxMessages(
       pinned_at: m.pinned_at || null,
       is_deleted: !!m.is_deleted,
       deleted_at: m.deleted_at || null,
+      edited: !!m.is_edited,
+      edited_at: m.edited_at || null,
       metadata: m.metadata || null,
     }))
   ), []);
@@ -88,7 +90,7 @@ export function useInboxMessages(
 
         const { data: unifiedRows, error } = await (supabase
           .from("conversation_messages" as any)
-          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id, sender_name, sender_phone, sender_photo, is_pinned, pinned_at, is_deleted, deleted_at, metadata")
+          .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id, sender_name, sender_phone, sender_photo, is_pinned, pinned_at, is_deleted, deleted_at, is_edited, edited_at, metadata")
           .in("conversation_id", allConversationIds)
           .order("timestamp", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false })
@@ -132,7 +134,7 @@ export function useInboxMessages(
 
     const { data: olderRows } = await (supabase
       .from("conversation_messages" as any)
-      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id, sender_name, sender_phone, sender_photo, is_pinned, pinned_at, is_deleted, deleted_at, metadata")
+      .select("id, conversation_id, sender_type, direction, message_type, content, media_url, media_storage_url, media_status, media_mimetype, media_filename, media_size_bytes, media_failure_reason, status, timestamp, created_at, external_message_id, sender_name, sender_phone, sender_photo, is_pinned, pinned_at, is_deleted, deleted_at, is_edited, edited_at, metadata")
       .in("conversation_id", allConversationIds)
       .lt("timestamp", cursor)
       .order("timestamp", { ascending: false, nullsFirst: false })
