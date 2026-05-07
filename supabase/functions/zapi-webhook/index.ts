@@ -1037,7 +1037,9 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════════
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
-    const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
+    const preview = msgType === "location"
+      ? `📍 Localização${body.location?.name || body.location?.address ? `: ${body.location?.name || body.location?.address}` : ""}`
+      : (textContent || (msgType !== "text" ? `📎 ${msgType}` : ""));
     const isGroupMsg = body.isGroup === true || /-group$/i.test(String(rawPhone || "")) || cleanPhone.length >= 15;
     const groupSubject = isGroupMsg ? (body.chatName || null) : null;
     const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe, isGroupMsg, groupSubject);
