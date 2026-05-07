@@ -1055,38 +1055,63 @@ export default function Checkin() {
                               />
                             </td>
                             <td className="px-3 py-3 align-middle">
-                              {passengerFiles[pax.id] ? (
-                                <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                                  <span className="truncate flex-1 text-foreground">{passengerFiles[pax.id]!.name}</span>
-                                  <button onClick={() => setPassengerFiles(prev => ({ ...prev, [pax.id]: null }))} className="text-muted-foreground hover:text-destructive shrink-0">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : passengerExisting[pax.id]?.boarding_pass_url ? (
-                                <div className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                  <a href={passengerExisting[pax.id].boarding_pass_url} target="_blank" rel="noreferrer" className="truncate flex-1 text-foreground hover:underline">
-                                    {passengerExisting[pax.id].boarding_pass_file_name || "Cartão"}
-                                  </a>
-                                  <button onClick={() => {
-                                    setPassengerExisting(prev => {
-                                      const next = { ...prev };
-                                      delete next[pax.id];
-                                      return next;
-                                    });
-                                  }} className="text-muted-foreground hover:text-destructive shrink-0">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
+                              <div className="space-y-1.5">
+                                {/* Cartões já salvos */}
+                                {(existingPasses[pax.id] || []).map((bp) => (
+                                  <div key={bp.id} className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <Input
+                                      value={bp.label || ""}
+                                      onChange={(e) => setExistingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: (prev[pax.id] || []).map(x => x.id === bp.id ? { ...x, label: e.target.value } : x),
+                                      }))}
+                                      placeholder="Nome do cartão"
+                                      className="h-6 text-xs flex-1 bg-transparent border-0 px-1 focus-visible:ring-1"
+                                    />
+                                    <a href={bp.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline shrink-0" title="Abrir">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                    <button onClick={() => setExistingPasses(prev => ({
+                                      ...prev,
+                                      [pax.id]: (prev[pax.id] || []).filter(x => x.id !== bp.id),
+                                    }))} className="text-muted-foreground hover:text-destructive shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {/* Cartões pendentes (novos) */}
+                                {(pendingPasses[pax.id] || []).map((p) => (
+                                  <div key={p.tempId} className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                                    <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    <Input
+                                      value={p.label}
+                                      onChange={(e) => setPendingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: (prev[pax.id] || []).map(x => x.tempId === p.tempId ? { ...x, label: e.target.value } : x),
+                                      }))}
+                                      placeholder={p.file.name}
+                                      className="h-6 text-xs flex-1 bg-transparent border-0 px-1 focus-visible:ring-1"
+                                    />
+                                    <span className="text-[10px] text-muted-foreground shrink-0">{(p.file.size / 1024).toFixed(0)}KB</span>
+                                    <button onClick={() => setPendingPasses(prev => ({
+                                      ...prev,
+                                      [pax.id]: (prev[pax.id] || []).filter(x => x.tempId !== p.tempId),
+                                    }))} className="text-muted-foreground hover:text-destructive shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {/* Botão Adicionar */}
                                 <button
                                   onClick={() => fileInputRefs.current[pax.id]?.click()}
-                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-1.5 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
+                                  className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-1.5 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
                                 >
-                                  <Upload className="w-3.5 h-3.5" /> Upload
+                                  {(existingPasses[pax.id]?.length || 0) + (pendingPasses[pax.id]?.length || 0) > 0
+                                    ? <><Plus className="w-3.5 h-3.5" /> Adicionar mais um cartão</>
+                                    : <><Upload className="w-3.5 h-3.5" /> Adicionar cartão de embarque</>}
                                 </button>
-                              )}
+                              </div>
                               <input
                                 ref={el => { fileInputRefs.current[pax.id] = el; }}
                                 type="file"
@@ -1097,9 +1122,16 @@ export default function Checkin() {
                                   if (file) {
                                     if (file.size > 10 * 1024 * 1024) {
                                       toast({ title: "Arquivo muito grande", description: "Máximo 10MB", variant: "destructive" });
-                                      return;
+                                    } else {
+                                      const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                                      // Sugestão de label automática: "Cartão N · arquivo"
+                                      const count = (existingPasses[pax.id]?.length || 0) + (pendingPasses[pax.id]?.length || 0) + 1;
+                                      const suggested = `Cartão ${count}`;
+                                      setPendingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: [...(prev[pax.id] || []), { tempId, file, label: suggested }],
+                                      }));
                                     }
-                                    setPassengerFiles(prev => ({ ...prev, [pax.id]: file }));
                                   }
                                   e.target.value = "";
                                 }}
