@@ -254,6 +254,7 @@ export default function PassengerProfile() {
       passport_number: editForm.passport_number || null,
       passport_expiry: editForm.passport_expiry || null,
       phone: editForm.phone || null,
+      email: editForm.email || null,
       rg: editForm.rg || null,
       address_cep: editForm.address_cep || null,
       address_street: editForm.address_street || null,
