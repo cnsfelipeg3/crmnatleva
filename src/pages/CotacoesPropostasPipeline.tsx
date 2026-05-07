@@ -113,25 +113,27 @@ export default function CotacoesPropostasPipeline() {
     },
   });
 
-  // Fetch proposals
+  // Fetch proposals (apenas reais · esconde fictícias do simulador)
   const { data: proposals, refetch: refetchProposals } = useQuery({
     queryKey: ["pipeline-proposals"],
     queryFn: async () => {
       const { data } = await supabase
         .from("proposals")
         .select("*")
+        .eq("is_fictional", false)
         .order("created_at", { ascending: false });
       return data || [];
     },
   });
 
-  // Fetch briefings
+  // Fetch briefings (apenas reais)
   const { data: briefings } = useQuery({
     queryKey: ["pipeline-briefings"],
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("quotation_briefings")
         .select("*")
+        .eq("is_fictional", false)
         .order("created_at", { ascending: false });
       return data || [];
     },
