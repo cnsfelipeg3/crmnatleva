@@ -366,9 +366,14 @@ export default function Passengers() {
             <CheckSquare className="w-4 h-4 mr-1" /> {bulkMode ? "Cancelar seleção" : "Selecionar"}
           </Button>
           {bulkMode && bulkSelection.size > 0 && (
-            <Button size="sm" onClick={() => navigateToNewSaleWithPassengers([...bulkSelection])}>
-              <ShoppingCart className="w-4 h-4 mr-1" /> Criar venda ({bulkSelection.size})
-            </Button>
+            <>
+              <Button size="sm" variant="outline" onClick={() => copyPassengers([...bulkSelection])}>
+                <Copy className="w-4 h-4 mr-1" /> Copiar dados ({bulkSelection.size})
+              </Button>
+              <Button size="sm" onClick={() => navigateToNewSaleWithPassengers([...bulkSelection])}>
+                <ShoppingCart className="w-4 h-4 mr-1" /> Criar venda ({bulkSelection.size})
+              </Button>
+            </>
           )}
           <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
             {syncing ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
