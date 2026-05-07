@@ -358,12 +358,18 @@ export default function CotacoesMonitorView() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchBriefings]);
 
-  // KPIs
-  const extracting = briefings.filter(b => b.status === "extraindo").length;
-  const totalFields = briefings.reduce((s, b) => s + countFilledFields(b as any), 0);
-  const maxFields = briefings.length * MONITOR_TOTAL_FIELDS;
+  // Filtra fictícias por padrão (toggle dinâmico no header)
+  const visibleBriefings = showFictional
+    ? briefings
+    : briefings.filter((b: any) => !b.is_fictional);
+  const fictionalCount = briefings.filter((b: any) => b.is_fictional).length;
+
+  // KPIs (calculados sobre o set visível)
+  const extracting = visibleBriefings.filter(b => b.status === "extraindo").length;
+  const totalFields = visibleBriefings.reduce((s, b) => s + countFilledFields(b as any), 0);
+  const maxFields = visibleBriefings.length * MONITOR_TOTAL_FIELDS;
   const completionPct = maxFields > 0 ? Math.round((totalFields / maxFields) * 100) : 0;
-  const completed = briefings.filter(b => {
+  const completed = visibleBriefings.filter(b => {
     const f = countFilledFields(b as any);
     return f >= Math.floor(MONITOR_TOTAL_FIELDS * 0.9);
   }).length;
