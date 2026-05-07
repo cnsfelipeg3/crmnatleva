@@ -103,6 +103,11 @@ export default function Dashboard() {
   const [valueRange, setValueRange] = useState("all");
   const [marginRange, setMarginRange] = useState("all");
   const [region, setRegion] = useState("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
+  const [hourFrom, setHourFrom] = useState<string>("");
+  const [hourTo, setHourTo] = useState<string>("");
+  const [liveMode, setLiveMode] = useState(false);
+  const [, forceTick] = useState(0);
   const [ceoMode, setCeoMode] = useState(false);
 
   // ── FAST PATH: Server-side aggregated KPIs ──
