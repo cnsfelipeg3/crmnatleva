@@ -60,6 +60,7 @@ import LazyEmojiPicker from "@/components/LazyEmojiPicker";
 import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
+import { MessageInfoDialog } from "@/components/inbox/MessageInfoDialog";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
