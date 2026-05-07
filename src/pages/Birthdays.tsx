@@ -232,6 +232,13 @@ export default function Birthdays() {
           })}
         </div>
       )}
+
+      <BirthdayMessageDialog
+        open={!!openMessage}
+        onOpenChange={(v) => { if (!v) setOpenMessage(null); }}
+        passenger={openMessage?.passenger || null}
+        age={openMessage?.age}
+      />
     </div>
   );
 }
