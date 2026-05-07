@@ -100,6 +100,28 @@ function getDateKey(dateStr: string | null): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const LODGING_FILTER_CONFIG: SmartFilterConfig = {
+  sortOptions: [
+    { key: "scheduled_at_utc", label: "Data agendada", type: "date" },
+    { key: "hotel_checkin_datetime_utc", label: "Data do check-in", type: "date" },
+    { key: "status", label: "Status", type: "string" },
+  ],
+  defaultSortKey: "scheduled_at_utc",
+  defaultSortDirection: "asc",
+  dateField: "hotel_checkin_datetime_utc",
+  dateFieldOptions: [
+    { key: "hotel_checkin_datetime_utc", label: "Data do check-in" },
+    { key: "scheduled_at_utc", label: "Data agendada" },
+  ],
+  searchPlaceholder: "Buscar hotel, hóspede, reserva...",
+  searchFields: ["hotel_name", "hotel_reservation_code", "sale.name", "sale.display_id"],
+  selectFilters: [
+    { key: "status", label: "Status", options: ["PENDENTE", "EM_ANDAMENTO", "PROBLEMA", "CONFIRMADO", "BLOQUEADO", "CANCELADO"] },
+    { key: "milestone", label: "Etapa", options: ["D14", "D7", "H24"] },
+  ],
+  pillPresets: ["today", "tomorrow", "next_7_days", "next_30_days", "this_week", "this_month", "next_month", "all"],
+};
+
 export default function Lodging() {
   const [tasks, setTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
