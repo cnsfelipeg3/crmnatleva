@@ -331,6 +331,29 @@ export default function Passengers() {
     });
   };
 
+  const copyPassengers = async (ids: string[]) => {
+    const items = ids
+      .map((id) => passengers.find((p) => p.id === id))
+      .filter(Boolean) as Passenger[];
+    if (!items.length) return;
+    const ok = await copyPassengersToClipboard(items.map((p) => ({
+      full_name: p.full_name,
+      birth_date: p.birth_date,
+      cpf: p.cpf,
+      rg: p.rg,
+      passport_number: p.passport_number,
+      passport_expiry: p.passport_expiry,
+    })));
+    if (ok) {
+      toast({
+        title: items.length > 1 ? `${items.length} passageiros copiados` : "Dados copiados",
+        description: "Conteúdo pronto para colar (Ctrl+V).",
+      });
+    } else {
+      toast({ title: "Não foi possível copiar", description: "Tente novamente.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
