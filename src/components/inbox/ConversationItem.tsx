@@ -67,6 +67,8 @@ function getPreviewContent(raw: string) {
     return { icon: <Video className="h-3 w-3 text-purple-400 shrink-0" />, text: "Vídeo", italic: false };
   if (lower === "📎 document" || lower.includes("📄"))
     return { icon: <FileText className="h-3 w-3 text-amber-400 shrink-0" />, text: "Documento", italic: false };
+  if (lower === "📎 location" || lower.startsWith("📍"))
+    return { icon: <MapPin className="h-3 w-3 text-emerald-500 shrink-0" />, text: raw.replace(/^📍\s*/, "") || "Localização", italic: false };
   return { icon: null, text: raw, italic: false };
 }
 
