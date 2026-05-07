@@ -231,30 +231,21 @@ export default function Lodging() {
     toast({ title: "Copiado!" });
   };
 
-  const filtered = useMemo(() => {
-    let result = tasks;
+  // Pre-filter by tab (active vs history) before SmartFilters
+  const tabData = useMemo(() => {
     if (mainTab === "active") {
-      result = result.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
-    } else {
-      result = result.filter(t => ["CONFIRMADO", "CANCELADO"].includes(t.status));
+      return tasks.filter(t => !["CONFIRMADO", "CANCELADO"].includes(t.status));
     }
-    if (filterStatus !== "all") result = result.filter(t => t.status === filterStatus);
-    if (filterMilestone !== "all") result = result.filter(t => t.milestone === filterMilestone);
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      result = result.filter(t => {
-        const paxNames = t.passengers?.map((p: any) => p.full_name?.toLowerCase()).join(" ") || "";
-        return (
-          t.hotel_name?.toLowerCase().includes(q) ||
-          t.hotel_reservation_code?.toLowerCase().includes(q) ||
-          t.sale?.name?.toLowerCase().includes(q) ||
-          t.sale?.display_id?.toLowerCase().includes(q) ||
-          paxNames.includes(q)
-        );
-      });
-    }
-    return result;
-  }, [tasks, mainTab, filterStatus, filterMilestone, search]);
+    return tasks.filter(t => ["CONFIRMADO", "CANCELADO"].includes(t.status));
+  }, [tasks, mainTab]);
+
+  const {
+    filtered,
+    state: filterState,
+    setState: setFilterState,
+    activeFilterCount,
+    clearAll: clearFilters,
+  } = useSmartFilters(tabData, LODGING_FILTER_CONFIG);
 
   // Group by scheduled date (when confirmation should happen)
   const groupedByDate = useMemo(() => {
