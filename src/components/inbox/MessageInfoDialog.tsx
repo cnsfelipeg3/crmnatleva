@@ -18,6 +18,11 @@ interface Props {
   externalMessageId: string | null;
   groupParticipants?: Array<{ phone?: string; name?: string }> | null;
   isGroup?: boolean;
+  /** Phone do contato em conversas 1:1 (usado pra sintetizar recipient quando ainda não houve receipt). */
+  contactPhone?: string | null;
+  contactName?: string | null;
+  /** Status atual da mensagem (sent/delivered/read) — usado pra estimar estado quando o receipt detalhado ainda não chegou. */
+  messageStatus?: string | null;
 }
 
 function fmtDateTime(iso: string | null): string {
@@ -26,7 +31,7 @@ function fmtDateTime(iso: string | null): string {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup }: Props) {
+export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup, contactPhone, contactName, messageStatus }: Props) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<RecipientStatus[]>([]);
 
@@ -44,13 +49,31 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
         setLoading(false);
       }
     })();
-    return () => { cancel = true; };
+
+    // Realtime: atualiza ao receber novo receipt
+    const channel = supabase
+      .channel(`mrs-${externalMessageId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "message_recipient_status", filter: `external_message_id=eq.${externalMessageId}` },
+        async () => {
+          const { data } = await (supabase as any)
+            .from("message_recipient_status")
+            .select("participant_phone, participant_name, delivered_at, read_at, played_at")
+            .eq("external_message_id", externalMessageId);
+          if (!cancel) setRows(((data as any[]) || []) as RecipientStatus[]);
+        }
+      )
+      .subscribe();
+
+    return () => { cancel = true; supabase.removeChannel(channel); };
   }, [open, externalMessageId]);
 
-  // Mescla participantes do grupo com receipts (mostra também quem ainda não recebeu)
+  // Mescla participantes (grupo) ou cria recipient sintético (1:1)
   const merged = (() => {
     const byPhone = new Map<string, RecipientStatus>();
     rows.forEach(r => byPhone.set(String(r.participant_phone).replace(/\D/g, ""), r));
+
     if (isGroup && groupParticipants?.length) {
       groupParticipants.forEach(p => {
         const phone = String(p.phone || "").replace(/\D/g, "");
@@ -67,13 +90,30 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
           byPhone.get(phone)!.participant_name = p.name;
         }
       });
+    } else if (!isGroup && contactPhone) {
+      // 1:1 — sintetiza recipient com o contato; estima estado pelo messageStatus
+      const phone = String(contactPhone).replace(/\D/g, "");
+      if (phone && !byPhone.has(phone)) {
+        const status = (messageStatus || "").toLowerCase();
+        const inferDelivered = status === "delivered" || status === "read" || status === "played";
+        const inferRead = status === "read" || status === "played";
+        byPhone.set(phone, {
+          participant_phone: phone,
+          participant_name: contactName || null,
+          delivered_at: inferDelivered ? null : null, // sem timestamp real, deixa só na seção
+          read_at: inferRead ? null : null,
+          played_at: null,
+        });
+        // Reposicionamento de seção via flags auxiliares
+        (byPhone.get(phone) as any)._inferred = { delivered: inferDelivered, read: inferRead };
+      }
     }
     return Array.from(byPhone.values());
   })();
 
-  const read = merged.filter(r => r.read_at);
-  const delivered = merged.filter(r => !r.read_at && r.delivered_at);
-  const pending = merged.filter(r => !r.read_at && !r.delivered_at);
+  const read = merged.filter(r => r.read_at || (r as any)._inferred?.read);
+  const delivered = merged.filter(r => !(r.read_at || (r as any)._inferred?.read) && (r.delivered_at || (r as any)._inferred?.delivered));
+  const pending = merged.filter(r => !(r.read_at || (r as any)._inferred?.read) && !(r.delivered_at || (r as any)._inferred?.delivered));
 
   const Section = ({ title, icon, items, dateKey }: { title: string; icon: React.ReactNode; items: RecipientStatus[]; dateKey: "read_at" | "delivered_at" | null }) => (
     <div className="space-y-2">
