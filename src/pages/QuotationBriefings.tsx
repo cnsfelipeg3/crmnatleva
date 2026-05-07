@@ -97,6 +97,7 @@ export default function QuotationBriefings() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [returnDialogId, setReturnDialogId] = useState<string | null>(null);
+  const [showFictional, setShowFictional] = useState(false);
 
   const fetchBriefings = async () => {
     setLoading(true);
@@ -140,7 +141,8 @@ export default function QuotationBriefings() {
     toast({ title: "Status atualizado", description: STATUS_CONFIG[status]?.label });
   };
 
-  const filtered = briefings.filter((b) => {
+  const filtered = briefings.filter((b: any) => {
+    if (!showFictional && b.is_fictional) return false;
     if (statusFilter !== "all" && b.status !== statusFilter) return false;
     if (search) {
       const s = search.toLowerCase();
@@ -153,7 +155,8 @@ export default function QuotationBriefings() {
     return true;
   });
 
-  const pendingCount = briefings.filter(b => b.status === "pendente").length;
+  const pendingCount = filtered.filter(b => b.status === "pendente").length;
+  const fictionalCount = briefings.filter((b: any) => b.is_fictional).length;
 
   return (
     <div className="space-y-6">
