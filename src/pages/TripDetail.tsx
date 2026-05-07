@@ -61,6 +61,8 @@ export default function TripDetail() {
   const [passengers, setPassengers] = useState<any[]>([]);
   const [checkinTasks, setCheckinTasks] = useState<any[]>([]);
   const [checkinPassengerDetails, setCheckinPassengerDetails] = useState<Record<string, any[]>>({});
+  // Cartões de embarque múltiplos: agrupa por (taskId,paxId) → array
+  const [boardingPassesByPax, setBoardingPassesByPax] = useState<Record<string, any[]>>({});
   const [lodgingTasks, setLodgingTasks] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [sellerName, setSellerName] = useState("");
