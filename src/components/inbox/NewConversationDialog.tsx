@@ -272,7 +272,9 @@ export function NewConversationDialog({ open, onOpenChange, conversations, waCon
       onSelectConversation(data!.id);
       onOpenChange(false);
     } catch (err: any) {
-      toast.error("Erro ao salvar contato · tente novamente");
+      console.error("[NewConversation] create failed:", err);
+      const detail = err?.message || err?.error?.message || err?.details || "tente novamente";
+      toast.error(`Erro ao salvar contato · ${detail}`);
       setStage("found");
     }
   }
