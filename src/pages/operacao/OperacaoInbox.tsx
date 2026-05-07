@@ -21,6 +21,7 @@ import { SlashCommandDropdown, type MessageShortcut } from "@/components/inbox/S
 import { ScheduleMessagePopover } from "@/components/inbox/ScheduleMessagePopover";
 import { ScheduledForConversationButton } from "@/components/inbox/ScheduledForConversationButton";
 import { GroupInfoDialog } from "@/components/inbox/GroupInfoDialog";
+import { DateFilterPopover } from "@/components/inbox/DateFilterPopover";
 import { AddParticipantsDialog } from "@/components/inbox/AddParticipantsDialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
