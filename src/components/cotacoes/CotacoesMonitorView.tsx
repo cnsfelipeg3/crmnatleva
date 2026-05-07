@@ -418,7 +418,13 @@ export default function CotacoesMonitorView() {
 
           <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
             <Activity className="w-3.5 h-3.5 text-accent" />
-            {briefings.length} operações rastreadas
+            {visibleBriefings.length} operações rastreadas
+            <button
+              onClick={() => setShowFictional(v => !v)}
+              className="ml-2 px-2 py-1 rounded text-[10px] uppercase tracking-wider border border-border hover:bg-accent/10 transition-colors"
+            >
+              {showFictional ? "Ocultar fictícias" : `Fictícias (${fictionalCount})`}
+            </button>
           </div>
         </div>
       </div>
