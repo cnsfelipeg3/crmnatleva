@@ -746,14 +746,22 @@ serve(async (req) => {
 
       // Enviar localização (lat/lng + título + endereço)
       case "send-message-location":
+      case "send-location":
+        if (payload?.latitude === undefined || payload?.longitude === undefined || !payload?.phone) {
+          return new Response(
+            JSON.stringify({ error: "phone, latitude, longitude required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         url = `${BASE_URL}/send-location`;
         method = "POST";
         body = JSON.stringify({
           phone: formatPhoneForSending(payload.phone),
           title: payload.title || "Localização",
           address: payload.address || "",
-          latitude: payload.latitude,
-          longitude: payload.longitude,
+          latitude: String(payload.latitude),
+          longitude: String(payload.longitude),
+          ...(payload.messageId && { messageId: payload.messageId }),
         });
         break;
 

@@ -85,6 +85,7 @@ function extractMediaUrl(body: any): string | null {
 
 // ─── Helper: extract message type ───
 function extractMsgType(body: any): string {
+  if (body.location && (body.location.latitude !== undefined || body.location.longitude !== undefined)) return "location";
   if (body.sticker) return "sticker";
   if (body.image) return "image";
   if (body.audio) return "audio"; // includes ptt
@@ -977,7 +978,7 @@ Deno.serve(async (req) => {
     }
 
     // Skip if no phone or no content
-    if (!phone || (!textContent && !body.image && !body.audio && !body.video && !body.document)) {
+    if (!phone || (!textContent && !body.image && !body.audio && !body.video && !body.document && !body.location)) {
       if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString(), error: "no_phone_or_content" }).eq("id", rawEventId);
       // Still save contact info
       if (phone && (body.senderName || body.chatName)) {
@@ -1036,7 +1037,9 @@ Deno.serve(async (req) => {
     // ═══════════════════════════════════════════════════════════
     // STEP 6: Upsert conversation
     // ═══════════════════════════════════════════════════════════
-    const preview = textContent || (msgType !== "text" ? `📎 ${msgType}` : "");
+    const preview = msgType === "location"
+      ? `📍 Localização${body.location?.name || body.location?.address ? `: ${body.location?.name || body.location?.address}` : ""}`
+      : (textContent || (msgType !== "text" ? `📎 ${msgType}` : ""));
     const isGroupMsg = body.isGroup === true || /-group$/i.test(String(rawPhone || "")) || cleanPhone.length >= 15;
     const groupSubject = isGroupMsg ? (body.chatName || null) : null;
     const conversationId = await upsertConversation(supabase, cleanPhone, safeContactName, preview, timestampIso, fromMe, isGroupMsg, groupSubject);
@@ -1163,13 +1166,25 @@ Deno.serve(async (req) => {
         reference_message_id: body.referenceMessageId || null,
       };
     }
+    if (msgType === "location" && body.location) {
+      messageMetadata.location = {
+        latitude: Number(body.location.latitude),
+        longitude: Number(body.location.longitude),
+        title: body.location.name || null,
+        address: body.location.address || null,
+        url: body.location.url || null,
+        thumbnail_url: body.location.thumbnailUrl || null,
+      };
+    }
 
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
       direction,
       sender_type: senderType,
-      content: textContent || "",
+      content: msgType === "location"
+        ? (body.location?.name || body.location?.address || `${body.location?.latitude}, ${body.location?.longitude}`)
+        : (textContent || ""),
       message_type: msgType,
       media_url: mediaUrl,
       media_original_url: mediaUrl,
