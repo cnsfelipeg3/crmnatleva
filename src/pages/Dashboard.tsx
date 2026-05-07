@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, lazy, Suspense } from "react";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,6 +8,7 @@ import KpiCards from "@/components/dashboard/KpiCards";
 import DeferredRender from "@/components/DeferredRender";
 import { Skeleton } from "@/components/ui/skeleton";
 import { hasProduct } from "@/lib/productTypes";
+import type { DateRange } from "react-day-picker";
 
 const FinancialSection = lazy(() => import("@/components/dashboard/FinancialSection"));
 const CommercialSection = lazy(() => import("@/components/dashboard/CommercialSection"));
@@ -102,6 +103,11 @@ export default function Dashboard() {
   const [valueRange, setValueRange] = useState("all");
   const [marginRange, setMarginRange] = useState("all");
   const [region, setRegion] = useState("all");
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(undefined);
+  const [hourFrom, setHourFrom] = useState<string>("");
+  const [hourTo, setHourTo] = useState<string>("");
+  const [liveMode, setLiveMode] = useState(false);
+  const [, forceTick] = useState(0);
   const [ceoMode, setCeoMode] = useState(false);
 
   // ── FAST PATH: Server-side aggregated KPIs ──
@@ -253,16 +259,33 @@ export default function Dashboard() {
 
   // Client-side filtering for chart sections (raw data)
   const periodCutoff = useMemo(() => {
+    if (period === "custom") {
+      if (customRange?.from) {
+        const d = customRange.from;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+      return null;
+    }
     if (period === "all") return null;
     const now = new Date();
+    if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (period === "this_month") return new Date(now.getFullYear(), now.getMonth(), 1);
     if (period === "last_month") return new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const daysMap: Record<string, number> = { "today": 0, "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
+    const daysMap: Record<string, number> = { "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
     const days = daysMap[period] ?? 30;
     return new Date(now.getTime() - days * 86400000);
-  }, [period]);
+  }, [period, customRange]);
 
   const periodEnd = useMemo(() => {
+    if (period === "custom") {
+      const d = customRange?.to ?? customRange?.from;
+      if (d) return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+      return null;
+    }
+    if (period === "today") {
+      const n = new Date();
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59);
+    }
     if (period === "last_month") {
       const now = new Date();
       return new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
@@ -272,7 +295,19 @@ export default function Dashboard() {
       return new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59);
     }
     return null;
-  }, [period]);
+  }, [period, customRange]);
+
+  // Parse "HH:MM" → minutes since midnight
+  const hourFromMin = useMemo(() => {
+    if (!hourFrom) return null;
+    const [h, m] = hourFrom.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }, [hourFrom]);
+  const hourToMin = useMemo(() => {
+    if (!hourTo) return null;
+    const [h, m] = hourTo.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }, [hourTo]);
 
   const filtered = useMemo(() => {
     let result = sales;
@@ -301,8 +336,18 @@ export default function Dashboard() {
       const [min, max] = ranges[marginRange] || [-Infinity, Infinity];
       result = result.filter(s => (s.margin || 0) >= min && (s.margin || 0) < max);
     }
+    if (hourFromMin !== null || hourToMin !== null) {
+      const lo = hourFromMin ?? 0;
+      const hi = hourToMin ?? 24 * 60;
+      result = result.filter(s => {
+        if (!s.close_date) return false;
+        const d = new Date(s.close_date);
+        const min = d.getHours() * 60 + d.getMinutes();
+        return min >= lo && min <= hi;
+      });
+    }
     return result;
-  }, [sales, periodCutoff, periodEnd, seller, destination, product, profiles, status, region, valueRange, marginRange, getRegion]);
+  }, [sales, periodCutoff, periodEnd, seller, destination, product, profiles, status, region, valueRange, marginRange, getRegion, hourFromMin, hourToMin]);
 
   const previous = useMemo(() => {
     if (!periodCutoff) return [];
@@ -440,13 +485,50 @@ export default function Dashboard() {
     if (valueRange !== "all") c++;
     if (marginRange !== "all") c++;
     if (region !== "all") c++;
+    if (hourFrom || hourTo) c++;
+    if (liveMode) c++;
     return c;
-  }, [period, seller, destination, product, status, valueRange, marginRange, region]);
+  }, [period, seller, destination, product, status, valueRange, marginRange, region, hourFrom, hourTo, liveMode]);
 
   const clearAllFilters = useCallback(() => {
     setPeriod("all"); setSeller("all"); setDestination("all"); setProduct("all");
     setStatus("all"); setValueRange("all"); setMarginRange("all"); setRegion("all");
+    setCustomRange(undefined); setHourFrom(""); setHourTo(""); setLiveMode(false);
   }, []);
+
+  // ── LIVE MODE ──
+  // Force "today" period and refresh sales every 20s + on realtime sales changes.
+  const refetchSales = useCallback(async () => {
+    const { data } = await supabase
+      .from("sales")
+      .select("id, name, display_id, status, origin_iata, destination_iata, departure_date, return_date, adults, children, products, received_value, total_cost, profit, margin, airline, locators, created_at, close_date, emission_status, hotel_name, is_international, miles_program, seller_id, client_id")
+      .order("close_date", { ascending: false })
+      .limit(5000);
+    if (data) setSales(data as Sale[]);
+  }, []);
+
+  const liveTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!liveMode) return;
+    setPeriod("today");
+    setCustomRange(undefined);
+    // Tick clock every 30s so periodCutoff stays fresh as the day progresses
+    const tick = window.setInterval(() => forceTick(t => t + 1), 30000);
+    // Refetch sales every 20s
+    const poll = window.setInterval(() => { refetchSales(); }, 20000);
+    liveTimerRef.current = poll;
+    // Also subscribe to realtime sales changes
+    const channel = supabase
+      .channel("dashboard-live-sales")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => refetchSales())
+      .subscribe();
+    refetchSales();
+    return () => {
+      window.clearInterval(tick);
+      window.clearInterval(poll);
+      supabase.removeChannel(channel);
+    };
+  }, [liveMode, refetchSales]);
 
   // Show skeleton only while KPIs are loading (fast path)
   if (kpiLoading && !kpiData) {
@@ -465,7 +547,7 @@ export default function Dashboard() {
   }
 
   // Use RPC data for KPI cards when simple filters are active, fall back when complex client-side filters are used
-  const hasClientOnlyFilters = product !== "all" || valueRange !== "all" || marginRange !== "all" || region !== "all" || period === "yesterday";
+  const hasClientOnlyFilters = product !== "all" || valueRange !== "all" || marginRange !== "all" || region !== "all" || period === "yesterday" || period === "custom" || !!hourFrom || !!hourTo || liveMode;
   const useRpcForKpis = !hasClientOnlyFilters && kpiData;
 
   return (
@@ -497,6 +579,10 @@ export default function Dashboard() {
         valueRange={valueRange} setValueRange={setValueRange}
         marginRange={marginRange} setMarginRange={setMarginRange}
         region={region} setRegion={setRegion}
+        customRange={customRange} setCustomRange={setCustomRange}
+        hourFrom={hourFrom} setHourFrom={setHourFrom}
+        hourTo={hourTo} setHourTo={setHourTo}
+        liveMode={liveMode} setLiveMode={setLiveMode}
         sellers={sellersList} destinations={destinationsList} statuses={statusList}
         activeFilterCount={activeFilterCount}
         onClearAll={clearAllFilters}
