@@ -283,12 +283,12 @@ export default function Checkin() {
     setCompleteDialog(task);
     setCompleteNotes(task.notes || "");
     const seats: Record<string, string> = {};
-    const existing: Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }> = {};
-    const files: Record<string, File | null> = {};
+    const existing: Record<string, Array<{ id: string; file_url: string; file_name: string | null; label: string | null }>> = {};
     (task.passengers || []).forEach((p: any) => {
       seats[p.id] = "";
-      files[p.id] = null;
+      existing[p.id] = [];
     });
+    // Carrega seats da tabela legacy
     const { data: details } = await supabase
       .from("checkin_passenger_details")
       .select("*")
@@ -296,12 +296,35 @@ export default function Checkin() {
     if (details) {
       details.forEach((d: any) => {
         if (d.seat) seats[d.passenger_id] = d.seat;
-        if (d.boarding_pass_url) existing[d.passenger_id] = { boarding_pass_url: d.boarding_pass_url, boarding_pass_file_name: d.boarding_pass_file_name };
+        // Migra cartão único legado para a lista (mostra como já existente)
+        if (d.boarding_pass_url) {
+          existing[d.passenger_id] = existing[d.passenger_id] || [];
+          existing[d.passenger_id].push({
+            id: `legacy-${d.id}`,
+            file_url: d.boarding_pass_url,
+            file_name: d.boarding_pass_file_name,
+            label: d.boarding_pass_file_name || "Cartão de embarque",
+          });
+        }
+      });
+    }
+    // Carrega múltiplos cartões da nova tabela
+    const { data: passes } = await (supabase as any)
+      .from("checkin_boarding_passes")
+      .select("id, passenger_id, file_url, file_name, label, display_order")
+      .eq("checkin_task_id", task.id)
+      .order("display_order", { ascending: true });
+    if (passes) {
+      passes.forEach((p: any) => {
+        existing[p.passenger_id] = existing[p.passenger_id] || [];
+        existing[p.passenger_id].push({
+          id: p.id, file_url: p.file_url, file_name: p.file_name, label: p.label,
+        });
       });
     }
     setPassengerSeats(seats);
-    setPassengerFiles(files);
-    setPassengerExisting(existing);
+    setPendingPasses({});
+    setExistingPasses(existing);
   };
 
   const handleComplete = async () => {
@@ -312,30 +335,49 @@ export default function Checkin() {
       const passengers = task.passengers || [];
 
       for (const pax of passengers) {
-        const file = passengerFiles[pax.id];
-        let boardingPassUrl: string | null = passengerExisting[pax.id]?.boarding_pass_url || null;
-        let boardingPassFileName: string | null = passengerExisting[pax.id]?.boarding_pass_file_name || null;
-
-        if (file) {
-          const ext = file.name.split(".").pop() || "pdf";
-          const filePath = `${task.sale_id}/boarding_passes/${task.id}_${pax.id}_${Date.now()}.${ext}`;
+        // 1) Sobe novos cartões pendentes
+        const pending = pendingPasses[pax.id] || [];
+        for (let idx = 0; idx < pending.length; idx++) {
+          const item = pending[idx];
+          const ext = item.file.name.split(".").pop() || "pdf";
+          const filePath = `${task.sale_id}/boarding_passes/${task.id}_${pax.id}_${Date.now()}_${idx}.${ext}`;
           const { error: uploadError } = await supabase.storage
             .from("sale-attachments")
-            .upload(filePath, file);
+            .upload(filePath, item.file);
           if (uploadError) throw uploadError;
           const { data: urlData } = supabase.storage
             .from("sale-attachments")
             .getPublicUrl(filePath);
-          boardingPassUrl = urlData.publicUrl;
-          boardingPassFileName = file.name;
+          await (supabase as any).from("checkin_boarding_passes").insert({
+            checkin_task_id: task.id,
+            passenger_id: pax.id,
+            label: item.label?.trim() || item.file.name,
+            file_url: urlData.publicUrl,
+            file_name: item.file.name,
+            file_size: item.file.size,
+            mime_type: item.file.type,
+            display_order: (existingPasses[pax.id]?.length || 0) + idx,
+          });
         }
 
+        // 2) Atualiza label de cartões existentes (não-legacy) que tiveram nome editado
+        const existingList = existingPasses[pax.id] || [];
+        for (const ep of existingList) {
+          if (ep.id.startsWith("legacy-")) continue;
+          await (supabase as any)
+            .from("checkin_boarding_passes")
+            .update({ label: ep.label })
+            .eq("id", ep.id);
+        }
+
+        // 3) Mantém compatibilidade com tabela legacy (seat + 1º cartão)
+        const firstPass = existingList[0] || (pending[0] ? { file_url: null, file_name: pending[0].file.name } : null);
         await supabase.from("checkin_passenger_details").upsert({
           checkin_task_id: task.id,
           passenger_id: pax.id,
           seat: passengerSeats[pax.id] || null,
-          boarding_pass_url: boardingPassUrl,
-          boarding_pass_file_name: boardingPassFileName,
+          boarding_pass_url: firstPass?.file_url || null,
+          boarding_pass_file_name: firstPass?.file_name || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "checkin_task_id,passenger_id" });
       }
@@ -356,8 +398,8 @@ export default function Checkin() {
       setCompleteDialog(null);
       setCompleteNotes("");
       setPassengerSeats({});
-      setPassengerFiles({});
-      setPassengerExisting({});
+      setPendingPasses({});
+      setExistingPasses({});
       await fetchTasks();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
