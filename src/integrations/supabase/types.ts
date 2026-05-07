@@ -4644,6 +4644,63 @@ export type Database = {
           },
         ]
       }
+      message_recipient_status: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          delivered_at: string | null
+          external_message_id: string
+          id: string
+          is_group: boolean | null
+          participant_name: string | null
+          participant_phone: string
+          played_at: string | null
+          read_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          external_message_id: string
+          id?: string
+          is_group?: boolean | null
+          participant_name?: string | null
+          participant_phone: string
+          played_at?: string | null
+          read_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          external_message_id?: string
+          id?: string
+          is_group?: boolean | null
+          participant_name?: string | null
+          participant_phone?: string
+          played_at?: string | null
+          read_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_recipient_status_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "message_recipient_status_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_shortcuts: {
         Row: {
           caption: string | null
