@@ -207,19 +207,23 @@ export default function Birthdays() {
                     </div>
                   </div>
 
-                  {p.phone ? (
+                  {(p.phone || p.email) ? (
                     <Button
                       size="sm"
                       variant={isToday ? "default" : "outline"}
                       className="shrink-0 gap-1.5"
-                      onClick={() => window.open(buildWhatsAppUrl(p.phone!, p.full_name), "_blank")}
+                      onClick={() => setOpenMessage({ passenger: p, age: age + (isToday ? 1 : days <= 0 ? 1 : 0) })}
                     >
-                      <MessageCircle className="w-4 h-4" />
+                      <PartyPopper className="w-4 h-4" />
                       <span className="hidden sm:inline">Parabéns</span>
+                      <span className="hidden md:flex items-center gap-1 ml-1 opacity-70">
+                        {p.phone && <MessageCircle className="w-3 h-3" />}
+                        {p.email && <Mail className="w-3 h-3" />}
+                      </span>
                     </Button>
                   ) : (
                     <Badge variant="outline" className="text-[10px] text-muted-foreground shrink-0">
-                      Sem telefone
+                      Sem contato
                     </Badge>
                   )}
                 </div>
