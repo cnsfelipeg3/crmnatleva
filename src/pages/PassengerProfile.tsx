@@ -35,6 +35,7 @@ interface Passenger {
   passport_number: string | null;
   passport_expiry: string | null;
   phone: string | null;
+  email: string | null;
   rg: string | null;
   address_cep: string | null;
   address_street: string | null;
