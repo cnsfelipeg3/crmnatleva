@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCheck, Check, Eye, Users, Loader2 } from "lucide-react";
+import { CheckCheck, Check, Users, Loader2, RefreshCw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatPhoneDisplay } from "@/components/inbox/helpers";
 
 interface RecipientStatus {
@@ -23,6 +24,8 @@ interface Props {
   contactName?: string | null;
   /** Status atual da mensagem (sent/delivered/read) — usado pra estimar estado quando o receipt detalhado ainda não chegou. */
   messageStatus?: string | null;
+  /** ID da conversa no DB · usado para buscar/cachear participantes do grupo. */
+  conversationDbId?: string | null;
 }
 
 function fmtDateTime(iso: string | null): string {
@@ -31,9 +34,24 @@ function fmtDateTime(iso: string | null): string {
   return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup, contactPhone, contactName, messageStatus }: Props) {
+function normalizeParticipants(raw: any): Array<{ phone: string; name: string | null }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((p: any) => {
+      const phone = String(p?.phone || p?.id || p?.participant || "")
+        .replace(/@(c\.us|s\.whatsapp\.net|lid|g\.us)/gi, "")
+        .replace(/\D/g, "");
+      const name = p?.short || p?.name || p?.pushname || p?.notify || p?.shortName || p?.contactName || null;
+      return phone ? { phone, name } : null;
+    })
+    .filter(Boolean) as Array<{ phone: string; name: string | null }>;
+}
+
+export function MessageInfoDialog({ open, onOpenChange, externalMessageId, groupParticipants, isGroup, contactPhone, contactName, messageStatus, conversationDbId }: Props) {
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<RecipientStatus[]>([]);
+  const [resolvedParticipants, setResolvedParticipants] = useState<Array<{ phone: string; name: string | null }>>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
 
   useEffect(() => {
     if (!open || !externalMessageId) return;
@@ -50,7 +68,6 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
       }
     })();
 
-    // Realtime: atualiza ao receber novo receipt
     const channel = supabase
       .channel(`mrs-${externalMessageId}`)
       .on(
@@ -69,14 +86,74 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
     return () => { cancel = true; supabase.removeChannel(channel); };
   }, [open, externalMessageId]);
 
+  // ── Auto-resolve participantes do grupo ──
+  const fetchGroupParticipants = async (forceFresh = false) => {
+    if (!isGroup) return;
+    // 1. Prop (cache do conversations.group_participants já vindo da página)
+    if (!forceFresh) {
+      const fromProp = normalizeParticipants(groupParticipants);
+      if (fromProp.length > 0) { setResolvedParticipants(fromProp); return; }
+    }
+
+    // 2. DB (cache existente)
+    let groupPhone: string | null = contactPhone || null;
+    if (conversationDbId) {
+      const { data: conv } = await (supabase as any)
+        .from("conversations")
+        .select("group_participants, phone")
+        .eq("id", conversationDbId)
+        .maybeSingle();
+      groupPhone = (conv?.phone as string) || groupPhone;
+      if (!forceFresh) {
+        const fromDb = normalizeParticipants(conv?.group_participants);
+        if (fromDb.length > 0) { setResolvedParticipants(fromDb); return; }
+      }
+    }
+
+    // 3. Fetch fresh via Z-API
+    if (!groupPhone) return;
+    setLoadingParticipants(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("zapi-proxy", {
+        body: { action: "group-metadata", payload: { phone: groupPhone } },
+      });
+      if (error) throw error;
+      const fresh = normalizeParticipants((data as any)?.participants);
+      setResolvedParticipants(fresh);
+      if (fresh.length > 0 && conversationDbId) {
+        await (supabase as any)
+          .from("conversations")
+          .update({
+            group_participants: (data as any)?.participants || fresh,
+            group_subject: (data as any)?.subject || null,
+            group_description: (data as any)?.description || null,
+            group_photo_url: (data as any)?.pictureUrl || null,
+            group_metadata_fetched_at: new Date().toISOString(),
+            is_group: true,
+          })
+          .eq("id", conversationDbId);
+      }
+    } catch (e) {
+      console.error("[MessageInfoDialog] group-metadata failed:", e);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !isGroup) { setResolvedParticipants([]); return; }
+    fetchGroupParticipants(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, isGroup, conversationDbId]);
+
   // Mescla participantes (grupo) ou cria recipient sintético (1:1)
   const merged = (() => {
     const byPhone = new Map<string, RecipientStatus>();
     rows.forEach(r => byPhone.set(String(r.participant_phone).replace(/\D/g, ""), r));
 
-    if (isGroup && groupParticipants?.length) {
-      groupParticipants.forEach(p => {
-        const phone = String(p.phone || "").replace(/\D/g, "");
+    if (isGroup && resolvedParticipants.length > 0) {
+      resolvedParticipants.forEach(p => {
+        const phone = p.phone;
         if (!phone) return;
         if (!byPhone.has(phone)) {
           byPhone.set(phone, {
@@ -90,6 +167,8 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
           byPhone.get(phone)!.participant_name = p.name;
         }
       });
+    } else if (isGroup) {
+      // Sem lista resolvida ainda · placeholder vazio (o effect vai popular)
     } else if (!isGroup && contactPhone) {
       // 1:1 — sintetiza recipient com o contato; estima estado pelo messageStatus
       const phone = String(contactPhone).replace(/\D/g, "");
@@ -148,10 +227,32 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Dados da mensagem
+          <DialogTitle className="flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Dados da mensagem
+            </span>
+            {isGroup && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs gap-1"
+                onClick={() => fetchGroupParticipants(true)}
+                disabled={loadingParticipants}
+                title="Atualizar lista de membros do grupo"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${loadingParticipants ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            )}
           </DialogTitle>
+          {isGroup && (
+            <p className="text-xs text-muted-foreground">
+              {resolvedParticipants.length > 0
+                ? `${resolvedParticipants.length} membros no grupo`
+                : loadingParticipants ? "Buscando membros do grupo…" : "Sem membros carregados"}
+            </p>
+          )}
         </DialogHeader>
         {loading ? (
           <div className="flex items-center justify-center py-8">
@@ -162,10 +263,17 @@ export function MessageInfoDialog({ open, onOpenChange, externalMessageId, group
             <Section title="Lida por" icon={<CheckCheck className="h-4 w-4 text-primary" />} items={read} dateKey="read_at" />
             <Section title="Entregue para" icon={<CheckCheck className="h-4 w-4 text-muted-foreground" />} items={delivered} dateKey="delivered_at" />
             <Section title="Pendente" icon={<Check className="h-4 w-4 text-muted-foreground" />} items={pending} dateKey={null} />
-            {merged.length === 0 && (
+            {merged.length === 0 && !loadingParticipants && (
               <p className="text-sm text-muted-foreground text-center py-4">
-                Sem informações de entrega ainda. Os dados aparecem conforme cada destinatário recebe e lê a mensagem.
+                {isGroup
+                  ? "Não foi possível listar os membros do grupo. Toque em Atualizar para tentar de novo."
+                  : "Sem informações de entrega ainda. Os dados aparecem conforme cada destinatário recebe e lê a mensagem."}
               </p>
+            )}
+            {isGroup && loadingParticipants && merged.length === 0 && (
+              <div className="flex items-center justify-center py-4 gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> Carregando membros…
+              </div>
             )}
           </div>
         )}
