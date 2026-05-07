@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Save, Youtube, Sparkles, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 type ProductForm = {
@@ -53,6 +53,48 @@ export default function ProdutoEditor() {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
+  const [ytUrl, setYtUrl] = useState("");
+  const [ytLoading, setYtLoading] = useState(false);
+
+  const importFromYouTube = async () => {
+    if (!ytUrl.trim()) {
+      toast.error("Cole a URL do vídeo do YouTube");
+      return;
+    }
+    setYtLoading(true);
+    const tId = toast.loading("Analisando vídeo e gerando o produto…", { description: "Isso pode levar até 1 minuto." });
+    try {
+      const { data, error } = await supabase.functions.invoke("product-from-youtube", {
+        body: { url: ytUrl.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.message || data.error);
+      const p = data?.product;
+      if (!p) throw new Error("Resposta vazia da IA");
+      setForm((f) => ({
+        ...f,
+        title: p.title ?? f.title,
+        slug: f.slug || slugify(p.title ?? ""),
+        destination: p.destination ?? f.destination,
+        destination_country: p.destination_country ?? f.destination_country,
+        category: p.category ?? f.category,
+        short_description: p.short_description ?? f.short_description,
+        description: p.description ?? f.description,
+        duration: p.duration ?? f.duration,
+        how_it_works: p.how_it_works ?? f.how_it_works,
+        pickup_info: p.pickup_info ?? f.pickup_info,
+        recommendations: p.recommendations ?? f.recommendations,
+        highlights: Array.isArray(p.highlights) ? p.highlights.join("\n") : f.highlights,
+        includes: Array.isArray(p.includes) ? p.includes.join("\n") : f.includes,
+        excludes: Array.isArray(p.excludes) ? p.excludes.join("\n") : f.excludes,
+      }));
+      toast.success("Produto preenchido com base no vídeo", { id: tId, description: "Revise os campos antes de salvar." });
+    } catch (e: any) {
+      toast.error("Não foi possível extrair do vídeo", { id: tId, description: e?.message ?? "Tente outro vídeo ou preencha manualmente." });
+    } finally {
+      setYtLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!isEdit) return;
@@ -156,6 +198,48 @@ export default function ProdutoEditor() {
       </div>
 
       <h1 className="font-serif text-3xl">{isEdit ? "Editar produto" : "Novo produto"}</h1>
+
+      {!isEdit && (
+        <Card className="p-6 space-y-3 border-champagne/40 bg-gradient-to-br from-champagne/5 to-transparent">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-lg bg-champagne/15 flex items-center justify-center shrink-0">
+              <Youtube className="w-5 h-5 text-champagne" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="font-semibold text-[15px] flex items-center gap-2">
+                Criar a partir de um vídeo do YouTube
+                <Sparkles className="w-3.5 h-3.5 text-champagne" />
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Cole a URL de um vídeo sobre o passeio. A IA assiste o vídeo e preenche os campos abaixo.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Input
+              value={ytUrl}
+              onChange={(e) => setYtUrl(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              disabled={ytLoading}
+              className="flex-1"
+            />
+            <Button
+              onClick={importFromYouTube}
+              disabled={ytLoading || !ytUrl.trim()}
+              className="bg-champagne text-champagne-foreground hover:bg-champagne/90 shrink-0"
+            >
+              {ytLoading ? (
+                <><Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> Analisando…</>
+              ) : (
+                <><Sparkles className="w-4 h-4 mr-1.5" /> Gerar com IA</>
+              )}
+            </Button>
+          </div>
+          <p className="text-[11px] text-muted-foreground">
+            Os campos serão preenchidos automaticamente. Você pode revisar e ajustar tudo antes de salvar.
+          </p>
+        </Card>
+      )}
 
       <Card className="p-6 space-y-4">
         <h2 className="font-semibold text-[15px]">Informações principais</h2>
