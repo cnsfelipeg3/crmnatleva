@@ -72,6 +72,7 @@ import {
   normalizeDbMessageType, normalizeDbStatus, safeUnreadCount,
 } from "@/components/inbox/helpers";
 import { VirtualConversationList } from "@/components/inbox/VirtualConversationList";
+import { NewConversationDialog } from "@/components/inbox/NewConversationDialog";
 import { usePresenceByPhone } from "@/hooks/usePresenceByPhone";
 import { MessageBubble } from "@/components/inbox/MessageBubble";
 import { useChatScrollAnchor } from "@/hooks/useChatScrollAnchor";
