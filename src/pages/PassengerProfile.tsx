@@ -720,18 +720,36 @@ function MetricCard({ icon, label, value, subtitle }: { icon: React.ReactNode; l
   );
 }
 
-function DataField({ label, value, mono, alert: isAlert }: { label: string; value: string | null; mono?: boolean; alert?: boolean }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-      {value ? (
-        <p className={`text-sm text-foreground ${mono ? "font-mono" : ""} ${isAlert ? "text-destructive" : ""}`}>
-          {value}
-          {isAlert && <AlertTriangle className="w-3 h-3 inline ml-1" />}
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground/50 italic">atualizar campo</p>
-      )}
+      <h4 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">{title}</h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        {children}
+      </div>
     </div>
   );
 }
+
+function DataField({ label, value, mono, alert: isAlert, icon, href }: { label: string; value: string | null; mono?: boolean; alert?: boolean; icon?: React.ReactNode; href?: string }) {
+  const content = value ? (
+    <p className={`text-sm text-foreground flex items-center gap-1.5 ${mono ? "font-mono" : ""} ${isAlert ? "text-destructive" : ""}`}>
+      {icon}
+      <span className="break-all">{value}</span>
+      {isAlert && <AlertTriangle className="w-3 h-3 inline ml-1" />}
+    </p>
+  ) : (
+    <p className="text-xs text-muted-foreground/50 italic">atualizar campo</p>
+  );
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">{label}</p>
+      {value && href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
+          {content}
+        </a>
+      ) : content}
+    </div>
+  );
+}
+
