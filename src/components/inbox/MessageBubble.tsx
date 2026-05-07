@@ -382,7 +382,15 @@ function MessageBubbleInner({ msg, messages, index, contactName, onReply, onEdit
               {/* Text */}
               {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(displayText)} /></p>}
               <div className="flex items-center justify-end gap-1 mt-1">
-                {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
+                {msg.edited && (
+                  <span
+                    className="inline-flex items-center gap-0.5 text-[10px] opacity-70 italic mr-1"
+                    title={msg.edited_at ? `Editada em ${formatMsgTime(msg.edited_at)}` : "Mensagem editada"}
+                  >
+                    <Pencil className="h-2.5 w-2.5" />
+                    editada
+                  </span>
+                )}
                 {msg.status === "failed" && onRetry && (
                   <button onClick={() => onRetry(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
                     <RotateCcw className="h-2.5 w-2.5" /> Reenviar
