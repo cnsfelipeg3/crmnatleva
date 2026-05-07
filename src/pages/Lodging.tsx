@@ -126,9 +126,8 @@ export default function Lodging() {
   const [tasks, setTasks] = useState<LodgingTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterMilestone, setFilterMilestone] = useState("all");
+  // Tab-pre-filtered (active/history) data goes into useSmartFilters
+  // (state below)
   const [mainTab, setMainTab] = useState<"active" | "history">("active");
   const [viewMode, setViewMode] = useState<"agenda" | "cards" | "calendar">("agenda");
 
