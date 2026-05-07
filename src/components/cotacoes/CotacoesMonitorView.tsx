@@ -445,7 +445,7 @@ export default function CotacoesMonitorView() {
             <span className="text-xs text-muted-foreground">Conectando ao monitor...</span>
           </div>
         </div>
-      ) : briefings.length === 0 ? (
+      ) : visibleBriefings.length === 0 ? (
         <div className="text-center py-20 rounded-xl" style={{
           background: "hsl(var(--card))",
           border: "1px solid hsl(var(--border))",
@@ -456,13 +456,13 @@ export default function CotacoesMonitorView() {
           </div>
           <p className="text-muted-foreground mt-4 font-medium">Monitor aguardando sinais</p>
           <p className="text-xs text-muted-foreground/60 mt-1 max-w-md mx-auto">
-            Inicie uma simulação no modo Automático ou Camaleão. As cotações aparecerão aqui em tempo real conforme as conversas avançarem.
+            Cotações reais aparecerão aqui conforme conversas do WhatsApp avançarem. {fictionalCount > 0 && "Ative \"Fictícias\" para ver as do simulador."}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           <AnimatePresence>
-            {briefings.map(b => (
+            {visibleBriefings.map(b => (
               <MonitorCard key={b.id} briefing={b} isNew={newIds.has(b.id)} />
             ))}
           </AnimatePresence>
