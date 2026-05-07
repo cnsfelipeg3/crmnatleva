@@ -704,9 +704,11 @@ Deno.serve(async (req) => {
     if (eventType === "status_broadcast") {
       console.log("[zapi-webhook] status event received", { eventType, phone: rawPhone, hasImage: !!body.image, hasVideo: !!body.video, fromMe: body.fromMe, messageId: body.messageId, participantPhone: body.participantPhone });
       try {
-        // Status postado por um contato. O phone real está em participantPhone.
+        // Status postado por um contato. O phone real está em participantPhone (ou fallbacks).
         // body.phone = "status@broadcast" é INÚTIL pra identificação do remetente.
-        const stPhone = String(body.participantPhone || "").replace(/\D/g, "");
+        const stPhone = String(
+          body.participantPhone || body.participant || body.author || body.senderPhone || ""
+        ).replace(/\D/g, "");
         if (!stPhone && body.fromMe !== true) {
           console.warn("[zapi-webhook] status_broadcast without participantPhone, skipping", { eventId: rawEventId, phone: body.phone });
           if (rawEventId) {
