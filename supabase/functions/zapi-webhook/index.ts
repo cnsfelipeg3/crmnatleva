@@ -85,6 +85,7 @@ function extractMediaUrl(body: any): string | null {
 
 // ─── Helper: extract message type ───
 function extractMsgType(body: any): string {
+  if (body.location && (body.location.latitude !== undefined || body.location.longitude !== undefined)) return "location";
   if (body.sticker) return "sticker";
   if (body.image) return "image";
   if (body.audio) return "audio"; // includes ptt
