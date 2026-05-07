@@ -638,6 +638,7 @@ function OperacaoInboxInner() {
   const [selectedMsgIds, setSelectedMsgIds] = useState<Set<string>>(new Set());
   const [forwardOpen, setForwardOpen] = useState(false);
   const [forwardSeed, setForwardSeed] = useState<Message[] | null>(null);
+  const [messageInfoId, setMessageInfoId] = useState<string | null>(null);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toggleMsgSelected = useCallback((id: string) => {
