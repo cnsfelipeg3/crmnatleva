@@ -199,48 +199,6 @@ export default function ProdutoEditor() {
 
       <h1 className="font-serif text-3xl">{isEdit ? "Editar produto" : "Novo produto"}</h1>
 
-      <Card className="p-6 space-y-4">
-        <h2 className="font-semibold text-[15px]">Informações principais</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label>Título *</Label>
-            <Input value={form.title} onChange={(e) => set("title", e.target.value)} placeholder="Isla Saona · Dia Completo" />
-          </div>
-          <div>
-            <Label>Slug (URL)</Label>
-            <Input value={form.slug} onChange={(e) => set("slug", slugify(e.target.value))} placeholder="auto a partir do título" />
-          </div>
-          <div>
-            <Label>Destino *</Label>
-            <Input value={form.destination} onChange={(e) => set("destination", e.target.value)} placeholder="Punta Cana" />
-          </div>
-          <div>
-            <Label>País</Label>
-            <Input value={form.destination_country} onChange={(e) => set("destination_country", e.target.value)} placeholder="República Dominicana" />
-          </div>
-          <div>
-            <Label>Categoria</Label>
-            <Input value={form.category} onChange={(e) => set("category", e.target.value)} placeholder="passeio" />
-          </div>
-          <div>
-            <Label>Duração</Label>
-            <Input value={form.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Dia inteiro · ~9h" />
-          </div>
-          <div>
-            <Label>Preço a partir de</Label>
-            <Input type="number" value={form.price_from} onChange={(e) => set("price_from", e.target.value)} placeholder="120" />
-          </div>
-          <div>
-            <Label>Moeda</Label>
-            <Input value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase())} placeholder="USD" />
-          </div>
-        </div>
-        <div>
-          <Label>Resumo curto</Label>
-          <Textarea rows={2} value={form.short_description} onChange={(e) => set("short_description", e.target.value)} placeholder="Frase de impacto para a prateleira" />
-        </div>
-      <h1 className="font-serif text-3xl">{isEdit ? "Editar produto" : "Novo produto"}</h1>
-
       {!isEdit && (
         <Card className="p-6 space-y-3 border-champagne/40 bg-gradient-to-br from-champagne/5 to-transparent">
           <div className="flex items-start gap-3">
