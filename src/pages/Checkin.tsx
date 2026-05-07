@@ -19,7 +19,7 @@ import {
   ClipboardCheck, Clock, AlertTriangle, CheckCircle2, Copy,
   ExternalLink, Eye, Plane, User, Upload, X, FileText,
   RefreshCw, Loader2, Shield, Calendar, List, LayoutGrid, Columns3,
-  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock, ChevronRight,
+  ArrowRight, Timer, Zap, Bell, AlertCircle, Lock, ChevronRight, Plus,
 } from "lucide-react";
 import AirlineLogo from "@/components/AirlineLogo";
 import TaskCalendarView from "@/components/TaskCalendarView";
@@ -213,11 +213,14 @@ export default function Checkin() {
   const [completeDialog, setCompleteDialog] = useState<CheckinTask | null>(null);
   const [completeNotes, setCompleteNotes] = useState("");
   const [passengerSeats, setPassengerSeats] = useState<Record<string, string>>({});
-  const [passengerFiles, setPassengerFiles] = useState<Record<string, File | null>>({});
-  const [passengerExisting, setPassengerExisting] = useState<Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }>>({});
+  // Cartões pendentes de upload (novos): por passageiro, lista de {file, label, tempId}
+  const [pendingPasses, setPendingPasses] = useState<Record<string, Array<{ tempId: string; file: File; label: string }>>>({});
+  // Cartões já salvos (do banco): por passageiro
+  const [existingPasses, setExistingPasses] = useState<Record<string, Array<{ id: string; file_url: string; file_name: string | null; label: string | null }>>>({});
   const [expandedPassengers, setExpandedPassengers] = useState<Set<string>>(new Set());
   const [savingCheckin, setSavingCheckin] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  // refs por chave passenger.tempId — input file oculto
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const { toast } = useToast();
   const { user } = useAuth();
@@ -280,12 +283,12 @@ export default function Checkin() {
     setCompleteDialog(task);
     setCompleteNotes(task.notes || "");
     const seats: Record<string, string> = {};
-    const existing: Record<string, { boarding_pass_url?: string; boarding_pass_file_name?: string }> = {};
-    const files: Record<string, File | null> = {};
+    const existing: Record<string, Array<{ id: string; file_url: string; file_name: string | null; label: string | null }>> = {};
     (task.passengers || []).forEach((p: any) => {
       seats[p.id] = "";
-      files[p.id] = null;
+      existing[p.id] = [];
     });
+    // Carrega seats da tabela legacy
     const { data: details } = await supabase
       .from("checkin_passenger_details")
       .select("*")
@@ -293,12 +296,35 @@ export default function Checkin() {
     if (details) {
       details.forEach((d: any) => {
         if (d.seat) seats[d.passenger_id] = d.seat;
-        if (d.boarding_pass_url) existing[d.passenger_id] = { boarding_pass_url: d.boarding_pass_url, boarding_pass_file_name: d.boarding_pass_file_name };
+        // Migra cartão único legado para a lista (mostra como já existente)
+        if (d.boarding_pass_url) {
+          existing[d.passenger_id] = existing[d.passenger_id] || [];
+          existing[d.passenger_id].push({
+            id: `legacy-${d.id}`,
+            file_url: d.boarding_pass_url,
+            file_name: d.boarding_pass_file_name,
+            label: d.boarding_pass_file_name || "Cartão de embarque",
+          });
+        }
+      });
+    }
+    // Carrega múltiplos cartões da nova tabela
+    const { data: passes } = await (supabase as any)
+      .from("checkin_boarding_passes")
+      .select("id, passenger_id, file_url, file_name, label, display_order")
+      .eq("checkin_task_id", task.id)
+      .order("display_order", { ascending: true });
+    if (passes) {
+      passes.forEach((p: any) => {
+        existing[p.passenger_id] = existing[p.passenger_id] || [];
+        existing[p.passenger_id].push({
+          id: p.id, file_url: p.file_url, file_name: p.file_name, label: p.label,
+        });
       });
     }
     setPassengerSeats(seats);
-    setPassengerFiles(files);
-    setPassengerExisting(existing);
+    setPendingPasses({});
+    setExistingPasses(existing);
   };
 
   const handleComplete = async () => {
@@ -309,30 +335,49 @@ export default function Checkin() {
       const passengers = task.passengers || [];
 
       for (const pax of passengers) {
-        const file = passengerFiles[pax.id];
-        let boardingPassUrl: string | null = passengerExisting[pax.id]?.boarding_pass_url || null;
-        let boardingPassFileName: string | null = passengerExisting[pax.id]?.boarding_pass_file_name || null;
-
-        if (file) {
-          const ext = file.name.split(".").pop() || "pdf";
-          const filePath = `${task.sale_id}/boarding_passes/${task.id}_${pax.id}_${Date.now()}.${ext}`;
+        // 1) Sobe novos cartões pendentes
+        const pending = pendingPasses[pax.id] || [];
+        for (let idx = 0; idx < pending.length; idx++) {
+          const item = pending[idx];
+          const ext = item.file.name.split(".").pop() || "pdf";
+          const filePath = `${task.sale_id}/boarding_passes/${task.id}_${pax.id}_${Date.now()}_${idx}.${ext}`;
           const { error: uploadError } = await supabase.storage
             .from("sale-attachments")
-            .upload(filePath, file);
+            .upload(filePath, item.file);
           if (uploadError) throw uploadError;
           const { data: urlData } = supabase.storage
             .from("sale-attachments")
             .getPublicUrl(filePath);
-          boardingPassUrl = urlData.publicUrl;
-          boardingPassFileName = file.name;
+          await (supabase as any).from("checkin_boarding_passes").insert({
+            checkin_task_id: task.id,
+            passenger_id: pax.id,
+            label: item.label?.trim() || item.file.name,
+            file_url: urlData.publicUrl,
+            file_name: item.file.name,
+            file_size: item.file.size,
+            mime_type: item.file.type,
+            display_order: (existingPasses[pax.id]?.length || 0) + idx,
+          });
         }
 
+        // 2) Atualiza label de cartões existentes (não-legacy) que tiveram nome editado
+        const existingList = existingPasses[pax.id] || [];
+        for (const ep of existingList) {
+          if (ep.id.startsWith("legacy-")) continue;
+          await (supabase as any)
+            .from("checkin_boarding_passes")
+            .update({ label: ep.label })
+            .eq("id", ep.id);
+        }
+
+        // 3) Mantém compatibilidade com tabela legacy (seat + 1º cartão)
+        const firstPass = existingList[0] || (pending[0] ? { file_url: null, file_name: pending[0].file.name } : null);
         await supabase.from("checkin_passenger_details").upsert({
           checkin_task_id: task.id,
           passenger_id: pax.id,
           seat: passengerSeats[pax.id] || null,
-          boarding_pass_url: boardingPassUrl,
-          boarding_pass_file_name: boardingPassFileName,
+          boarding_pass_url: firstPass?.file_url || null,
+          boarding_pass_file_name: firstPass?.file_name || null,
           updated_at: new Date().toISOString(),
         }, { onConflict: "checkin_task_id,passenger_id" });
       }
@@ -353,8 +398,8 @@ export default function Checkin() {
       setCompleteDialog(null);
       setCompleteNotes("");
       setPassengerSeats({});
-      setPassengerFiles({});
-      setPassengerExisting({});
+      setPendingPasses({});
+      setExistingPasses({});
       await fetchTasks();
     } catch (err: any) {
       toast({ title: "Erro", description: err.message, variant: "destructive" });
@@ -1010,38 +1055,63 @@ export default function Checkin() {
                               />
                             </td>
                             <td className="px-3 py-3 align-middle">
-                              {passengerFiles[pax.id] ? (
-                                <div className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
-                                  <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
-                                  <span className="truncate flex-1 text-foreground">{passengerFiles[pax.id]!.name}</span>
-                                  <button onClick={() => setPassengerFiles(prev => ({ ...prev, [pax.id]: null }))} className="text-muted-foreground hover:text-destructive shrink-0">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : passengerExisting[pax.id]?.boarding_pass_url ? (
-                                <div className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                  <a href={passengerExisting[pax.id].boarding_pass_url} target="_blank" rel="noreferrer" className="truncate flex-1 text-foreground hover:underline">
-                                    {passengerExisting[pax.id].boarding_pass_file_name || "Cartão"}
-                                  </a>
-                                  <button onClick={() => {
-                                    setPassengerExisting(prev => {
-                                      const next = { ...prev };
-                                      delete next[pax.id];
-                                      return next;
-                                    });
-                                  }} className="text-muted-foreground hover:text-destructive shrink-0">
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              ) : (
+                              <div className="space-y-1.5">
+                                {/* Cartões já salvos */}
+                                {(existingPasses[pax.id] || []).map((bp) => (
+                                  <div key={bp.id} className="flex items-center gap-2 text-xs bg-emerald-500/10 rounded-md px-2 py-1.5">
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <Input
+                                      value={bp.label || ""}
+                                      onChange={(e) => setExistingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: (prev[pax.id] || []).map(x => x.id === bp.id ? { ...x, label: e.target.value } : x),
+                                      }))}
+                                      placeholder="Nome do cartão"
+                                      className="h-6 text-xs flex-1 bg-transparent border-0 px-1 focus-visible:ring-1"
+                                    />
+                                    <a href={bp.file_url} target="_blank" rel="noreferrer" className="text-primary hover:underline shrink-0" title="Abrir">
+                                      <ExternalLink className="w-3.5 h-3.5" />
+                                    </a>
+                                    <button onClick={() => setExistingPasses(prev => ({
+                                      ...prev,
+                                      [pax.id]: (prev[pax.id] || []).filter(x => x.id !== bp.id),
+                                    }))} className="text-muted-foreground hover:text-destructive shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {/* Cartões pendentes (novos) */}
+                                {(pendingPasses[pax.id] || []).map((p) => (
+                                  <div key={p.tempId} className="flex items-center gap-2 text-xs bg-muted/50 rounded-md px-2 py-1.5">
+                                    <FileText className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    <Input
+                                      value={p.label}
+                                      onChange={(e) => setPendingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: (prev[pax.id] || []).map(x => x.tempId === p.tempId ? { ...x, label: e.target.value } : x),
+                                      }))}
+                                      placeholder={p.file.name}
+                                      className="h-6 text-xs flex-1 bg-transparent border-0 px-1 focus-visible:ring-1"
+                                    />
+                                    <span className="text-[10px] text-muted-foreground shrink-0">{(p.file.size / 1024).toFixed(0)}KB</span>
+                                    <button onClick={() => setPendingPasses(prev => ({
+                                      ...prev,
+                                      [pax.id]: (prev[pax.id] || []).filter(x => x.tempId !== p.tempId),
+                                    }))} className="text-muted-foreground hover:text-destructive shrink-0">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ))}
+                                {/* Botão Adicionar */}
                                 <button
                                   onClick={() => fileInputRefs.current[pax.id]?.click()}
-                                  className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-1.5 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
+                                  className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground border border-dashed border-border/50 rounded-md px-3 py-1.5 w-full transition-colors hover:border-primary/40 hover:bg-primary/5"
                                 >
-                                  <Upload className="w-3.5 h-3.5" /> Upload
+                                  {(existingPasses[pax.id]?.length || 0) + (pendingPasses[pax.id]?.length || 0) > 0
+                                    ? <><Plus className="w-3.5 h-3.5" /> Adicionar mais um cartão</>
+                                    : <><Upload className="w-3.5 h-3.5" /> Adicionar cartão de embarque</>}
                                 </button>
-                              )}
+                              </div>
                               <input
                                 ref={el => { fileInputRefs.current[pax.id] = el; }}
                                 type="file"
@@ -1052,9 +1122,16 @@ export default function Checkin() {
                                   if (file) {
                                     if (file.size > 10 * 1024 * 1024) {
                                       toast({ title: "Arquivo muito grande", description: "Máximo 10MB", variant: "destructive" });
-                                      return;
+                                    } else {
+                                      const tempId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+                                      // Sugestão de label automática: "Cartão N · arquivo"
+                                      const count = (existingPasses[pax.id]?.length || 0) + (pendingPasses[pax.id]?.length || 0) + 1;
+                                      const suggested = `Cartão ${count}`;
+                                      setPendingPasses(prev => ({
+                                        ...prev,
+                                        [pax.id]: [...(prev[pax.id] || []), { tempId, file, label: suggested }],
+                                      }));
                                     }
-                                    setPassengerFiles(prev => ({ ...prev, [pax.id]: file }));
                                   }
                                   e.target.value = "";
                                 }}

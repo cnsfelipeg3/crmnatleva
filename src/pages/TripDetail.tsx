@@ -61,6 +61,8 @@ export default function TripDetail() {
   const [passengers, setPassengers] = useState<any[]>([]);
   const [checkinTasks, setCheckinTasks] = useState<any[]>([]);
   const [checkinPassengerDetails, setCheckinPassengerDetails] = useState<Record<string, any[]>>({});
+  // Cartões de embarque múltiplos: agrupa por (taskId,paxId) → array
+  const [boardingPassesByPax, setBoardingPassesByPax] = useState<Record<string, any[]>>({});
   const [lodgingTasks, setLodgingTasks] = useState<any[]>([]);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [sellerName, setSellerName] = useState("");
@@ -99,6 +101,19 @@ export default function TripDetail() {
           grouped[d.checkin_task_id].push(d);
         });
         setCheckinPassengerDetails(grouped);
+
+        // Múltiplos cartões de embarque por (task,pax)
+        const { data: bps } = await (supabase as any)
+          .from("checkin_boarding_passes")
+          .select("*")
+          .in("checkin_task_id", taskIds)
+          .order("display_order", { ascending: true });
+        const bpGrouped: Record<string, any[]> = {};
+        (bps || []).forEach((b: any) => {
+          const k = `${b.checkin_task_id}::${b.passenger_id}`;
+          (bpGrouped[k] = bpGrouped[k] || []).push(b);
+        });
+        setBoardingPassesByPax(bpGrouped);
       }
 
       if (s?.seller_id) {
@@ -687,18 +702,36 @@ export default function TripDetail() {
                     </div>
                     {details.length > 0 && (
                       <div className="border-t border-border/30 pt-2 space-y-1.5">
-                        {details.map((d: any) => (
-                          <div key={d.id} className="flex items-center gap-2 text-[11px]">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-                            <span className="text-foreground font-medium">{d.passengers?.full_name || "—"}</span>
-                            {d.seat && <span className="text-muted-foreground">— Assento {d.seat}</span>}
-                            {d.boarding_pass_url && (
-                              <a href={d.boarding_pass_url} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center gap-0.5 ml-auto shrink-0">
-                                <FileText className="w-3 h-3" /> Cartão
-                              </a>
-                            )}
-                          </div>
-                        ))}
+                        {details.map((d: any) => {
+                          const passes = boardingPassesByPax[`${t.id}::${d.passenger_id}`] || [];
+                          // Fallback p/ cartão antigo único
+                          const allPasses = passes.length > 0
+                            ? passes
+                            : (d.boarding_pass_url ? [{ id: `legacy-${d.id}`, file_url: d.boarding_pass_url, file_name: d.boarding_pass_file_name, label: d.boarding_pass_file_name || "Cartão de embarque" }] : []);
+                          return (
+                            <div key={d.id} className="text-[11px] space-y-1">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                                <span className="text-foreground font-medium">{d.passengers?.full_name || "—"}</span>
+                                {d.seat && <span className="text-muted-foreground">— Assento {d.seat}</span>}
+                                {allPasses.length > 0 && (
+                                  <Badge variant="outline" className="text-[9px] ml-auto">{allPasses.length} cartão{allPasses.length > 1 ? "ões" : ""}</Badge>
+                                )}
+                              </div>
+                              {allPasses.length > 0 && (
+                                <div className="ml-5 space-y-0.5">
+                                  {allPasses.map((bp: any) => (
+                                    <a key={bp.id} href={bp.file_url} target="_blank" rel="noreferrer"
+                                      className="flex items-center gap-1.5 text-primary hover:underline">
+                                      <FileText className="w-3 h-3 shrink-0" />
+                                      <span className="truncate">{bp.label || bp.file_name || "Cartão"}</span>
+                                    </a>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                     {t.seat_info && details.length === 0 && (
