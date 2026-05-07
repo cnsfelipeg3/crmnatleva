@@ -48,6 +48,8 @@ export function useInboxMessages(
       sender_photo: m.sender_photo || null,
       is_pinned: !!m.is_pinned,
       pinned_at: m.pinned_at || null,
+      is_deleted: !!m.is_deleted,
+      deleted_at: m.deleted_at || null,
       metadata: m.metadata || null,
     }))
   ), []);
