@@ -3041,6 +3041,14 @@ function OperacaoInboxInner() {
                           </TooltipTrigger>
                           <TooltipContent><p className="text-xs">Vincular cliente</p></TooltipContent>
                         </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => setShowGenerateQuotation(true)}>
+                              <Sparkles className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent><p className="text-xs">Gerar cotação a partir desta conversa</p></TooltipContent>
+                        </Tooltip>
                         {activeFlowName && (
                           <Badge variant="outline" className="text-[9px] font-bold gap-1 border-primary/30 text-primary ml-1">
                             <Workflow className="h-3 w-3" />{activeFlowName}
