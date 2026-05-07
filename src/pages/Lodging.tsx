@@ -22,6 +22,8 @@ import {
   XCircle, Phone, Calendar, List, LayoutGrid,
 } from "lucide-react";
 import TaskCalendarView from "@/components/TaskCalendarView";
+import { SmartFilters, useSmartFilters } from "@/components/smart-filters";
+import type { SmartFilterConfig } from "@/components/smart-filters";
 
 interface LodgingTask {
   id: string;
