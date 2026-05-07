@@ -3739,6 +3739,11 @@ function OperacaoInboxInner() {
         conversationName={selected?.contact_name || selected?.phone || ""}
         onDelegate={delegate}
       />
+      <SendLocationDialog
+        open={locationDialogOpen}
+        onOpenChange={setLocationDialogOpen}
+        onSend={handleSendLocation}
+      />
       <AddParticipantsDialog
         open={addParticipantsDialogOpen}
         onOpenChange={setAddParticipantsDialogOpen}
