@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { DatePartsInput } from "@/components/ui/date-parts-input";
+import { copyPassengersToClipboard } from "@/lib/passengerCopy";
 
 interface Passenger {
   id: string;
