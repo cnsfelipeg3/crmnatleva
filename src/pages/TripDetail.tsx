@@ -101,6 +101,19 @@ export default function TripDetail() {
           grouped[d.checkin_task_id].push(d);
         });
         setCheckinPassengerDetails(grouped);
+
+        // Múltiplos cartões de embarque por (task,pax)
+        const { data: bps } = await (supabase as any)
+          .from("checkin_boarding_passes")
+          .select("*")
+          .in("checkin_task_id", taskIds)
+          .order("display_order", { ascending: true });
+        const bpGrouped: Record<string, any[]> = {};
+        (bps || []).forEach((b: any) => {
+          const k = `${b.checkin_task_id}::${b.passenger_id}`;
+          (bpGrouped[k] = bpGrouped[k] || []).push(b);
+        });
+        setBoardingPassesByPax(bpGrouped);
       }
 
       if (s?.seller_id) {
