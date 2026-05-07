@@ -81,6 +81,7 @@ export async function createMonitorBriefing(lead: any): Promise<string | null> {
         lead_origin: "Monitor · " + (mapped.lead_origin || "Simulador"),
         status: "extraindo",
         urgency: "media",
+        is_fictional: true,
       })
       .select("id")
       .single();
