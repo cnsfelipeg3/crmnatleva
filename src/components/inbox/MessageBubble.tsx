@@ -421,6 +421,7 @@ export const MessageBubble = memo(MessageBubbleInner, (prev, next) => {
     prev.msg.text === next.msg.text &&
     prev.msg.status === next.msg.status &&
     prev.msg.edited === next.msg.edited &&
+    prev.msg.edited_at === next.msg.edited_at &&
     prev.msg.media_url === next.msg.media_url &&
     prev.msg.media_storage_url === next.msg.media_storage_url &&
     prev.msg.media_status === next.msg.media_status &&
