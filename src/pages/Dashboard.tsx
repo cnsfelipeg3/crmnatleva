@@ -259,16 +259,33 @@ export default function Dashboard() {
 
   // Client-side filtering for chart sections (raw data)
   const periodCutoff = useMemo(() => {
+    if (period === "custom") {
+      if (customRange?.from) {
+        const d = customRange.from;
+        return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      }
+      return null;
+    }
     if (period === "all") return null;
     const now = new Date();
+    if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (period === "this_month") return new Date(now.getFullYear(), now.getMonth(), 1);
     if (period === "last_month") return new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const daysMap: Record<string, number> = { "today": 0, "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
+    const daysMap: Record<string, number> = { "yesterday": 1, "7d": 7, "30d": 30, "90d": 90, "12m": 365 };
     const days = daysMap[period] ?? 30;
     return new Date(now.getTime() - days * 86400000);
-  }, [period]);
+  }, [period, customRange]);
 
   const periodEnd = useMemo(() => {
+    if (period === "custom") {
+      const d = customRange?.to ?? customRange?.from;
+      if (d) return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+      return null;
+    }
+    if (period === "today") {
+      const n = new Date();
+      return new Date(n.getFullYear(), n.getMonth(), n.getDate(), 23, 59, 59);
+    }
     if (period === "last_month") {
       const now = new Date();
       return new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
@@ -278,7 +295,19 @@ export default function Dashboard() {
       return new Date(y.getFullYear(), y.getMonth(), y.getDate(), 23, 59, 59);
     }
     return null;
-  }, [period]);
+  }, [period, customRange]);
+
+  // Parse "HH:MM" → minutes since midnight
+  const hourFromMin = useMemo(() => {
+    if (!hourFrom) return null;
+    const [h, m] = hourFrom.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }, [hourFrom]);
+  const hourToMin = useMemo(() => {
+    if (!hourTo) return null;
+    const [h, m] = hourTo.split(":").map(Number);
+    return (h || 0) * 60 + (m || 0);
+  }, [hourTo]);
 
   const filtered = useMemo(() => {
     let result = sales;
