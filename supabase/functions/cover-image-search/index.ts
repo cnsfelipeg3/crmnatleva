@@ -1,4 +1,6 @@
-// Search real destination photos (Wikimedia Commons) + AI-generated cinematic options
+// Search real photos (Wikimedia) + generate 4 AI cinematic variants in parallel.
+// Designed to always return at least 4 usable cover options for any query
+// (destination, hotel, cruise ship, attraction, etc.).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
@@ -15,11 +17,10 @@ interface CoverImage {
   attribution?: string;
 }
 
-async function searchWikimedia(query: string, limit = 6): Promise<CoverImage[]> {
-  // Use Wikimedia Commons API to search for high-quality images
-  const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query)}&gsrlimit=${limit * 2}&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=1600&origin=*`;
+async function searchWikimedia(query: string, limit = 4): Promise<CoverImage[]> {
+  const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&format=json&generator=search&gsrnamespace=6&gsrsearch=${encodeURIComponent(query)}&gsrlimit=${limit * 3}&prop=imageinfo&iiprop=url|extmetadata|size&iiurlwidth=1600&origin=*`;
   try {
-    const res = await fetch(searchUrl);
+    const res = await fetch(searchUrl, { signal: AbortSignal.timeout(6000) });
     if (!res.ok) return [];
     const json = await res.json();
     const pages = json?.query?.pages ?? {};
@@ -29,16 +30,14 @@ async function searchWikimedia(query: string, limit = 6): Promise<CoverImage[]> 
       const info = p.imageinfo?.[0];
       if (!info) continue;
       const url: string = info.thumburl || info.url;
-      const ext = (url || "").toLowerCase();
-      if (!/\.(jpg|jpeg|png|webp)(\?|$)/.test(ext)) continue;
-      // Filter out tiny images and likely logos/maps
+      if (!url || !/\.(jpg|jpeg|png|webp)(\?|$)/i.test(url)) continue;
       const w = info.thumbwidth || info.width || 0;
       const h = info.thumbheight || info.height || 0;
       if (w < 1000 || h < 600) continue;
       const title = (p.title || "").replace(/^File:/, "");
-      if (/logo|map|coat_of_arms|flag|seal|diagram/i.test(title)) continue;
+      if (/logo|map|coat_of_arms|flag|seal|diagram|chart|graph/i.test(title)) continue;
       const attribution = info.extmetadata?.Artist?.value
-        ? String(info.extmetadata.Artist.value).replace(/<[^>]+>/g, "").trim()
+        ? String(info.extmetadata.Artist.value).replace(/<[^>]+>/g, "").trim().slice(0, 80)
         : undefined;
       items.push({ url, source: "wikimedia", title, attribution });
       if (items.length >= limit) break;
@@ -64,9 +63,10 @@ async function generateAIImage(prompt: string): Promise<CoverImage | null> {
         messages: [{ role: "user", content: prompt }],
         modalities: ["image", "text"],
       }),
+      signal: AbortSignal.timeout(45000),
     });
     if (!res.ok) {
-      console.error("AI image error:", res.status, await res.text());
+      console.error("AI image error:", res.status, (await res.text()).slice(0, 200));
       return null;
     }
     const data = await res.json();
@@ -79,11 +79,22 @@ async function generateAIImage(prompt: string): Promise<CoverImage | null> {
   }
 }
 
+function buildPrompts(query: string): string[] {
+  const q = query.trim();
+  const base = `Subject: ${q}. Strict rules: NO text, NO captions, NO watermarks, NO logos, NO UI overlays, NO borders. Photo realistic, magazine quality, 16:9 cinematic composition.`;
+  return [
+    `Cinematic golden-hour travel photograph of ${q}. Wide establishing shot, dramatic warm light, ultra detailed, professional travel magazine cover. ${base}`,
+    `Stunning aerial drone view of ${q}, vibrant blue sky, crystal clear water or vivid landscape, magazine cover composition. ${base}`,
+    `Dreamy dusk scene of ${q}, soft pastel sky, ambient lights starting to glow, luxury travel mood, atmospheric and elegant. ${base}`,
+    `Iconic close-up perspective of ${q}, rich textures and colors, depth of field, premium editorial photography, eye-catching framing. ${base}`,
+  ];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { destination } = await req.json();
+    const { destination, count } = await req.json();
     if (!destination || typeof destination !== "string" || destination.trim().length < 2) {
       return new Response(JSON.stringify({ error: "destination is required" }), {
         status: 400,
@@ -92,24 +103,28 @@ serve(async (req) => {
     }
 
     const dest = destination.trim();
+    const aiCount = Math.min(Math.max(Number(count) || 4, 2), 6);
+    const prompts = buildPrompts(dest).slice(0, aiCount);
 
-    // Run real photo search + 2 AI generations in parallel
-    const [realPhotos, ai1, ai2] = await Promise.all([
+    // Run real photo search + N AI generations in parallel
+    const [realPhotos, ...aiResults] = await Promise.all([
       searchWikimedia(dest, 4),
-      generateAIImage(
-        `Cinematic, high-resolution travel photography of ${dest}. Golden hour lighting, dramatic landscape, ultra detailed, professional photo, no text, no watermark, no logos, 16:9 aspect ratio.`,
-      ),
-      generateAIImage(
-        `Stunning aerial drone view of ${dest}, vibrant colors, magazine cover quality travel photo, blue sky, no text, no watermark, no people in foreground, 16:9.`,
-      ),
+      ...prompts.map((p) => generateAIImage(p)),
     ]);
 
-    const aiPhotos = [ai1, ai2].filter(Boolean) as CoverImage[];
-    const images = [...realPhotos, ...aiPhotos];
+    const aiPhotos = aiResults.filter(Boolean) as CoverImage[];
+    // Show AI first (mais consistente), depois fotos reais como complemento
+    const images = [...aiPhotos, ...realPhotos];
 
-    return new Response(JSON.stringify({ images, destination: dest }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        images,
+        destination: dest,
+        ai_count: aiPhotos.length,
+        real_count: realPhotos.length,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("cover-image-search error:", e);
     return new Response(
