@@ -467,33 +467,36 @@ export default function ProposalEditor() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (snapshot?: { form: typeof form; items: typeof items; visualOverrides: VisualOverrides }) => {
+      const currentForm = snapshot?.form ?? formRef.current;
+      const currentItems = snapshot?.items ?? itemsRef.current;
+      const currentVisualOverrides = snapshot?.visualOverrides ?? visualOverridesRef.current;
       const slug = existing?.slug || generateSlug();
       const payload: Record<string, any> = {
-        title: form.title,
-        client_name: form.client_name,
-        origin: form.origin,
-        destinations: form.destinations,
-        travel_start_date: form.travel_start_date || null,
-        travel_end_date: form.travel_end_date || null,
-        passenger_count: (form.passengers_adults || 0) + (form.passengers_children || 0) || form.passenger_count,
-        passengers_adults: form.passengers_adults ?? null,
-        passengers_children: form.passengers_children ?? null,
-        children_ages: form.children_ages && form.children_ages.length > 0 ? form.children_ages : null,
-        consultant_name: form.consultant_name,
-        status: form.status,
-        intro_text: form.intro_text,
-        cover_image_url: form.cover_image_url,
-        total_value: form.total_value ? parseFloat(form.total_value) : null,
-        value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-        payment_conditions: form.payment_conditions,
-        proposal_strategy: form.proposal_strategy || null,
-        proposal_outcome: form.proposal_outcome || "pending",
-        template_id: form.template_id || null,
+        title: currentForm.title,
+        client_name: currentForm.client_name,
+        origin: currentForm.origin,
+        destinations: currentForm.destinations,
+        travel_start_date: currentForm.travel_start_date || null,
+        travel_end_date: currentForm.travel_end_date || null,
+        passenger_count: (currentForm.passengers_adults || 0) + (currentForm.passengers_children || 0) || currentForm.passenger_count,
+        passengers_adults: currentForm.passengers_adults ?? null,
+        passengers_children: currentForm.passengers_children ?? null,
+        children_ages: currentForm.children_ages && currentForm.children_ages.length > 0 ? currentForm.children_ages : null,
+        consultant_name: currentForm.consultant_name,
+        status: currentForm.status,
+        intro_text: currentForm.intro_text,
+        cover_image_url: currentForm.cover_image_url,
+        total_value: currentForm.total_value ? parseFloat(currentForm.total_value) : null,
+        value_per_person: currentForm.value_per_person ? parseFloat(currentForm.value_per_person) : null,
+        payment_conditions: currentForm.payment_conditions,
+        proposal_strategy: currentForm.proposal_strategy || null,
+        proposal_outcome: currentForm.proposal_outcome || "pending",
+        template_id: currentForm.template_id || null,
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
-        visual_overrides: visualOverrides as any,
+        visual_overrides: currentVisualOverrides as any,
       };
 
       let proposalId = id;
@@ -510,8 +513,8 @@ export default function ProposalEditor() {
       if (!isNew) {
         await supabase.from("proposal_items").delete().eq("proposal_id", proposalId!);
       }
-      if (items.length > 0) {
-        const itemsPayload = items.map((item, idx) => ({
+      if (currentItems.length > 0) {
+        const itemsPayload = currentItems.map((item, idx) => ({
           proposal_id: proposalId,
           item_type: item.item_type,
           position: idx,
