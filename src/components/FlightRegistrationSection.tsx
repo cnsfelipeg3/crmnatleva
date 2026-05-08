@@ -58,6 +58,15 @@ const defaultSegment: FlightSegment = {
   operated_by: "", connection_time_minutes: 0, terminal: "",
 };
 
+function hasSegmentDraftData(seg: FlightSegment): boolean {
+  return Boolean(
+    seg.airline || seg.flight_number || seg.origin_iata || seg.destination_iata ||
+    seg.departure_date || seg.departure_time || seg.arrival_time || seg.flight_class ||
+    seg.cabin_type || seg.operated_by || seg.terminal || seg.duration_minutes ||
+    seg.connection_time_minutes
+  );
+}
+
 function createGroup(type: FlightGroup["type"], label: string): FlightGroup {
   return {
     id: crypto.randomUUID(),
@@ -161,7 +170,7 @@ export default function FlightRegistrationSection({
     const flat: FlightSegment[] = [];
     for (const g of newGroups) {
       for (const seg of g.segments) {
-        if (seg.origin_iata || seg.destination_iata) {
+        if (hasSegmentDraftData(seg)) {
           flat.push(seg);
         }
       }
