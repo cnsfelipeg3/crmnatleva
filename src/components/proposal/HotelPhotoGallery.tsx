@@ -322,7 +322,17 @@ export function HotelPhotoGallery({
   const currentIsCover = current ? current.url === coverUrl : false;
 
   return (
-    <div className="md:col-span-2 space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={cn(
+        "md:col-span-2 space-y-3 p-3 rounded-xl border bg-muted/20 outline-none transition-colors",
+        isDragging ? "border-primary border-2 bg-primary/5" : "border-border/60",
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
