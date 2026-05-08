@@ -83,10 +83,50 @@ type TabId = typeof TAB_IDS[number];
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const NEW_SALE_DRAFT_KEY = "natleva:new-sale:draft:v1";
+
+const DEFAULT_SALE_FORM = {
+  name: "", close_date: "", payment_method: "", observations: "",
+  link_chat: "", adults: 1, children: 0, children_ages: "",
+  origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
+  airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
+  emission_source: "", lead_type: "agencia" as "agencia" | "organico",
+  seller_id: "",
+  received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
+};
+
+interface NewSaleDraft {
+  version: 1;
+  savedAt: string;
+  activeTab: string;
+  form: typeof DEFAULT_SALE_FORM;
+  segments: FlightSegment[];
+  groupLocators: string[];
+  airCostBlocks: AirCostBlock[];
+  hotelEntries: HotelEntry[];
+  otherProducts: OtherProduct[];
+  salePayments: SalePayment[];
+  airTariff: TariffCondition;
+  hotelTariff: TariffCondition;
+  selectedPassengers: SelectedPassenger[];
+  textInput: string;
+}
+
+function readNewSaleDraft(): NewSaleDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(NEW_SALE_DRAFT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<NewSaleDraft>;
+    return parsed.version === 1 ? parsed as NewSaleDraft : null;
+  } catch {
+    return null;
+  }
+}
+
 /* ─── Component ────────────────────────────────────────── */
 
 export default function NewSale() {
-  const [activeTab, setActiveTab] = useState<string>("info");
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
@@ -94,6 +134,11 @@ export default function NewSale() {
   const location = useLocation();
   const { id: editId } = useParams<{ id: string }>();
   const isEditMode = !!editId;
+  const initialDraft = useMemo(() => isEditMode ? null : readNewSaleDraft(), [isEditMode]);
+  const [activeTab, setActiveTab] = useState<string>(() => {
+    const savedTab = initialDraft?.activeTab;
+    return savedTab && TAB_IDS.includes(savedTab as TabId) ? savedTab : "info";
+  });
 
   // Lista de colaboradores (apenas para admins selecionarem o vendedor da venda)
   const { data: employeesList = [] } = useQuery({
@@ -121,41 +166,35 @@ export default function NewSale() {
     () => SALE_ATTACHMENT_CATEGORIES.flatMap(c => filesByCategory[c.key].map(f => ({ file: f, category: c.key }))),
     [filesByCategory]
   );
-  const [textInput, setTextInput] = useState("");
+  const [textInput, setTextInput] = useState(() => initialDraft?.textInput || "");
   const [extracting, setExtracting] = useState(false);
   const [extraction, setExtraction] = useState<ExtractionResult | null>(null);
 
   // Form (basic sale info)
-  const [form, setForm] = useState({
-    name: "", close_date: "", payment_method: "", observations: "",
-    link_chat: "", adults: 1, children: 0, children_ages: "",
-    origin_iata: "", destination_iata: "", departure_date: "", return_date: "",
-    airline: "", flight_class: "", locator: "", connections: "", miles_program: "",
-    emission_source: "", lead_type: "agencia" as "agencia" | "organico",
-    seller_id: "" as string,
-    // Payment
-    received_value: "", paid_value: "", payment_gateway: "", payment_installments: "1",
-  });
+  const [form, setForm] = useState<typeof DEFAULT_SALE_FORM>(() => ({ ...DEFAULT_SALE_FORM, ...(initialDraft?.form || {}) }));
 
-  const [segments, setSegments] = useState<FlightSegment[]>([
-    { ...defaultSegment, direction: "ida", segment_order: 1 },
-  ]);
-  const [groupLocators, setGroupLocators] = useState<string[]>([]);
+  const [segments, setSegments] = useState<FlightSegment[]>(() => initialDraft?.segments?.length
+    ? initialDraft.segments
+    : [{ ...defaultSegment, direction: "ida", segment_order: 1 }]
+  );
+  const [groupLocators, setGroupLocators] = useState<string[]>(() => initialDraft?.groupLocators || []);
   
   // NEW: Air cost blocks (replaces single air cost)
-  const [airCostBlocks, setAirCostBlocks] = useState<AirCostBlock[]>([]);
+  const [airCostBlocks, setAirCostBlocks] = useState<AirCostBlock[]>(() => initialDraft?.airCostBlocks || []);
   
   // NEW: Multiple hotels (replaces single hotel)
-  const [hotelEntries, setHotelEntries] = useState<HotelEntry[]>([]);
+  const [hotelEntries, setHotelEntries] = useState<HotelEntry[]>(() => initialDraft?.hotelEntries || []);
   
-  const [otherProducts, setOtherProducts] = useState<OtherProduct[]>([]);
-  const [salePayments, setSalePayments] = useState<SalePayment[]>([]);
-  const [airTariff, setAirTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
-  const [hotelTariff, setHotelTariff] = useState<TariffCondition>({ ...EMPTY_TARIFF });
+  const [otherProducts, setOtherProducts] = useState<OtherProduct[]>(() => initialDraft?.otherProducts || []);
+  const [salePayments, setSalePayments] = useState<SalePayment[]>(() => initialDraft?.salePayments || []);
+  const [airTariff, setAirTariff] = useState<TariffCondition>(() => initialDraft?.airTariff || { ...EMPTY_TARIFF });
+  const [hotelTariff, setHotelTariff] = useState<TariffCondition>(() => initialDraft?.hotelTariff || { ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
     const state = location.state as any;
-    return state?.preSelectedPassengers || [];
+    const preSelected = state?.preSelectedPassengers || [];
+    const drafted = initialDraft?.selectedPassengers || [];
+    return [...drafted, ...preSelected.filter((p: SelectedPassenger) => !drafted.some(d => d.id === p.id))];
   });
 
   // Validação automática · trip_length manual vs. derivado dos segmentos
