@@ -864,6 +864,20 @@ export default function ProposalEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Indicador de autosave */}
+          {!isNew && form.title && (
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground mr-1">
+              {autoSaveStatus === "saving" && (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Salvando...</>
+              )}
+              {autoSaveStatus === "saved" && lastSavedAt && (
+                <><Check className="w-3 h-3 text-emerald-600" /> Salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+              )}
+              {autoSaveStatus === "error" && (
+                <span className="text-destructive">Erro ao salvar · tente novamente</span>
+              )}
+            </div>
+          )}
           {!isNew && existing?.slug && (
             <>
               <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
