@@ -467,10 +467,10 @@ export default function ProposalEditor() {
   };
 
   const saveMutation = useMutation({
-    mutationFn: async (snapshot?: { form: typeof form; items: typeof items; visualOverrides: VisualOverrides }) => {
-      const currentForm = snapshot?.form ?? formRef.current;
-      const currentItems = snapshot?.items ?? itemsRef.current;
-      const currentVisualOverrides = snapshot?.visualOverrides ?? visualOverridesRef.current;
+    mutationFn: async () => {
+      const currentForm = formRef.current;
+      const currentItems = itemsRef.current;
+      const currentVisualOverrides = visualOverridesRef.current;
       const slug = existing?.slug || generateSlug();
       const payload: Record<string, any> = {
         title: currentForm.title,
