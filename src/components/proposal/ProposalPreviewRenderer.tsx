@@ -920,12 +920,19 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
   const galleryRaw: any[] = Array.isArray(d.gallery) ? d.gallery.filter((p: any) => p && p.excluded !== true) : [];
   const cover = cruise.image_url || galleryRaw[0]?.url;
   const galleryPhotos = galleryRaw.filter((p: any) => p?.url && p.url !== cover).slice(0, 12);
+  const galleryUrls: string[] = galleryPhotos.map((p: any) => p.url);
+  const galleryCaptions: (string | null)[] = galleryPhotos.map((p: any) => {
+    const raw = String(p?.label || "").trim();
+    if (!raw) return null;
+    // Hide useless generic labels (e.g. "Foto extraída", "Manual", "Foto 1")
+    if (/^foto\s*(extra[ií]da|manual)?\s*\d*$/i.test(raw)) return null;
+    if (/^manual$/i.test(raw)) return null;
+    return raw;
+  });
 
   const includes: string[] = Array.isArray(d.includes) ? d.includes : [];
   const excludes: string[] = Array.isArray(d.excludes) ? d.excludes : [];
   const amenities: string[] = Array.isArray(d.amenities) ? d.amenities : [];
-
-  const [lightbox, setLightbox] = React.useState<number | null>(null);
 
   return (
     <motion.div
