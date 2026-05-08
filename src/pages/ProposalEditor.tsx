@@ -190,6 +190,14 @@ export default function ProposalEditor() {
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
+  const formRef = useRef(form);
+  const itemsRef = useRef(items);
+  const visualOverridesRef = useRef(visualOverrides);
+
+  useEffect(() => { formRef.current = form; }, [form]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { visualOverridesRef.current = visualOverrides; }, [visualOverrides]);
+
   // ── Autosave state ──────────────────────────────────────────────────
   // Hidrata silenciosamente após carregar dados existentes; depois grava
   // automaticamente no banco a cada alteração para nunca perder progresso.
@@ -314,7 +322,14 @@ export default function ProposalEditor() {
     }
     if (existing && existingItems !== undefined) {
       // pequeno delay garante que setForm/setItems já tenham aplicado
-      const t = setTimeout(() => { hydratedRef.current = true; }, 50);
+      const t = setTimeout(() => {
+        hydratedRef.current = true;
+        lastAutoSavedSnapshotRef.current = JSON.stringify({
+          f: formRef.current,
+          i: itemsRef.current,
+          v: visualOverridesRef.current,
+        });
+      }, 50);
       return () => clearTimeout(t);
     }
   }, [isNew, existing, existingItems]);
