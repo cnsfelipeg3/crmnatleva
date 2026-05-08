@@ -3285,6 +3285,28 @@ function OperacaoInboxInner() {
                                     <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                                   </div>
                                 )}
+                                {/* Location */}
+                                {msg.message_type === "location" && (() => {
+                                  const loc = (msg.metadata as any)?.location;
+                                  const lat = Number(loc?.latitude ?? loc?.lat);
+                                  const lng = Number(loc?.longitude ?? loc?.lng ?? loc?.lon);
+                                  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                                    return (
+                                      <div className="flex items-center gap-2 text-xs opacity-70 py-2">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>Localização indisponível</span>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <LocationBubble
+                                      latitude={lat}
+                                      longitude={lng}
+                                      title={loc?.title || loc?.name || null}
+                                      address={loc?.address || null}
+                                    />
+                                  );
+                                })()}
                                 {/* Sticker */}
                                 {msg.message_type === "sticker" && (() => {
                                   const stickerUrl = msg.media_storage_url || msg.media_url;
