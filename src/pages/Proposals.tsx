@@ -151,6 +151,22 @@ export default function Proposals() {
     toast.success("Link copiado!");
   };
 
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase.from("proposals").delete().eq("id", deleteTarget.id);
+      if (error) throw error;
+      toast.success("Proposta excluída");
+      setDeleteTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["proposals"] });
+    } catch (err: any) {
+      toast.error("Erro ao excluir", { description: err.message });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-5 animate-fade-in">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
