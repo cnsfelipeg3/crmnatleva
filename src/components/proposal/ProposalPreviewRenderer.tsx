@@ -1718,6 +1718,16 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         </section>
       )}
 
+      {/* ──── CRUISES ──── */}
+      {showCruises && cruises.length > 0 && (
+        <section data-track-section="cruises" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
+          <SectionTitle subtitle="Seu cruzeiro com itinerário detalhado">Cruzeiro</SectionTitle>
+          <div className={cruises.length === 1 ? "max-w-3xl mx-auto space-y-8" : "max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6"}>
+            {cruises.map((c, idx) => <CruiseCard key={c.id || idx} cruise={c} idx={idx} />)}
+          </div>
+        </section>
+      )}
+
       {/* ──── EXPERIENCES ──── */}
       {showExperiences && experiences.length > 0 && (
         <section data-track-section="experiences" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
