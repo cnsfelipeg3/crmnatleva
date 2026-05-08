@@ -3694,6 +3694,22 @@ function OperacaoInboxInner() {
                         </PopoverContent>
                       </Popover>
 
+                      <Popover open={showStickerPicker} onOpenChange={setShowStickerPicker}>
+                        <PopoverTrigger asChild>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+                                <StickerIcon className="h-5 w-5 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p className="text-xs">Figurinhas salvas</p></TooltipContent>
+                          </Tooltip>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" side="top" align="start">
+                          <StickerPicker onSelect={handleSendSticker} />
+                        </PopoverContent>
+                      </Popover>
+
                       <Popover open={showMediaMenu} onOpenChange={setShowMediaMenu}>
                         <PopoverTrigger asChild><Button variant="ghost" size="icon" className="h-9 w-9 shrink-0"><Paperclip className="h-5 w-5 text-muted-foreground" /></Button></PopoverTrigger>
                         <PopoverContent className="w-40 p-1" side="top" align="start">
