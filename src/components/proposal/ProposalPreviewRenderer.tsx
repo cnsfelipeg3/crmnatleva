@@ -6,6 +6,7 @@ import {
   Clock, Luggage, Users, Wifi, Coffee, UtensilsCrossed, Waves,
   Car, Camera, ChevronRight, Calendar, Globe, Shield,
   BedDouble, Bath, Mountain, X, Briefcase,
+  Ship, Anchor, Sun, Moon, Navigation,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
