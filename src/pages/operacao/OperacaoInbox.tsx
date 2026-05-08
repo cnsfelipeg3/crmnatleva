@@ -1282,7 +1282,11 @@ function OperacaoInboxInner() {
           // Persiste edição no banco (não cria nova linha)
           try {
             const tableName = (msgToEdit as any).source_table || "conversation_messages";
-            await supabase.from(tableName as any).update({ content: text, edited: true, edited_at: new Date().toISOString() } as any).eq("id", msgToEdit.id);
+            const editPatch = tableName === "messages"
+              ? { text, is_edited: true, edited_at: new Date().toISOString() }
+              : { content: text, is_edited: true, edited_at: new Date().toISOString() };
+            const { error: editErr } = await supabase.from(tableName as any).update(editPatch as any).eq("id", msgToEdit.id);
+            if (editErr) console.error("[edit] persist failed:", editErr);
           } catch {}
           toast({ title: "Mensagem editada" });
         } catch (err: any) {
