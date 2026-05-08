@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export type ExtractItemType = "flight" | "hotel" | "experience";
+export type ExtractItemType = "flight" | "hotel" | "experience" | "cruise";
 
 interface Props {
   itemType: ExtractItemType;
@@ -24,6 +24,10 @@ const LABELS: Record<ExtractItemType, { title: string; helper: string }> = {
   experience: {
     title: "Extrair experiência de imagem/PDF",
     helper: "Cole até 20 prints de passeio, ingresso, voucher ou PDFs do fornecedor.",
+  },
+  cruise: {
+    title: "Extrair cruzeiro de imagem/PDF",
+    helper: "Cole prints do roteiro, mapa de itinerário, cabine, voucher MSC/Costa/NCL/Royal ou PDFs · até 20 arquivos.",
   },
 };
 
