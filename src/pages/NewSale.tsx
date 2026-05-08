@@ -1145,6 +1145,9 @@ export default function NewSale() {
       }
 
       toast({ title: isEditMode ? "Venda atualizada com sucesso!" : "Venda salva com sucesso!" });
+      if (!isEditMode) {
+        try { window.localStorage.removeItem(NEW_SALE_DRAFT_KEY); } catch {}
+      }
       try { await Promise.all([supabase.functions.invoke("checkin-generate"), supabase.functions.invoke("lodging-generate")]); } catch {}
       navigate(isEditMode ? `/sales/${editId}` : "/sales");
     } catch (err: any) {
