@@ -164,6 +164,34 @@ export default function CruiseQuickFields({ data, onChange }: Props) {
           </div>
         )}
       </div>
+
+      {/* Includes / Excludes */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs flex items-center gap-1.5">
+            <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Inclusos (um por linha)
+          </Label>
+          <Textarea
+            rows={4}
+            value={Array.isArray(data.includes) ? data.includes.join("\n") : (data.includes || "")}
+            onChange={(e) => onChange("includes", e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))}
+            placeholder={"Pensão completa\nBebidas inclusas\nGorjetas\nTaxas portuárias"}
+            className="text-xs"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label className="text-xs flex items-center gap-1.5">
+            <XCircle className="w-3 h-3 text-rose-500" /> Não inclusos (um por linha)
+          </Label>
+          <Textarea
+            rows={4}
+            value={Array.isArray(data.excludes) ? data.excludes.join("\n") : (data.excludes || "")}
+            onChange={(e) => onChange("excludes", e.target.value.split("\n").map((s) => s.trim()).filter(Boolean))}
+            placeholder={"Excursões em terra\nBebidas premium\nSpa"}
+            className="text-xs"
+          />
+        </div>
+      </div>
     </div>
   );
 }
