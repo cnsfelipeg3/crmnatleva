@@ -97,7 +97,9 @@ export default function Proposals() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
-
+  const queryClient = useQueryClient();
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { data: proposals, isLoading } = useQuery({
     queryKey: ["proposals"],
     queryFn: async () => {
