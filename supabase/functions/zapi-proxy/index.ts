@@ -941,11 +941,30 @@ serve(async (req) => {
     let data = parseJsonSafely(rawText);
     if (!response.ok) {
       console.error(`[Z-API] ${action} upstream ${response.status}: ${rawText.slice(0, 500)}`);
+      const errMsg = String(data?.error || data?.message || rawText || "").toLowerCase();
+      const isSmartphoneTimeout =
+        /smartphone is not responding|smartphone.*timeout|it has a timeout|not connected/i.test(errMsg);
+
       // Degradação graciosa para leituras não críticas: nunca propagar erro ao cliente
       // (evita blank screen quando o smartphone está temporariamente offline)
       if (action === "get-profile-picture") {
         return new Response(
           JSON.stringify({ link: null, unavailable: true, reason: data?.error || rawText.slice(0, 200) }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Timeout do smartphone Z-API → resposta 200 com flag para o frontend tratar com fallback
+      // (evita blank screen em qualquer leitura: get-chats, get-statuses, get-stickers, etc.)
+      if (isSmartphoneTimeout) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            unavailable: true,
+            smartphone_timeout: true,
+            error: data?.error || "Smartphone não está respondendo. Verifique a conexão do WhatsApp.",
+            data: null,
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
