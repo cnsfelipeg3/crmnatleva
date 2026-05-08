@@ -1321,6 +1321,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const showFlights = isSecOn("flights");
   const showHotels = isSecOn("hotels");
   const showExperiences = isSecOn("experiences");
+  const showCruises = isSecOn("cruises");
   const showPricing = isSecOn("pricing");
 
   const startDate = parseLocalDate(proposal.travel_start_date);
@@ -1332,7 +1333,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         ? fmtDate(proposal.travel_start_date)
         : "";
 
-  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || proposal.destinations?.length > 0;
+  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || proposal.destinations?.length > 0;
 
   if (!hasContent && !proposal.title) {
     return (
