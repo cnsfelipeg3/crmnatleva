@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import EmployeeFormTabs from "@/components/rh/EmployeeFormTabs";
 
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
