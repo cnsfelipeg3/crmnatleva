@@ -3284,6 +3284,41 @@ function OperacaoInboxInner() {
                                     <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                                   </div>
                                 )}
+                                {/* Sticker */}
+                                {msg.message_type === "sticker" && (() => {
+                                  const stickerUrl = msg.media_storage_url || msg.media_url;
+                                  const isSaving = savingStickerIds.has(msg.id);
+                                  return (
+                                    <div className="relative group/sticker">
+                                      {stickerUrl ? (
+                                        <img
+                                          src={stickerUrl}
+                                          alt="Figurinha"
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="w-44 h-44 object-contain cursor-pointer drop-shadow-sm"
+                                          onClick={() => setLightboxUrl(stickerUrl)}
+                                        />
+                                      ) : (
+                                        <div className="flex items-center gap-2 text-xs opacity-60 py-6 px-3 bg-muted/40 rounded-lg">
+                                          <StickerIcon className="h-4 w-4" />
+                                          <span>Figurinha indisponível</span>
+                                        </div>
+                                      )}
+                                      {stickerUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleSaveStickerFromMessage(msg); }}
+                                          disabled={isSaving}
+                                          className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-background/95 border border-border shadow-md flex items-center justify-center opacity-0 group-hover/sticker:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground disabled:opacity-100"
+                                          title="Salvar na galeria"
+                                        >
+                                          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 {/* Audio */}
                                 {msg.message_type === "audio" && (
                                   <div className="min-w-[220px]">
