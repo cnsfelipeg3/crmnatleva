@@ -31,6 +31,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
 import CruiseQuickFields from "@/components/proposal/CruiseQuickFields";
+import InsuranceQuickFields from "@/components/proposal/InsuranceQuickFields";
 import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
 import FlightCoverPicker from "@/components/proposal/FlightCoverPicker";
 import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
