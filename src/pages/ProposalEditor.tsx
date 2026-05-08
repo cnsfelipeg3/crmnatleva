@@ -190,6 +190,16 @@ export default function ProposalEditor() {
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
+  // ── Autosave state ──────────────────────────────────────────────────
+  // Hidrata silenciosamente após carregar dados existentes; depois grava
+  // automaticamente no banco a cada alteração para nunca perder progresso.
+  const hydratedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoSavedSnapshotRef = useRef<string>("");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
   // ── Debounce para o preview ─────────────────────────────────────────
   // Form e items são atualizados em todo keystroke, mas o preview à direita
   // (ProposalPreviewRenderer) é caro. Esperamos 250ms de inatividade antes
