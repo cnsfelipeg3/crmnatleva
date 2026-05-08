@@ -458,7 +458,8 @@ export default function ProposalEditor() {
     setSavingItemIdx(idx);
     try {
       await saveMutation.mutateAsync();
-      toast.success(`Bloco "${items[idx]?.title || itemTypeLabels[items[idx]?.item_type]}" salvo!`);
+      const currentItem = itemsRef.current[idx];
+      toast.success(`Bloco "${currentItem?.title || itemTypeLabels[currentItem?.item_type]}" salvo!`);
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar bloco");
     } finally {
@@ -541,20 +542,20 @@ export default function ProposalEditor() {
         emitLearningEvent({
           event_type: "proposal_created",
           proposal_id: proposalId as string,
-          strategy_chosen: form.proposal_strategy || undefined,
-          destination: form.destinations?.[0] || undefined,
-          passenger_count: form.passenger_count,
+          strategy_chosen: formRef.current.proposal_strategy || undefined,
+          destination: formRef.current.destinations?.[0] || undefined,
+          passenger_count: formRef.current.passenger_count,
           created_by: user?.id,
         });
       }
 
       // If outcome changed from pending to won/lost/expired
-      if (form.proposal_outcome !== "pending" && existing?.proposal_outcome !== form.proposal_outcome) {
+      if (formRef.current.proposal_outcome !== "pending" && existing?.proposal_outcome !== formRef.current.proposal_outcome) {
         emitProposalOutcome({
           proposalId: proposalId as string,
-          outcome: form.proposal_outcome as "won" | "lost" | "expired",
-          strategy: form.proposal_strategy,
-          destination: form.destinations?.[0],
+          outcome: formRef.current.proposal_outcome as "won" | "lost" | "expired",
+          strategy: formRef.current.proposal_strategy,
+          destination: formRef.current.destinations?.[0],
           createdAt: existing?.created_at,
           userId: user?.id,
         });
