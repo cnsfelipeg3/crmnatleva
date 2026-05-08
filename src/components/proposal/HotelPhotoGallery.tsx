@@ -7,7 +7,7 @@
  * - Lightbox with arrow navigation, "set as cover" and "remove" actions
  * - Inline label below each thumb, badge for source ("Oficial"/"Manual")
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +17,11 @@ import {
   X,
   Check,
   EyeOff,
+  Upload,
+  Link2,
+  Loader2,
+  Sparkles,
+  ClipboardPaste,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +30,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import SmartImage from "@/components/proposal/SmartImage";
 import { cn } from "@/lib/utils";
+import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface HotelPhoto {
   url: string;
