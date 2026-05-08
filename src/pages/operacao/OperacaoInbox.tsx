@@ -3161,7 +3161,8 @@ function OperacaoInboxInner() {
                       scrollAreaRef.current = el;
                       chatScroll.containerRef.current = el;
                     }}
-                    className={`chat-thread flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 transition-opacity duration-150 ${selectionMode ? "pt-12" : ""} ${chatScroll.ready || !selectedId || currentMessages.length === 0 ? "opacity-100" : "opacity-0"}`}
+                    className={`chat-thread flex-1 min-h-0 overflow-y-auto overscroll-contain-y scroll-momentum px-2 md:px-4 ${selectionMode ? "pt-12" : ""} ${chatScroll.ready || !selectedId || currentMessages.length === 0 ? "opacity-100" : "opacity-0"}`}
+                    style={{ contain: "layout paint", transition: "opacity 80ms linear" }}
                   >
                     {/* Banner de mensagens fixadas */}
                     {selectedId && (() => {
