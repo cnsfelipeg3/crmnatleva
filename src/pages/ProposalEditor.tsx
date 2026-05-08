@@ -190,6 +190,16 @@ export default function ProposalEditor() {
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
+  // ── Autosave state ──────────────────────────────────────────────────
+  // Hidrata silenciosamente após carregar dados existentes; depois grava
+  // automaticamente no banco a cada alteração para nunca perder progresso.
+  const hydratedRef = useRef(false);
+  const isAutoSavingRef = useRef(false);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoSavedSnapshotRef = useRef<string>("");
+  const [autoSaveStatus, setAutoSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
   // ── Debounce para o preview ─────────────────────────────────────────
   // Form e items são atualizados em todo keystroke, mas o preview à direita
   // (ProposalPreviewRenderer) é caro. Esperamos 250ms de inatividade antes
@@ -294,6 +304,20 @@ export default function ProposalEditor() {
   useEffect(() => {
     if (existingItems) setItems(existingItems);
   }, [existingItems]);
+
+  // Marca hidratação concluída para liberar o autosave (evita gravar
+  // o estado vazio inicial sobre a proposta existente).
+  useEffect(() => {
+    if (isNew) {
+      hydratedRef.current = true;
+      return;
+    }
+    if (existing && existingItems !== undefined) {
+      // pequeno delay garante que setForm/setItems já tenham aplicado
+      const t = setTimeout(() => { hydratedRef.current = true; }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [isNew, existing, existingItems]);
 
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
@@ -490,7 +514,9 @@ export default function ProposalEditor() {
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
-      toast.success("Proposta salva com sucesso!");
+      if (!isAutoSavingRef.current) {
+        toast.success("Proposta salva com sucesso!");
+      }
 
       // Emit learning events
       if (isNew) {
@@ -518,8 +544,57 @@ export default function ProposalEditor() {
 
       if (isNew) navigate(`/propostas/${proposalId}`, { replace: true });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => {
+      if (!isAutoSavingRef.current) toast.error(err.message);
+    },
   });
+
+  // ── Autosave: grava no banco automaticamente após cada alteração ────
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (!form.title || !form.title.trim()) return;
+
+    const snapshot = JSON.stringify({
+      f: debouncedForm,
+      i: debouncedItems,
+      v: debouncedVisualOverrides,
+    });
+    if (snapshot === lastAutoSavedSnapshotRef.current) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (saveMutation.isPending) return;
+      isAutoSavingRef.current = true;
+      setAutoSaveStatus("saving");
+      try {
+        await saveMutation.mutateAsync();
+        lastAutoSavedSnapshotRef.current = snapshot;
+        setLastSavedAt(new Date());
+        setAutoSaveStatus("saved");
+      } catch {
+        setAutoSaveStatus("error");
+      } finally {
+        isAutoSavingRef.current = false;
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedForm, debouncedItems, debouncedVisualOverrides]);
+
+  // Avisa antes de sair se ainda houver gravação em andamento
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (autoSaveStatus === "saving") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [autoSaveStatus]);
 
   const addDest = () => {
     if (destInput.trim()) {
@@ -789,6 +864,20 @@ export default function ProposalEditor() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Indicador de autosave */}
+          {!isNew && form.title && (
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground mr-1">
+              {autoSaveStatus === "saving" && (
+                <><Loader2 className="w-3 h-3 animate-spin" /> Salvando...</>
+              )}
+              {autoSaveStatus === "saved" && lastSavedAt && (
+                <><Check className="w-3 h-3 text-emerald-600" /> Salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+              )}
+              {autoSaveStatus === "error" && (
+                <span className="text-destructive">Erro ao salvar · tente novamente</span>
+              )}
+            </div>
+          )}
           {!isNew && existing?.slug && (
             <>
               <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
