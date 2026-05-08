@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, forwardRef } from "react";
 import { Play, Pause } from "lucide-react";
+import { audioPlaybackManager } from "@/lib/audioPlaybackManager";
 
 interface AudioWaveformPlayerProps {
   src: string;
@@ -86,6 +87,8 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+      audioPlaybackManager.release(audio);
+      try { audio.pause(); } catch { /* noop */ }
     };
   }, [updateProgress]);
 
@@ -93,6 +96,7 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) {
+      audioPlaybackManager.notifyPlay(audio);
       audio.play().catch(() => {
         // If play fails (e.g. Safari can't decode ogg), show fallback
         setUseFallback(true);
