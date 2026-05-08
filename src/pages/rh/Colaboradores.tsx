@@ -247,7 +247,17 @@ export default function Colaboradores() {
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge className={statusColor(e.status)}>{e.status}</Badge></TableCell>
                   <TableCell className="text-right font-mono cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>R$ {Number(e.base_salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-2">
+                      <div
+                        className="flex items-center gap-1.5 mr-1"
+                        onClick={(ev) => ev.stopPropagation()}
+                        title={e.status === "ativo" ? "Desativar colaborador" : "Ativar colaborador"}
+                      >
+                        <Switch
+                          checked={e.status === "ativo"}
+                          onCheckedChange={(v) => toggleActive(e, v)}
+                        />
+                      </div>
                       <Button
                         variant="ghost" size="icon" className="h-7 w-7"
                         onClick={(ev) => { ev.stopPropagation(); setForm(e); setShowForm(true); }}
