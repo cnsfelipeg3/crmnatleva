@@ -65,6 +65,7 @@ import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
 import { MessageInfoDialog } from "@/components/inbox/MessageInfoDialog";
+import { LocationBubble } from "@/components/inbox/LocationBubble";
 import { StickerPicker } from "@/components/inbox/StickerPicker";
 import { saveStickerFromUrl, touchSavedSticker, type SavedSticker } from "@/lib/savedStickers";
 
@@ -3258,7 +3259,7 @@ function OperacaoInboxInner() {
                                   </button>
                                 )}
                               </div>
-                              <div className={`${msg.message_type === "sticker" ? "bg-transparent p-0" : `rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"}`} transition-all ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${(msg as any).is_deleted ? "opacity-50 ring-1 ring-dashed ring-muted-foreground/40 grayscale" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                              <div className={`${msg.message_type === "sticker" || msg.message_type === "location" ? "bg-transparent p-0" : `rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"}`} transition-all ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${(msg as any).is_deleted ? "opacity-50 ring-1 ring-dashed ring-muted-foreground/40 grayscale" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
                                 {(msg as any).is_deleted && (
                                   <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                                     <Trash2 className="h-2.5 w-2.5" />
@@ -3284,6 +3285,28 @@ function OperacaoInboxInner() {
                                     <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                                   </div>
                                 )}
+                                {/* Location */}
+                                {msg.message_type === "location" && (() => {
+                                  const loc = (msg.metadata as any)?.location;
+                                  const lat = Number(loc?.latitude ?? loc?.lat);
+                                  const lng = Number(loc?.longitude ?? loc?.lng ?? loc?.lon);
+                                  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                                    return (
+                                      <div className="flex items-center gap-2 text-xs opacity-70 py-2">
+                                        <MapPin className="h-4 w-4" />
+                                        <span>Localização indisponível</span>
+                                      </div>
+                                    );
+                                  }
+                                  return (
+                                    <LocationBubble
+                                      latitude={lat}
+                                      longitude={lng}
+                                      title={loc?.title || loc?.name || null}
+                                      address={loc?.address || null}
+                                    />
+                                  );
+                                })()}
                                 {/* Sticker */}
                                 {msg.message_type === "sticker" && (() => {
                                   const stickerUrl = msg.media_storage_url || msg.media_url;
@@ -3432,7 +3455,7 @@ function OperacaoInboxInner() {
                                 })()}
                                 {/* Text */}
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
-                                <div className={`flex items-center justify-end gap-1 mt-1 ${msg.message_type === "sticker" ? "px-1" : ""}`}>
+                                <div className={`flex items-center justify-end gap-1 mt-1 ${msg.message_type === "sticker" || msg.message_type === "location" ? "px-1" : ""}`}>
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   {msg.status === "failed" && (
                                     <button onClick={() => handleRetryMessage(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
