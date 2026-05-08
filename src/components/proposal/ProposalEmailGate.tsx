@@ -113,7 +113,7 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="Seu nome (opcional)"
+                  placeholder="Seu nome"
                   className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3.5 text-neutral-900 placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all"
                 />
               </div>
