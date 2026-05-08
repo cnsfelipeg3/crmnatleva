@@ -13,7 +13,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type ItemType = "flight" | "hotel" | "experience";
+type ItemType = "flight" | "hotel" | "experience" | "cruise";
 
 const FLIGHT_SCHEMA = {
   name: "extract_flight",
@@ -248,10 +248,116 @@ const EXPERIENCE_SCHEMA = {
   },
 };
 
+const CRUISE_SCHEMA = {
+  name: "extract_cruise",
+  description:
+    "Extrai dados estruturados de uma reserva, cotação ou itinerário de CRUZEIRO marítimo/fluvial. Inclui navio, companhia, itinerário dia-a-dia (portos com horários), cabine e preços.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: {
+        type: "string",
+        description:
+          "Título curto e humano. Padrão: '<Navio> · <N> noites pelo <Região>'. Ex.: 'MSC Seaside · 7 noites pelo Caribe', 'Norwegian Epic · 11 noites Mediterrâneo'. Sem códigos isolados, sem marketing. Máx ~70 chars.",
+      },
+      description: {
+        type: "string",
+        description:
+          "Frase opcional curta com regime, embarque/desembarque e tipo de cabine. Ex.: 'Embarque em Santos · Cabine Balcony · Pensão completa + bebidas'.",
+      },
+      data: {
+        type: "object",
+        properties: {
+          cruise_line: { type: "string", description: "Companhia (MSC Cruzeiros, Costa, Norwegian, Royal Caribbean, Disney, Viking, etc.)" },
+          ship_name: { type: "string", description: "Nome do navio (ex.: 'MSC Seaside', 'Costa Diadema')" },
+          region: { type: "string", description: "Região do roteiro (Caribe, Mediterrâneo, Costa Brasileira, Fiordes Noruegueses, etc.)" },
+          nights: { type: "number", description: "Número total de noites a bordo" },
+          embark_port: { type: "string", description: "Porto de embarque (cidade)" },
+          embark_country: { type: "string" },
+          disembark_port: { type: "string", description: "Porto de desembarque (cidade)" },
+          disembark_country: { type: "string" },
+          embark_date: { type: "string", description: "Data de embarque YYYY-MM-DD" },
+          disembark_date: { type: "string", description: "Data de desembarque YYYY-MM-DD" },
+          embark_time: { type: "string", description: "Hora de embarque HH:MM (24h)" },
+          all_aboard_time: { type: "string", description: "Horário limite a bordo HH:MM" },
+          cabin_category: {
+            type: "string",
+            enum: ["Interna", "Externa", "Balcony", "Varanda", "Suíte", "Suíte Premium", "Yacht Club", "The Haven", "Concierge", "Outra"],
+            description: "Categoria geral da cabine NORMALIZADA",
+          },
+          cabin_type: { type: "string", description: "Nome comercial da cabine (ex.: 'Balcony Aurea', 'Suite Yacht Club Deluxe', 'Cabine Externa Vista Mar')" },
+          cabin_number: { type: "string", description: "Número da cabine se visível" },
+          deck: { type: "string", description: "Deck/Andar (ex.: 'Deck 10', 'Deck 14')" },
+          cabin_size_sqm: { type: "number" },
+          balcony_size_sqm: { type: "number" },
+          bed_configuration: { type: "string", description: "Configuração de camas (King, 2 Twin convertíveis, Beliche, etc.)" },
+          guests: { type: "number", description: "Total de hóspedes" },
+          adults: { type: "number" },
+          children: { type: "number" },
+          meal_plan: {
+            type: "string",
+            description:
+              "Regime de alimentação NORMALIZADO: 'Pensão completa', 'All inclusive', 'Bebidas inclusas', 'Premium All Inclusive', 'Easy Package'. Use o que se aproximar mais do que está visível.",
+          },
+          drinks_package: { type: "string", description: "Pacote de bebidas, se houver (ex.: 'Easy Package', 'Premium Extra')" },
+          wifi_included: { type: "boolean" },
+          gratuities_included: { type: "boolean", description: "true se taxas de serviço/gorjetas estão inclusas" },
+          port_taxes: { type: "number", description: "Valor das taxas portuárias se separado" },
+          total_price: { type: "number" },
+          price_per_person: { type: "number" },
+          currency: { type: "string" },
+          provider: { type: "string", description: "Operadora/loja (CVC, MSC direto, Costa direto, agência, etc.)" },
+          locator: { type: "string", description: "Localizador/código da reserva" },
+          amenities: {
+            type: "array",
+            items: { type: "string" },
+            description: "Comodidades a bordo visíveis (piscinas, spa, teatro, casino, kids club, etc.)",
+          },
+          includes: {
+            type: "array",
+            items: { type: "string" },
+            description: "O que está incluso no preço (refeições, bebidas, taxas, gorjetas, transfer, excursão x, etc.)",
+          },
+          excludes: {
+            type: "array",
+            items: { type: "string" },
+            description: "O que NÃO está incluso (excursões, bebidas premium, spa, etc.)",
+          },
+          itinerary: {
+            type: "array",
+            description:
+              "Roteiro DIA-A-DIA do cruzeiro, em ordem cronológica. UM item por dia. Inclua dias de navegação como is_sea_day=true (porto pode ser 'Dia no Mar' ou 'Navegação').",
+            items: {
+              type: "object",
+              properties: {
+                day: { type: "number", description: "Número do dia (1, 2, 3...)" },
+                date: { type: "string", description: "Data YYYY-MM-DD" },
+                port: { type: "string", description: "Nome do porto/cidade. Para dias de navegação use 'Dia no Mar'." },
+                country: { type: "string", description: "País do porto (omita em dias no mar)" },
+                arrival_time: { type: "string", description: "Hora de chegada no porto HH:MM (omita em dias no mar)" },
+                departure_time: { type: "string", description: "Hora de saída do porto HH:MM (omita em dias no mar)" },
+                is_sea_day: { type: "boolean", description: "true para dias inteiros de navegação sem parada em porto" },
+                description: { type: "string", description: "Descrição opcional curta do dia (excursões sugeridas, destaques, atividades a bordo)" },
+              },
+              required: ["day", "port"],
+            },
+          },
+          cancellation_policy: { type: "string" },
+          payment_policy: { type: "string" },
+          notes: { type: "string", description: "Observações livres relevantes" },
+        },
+        required: ["itinerary"],
+      },
+    },
+    required: ["title", "data"],
+  },
+};
+
 const SCHEMAS: Record<ItemType, any> = {
   flight: FLIGHT_SCHEMA,
   hotel: HOTEL_SCHEMA,
   experience: EXPERIENCE_SCHEMA,
+  cruise: CRUISE_SCHEMA,
 };
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
@@ -261,6 +367,8 @@ const SYSTEM_PROMPTS: Record<ItemType, string> = {
     "Você é um extrator preciso de reservas e cotações de HOTEL (Booking, Decolar, Expedia, sites de hotéis, e-mails de confirmação). MISSÃO: extrair TODOS os dados visíveis com normalização rigorosa. Regras: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de checkin/checkout se não vier explícito. (3) NORMALIZE meal_plan para um destes valores: 'Sem refeição', 'Café da manhã', 'Meia pensão', 'Pensão completa', 'All inclusive'. Preencha também meal_plan_code (RO/BB/HB/FB/AI). (4) Detecte stars (categoria 1-5) e rating separadamente (nota dos hóspedes 0-10). (5) Identifique se a tarifa é reembolsável (is_refundable) e até quando o cancelamento é gratuito (free_cancellation_until em YYYY-MM-DD). (6) Liste amenities visíveis como array. (7) Construa um description curto e útil: 'Hotel 5★ em Roma · Café da manhã · Quarto Deluxe Vista Cidade'. (8) Identifique adults/children/rooms separadamente quando possível. (9) TÍTULO: o campo 'title' deve conter APENAS o nome principal do hotel (ex.: 'Siyam World Maldives'), opcionalmente seguido do regime se for all-inclusive (ex.: 'Siyam World Maldives - All Inclusive'). PROIBIDO incluir no title: textos promocionais do site ('24-Hour Premium All-inclusive with Free Transfer'), cidade/país, número de noites, tipo de quarto, estrelas, código da reserva ou qualquer copy de marketing. Esses dados ricos vão para 'description' e demais campos estruturados, NÃO no título. Máximo ~60 caracteres. Omita campos sem evidência em vez de inventar.",
   experience:
     "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Normalize datas/horas (YYYY-MM-DD, HH:MM). Use null/omita quando não houver evidência clara.",
+  cruise:
+    "Você é um extrator preciso de reservas, cotações e itinerários de CRUZEIRO marítimo/fluvial (MSC, Costa, Norwegian, Royal Caribbean, Disney, Viking, CVC, agências). MISSÃO: extrair TUDO o que estiver visível e MONTAR o itinerário dia-a-dia COMPLETO. Regras CRÍTICAS: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de embark_date/disembark_date se não vier explícito. (3) ITINERÁRIO: liste UM item por DIA da viagem, em ordem cronológica do dia 1 ao último. Para cada porto, capture nome da cidade/porto, país, hora de chegada e saída. Para dias inteiros de navegação use port='Dia no Mar' e is_sea_day=true (omita arrival/departure). (4) NORMALIZE cabin_category para um destes: 'Interna', 'Externa', 'Balcony', 'Varanda', 'Suíte', 'Suíte Premium', 'Yacht Club' (MSC), 'The Haven' (NCL), 'Concierge', 'Outra'. (5) Capture o NOME COMERCIAL da cabine em cabin_type (ex.: 'Balcony Aurea', 'Suite Yacht Club Deluxe'). (6) NORMALIZE meal_plan ('Pensão completa', 'All inclusive', 'Bebidas inclusas', 'Premium All Inclusive'). (7) Liste includes/excludes como arrays separados — refeições, bebidas, gorjetas, taxas, excursões, transfer. (8) Detecte gratuities_included, wifi_included como boolean. (9) TÍTULO: padrão '<Navio> · <N> noites pelo <Região>'. Ex.: 'MSC Seaside · 7 noites pelo Caribe'. PROIBIDO marketing, preços ou códigos no título. Máx ~70 chars. (10) Se a imagem mostrar apenas mapa/roteiro sem cabine, foque no itinerário e cruise_line/ship_name. (11) Omita campos sem evidência clara em vez de inventar.",
 };
 
 Deno.serve(async (req) => {

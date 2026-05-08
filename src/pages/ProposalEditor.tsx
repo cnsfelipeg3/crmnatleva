@@ -1232,11 +1232,19 @@ export default function ProposalEditor() {
                           </div>
                         )}
 
-                        {/* AI extractor — voo, hotel e experiência */}
-                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience") && (
+                        {/* AI extractor — voo, hotel, experiência e cruzeiro */}
+                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience" || item.item_type === "cruise") && (
                           <AIBookingExtractor
                             itemType={item.item_type as ExtractItemType}
                             onExtracted={(data) => applyExtractedItem(idx, data)}
+                          />
+                        )}
+
+                        {/* Cruise-specific quick fields */}
+                        {item.item_type === "cruise" && (
+                          <CruiseQuickFields
+                            data={item.data || {}}
+                            onChange={(key, value) => updateItemData(idx, key, value)}
                           />
                         )}
 
