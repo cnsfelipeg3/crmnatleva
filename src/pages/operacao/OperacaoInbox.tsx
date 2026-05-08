@@ -3725,14 +3725,9 @@ function OperacaoInboxInner() {
 
                       <Popover open={showStickerPicker} onOpenChange={setShowStickerPicker}>
                         <PopoverTrigger asChild>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
-                                <StickerIcon className="h-5 w-5 text-muted-foreground" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent><p className="text-xs">Figurinhas salvas</p></TooltipContent>
-                          </Tooltip>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Figurinhas salvas" title="Figurinhas salvas">
+                            <StickerIcon className="h-5 w-5 text-muted-foreground" />
+                          </Button>
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" side="top" align="start">
                           <StickerPicker onSelect={handleSendSticker} />
