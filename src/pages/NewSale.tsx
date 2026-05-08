@@ -1231,7 +1231,7 @@ export default function NewSale() {
         </TabsList>
 
         {/* ═══════════════ 1. INFORMAÇÕES DA VENDA ═══════════════ */}
-        <TabsContent value="info">
+        <TabsContent value="info" forceMount>
           <Card className="p-6">
             <SectionTitle icon={FileText} title="Informações da Venda" subtitle="Dados gerais do registro" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1323,7 +1323,7 @@ export default function NewSale() {
         </TabsContent>
 
         {/* ═══════════════ 2. PASSAGEIROS ═══════════════ */}
-        <TabsContent value="passageiros">
+        <TabsContent value="passageiros" forceMount>
           <Card className="p-6">
             <SectionTitle icon={Users} title="Passageiros" subtitle="Adicione os viajantes desta venda" />
             
@@ -1370,7 +1370,7 @@ export default function NewSale() {
         </TabsContent>
 
         {/* ═══════════════ 3. AÉREO ═══════════════ */}
-        <TabsContent value="aereo">
+        <TabsContent value="aereo" forceMount>
           <div className="space-y-4">
             {tripLengthCheck.hasMismatch && (
               <div className={cn(
