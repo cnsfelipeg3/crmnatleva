@@ -787,22 +787,24 @@ export default function ProposalEditor() {
 
     if (!isNew && id && cleanUrl) {
       setAutoSaveStatus("saving");
-      supabase
-        .from("proposals")
-        .update({ cover_image_url: cleanUrl, updated_at: new Date().toISOString() } as any)
-        .eq("id", id)
-        .then(({ error }) => {
+      void (async () => {
+        try {
+          const { error } = await supabase
+            .from("proposals")
+            .update({ cover_image_url: cleanUrl, updated_at: new Date().toISOString() } as any)
+            .eq("id", id);
+          if (error) throw error;
           if (error) throw error;
           lastAutoSavedSnapshotRef.current = "";
           setLastSavedAt(new Date());
           setAutoSaveStatus("saved");
           queryClient.invalidateQueries({ queryKey: ["proposal", id] });
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("[proposal-cover] falha ao salvar capa:", err);
           setAutoSaveStatus("error");
           toast.error("Não consegui salvar a capa. Clique em Salvar para tentar novamente.");
-        });
+        }
+      })();
     }
   }, [id, isNew, queryClient]);
 
