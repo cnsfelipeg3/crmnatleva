@@ -1769,6 +1769,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const showHotels = isSecOn("hotels");
   const showExperiences = isSecOn("experiences");
   const showCruises = isSecOn("cruises");
+  const showInsurances = isSecOn("insurances");
   const showPricing = isSecOn("pricing");
 
   const startDate = parseLocalDate(proposal.travel_start_date);
