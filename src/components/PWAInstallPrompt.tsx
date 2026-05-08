@@ -30,7 +30,15 @@ export function PWAInstallPrompt() {
       host.includes("lovableproject-dev.com");
     if (inIframe || isPreviewHost) return;
 
+    // Apenas no desktop (esconde em mobile/tablet)
+    const isMobileViewport = window.matchMedia("(max-width: 1024px)").matches;
     const ua = navigator.userAgent || "";
+    const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+    if (isMobileViewport || isMobileUA) return;
+
+    // Apenas na raiz do domínio (sem /proposta, /portal, etc)
+    if (window.location.pathname !== "/") return;
+
     const ios = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream;
     setIsIOS(ios);
 
