@@ -7,6 +7,7 @@ import {
   Car, Camera, ChevronRight, Calendar, Globe, Shield,
   BedDouble, Bath, Mountain, X, Briefcase,
   Ship, Anchor, Sun, Moon, Navigation,
+  ShieldCheck, Gift, Heart, Stethoscope, Plus as PlusIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
