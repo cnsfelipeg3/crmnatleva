@@ -1244,6 +1244,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const flights = items.filter((i) => i.item_type === "flight");
   const hotels = items.filter((i) => i.item_type === "hotel");
   const experiences = items.filter((i) => i.item_type === "experience");
+  const cruises = items.filter((i) => i.item_type === "cruise");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
 
   // Apply visual overrides (signature → style) on top of the rendered DOM. Re-runs after every render.
