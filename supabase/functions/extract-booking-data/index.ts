@@ -13,7 +13,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type ItemType = "flight" | "hotel" | "experience" | "cruise";
+type ItemType = "flight" | "hotel" | "experience" | "cruise" | "insurance";
 
 const FLIGHT_SCHEMA = {
   name: "extract_flight",
@@ -353,11 +353,86 @@ const CRUISE_SCHEMA = {
   },
 };
 
+const INSURANCE_SCHEMA = {
+  name: "extract_insurance",
+  description:
+    "Extrai dados estruturados de uma apólice/cotação de SEGURO VIAGEM (Assist Card, Affinity, Coris, GTA, Universal Assistance, Allianz, Travel Ace, AXA, etc.). Inclui plano, vigência, cobertura completa e preço.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: {
+        type: "string",
+        description:
+          "Título humano e curto. Padrão: '<Operadora> · <Plano> · <Destino/Região>'. Ex.: 'Assist Card AC 250 Mundo · Europa', 'Coris 60 Especial Brasil'. Sem códigos isolados nem marketing. Máx ~70 chars.",
+      },
+      description: {
+        type: "string",
+        description:
+          "Frase curta com vigência, número de viajantes e principais coberturas. Ex.: 'Cobertura mundial · 12 dias · 2 viajantes · DMH USD 250 mil'.",
+      },
+      data: {
+        type: "object",
+        properties: {
+          provider: { type: "string", description: "Operadora/seguradora (Assist Card, Coris, GTA, Universal, Allianz, Travel Ace, AXA, etc.)" },
+          plan_name: { type: "string", description: "Nome comercial do plano (ex.: 'AC 250 Mundo Inclusive', 'GTA 60 Especial', 'Allianz Plus 100')" },
+          coverage_region: {
+            type: "string",
+            enum: ["Brasil", "América do Sul", "Mercosul", "Europa", "América do Norte", "Mundo todo", "Mundo todo exceto EUA/Canadá", "Outra"],
+            description: "Região coberta NORMALIZADA",
+          },
+          start_date: { type: "string", description: "Início da vigência YYYY-MM-DD" },
+          end_date: { type: "string", description: "Fim da vigência YYYY-MM-DD" },
+          days: { type: "number", description: "Dias totais de cobertura" },
+          travelers: { type: "number", description: "Quantidade de viajantes cobertos" },
+          ages: { type: "string", description: "Faixa etária dos viajantes (ex.: '0-70 anos', '2 adultos + 1 criança')" },
+          currency: { type: "string", description: "Moeda do preço (BRL, USD, EUR)" },
+          price_total: { type: "number", description: "Preço total da apólice" },
+          price_per_person: { type: "number" },
+          is_courtesy: { type: "boolean", description: "true se for cortesia / brinde da agência (omita se não houver indicação)" },
+          locator: { type: "string", description: "Número da apólice ou código da cotação" },
+          coverages: {
+            type: "array",
+            description:
+              "Lista detalhada de coberturas com nome e valor. Capture TUDO que estiver visível: DMH, DMHO, traslado médico, traslado de corpo, regresso sanitário, bagagem extraviada, atraso de bagagem, cancelamento, interrupção, invalidez, morte acidental, gestante, esportes, COVID, telemedicina, assistência jurídica, etc.",
+            items: {
+              type: "object",
+              properties: {
+                name: { type: "string", description: "Nome da cobertura (ex.: 'Despesas Médicas e Hospitalares', 'Bagagem Extraviada')" },
+                value: { type: "string", description: "Valor com moeda e formato original (ex.: 'USD 250.000', 'R$ 5.000', 'até USD 1.500')" },
+                category: {
+                  type: "string",
+                  enum: ["Médico", "Bagagem", "Cancelamento", "Assistência", "Acidentes", "Esportes", "Outras"],
+                  description: "Categoria NORMALIZADA",
+                },
+              },
+              required: ["name", "value"],
+            },
+          },
+          highlights: {
+            type: "array",
+            items: { type: "string" },
+            description: "Diferenciais/destaques do plano (ex.: 'Cobertura COVID-19', 'Esportes radicais inclusos', 'Telemedicina 24h')",
+          },
+          excludes: {
+            type: "array",
+            items: { type: "string" },
+            description: "Exclusões importantes da apólice",
+          },
+          notes: { type: "string", description: "Observações livres relevantes (carências, franquias, etc.)" },
+        },
+        required: ["coverages"],
+      },
+    },
+    required: ["title", "data"],
+  },
+};
+
 const SCHEMAS: Record<ItemType, any> = {
   flight: FLIGHT_SCHEMA,
   hotel: HOTEL_SCHEMA,
   experience: EXPERIENCE_SCHEMA,
   cruise: CRUISE_SCHEMA,
+  insurance: INSURANCE_SCHEMA,
 };
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
@@ -369,6 +444,8 @@ const SYSTEM_PROMPTS: Record<ItemType, string> = {
     "Você extrai dados estruturados de imagens/PDFs de experiências, passeios e ingressos turísticos. Normalize datas/horas (YYYY-MM-DD, HH:MM). Use null/omita quando não houver evidência clara.",
   cruise:
     "Você é um extrator preciso de reservas, cotações e itinerários de CRUZEIRO marítimo/fluvial (MSC, Costa, Norwegian, Royal Caribbean, Disney, Viking, CVC, agências). MISSÃO: extrair TUDO o que estiver visível e MONTAR o itinerário dia-a-dia COMPLETO. Regras CRÍTICAS: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de embark_date/disembark_date se não vier explícito. (3) ITINERÁRIO: liste UM item por DIA da viagem, em ordem cronológica do dia 1 ao último. Para cada porto, capture nome da cidade/porto, país, hora de chegada e saída. Para dias inteiros de navegação use port='Dia no Mar' e is_sea_day=true (omita arrival/departure). (4) NORMALIZE cabin_category para um destes: 'Interna', 'Externa', 'Balcony', 'Varanda', 'Suíte', 'Suíte Premium', 'Yacht Club' (MSC), 'The Haven' (NCL), 'Concierge', 'Outra'. (5) Capture o NOME COMERCIAL da cabine em cabin_type (ex.: 'Balcony Aurea', 'Suite Yacht Club Deluxe'). (6) NORMALIZE meal_plan ('Pensão completa', 'All inclusive', 'Bebidas inclusas', 'Premium All Inclusive'). (7) Liste includes/excludes como arrays separados — refeições, bebidas, gorjetas, taxas, excursões, transfer. (8) Detecte gratuities_included, wifi_included como boolean. (9) TÍTULO: padrão '<Navio> · <N> noites pelo <Região>'. Ex.: 'MSC Seaside · 7 noites pelo Caribe'. PROIBIDO marketing, preços ou códigos no título. Máx ~70 chars. (10) Se a imagem mostrar apenas mapa/roteiro sem cabine, foque no itinerário e cruise_line/ship_name. (11) Omita campos sem evidência clara em vez de inventar.",
+  insurance:
+    "Você é um extrator preciso de apólices e cotações de SEGURO VIAGEM. MISSÃO: capturar TODAS as coberturas visíveis com seus valores exatos, normalizar provedor/plano/região, datas em YYYY-MM-DD. Regras CRÍTICAS: (1) Para cada cobertura crie UM item em coverages com name (texto amigável em pt-BR), value (preserve moeda e formato originais, ex.: 'USD 250.000', 'R$ 5.000', 'até USD 1.500') e category normalizada. (2) Liste TODAS as coberturas — não resuma. Inclua DMH, DMHO, traslado médico, traslado de corpo, regresso sanitário, bagagem extraviada/atraso, cancelamento, interrupção de viagem, invalidez/morte por acidente, gestante, esportes, COVID, telemedicina, assistência jurídica, fiança, regresso antecipado, etc. (3) NORMALIZE coverage_region para uma das opções do enum. (4) Se for cortesia/brinde da agência marque is_courtesy=true. (5) Se houver período visível, calcule days a partir de start_date/end_date. (6) TÍTULO padrão: '<Operadora> · <Plano> · <Região>'. PROIBIDO marketing ou códigos isolados no título. Máx ~70 chars. (7) Detecte highlights/diferenciais (cobertura COVID, esportes radicais, telemedicina). (8) Omita campos sem evidência em vez de inventar.",
 };
 
 Deno.serve(async (req) => {

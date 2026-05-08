@@ -7,6 +7,7 @@ import {
   Car, Camera, ChevronRight, Calendar, Globe, Shield,
   BedDouble, Bath, Mountain, X, Briefcase,
   Ship, Anchor, Sun, Moon, Navigation,
+  ShieldCheck, Gift, Heart, Stethoscope, Plus as PlusIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -899,15 +900,32 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
 function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
   const d = cruise.data || {};
   const itinerary: any[] = Array.isArray(d.itinerary) ? d.itinerary : [];
-  const nights = d.nights || (d.embarkation_date && d.disembarkation_date
-    ? Math.max(0, Math.round((new Date(d.disembarkation_date).getTime() - new Date(d.embarkation_date).getTime()) / 86400000))
+
+  // Aceita tanto schema novo (embark_*) quanto antigo (embarkation_*)
+  const embarkPort = d.embark_port || d.embarkation_port;
+  const embarkDate = d.embark_date || d.embarkation_date;
+  const disembarkPort = d.disembark_port || d.disembarkation_port;
+  const disembarkDate = d.disembark_date || d.disembarkation_date;
+
+  const nights = d.nights || (embarkDate && disembarkDate
+    ? Math.max(0, Math.round((new Date(disembarkDate).getTime() - new Date(embarkDate).getTime()) / 86400000))
     : itinerary.length > 0 ? itinerary.length - 1 : null);
 
   const fmtPortDate = (raw: any) => {
     if (!raw) return "";
-    try { return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM", { locale: ptBR }); }
+    try { return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd 'de' MMM", { locale: ptBR }); }
     catch { return String(raw); }
   };
+
+  const galleryRaw: any[] = Array.isArray(d.gallery) ? d.gallery.filter((p: any) => p && p.excluded !== true) : [];
+  const cover = cruise.image_url || galleryRaw[0]?.url;
+  const galleryPhotos = galleryRaw.filter((p: any) => p?.url && p.url !== cover).slice(0, 12);
+
+  const includes: string[] = Array.isArray(d.includes) ? d.includes : [];
+  const excludes: string[] = Array.isArray(d.excludes) ? d.excludes : [];
+  const amenities: string[] = Array.isArray(d.amenities) ? d.amenities : [];
+
+  const [lightbox, setLightbox] = React.useState<number | null>(null);
 
   return (
     <motion.div
@@ -918,69 +936,66 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
       className="rounded-3xl border border-accent/15 bg-card overflow-hidden shadow-xl shadow-accent/5"
     >
       {/* Cover */}
-      {cruise.image_url && (
+      {cover ? (
         <div className="aspect-[16/8] overflow-hidden bg-muted relative">
-          <img src={cruise.image_url} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full object-cover" loading="lazy" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 text-white">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Ship className="w-4 h-4 text-accent" />
-              <span className="text-[10px] uppercase tracking-[0.25em] text-white/80 font-semibold">Cruzeiro</span>
+          <img src={cover} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full object-cover" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white text-center">
+            <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20">
+              <Ship className="w-3.5 h-3.5 text-white" />
+              <span className="text-[10px] uppercase tracking-[0.25em] text-white font-semibold">Cruzeiro</span>
             </div>
-            <h3 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <h3 className="text-2xl sm:text-3xl font-bold leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
               {cruise.title || d.ship_name || "Cruzeiro"}
             </h3>
             {(d.cruise_line || d.region) && (
-              <p className="text-sm text-white/85 mt-0.5">
+              <p className="text-sm sm:text-base text-white/90 mt-1.5">
                 {d.cruise_line}{d.cruise_line && d.region ? " · " : ""}{d.region}
               </p>
             )}
           </div>
         </div>
-      )}
-
-      {/* Header (sem cover) */}
-      {!cruise.image_url && (
-        <div className="px-5 sm:px-7 pt-6">
-          <div className="flex items-center gap-2 mb-1.5">
-            <Ship className="w-4 h-4 text-accent" />
-            <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-semibold">Cruzeiro</span>
+      ) : (
+        <div className="px-6 pt-8 text-center">
+          <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/15">
+            <Ship className="w-3.5 h-3.5 text-accent" />
+            <span className="text-[10px] uppercase tracking-[0.25em] text-accent font-semibold">Cruzeiro</span>
           </div>
-          <h3 className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          <h3 className="text-2xl sm:text-3xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
             {cruise.title || d.ship_name || "Cruzeiro"}
           </h3>
           {(d.cruise_line || d.region) && (
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-1.5">
               {d.cruise_line}{d.cruise_line && d.region ? " · " : ""}{d.region}
             </p>
           )}
         </div>
       )}
 
-      {/* Info pills */}
-      <div className="px-5 sm:px-7 py-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {/* Info pills · centralizadas */}
+      <div className="px-5 sm:px-8 py-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {nights != null && (
-          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
             <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Moon className="w-3 h-3 text-accent" /> Noites</div>
             <p className="mt-1 text-base font-bold text-foreground">{nights}</p>
           </div>
         )}
-        {d.embarkation_port && (
-          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+        {embarkPort && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
             <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Anchor className="w-3 h-3 text-accent" /> Embarque</div>
-            <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.embarkation_port}</p>
-            {d.embarkation_date && <p className="text-[11px] text-muted-foreground">{fmtPortDate(d.embarkation_date)}</p>}
+            <p className="mt-1 text-sm font-semibold text-foreground truncate">{embarkPort}</p>
+            {embarkDate && <p className="text-[11px] text-muted-foreground">{fmtPortDate(embarkDate)}</p>}
           </div>
         )}
-        {d.disembarkation_port && (
-          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+        {disembarkPort && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
             <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Anchor className="w-3 h-3 text-accent" /> Desembarque</div>
-            <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.disembarkation_port}</p>
-            {d.disembarkation_date && <p className="text-[11px] text-muted-foreground">{fmtPortDate(d.disembarkation_date)}</p>}
+            <p className="mt-1 text-sm font-semibold text-foreground truncate">{disembarkPort}</p>
+            {disembarkDate && <p className="text-[11px] text-muted-foreground">{fmtPortDate(disembarkDate)}</p>}
           </div>
         )}
         {(d.cabin_category || d.cabin_type) && (
-          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
             <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><BedDouble className="w-3 h-3 text-accent" /> Cabine</div>
             <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.cabin_category || d.cabin_type}</p>
             {d.cabin_number && <p className="text-[11px] text-muted-foreground">Nº {d.cabin_number}</p>}
@@ -988,15 +1003,46 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
         )}
       </div>
 
-      {/* Itinerary */}
-      {itinerary.length > 0 && (
-        <div className="px-5 sm:px-7 pb-7">
-          <div className="flex items-center gap-2 mb-4">
-            <Navigation className="w-4 h-4 text-accent" />
-            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Itinerário</h4>
+      {cruise.description && (
+        <div className="px-5 sm:px-8 pb-2 -mt-2">
+          <p className="text-sm text-muted-foreground leading-relaxed text-center max-w-2xl mx-auto whitespace-pre-line">{cruise.description}</p>
+        </div>
+      )}
+
+      {/* Galeria */}
+      {galleryPhotos.length > 0 && (
+        <div className="px-5 sm:px-8 pt-4 pb-2">
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Camera className="w-4 h-4 text-accent" />
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Galeria</h4>
           </div>
-          <div className="relative pl-6 sm:pl-7">
-            {/* Timeline line */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            {galleryPhotos.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => setLightbox(i)}
+                className="aspect-[4/3] overflow-hidden rounded-xl bg-muted relative group"
+              >
+                <img src={p.url} alt={p.label || `Foto ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
+                {p.label && (
+                  <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] text-white bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 truncate">
+                    {p.label}
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Itinerário */}
+      {itinerary.length > 0 && (
+        <div className="px-5 sm:px-8 pt-6 pb-7">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <Navigation className="w-4 h-4 text-accent" />
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Itinerário dia a dia</h4>
+          </div>
+          <div className="relative pl-6 sm:pl-7 max-w-2xl mx-auto">
             <div className="absolute left-2 sm:left-2.5 top-1.5 bottom-1.5 w-px bg-gradient-to-b from-accent/40 via-accent/20 to-transparent" />
             <ul className="space-y-3">
               {itinerary.map((stop: any, i: number) => {
@@ -1046,9 +1092,249 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
         </div>
       )}
 
-      {cruise.description && (
-        <div className="px-5 sm:px-7 pb-6 -mt-2">
-          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{cruise.description}</p>
+      {/* Includes / Excludes / Amenities */}
+      {(includes.length > 0 || excludes.length > 0 || amenities.length > 0) && (
+        <div className="px-5 sm:px-8 pb-7 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+          {includes.length > 0 && (
+            <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700 mb-2 flex items-center gap-1.5">
+                <CheckCircle className="w-3.5 h-3.5" /> Inclusos
+              </p>
+              <ul className="space-y-1.5">
+                {includes.map((it, i) => (
+                  <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                    <span className="text-emerald-600 mt-0.5">·</span>
+                    <span className="flex-1">{it}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {excludes.length > 0 && (
+            <div className="rounded-2xl border border-rose-500/15 bg-rose-500/[0.04] p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-700 mb-2 flex items-center gap-1.5">
+                <X className="w-3.5 h-3.5" /> Não inclusos
+              </p>
+              <ul className="space-y-1.5">
+                {excludes.map((it, i) => (
+                  <li key={i} className="text-sm text-foreground flex items-start gap-2">
+                    <span className="text-rose-500 mt-0.5">·</span>
+                    <span className="flex-1">{it}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {amenities.length > 0 && (
+            <div className="md:col-span-2 rounded-2xl border border-accent/15 bg-accent/[0.04] p-4">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2 flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5" /> A bordo
+              </p>
+              <div className="flex flex-wrap gap-1.5 justify-center">
+                {amenities.map((a, i) => (
+                  <span key={i} className="text-[12px] px-2.5 py-1 rounded-full bg-background border border-border/40 text-foreground">
+                    {a}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox !== null && galleryPhotos[lightbox] && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={() => setLightbox(null)}
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          >
+            <button onClick={(e) => { e.stopPropagation(); setLightbox(null); }} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+              <X className="w-5 h-5" />
+            </button>
+            <img src={galleryPhotos[lightbox].url} alt="" className="max-w-full max-h-full object-contain rounded-xl" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ═══ Insurance Card ═══ */
+function InsuranceCard({ insurance, idx }: { insurance: any; idx: number }) {
+  const d = insurance.data || {};
+  const coverages: any[] = Array.isArray(d.coverages) ? d.coverages : [];
+  const highlights: string[] = Array.isArray(d.highlights) ? d.highlights : [];
+  const isCourtesy = !!d.is_courtesy;
+
+  const fmtDate = (raw: any) => {
+    if (!raw) return "";
+    try { return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd 'de' MMM", { locale: ptBR }); }
+    catch { return String(raw); }
+  };
+
+  const fmtPrice = (val: any) => {
+    if (val == null || val === "") return "";
+    const n = Number(val);
+    if (isNaN(n)) return String(val);
+    const cur = (d.currency || "BRL").toUpperCase();
+    try {
+      return new Intl.NumberFormat("pt-BR", { style: "currency", currency: cur }).format(n);
+    } catch {
+      return `${cur} ${n.toFixed(2)}`;
+    }
+  };
+
+  // Group coverages by category
+  const grouped = coverages.reduce((acc: Record<string, any[]>, cov: any) => {
+    const cat = cov.category || "Outras";
+    (acc[cat] = acc[cat] || []).push(cov);
+    return acc;
+  }, {});
+  const categoryOrder = ["Médico", "Bagagem", "Cancelamento", "Acidentes", "Assistência", "Esportes", "Outras"];
+  const categoryIcons: Record<string, any> = {
+    "Médico": Stethoscope,
+    "Bagagem": Briefcase,
+    "Cancelamento": Calendar,
+    "Acidentes": Heart,
+    "Assistência": ShieldCheck,
+    "Esportes": Mountain,
+    "Outras": PlusIcon,
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.1 }}
+      className="rounded-3xl border border-accent/15 bg-card overflow-hidden shadow-xl shadow-accent/5"
+    >
+      {/* Header centralizado */}
+      <div className="relative px-6 sm:px-8 py-8 text-center bg-gradient-to-b from-accent/[0.06] to-transparent">
+        <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-accent/10 border border-accent/15">
+          <ShieldCheck className="w-3.5 h-3.5 text-accent" />
+          <span className="text-[10px] uppercase tracking-[0.25em] text-accent font-semibold">Seguro Viagem</span>
+        </div>
+        <h3 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+          {insurance.title || d.plan_name || "Seguro Viagem"}
+        </h3>
+        {(d.provider || d.coverage_region) && (
+          <p className="text-sm sm:text-base text-muted-foreground mt-2">
+            {d.provider}{d.provider && d.coverage_region ? " · " : ""}{d.coverage_region}
+          </p>
+        )}
+        {insurance.description && (
+          <p className="text-sm text-muted-foreground/85 mt-3 max-w-xl mx-auto leading-relaxed">{insurance.description}</p>
+        )}
+
+        {/* Cortesia ribbon */}
+        {isCourtesy && (
+          <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gradient-to-r from-amber-400/15 to-amber-500/10 border border-amber-500/30">
+            <Gift className="w-4 h-4 text-amber-600" />
+            <span className="text-sm font-bold text-amber-700">Cortesia NatLeva</span>
+          </div>
+        )}
+      </div>
+
+      {/* Pills · vigência, viajantes, preço */}
+      <div className="px-5 sm:px-8 pb-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {d.start_date && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Calendar className="w-3 h-3 text-accent" /> Início</div>
+            <p className="mt-1 text-sm font-semibold text-foreground">{fmtDate(d.start_date)}</p>
+          </div>
+        )}
+        {d.end_date && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Calendar className="w-3 h-3 text-accent" /> Fim</div>
+            <p className="mt-1 text-sm font-semibold text-foreground">{fmtDate(d.end_date)}</p>
+          </div>
+        )}
+        {d.days && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Clock className="w-3 h-3 text-accent" /> Dias</div>
+            <p className="mt-1 text-base font-bold text-foreground">{d.days}</p>
+          </div>
+        )}
+        {d.travelers && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-3 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Users className="w-3 h-3 text-accent" /> Viajantes</div>
+            <p className="mt-1 text-base font-bold text-foreground">{d.travelers}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Highlights */}
+      {highlights.length > 0 && (
+        <div className="px-5 sm:px-8 pb-5">
+          <div className="flex flex-wrap gap-1.5 justify-center">
+            {highlights.map((h, i) => (
+              <span key={i} className="text-[12px] px-3 py-1 rounded-full bg-accent/8 border border-accent/15 text-foreground inline-flex items-center gap-1">
+                <CheckCircle className="w-3 h-3 text-accent" /> {h}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Coberturas agrupadas */}
+      {coverages.length > 0 && (
+        <div className="px-5 sm:px-8 pb-7">
+          <div className="flex items-center justify-center gap-2 mb-5">
+            <ShieldCheck className="w-4 h-4 text-accent" />
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Coberturas inclusas</h4>
+          </div>
+          <div className="space-y-4 max-w-2xl mx-auto">
+            {categoryOrder.filter((c) => grouped[c]?.length).map((cat) => {
+              const Icon = categoryIcons[cat] || ShieldCheck;
+              return (
+                <div key={cat} className="rounded-2xl border border-border/40 bg-background/40 p-4">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
+                      <Icon className="w-3.5 h-3.5 text-accent" />
+                    </div>
+                    <span className="text-xs font-bold uppercase tracking-[0.18em] text-foreground">{cat}</span>
+                  </div>
+                  <ul className="divide-y divide-border/30">
+                    {grouped[cat].map((c: any, i: number) => (
+                      <li key={i} className="py-2 flex items-center justify-between gap-3 text-sm">
+                        <span className="text-foreground flex-1 min-w-0">{c.name}</span>
+                        <span className="text-foreground font-semibold whitespace-nowrap text-right">{c.value}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Preço · só se NÃO for cortesia E houver valor */}
+      {!isCourtesy && (d.price_total || d.price_per_person) && (
+        <div className="px-5 sm:px-8 pb-7">
+          <div className="rounded-2xl border border-accent/20 bg-gradient-to-b from-accent/[0.05] to-transparent p-5 max-w-md mx-auto text-center">
+            {d.price_per_person && (
+              <div className="mb-2">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Por pessoa</p>
+                <p className="text-lg font-bold text-foreground">{fmtPrice(d.price_per_person)}</p>
+              </div>
+            )}
+            {d.price_total && (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">Total</p>
+                <p className="text-2xl font-bold text-accent">{fmtPrice(d.price_total)}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {d.notes && (
+        <div className="px-5 sm:px-8 pb-6">
+          <p className="text-xs text-muted-foreground leading-relaxed text-center max-w-2xl mx-auto whitespace-pre-line">{d.notes}</p>
         </div>
       )}
     </motion.div>
@@ -1405,6 +1691,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const hotels = items.filter((i) => i.item_type === "hotel");
   const experiences = items.filter((i) => i.item_type === "experience");
   const cruises = items.filter((i) => i.item_type === "cruise");
+  const insurances = items.filter((i) => i.item_type === "insurance");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
 
   // Apply visual overrides (signature → style) on top of the rendered DOM. Re-runs after every render.
@@ -1482,6 +1769,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const showHotels = isSecOn("hotels");
   const showExperiences = isSecOn("experiences");
   const showCruises = isSecOn("cruises");
+  const showInsurances = isSecOn("insurances");
   const showPricing = isSecOn("pricing");
 
   const startDate = parseLocalDate(proposal.travel_start_date);
@@ -1493,7 +1781,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         ? fmtDate(proposal.travel_start_date)
         : "";
 
-  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || proposal.destinations?.length > 0;
+  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || insurances.length > 0 || proposal.destinations?.length > 0;
 
   if (!hasContent && !proposal.title) {
     return (
@@ -1724,6 +2012,16 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           <SectionTitle subtitle="Seu cruzeiro com itinerário detalhado">Cruzeiro</SectionTitle>
           <div className={cruises.length === 1 ? "max-w-3xl mx-auto space-y-8" : "max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6"}>
             {cruises.map((c, idx) => <CruiseCard key={c.id || idx} cruise={c} idx={idx} />)}
+          </div>
+        </section>
+      )}
+
+      {/* ──── INSURANCE ──── */}
+      {showInsurances && insurances.length > 0 && (
+        <section data-track-section="insurances" className="py-10 sm:py-14 px-5 sm:px-6">
+          <SectionTitle subtitle="Sua tranquilidade em todos os trechos da viagem">Seguro Viagem</SectionTitle>
+          <div className={insurances.length === 1 ? "max-w-3xl mx-auto space-y-8" : "max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6"}>
+            {insurances.map((ins, idx) => <InsuranceCard key={ins.id || idx} insurance={ins} idx={idx} />)}
           </div>
         </section>
       )}
