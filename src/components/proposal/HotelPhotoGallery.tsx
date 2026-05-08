@@ -7,7 +7,7 @@
  * - Lightbox with arrow navigation, "set as cover" and "remove" actions
  * - Inline label below each thumb, badge for source ("Oficial"/"Manual")
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -17,6 +17,11 @@ import {
   X,
   Check,
   EyeOff,
+  Upload,
+  Link2,
+  Loader2,
+  Sparkles,
+  ClipboardPaste,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +30,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import SmartImage from "@/components/proposal/SmartImage";
 import { cn } from "@/lib/utils";
+import { uploadCompressedImage } from "@/lib/uploadCompressedImage";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface HotelPhoto {
   url: string;
@@ -98,6 +105,11 @@ export function HotelPhotoGallery({
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [manualUrl, setManualUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [extractingUrl, setExtractingUrl] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const goPrev = useCallback(() => {
@@ -150,24 +162,177 @@ export function HotelPhotoGallery({
     }
   };
 
-  const handleAddManual = () => {
-    const url = manualUrl.trim();
-    if (!url) return;
-    const next: HotelPhoto[] = [
-      ...cleanPhotos,
-      { url, label: "Manual", category: "outros", source: "manual" },
-    ];
+  const addPhotos = useCallback((items: HotelPhoto[]) => {
+    if (items.length === 0) return 0;
+    const existing = new Set(cleanPhotos.map((p) => p.url));
+    const fresh = items.filter((p) => p.url && !existing.has(p.url));
+    if (fresh.length === 0) {
+      toast.info("Estas fotos já estão na galeria");
+      return 0;
+    }
+    const next = [...cleanPhotos, ...fresh];
     onPhotosChange(next);
-    if (!coverUrl) onCoverChange(url);
+    if (!coverUrl && fresh[0]?.url) onCoverChange(fresh[0].url);
+    return fresh.length;
+  }, [cleanPhotos, coverUrl, onPhotosChange, onCoverChange]);
+
+  const handleAddManual = () => {
+    const raw = manualUrl.trim();
+    if (!raw) return;
+    const urls = raw.split(/[\s,]+/).filter((u) => /^https?:\/\//i.test(u));
+    if (urls.length === 0) {
+      toast.error("Cole uma URL válida (https://...)");
+      return;
+    }
+    const added = addPhotos(urls.map((url) => ({ url, label: "Manual", category: "outros", source: "manual" })));
+    if (added) toast.success(`${added} foto(s) adicionada(s)`);
     setManualUrl("");
-    toast.success("Foto adicionada");
   };
+
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (list.length === 0) return;
+    setUploading(true);
+    const uploaded: HotelPhoto[] = [];
+    try {
+      for (const file of list) {
+        try {
+          const up = await uploadCompressedImage(file, "media", "proposal-gallery", {
+            maxWidth: 2000,
+            maxHeight: 2000,
+            quality: 0.85,
+          });
+          uploaded.push({
+            url: up.url,
+            label: file.name.replace(/\.[^.]+$/, "") || "Upload",
+            category: "outros",
+            source: "manual",
+          });
+        } catch (err) {
+          console.error("upload failed", file.name, err);
+        }
+      }
+      if (uploaded.length === 0) {
+        toast.error("Falha ao enviar as fotos");
+        return;
+      }
+      addPhotos(uploaded);
+      toast.success(`${uploaded.length} foto(s) enviada(s)`);
+    } finally {
+      setUploading(false);
+    }
+  }, [addPhotos]);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isDragging) setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget === e.target) setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length) {
+      handleFiles(e.dataTransfer.files);
+      return;
+    }
+    const text = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (text && /^https?:\/\//i.test(text)) {
+      addPhotos([{ url: text, label: "Manual", category: "outros", source: "manual" }]);
+      toast.success("Foto adicionada");
+    }
+  };
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (const it of items as any) {
+        if (it.kind === "file") {
+          const f = it.getAsFile();
+          if (f && f.type.startsWith("image/")) files.push(f);
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        handleFiles(files);
+        return;
+      }
+      const text = e.clipboardData?.getData("text") || "";
+      const urls = text.split(/[\s,]+/).filter((u) => /^https?:\/\/.+\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(u));
+      if (urls.length > 0) {
+        e.preventDefault();
+        addPhotos(urls.map((url) => ({ url, label: "Manual", category: "outros", source: "manual" })));
+        toast.success(`${urls.length} foto(s) coladas`);
+      }
+    };
+    node.addEventListener("paste", onPaste);
+    return () => node.removeEventListener("paste", onPaste);
+  }, [handleFiles, addPhotos]);
+
+  const handleExtractFromPage = async () => {
+    const raw = manualUrl.trim();
+    if (!/^https?:\/\//i.test(raw)) {
+      toast.error("Cole o link da página (Booking, site do navio, etc.)");
+      return;
+    }
+    setExtractingUrl(true);
+    try {
+      toast.info("Extraindo fotos da página...", { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke("extract-from-url", {
+        body: { url: raw },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha na extração");
+      const photos = (data.data?.photos || []) as Array<{ url: string; description?: string; category?: string }>;
+      if (photos.length === 0) {
+        toast.info("Nenhuma foto encontrada nessa página");
+        return;
+      }
+      const added = addPhotos(
+        photos.map((p) => ({
+          url: p.url,
+          label: p.description || "Foto extraída",
+          category: p.category || "outros",
+          source: "official",
+        })),
+      );
+      toast.success(`${added || 0} foto(s) extraída(s) da página`);
+      setManualUrl("");
+    } catch (err: any) {
+      console.error("[extract-from-url]", err);
+      toast.error(err?.message || "Não foi possível extrair fotos da página");
+    } finally {
+      setExtractingUrl(false);
+    }
+  };
+
 
   const current = lightboxIndex !== null ? cleanPhotos[lightboxIndex] : null;
   const currentIsCover = current ? current.url === coverUrl : false;
 
   return (
-    <div className="md:col-span-2 space-y-3 p-3 rounded-xl border border-border/60 bg-muted/20">
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={cn(
+        "md:col-span-2 space-y-3 p-3 rounded-xl border bg-muted/20 outline-none transition-colors",
+        isDragging ? "border-primary border-2 bg-primary/5" : "border-border/60",
+      )}
+    >
       {/* Header */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
@@ -275,30 +440,74 @@ export function HotelPhotoGallery({
         </p>
       )}
 
-      {/* Manual photo URL input */}
-      <div className="flex gap-1.5 items-center">
-        <Input
-          placeholder="Cole uma URL de imagem e pressione Enter..."
-          value={manualUrl}
-          onChange={(e) => setManualUrl(e.target.value)}
-          className="h-8 text-xs"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddManual();
-            }
-          }}
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs"
-          onClick={handleAddManual}
-          disabled={!manualUrl.trim()}
-        >
-          Adicionar
-        </Button>
+      {/* Toolbar: Upload · Paste · URL · Extrair página */}
+      <div className="space-y-2 rounded-lg border border-dashed border-border/60 bg-background/50 p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFileInput}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            className="h-8 gap-1.5"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            Enviar fotos
+          </Button>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ClipboardPaste className="h-3 w-3" /> ou cole (Ctrl+V) · arraste arquivos aqui
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <div className="flex-1 min-w-[200px] flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="Cole uma URL de imagem ou de página (Booking, site oficial, cruzeiro...)"
+              value={manualUrl}
+              onChange={(e) => setManualUrl(e.target.value)}
+              className="h-8 text-xs"
+              disabled={extractingUrl}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddManual();
+                }
+              }}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={handleAddManual}
+            disabled={!manualUrl.trim() || extractingUrl}
+            title="Adiciona como imagem direta (URL termina em .jpg/.png/etc.)"
+          >
+            Adicionar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8 text-xs gap-1.5"
+            onClick={handleExtractFromPage}
+            disabled={!manualUrl.trim() || extractingUrl}
+            title="Extrai automaticamente todas as fotos da página"
+          >
+            {extractingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Extrair fotos
+          </Button>
+        </div>
       </div>
 
       {/* Lightbox */}
