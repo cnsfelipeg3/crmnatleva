@@ -384,6 +384,35 @@ export default function NewSale() {
     })();
   }, [editId]);
 
+  useEffect(() => {
+    if (isEditMode) return;
+    const draft: NewSaleDraft = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      activeTab,
+      form,
+      segments,
+      groupLocators,
+      airCostBlocks,
+      hotelEntries,
+      otherProducts,
+      salePayments,
+      airTariff,
+      hotelTariff,
+      selectedPassengers,
+      textInput,
+    };
+    try {
+      window.localStorage.setItem(NEW_SALE_DRAFT_KEY, JSON.stringify(draft));
+    } catch (error) {
+      console.warn("[new-sale-draft] falha ao salvar rascunho local", error);
+    }
+  }, [
+    isEditMode, activeTab, form, segments, groupLocators, airCostBlocks,
+    hotelEntries, otherProducts, salePayments, airTariff, hotelTariff,
+    selectedPassengers, textInput,
+  ]);
+
   // ─── Autosave incremental (campos simples da venda) ──────────
   // Salva automaticamente UPDATE parcial em `sales` 1.2s após o usuário
   // parar de digitar. Não toca em listas (cost_items, segments, payments,
