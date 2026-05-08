@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Plus, Search, Download, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
 import EmployeeFormTabs from "@/components/rh/EmployeeFormTabs";
 
 const DEPARTMENTS = ["Comercial", "Operacional", "Financeiro", "Administrativo", "Marketing", "Atendimento"];
@@ -159,6 +160,24 @@ export default function Colaboradores() {
     }
   };
 
+  const toggleActive = async (emp: any, active: boolean) => {
+    const newStatus = active ? "ativo" : "inativo";
+    const prev = employees;
+    // Optimistic update
+    setEmployees((list) => list.map((x) => (x.id === emp.id ? { ...x, status: newStatus } : x)));
+    const patch: any = { status: newStatus };
+    if (!active && !emp.termination_date) {
+      patch.termination_date = new Date().toISOString().slice(0, 10);
+    }
+    const { error } = await supabase.from("employees").update(patch).eq("id", emp.id);
+    if (error) {
+      setEmployees(prev);
+      toast.error("Falha ao atualizar status: " + error.message);
+    } else {
+      toast.success(`${emp.full_name} ${active ? "ativado" : "desativado"}`);
+    }
+  };
+
   const exportCSV = () => {
     const headers = "Nome,Cargo,Área,Contrato,Status,Salário,Admissão\n";
     const rows = filtered.map(e => `"${e.full_name}","${e.position}","${e.department}","${e.contract_type}","${e.status}",${e.base_salary},"${e.hire_date}"`).join("\n");
@@ -228,7 +247,17 @@ export default function Colaboradores() {
                   <TableCell className="cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}><Badge className={statusColor(e.status)}>{e.status}</Badge></TableCell>
                   <TableCell className="text-right font-mono cursor-pointer" onClick={() => { setForm(e); setShowForm(true); }}>R$ {Number(e.base_salary).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
+                    <div className="flex items-center justify-end gap-2">
+                      <div
+                        className="flex items-center gap-1.5 mr-1"
+                        onClick={(ev) => ev.stopPropagation()}
+                        title={e.status === "ativo" ? "Desativar colaborador" : "Ativar colaborador"}
+                      >
+                        <Switch
+                          checked={e.status === "ativo"}
+                          onCheckedChange={(v) => toggleActive(e, v)}
+                        />
+                      </div>
                       <Button
                         variant="ghost" size="icon" className="h-7 w-7"
                         onClick={(ev) => { ev.stopPropagation(); setForm(e); setShowForm(true); }}
