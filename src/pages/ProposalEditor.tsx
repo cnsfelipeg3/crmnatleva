@@ -30,6 +30,7 @@ import ProposalFlightSearch, { type FlightSegmentData } from "@/components/propo
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import ProposalAnalyticsPanel from "@/components/proposal/ProposalAnalyticsPanel";
 import { AIBookingExtractor, type ExtractItemType } from "@/components/proposal/AIBookingExtractor";
+import CruiseQuickFields from "@/components/proposal/CruiseQuickFields";
 import CoverImageSuggestDialog from "@/components/proposal/CoverImageSuggestDialog";
 import FlightCoverPicker from "@/components/proposal/FlightCoverPicker";
 import AddFlightWizard, { type ItineraryType as WizardItineraryType } from "@/components/proposal/AddFlightWizard";
