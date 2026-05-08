@@ -920,12 +920,19 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
   const galleryRaw: any[] = Array.isArray(d.gallery) ? d.gallery.filter((p: any) => p && p.excluded !== true) : [];
   const cover = cruise.image_url || galleryRaw[0]?.url;
   const galleryPhotos = galleryRaw.filter((p: any) => p?.url && p.url !== cover).slice(0, 12);
+  const galleryUrls: string[] = galleryPhotos.map((p: any) => p.url);
+  const galleryCaptions: (string | null)[] = galleryPhotos.map((p: any) => {
+    const raw = String(p?.label || "").trim();
+    if (!raw) return null;
+    // Hide useless generic labels (e.g. "Foto extraída", "Manual", "Foto 1")
+    if (/^foto\s*(extra[ií]da|manual)?\s*\d*$/i.test(raw)) return null;
+    if (/^manual$/i.test(raw)) return null;
+    return raw;
+  });
 
   const includes: string[] = Array.isArray(d.includes) ? d.includes : [];
   const excludes: string[] = Array.isArray(d.excludes) ? d.excludes : [];
   const amenities: string[] = Array.isArray(d.amenities) ? d.amenities : [];
-
-  const [lightbox, setLightbox] = React.useState<number | null>(null);
 
   return (
     <motion.div
@@ -1010,28 +1017,13 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
       )}
 
       {/* Galeria */}
-      {galleryPhotos.length > 0 && (
-        <div className="px-5 sm:px-8 pt-4 pb-2">
+      {galleryUrls.length > 0 && (
+        <div className="px-5 sm:px-8 pt-6 pb-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Camera className="w-4 h-4 text-accent" />
             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Galeria</h4>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {galleryPhotos.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => setLightbox(i)}
-                className="aspect-[4/3] overflow-hidden rounded-xl bg-muted relative group"
-              >
-                <img src={p.url} alt={p.label || `Foto ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                {p.label && (
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] text-white bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 truncate">
-                    {p.label}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <PhotoGallery photos={galleryUrls} name={cruise.title || "Cruzeiro"} captions={galleryCaptions} />
         </div>
       )}
 
@@ -1146,21 +1138,6 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
         </div>
       )}
 
-      {/* Lightbox */}
-      <AnimatePresence>
-        {lightbox !== null && galleryPhotos[lightbox] && (
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setLightbox(null)}
-            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
-          >
-            <button onClick={(e) => { e.stopPropagation(); setLightbox(null); }} className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
-              <X className="w-5 h-5" />
-            </button>
-            <img src={galleryPhotos[lightbox].url} alt="" className="max-w-full max-h-full object-contain rounded-xl" />
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
