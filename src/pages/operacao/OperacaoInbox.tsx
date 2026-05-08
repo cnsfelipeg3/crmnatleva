@@ -3432,7 +3432,7 @@ function OperacaoInboxInner() {
                                 })()}
                                 {/* Text */}
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
-                                <div className="flex items-center justify-end gap-1 mt-1">
+                                <div className={`flex items-center justify-end gap-1 mt-1 ${msg.message_type === "sticker" ? "px-1" : ""}`}>
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   {msg.status === "failed" && (
                                     <button onClick={() => handleRetryMessage(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
