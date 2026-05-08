@@ -105,6 +105,11 @@ export function HotelPhotoGallery({
 
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [manualUrl, setManualUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [extractingUrl, setExtractingUrl] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const goPrev = useCallback(() => {
