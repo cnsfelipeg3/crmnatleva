@@ -2016,6 +2016,16 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         </section>
       )}
 
+      {/* ──── INSURANCE ──── */}
+      {showInsurances && insurances.length > 0 && (
+        <section data-track-section="insurances" className="py-10 sm:py-14 px-5 sm:px-6">
+          <SectionTitle subtitle="Sua tranquilidade em todos os trechos da viagem">Seguro Viagem</SectionTitle>
+          <div className={insurances.length === 1 ? "max-w-3xl mx-auto space-y-8" : "max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-6"}>
+            {insurances.map((ins, idx) => <InsuranceCard key={ins.id || idx} insurance={ins} idx={idx} />)}
+          </div>
+        </section>
+      )}
+
       {/* ──── EXPERIENCES ──── */}
       {showExperiences && experiences.length > 0 && (
         <section data-track-section="experiences" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
