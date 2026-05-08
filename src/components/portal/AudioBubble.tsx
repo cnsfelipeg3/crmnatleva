@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Play, Pause } from "lucide-react";
+import { audioPlaybackManager } from "@/lib/audioPlaybackManager";
 
 type Props = {
   src: string;
@@ -32,13 +33,18 @@ export default function AudioBubble({ src, durationSec, waveform, variant = "use
     const onMeta = () => {
       if (isFinite(a.duration) && a.duration > 0) setDuration(a.duration);
     };
+    const onPause = () => setPlaying(false);
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("ended", onEnd);
     a.addEventListener("loadedmetadata", onMeta);
+    a.addEventListener("pause", onPause);
     return () => {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("ended", onEnd);
       a.removeEventListener("loadedmetadata", onMeta);
+      a.removeEventListener("pause", onPause);
+      audioPlaybackManager.release(a);
+      try { a.pause(); } catch { /* noop */ }
     };
   }, []);
 
@@ -49,6 +55,7 @@ export default function AudioBubble({ src, durationSec, waveform, variant = "use
       a.pause();
       setPlaying(false);
     } else {
+      audioPlaybackManager.notifyPlay(a);
       a.play();
       setPlaying(true);
     }
