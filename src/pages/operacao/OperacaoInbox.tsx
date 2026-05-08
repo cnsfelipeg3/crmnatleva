@@ -3463,6 +3463,11 @@ function OperacaoInboxInner() {
                                   <Eye className="h-4 w-4 mr-2" /> Dados da mensagem
                                 </ContextMenuItem>
                               )}
+                              {msg.message_type === "sticker" && (msg.media_storage_url || msg.media_url) && (
+                                <ContextMenuItem onClick={() => handleSaveStickerFromMessage(msg)}>
+                                  <BookmarkPlus className="h-4 w-4 mr-2" /> Salvar figurinha
+                                </ContextMenuItem>
+                              )}
                               <ContextMenuSeparator />
                               <ContextMenuItem onClick={() => handleCopyMessageText(msg)} disabled={!msg.text}>
                                 Copiar texto
