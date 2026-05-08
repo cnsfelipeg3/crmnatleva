@@ -1234,8 +1234,8 @@ export default function ProposalEditor() {
                           </div>
                         )}
 
-                        {/* AI extractor — voo, hotel, experiência e cruzeiro */}
-                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience" || item.item_type === "cruise") && (
+                        {/* AI extractor — voo, hotel, experiência, cruzeiro e seguro */}
+                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience" || item.item_type === "cruise" || item.item_type === "insurance") && (
                           <AIBookingExtractor
                             itemType={item.item_type as ExtractItemType}
                             onExtracted={(data) => applyExtractedItem(idx, data)}
@@ -1244,7 +1244,33 @@ export default function ProposalEditor() {
 
                         {/* Cruise-specific quick fields */}
                         {item.item_type === "cruise" && (
-                          <CruiseQuickFields
+                          <>
+                            <CruiseQuickFields
+                              data={item.data || {}}
+                              onChange={(key, value) => updateItemData(idx, key, value)}
+                            />
+
+                            {/* Galeria de fotos do cruzeiro (navio + cabine + portos) */}
+                            <div className="rounded-xl border border-border/50 bg-muted/10 p-3.5 space-y-2">
+                              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                Galeria do Cruzeiro
+                              </Label>
+                              <p className="text-[11px] text-muted-foreground/80">
+                                Adicione fotos do navio, da cabine e dos portos. A primeira marcada como capa aparece no topo do card.
+                              </p>
+                              <HotelPhotoGallery
+                                photos={(item.data?.gallery as any[]) || []}
+                                coverUrl={item.image_url || ""}
+                                onPhotosChange={(next) => updateItemData(idx, "gallery", next)}
+                                onCoverChange={(url) => updateItem(idx, "image_url", url)}
+                              />
+                            </div>
+                          </>
+                        )}
+
+                        {/* Insurance-specific quick fields */}
+                        {item.item_type === "insurance" && (
+                          <InsuranceQuickFields
                             data={item.data || {}}
                             onChange={(key, value) => updateItemData(idx, key, value)}
                           />
