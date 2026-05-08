@@ -440,30 +440,74 @@ export function HotelPhotoGallery({
         </p>
       )}
 
-      {/* Manual photo URL input */}
-      <div className="flex gap-1.5 items-center">
-        <Input
-          placeholder="Cole uma URL de imagem e pressione Enter..."
-          value={manualUrl}
-          onChange={(e) => setManualUrl(e.target.value)}
-          className="h-8 text-xs"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddManual();
-            }
-          }}
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 text-xs"
-          onClick={handleAddManual}
-          disabled={!manualUrl.trim()}
-        >
-          Adicionar
-        </Button>
+      {/* Toolbar: Upload · Paste · URL · Extrair página */}
+      <div className="space-y-2 rounded-lg border border-dashed border-border/60 bg-background/50 p-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleFileInput}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="default"
+            className="h-8 gap-1.5"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            Enviar fotos
+          </Button>
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <ClipboardPaste className="h-3 w-3" /> ou cole (Ctrl+V) · arraste arquivos aqui
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5 items-center">
+          <div className="flex-1 min-w-[200px] flex items-center gap-1.5">
+            <Link2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <Input
+              placeholder="Cole uma URL de imagem ou de página (Booking, site oficial, cruzeiro...)"
+              value={manualUrl}
+              onChange={(e) => setManualUrl(e.target.value)}
+              className="h-8 text-xs"
+              disabled={extractingUrl}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleAddManual();
+                }
+              }}
+            />
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={handleAddManual}
+            disabled={!manualUrl.trim() || extractingUrl}
+            title="Adiciona como imagem direta (URL termina em .jpg/.png/etc.)"
+          >
+            Adicionar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8 text-xs gap-1.5"
+            onClick={handleExtractFromPage}
+            disabled={!manualUrl.trim() || extractingUrl}
+            title="Extrai automaticamente todas as fotos da página"
+          >
+            {extractingUrl ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+            Extrair fotos
+          </Button>
+        </div>
       </div>
 
       {/* Lightbox */}
