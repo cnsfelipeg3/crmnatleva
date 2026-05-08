@@ -753,7 +753,7 @@ function OperacaoInboxInner() {
     else if (msg.audio) { msgType = "audio"; mediaUrl = msg.audio.audioUrl || msg.audio; }
     else if (msg.video) { msgType = "video"; mediaUrl = msg.video.videoUrl || msg.video; text = msg.video.caption || msg.caption || text; }
     else if (msg.document) { msgType = "document"; text = `${msg.document.fileName || "Documento"}`; mediaUrl = msg.document.documentUrl || msg.document; }
-    else if (msg.sticker) { msgType = "image"; mediaUrl = msg.sticker.stickerUrl || msg.sticker; }
+    else if (msg.sticker) { msgType = "sticker"; mediaUrl = msg.sticker.stickerUrl || msg.sticker; }
 
     if (msg.type === "image" && !mediaUrl) msgType = "image";
     if (msg.type === "audio" && !mediaUrl) msgType = "audio";
