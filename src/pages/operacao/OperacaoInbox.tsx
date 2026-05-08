@@ -65,6 +65,7 @@ import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
 import { MessageInfoDialog } from "@/components/inbox/MessageInfoDialog";
+import { LocationBubble } from "@/components/inbox/LocationBubble";
 import { StickerPicker } from "@/components/inbox/StickerPicker";
 import { saveStickerFromUrl, touchSavedSticker, type SavedSticker } from "@/lib/savedStickers";
 
