@@ -941,6 +941,14 @@ serve(async (req) => {
     let data = parseJsonSafely(rawText);
     if (!response.ok) {
       console.error(`[Z-API] ${action} upstream ${response.status}: ${rawText.slice(0, 500)}`);
+      // Degradação graciosa para leituras não críticas: nunca propagar erro ao cliente
+      // (evita blank screen quando o smartphone está temporariamente offline)
+      if (action === "get-profile-picture") {
+        return new Response(
+          JSON.stringify({ link: null, unavailable: true, reason: data?.error || rawText.slice(0, 200) }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     if (action === "disconnect") {
