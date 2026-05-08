@@ -305,6 +305,20 @@ export default function ProposalEditor() {
     if (existingItems) setItems(existingItems);
   }, [existingItems]);
 
+  // Marca hidratação concluída para liberar o autosave (evita gravar
+  // o estado vazio inicial sobre a proposta existente).
+  useEffect(() => {
+    if (isNew) {
+      hydratedRef.current = true;
+      return;
+    }
+    if (existing && existingItems !== undefined) {
+      // pequeno delay garante que setForm/setItems já tenham aplicado
+      const t = setTimeout(() => { hydratedRef.current = true; }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [isNew, existing, existingItems]);
+
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
     if (!isNew || !hasAiStructure) return;
