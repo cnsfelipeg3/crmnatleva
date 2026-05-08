@@ -1094,45 +1094,49 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
 
       {/* Includes / Excludes / Amenities */}
       {(includes.length > 0 || excludes.length > 0 || amenities.length > 0) && (
-        <div className="px-5 sm:px-8 pb-7 pt-2 grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-          {includes.length > 0 && (
-            <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700 mb-2 flex items-center gap-1.5">
-                <CheckCircle className="w-3.5 h-3.5" /> Inclusos
-              </p>
-              <ul className="space-y-1.5">
-                {includes.map((it, i) => (
-                  <li key={i} className="text-sm text-foreground flex items-start gap-2">
-                    <span className="text-emerald-600 mt-0.5">·</span>
-                    <span className="flex-1">{it}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {excludes.length > 0 && (
-            <div className="rounded-2xl border border-rose-500/15 bg-rose-500/[0.04] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-700 mb-2 flex items-center gap-1.5">
-                <X className="w-3.5 h-3.5" /> Não inclusos
-              </p>
-              <ul className="space-y-1.5">
-                {excludes.map((it, i) => (
-                  <li key={i} className="text-sm text-foreground flex items-start gap-2">
-                    <span className="text-rose-500 mt-0.5">·</span>
-                    <span className="flex-1">{it}</span>
-                  </li>
-                ))}
-              </ul>
+        <div className="px-4 sm:px-8 pb-7 pt-2 max-w-3xl mx-auto space-y-4">
+          {(includes.length > 0 || excludes.length > 0) && (
+            <div className={`grid gap-4 ${includes.length > 0 && excludes.length > 0 ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"}`}>
+              {includes.length > 0 && (
+                <div className="rounded-2xl border border-emerald-500/15 bg-emerald-500/[0.04] p-4 sm:p-5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-700 mb-3 flex items-center gap-1.5">
+                    <CheckCircle className="w-3.5 h-3.5" /> Inclusos
+                  </p>
+                  <ul className="space-y-2">
+                    {includes.map((it, i) => (
+                      <li key={i} className="text-sm text-foreground flex items-start gap-2 leading-relaxed break-words">
+                        <span className="text-emerald-600 mt-1 shrink-0">·</span>
+                        <span className="flex-1 min-w-0">{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {excludes.length > 0 && (
+                <div className="rounded-2xl border border-rose-500/15 bg-rose-500/[0.04] p-4 sm:p-5">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-rose-700 mb-3 flex items-center gap-1.5">
+                    <X className="w-3.5 h-3.5" /> Não inclusos
+                  </p>
+                  <ul className="space-y-2">
+                    {excludes.map((it, i) => (
+                      <li key={i} className="text-sm text-foreground flex items-start gap-2 leading-relaxed break-words">
+                        <span className="text-rose-500 mt-1 shrink-0">·</span>
+                        <span className="flex-1 min-w-0">{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
           {amenities.length > 0 && (
-            <div className="md:col-span-2 rounded-2xl border border-accent/15 bg-accent/[0.04] p-4">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-2 flex items-center gap-1.5">
+            <div className="rounded-2xl border border-accent/15 bg-accent/[0.04] p-4 sm:p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-accent mb-3 flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5" /> A bordo
               </p>
               <div className="flex flex-wrap gap-1.5 justify-center">
                 {amenities.map((a, i) => (
-                  <span key={i} className="text-[12px] px-2.5 py-1 rounded-full bg-background border border-border/40 text-foreground">
+                  <span key={i} className="text-[12px] px-2.5 py-1 rounded-full bg-background border border-border/40 text-foreground break-words max-w-full">
                     {a}
                   </span>
                 ))}
