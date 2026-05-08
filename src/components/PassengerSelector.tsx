@@ -124,9 +124,6 @@ export default function PassengerSelector({ selected, onChange }: Props) {
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <User className="w-4 h-4 text-primary" /> Passageiros desta Venda
         </h3>
-        <Button variant="outline" size="sm" onClick={() => setCreateOpen(true)}>
-          <Plus className="w-3 h-3 mr-1" /> Novo Passageiro
-        </Button>
       </div>
 
       {/* Search */}
