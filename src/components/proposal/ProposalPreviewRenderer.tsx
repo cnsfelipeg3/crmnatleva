@@ -2068,7 +2068,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             </h2>
             <p className="text-muted-foreground mb-10">Entre em contato e garanta sua reserva</p>
             <a
-              href={`https://wa.me/?text=${encodeURIComponent(`Olá! Gostaria de reservar a viagem "${proposal.title}".`)}`}
+              href={`https://wa.me/5511966396692?text=${encodeURIComponent(`Olá! Vim pela proposta "${proposal.title}" e gostaria de reservar este pacote. Pode me ajudar com os próximos passos?`)}`}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => tracking?.trackCTA("whatsapp")}
