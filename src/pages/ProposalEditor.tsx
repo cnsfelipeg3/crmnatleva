@@ -190,6 +190,14 @@ export default function ProposalEditor() {
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
+  const formRef = useRef(form);
+  const itemsRef = useRef(items);
+  const visualOverridesRef = useRef(visualOverrides);
+
+  useEffect(() => { formRef.current = form; }, [form]);
+  useEffect(() => { itemsRef.current = items; }, [items]);
+  useEffect(() => { visualOverridesRef.current = visualOverrides; }, [visualOverrides]);
+
   // ── Autosave state ──────────────────────────────────────────────────
   // Hidrata silenciosamente após carregar dados existentes; depois grava
   // automaticamente no banco a cada alteração para nunca perder progresso.
@@ -314,7 +322,14 @@ export default function ProposalEditor() {
     }
     if (existing && existingItems !== undefined) {
       // pequeno delay garante que setForm/setItems já tenham aplicado
-      const t = setTimeout(() => { hydratedRef.current = true; }, 50);
+      const t = setTimeout(() => {
+        hydratedRef.current = true;
+        lastAutoSavedSnapshotRef.current = JSON.stringify({
+          f: formRef.current,
+          i: itemsRef.current,
+          v: visualOverridesRef.current,
+        });
+      }, 50);
       return () => clearTimeout(t);
     }
   }, [isNew, existing, existingItems]);
@@ -443,7 +458,8 @@ export default function ProposalEditor() {
     setSavingItemIdx(idx);
     try {
       await saveMutation.mutateAsync();
-      toast.success(`Bloco "${items[idx]?.title || itemTypeLabels[items[idx]?.item_type]}" salvo!`);
+      const currentItem = itemsRef.current[idx];
+      toast.success(`Bloco "${currentItem?.title || itemTypeLabels[currentItem?.item_type]}" salvo!`);
     } catch (err: any) {
       toast.error(err.message || "Erro ao salvar bloco");
     } finally {
@@ -453,32 +469,35 @@ export default function ProposalEditor() {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const currentForm = formRef.current;
+      const currentItems = itemsRef.current;
+      const currentVisualOverrides = visualOverridesRef.current;
       const slug = existing?.slug || generateSlug();
       const payload: Record<string, any> = {
-        title: form.title,
-        client_name: form.client_name,
-        origin: form.origin,
-        destinations: form.destinations,
-        travel_start_date: form.travel_start_date || null,
-        travel_end_date: form.travel_end_date || null,
-        passenger_count: (form.passengers_adults || 0) + (form.passengers_children || 0) || form.passenger_count,
-        passengers_adults: form.passengers_adults ?? null,
-        passengers_children: form.passengers_children ?? null,
-        children_ages: form.children_ages && form.children_ages.length > 0 ? form.children_ages : null,
-        consultant_name: form.consultant_name,
-        status: form.status,
-        intro_text: form.intro_text,
-        cover_image_url: form.cover_image_url,
-        total_value: form.total_value ? parseFloat(form.total_value) : null,
-        value_per_person: form.value_per_person ? parseFloat(form.value_per_person) : null,
-        payment_conditions: form.payment_conditions,
-        proposal_strategy: form.proposal_strategy || null,
-        proposal_outcome: form.proposal_outcome || "pending",
-        template_id: form.template_id || null,
+        title: currentForm.title,
+        client_name: currentForm.client_name,
+        origin: currentForm.origin,
+        destinations: currentForm.destinations,
+        travel_start_date: currentForm.travel_start_date || null,
+        travel_end_date: currentForm.travel_end_date || null,
+        passenger_count: (currentForm.passengers_adults || 0) + (currentForm.passengers_children || 0) || currentForm.passenger_count,
+        passengers_adults: currentForm.passengers_adults ?? null,
+        passengers_children: currentForm.passengers_children ?? null,
+        children_ages: currentForm.children_ages && currentForm.children_ages.length > 0 ? currentForm.children_ages : null,
+        consultant_name: currentForm.consultant_name,
+        status: currentForm.status,
+        intro_text: currentForm.intro_text,
+        cover_image_url: currentForm.cover_image_url,
+        total_value: currentForm.total_value ? parseFloat(currentForm.total_value) : null,
+        value_per_person: currentForm.value_per_person ? parseFloat(currentForm.value_per_person) : null,
+        payment_conditions: currentForm.payment_conditions,
+        proposal_strategy: currentForm.proposal_strategy || null,
+        proposal_outcome: currentForm.proposal_outcome || "pending",
+        template_id: currentForm.template_id || null,
         slug,
         created_by: user?.id,
         updated_at: new Date().toISOString(),
-        visual_overrides: visualOverrides as any,
+        visual_overrides: currentVisualOverrides as any,
       };
 
       let proposalId = id;
@@ -495,8 +514,8 @@ export default function ProposalEditor() {
       if (!isNew) {
         await supabase.from("proposal_items").delete().eq("proposal_id", proposalId!);
       }
-      if (items.length > 0) {
-        const itemsPayload = items.map((item, idx) => ({
+      if (currentItems.length > 0) {
+        const itemsPayload = currentItems.map((item, idx) => ({
           proposal_id: proposalId,
           item_type: item.item_type,
           position: idx,
@@ -523,20 +542,20 @@ export default function ProposalEditor() {
         emitLearningEvent({
           event_type: "proposal_created",
           proposal_id: proposalId as string,
-          strategy_chosen: form.proposal_strategy || undefined,
-          destination: form.destinations?.[0] || undefined,
-          passenger_count: form.passenger_count,
+          strategy_chosen: formRef.current.proposal_strategy || undefined,
+          destination: formRef.current.destinations?.[0] || undefined,
+          passenger_count: formRef.current.passenger_count,
           created_by: user?.id,
         });
       }
 
       // If outcome changed from pending to won/lost/expired
-      if (form.proposal_outcome !== "pending" && existing?.proposal_outcome !== form.proposal_outcome) {
+      if (formRef.current.proposal_outcome !== "pending" && existing?.proposal_outcome !== formRef.current.proposal_outcome) {
         emitProposalOutcome({
           proposalId: proposalId as string,
-          outcome: form.proposal_outcome as "won" | "lost" | "expired",
-          strategy: form.proposal_strategy,
-          destination: form.destinations?.[0],
+          outcome: formRef.current.proposal_outcome as "won" | "lost" | "expired",
+          strategy: formRef.current.proposal_strategy,
+          destination: formRef.current.destinations?.[0],
           createdAt: existing?.created_at,
           userId: user?.id,
         });
@@ -762,6 +781,33 @@ export default function ProposalEditor() {
     setForm((f) => ({ ...f, payment_conditions: f.payment_conditions.filter((_, i) => i !== idx) }));
   };
 
+  const applyCoverImageUrl = useCallback((url: string) => {
+    const cleanUrl = url.trim();
+    formRef.current = { ...formRef.current, cover_image_url: cleanUrl };
+    setForm((f) => ({ ...f, cover_image_url: cleanUrl }));
+
+    if (!isNew && id && cleanUrl) {
+      setAutoSaveStatus("saving");
+      void (async () => {
+        try {
+          const { error } = await supabase
+            .from("proposals")
+            .update({ cover_image_url: cleanUrl, updated_at: new Date().toISOString() } as any)
+            .eq("id", id);
+          if (error) throw error;
+          lastAutoSavedSnapshotRef.current = "";
+          setLastSavedAt(new Date());
+          setAutoSaveStatus("saved");
+          queryClient.invalidateQueries({ queryKey: ["proposal", id] });
+        } catch (err) {
+          console.error("[proposal-cover] falha ao salvar capa:", err);
+          setAutoSaveStatus("error");
+          toast.error("Não consegui salvar a capa. Clique em Salvar para tentar novamente.");
+        }
+      })();
+    }
+  }, [id, isNew, queryClient]);
+
   const handlePlacesEnrich = (idx: number, data: PlacesEnrichmentData) => {
     setItems((prev) =>
       prev.map((item, i) => {
@@ -947,7 +993,7 @@ export default function ProposalEditor() {
                   <Label>Imagem de capa</Label>
                   <div className="flex items-center gap-1">
                     <CoverUploadButton
-                      onUploaded={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+                      onUploaded={applyCoverImageUrl}
                     />
                     <Button
                       type="button"
@@ -960,7 +1006,7 @@ export default function ProposalEditor() {
                     </Button>
                   </div>
                 </div>
-                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="Cole uma URL ou clique em Enviar arquivo" />
+                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} onBlur={(e) => applyCoverImageUrl(e.target.value)} placeholder="Cole uma URL ou clique em Enviar arquivo" />
                 {form.cover_image_url?.trim() && /^https?:\/\//i.test(form.cover_image_url.trim()) && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-border/30 bg-muted/30 aspect-[16/6] max-h-[180px]">
                     <img
@@ -1640,7 +1686,7 @@ export default function ProposalEditor() {
         open={coverDialogOpen}
         onOpenChange={setCoverDialogOpen}
         initialDestination={form.title || ""}
-        onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+        onSelect={applyCoverImageUrl}
       />
       <AddFlightWizard
         open={flightWizardOpen}
