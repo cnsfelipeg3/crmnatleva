@@ -162,18 +162,161 @@ export function HotelPhotoGallery({
     }
   };
 
-  const handleAddManual = () => {
-    const url = manualUrl.trim();
-    if (!url) return;
-    const next: HotelPhoto[] = [
-      ...cleanPhotos,
-      { url, label: "Manual", category: "outros", source: "manual" },
-    ];
+  const addPhotos = useCallback((items: HotelPhoto[]) => {
+    if (items.length === 0) return 0;
+    const existing = new Set(cleanPhotos.map((p) => p.url));
+    const fresh = items.filter((p) => p.url && !existing.has(p.url));
+    if (fresh.length === 0) {
+      toast.info("Estas fotos já estão na galeria");
+      return 0;
+    }
+    const next = [...cleanPhotos, ...fresh];
     onPhotosChange(next);
-    if (!coverUrl) onCoverChange(url);
+    if (!coverUrl && fresh[0]?.url) onCoverChange(fresh[0].url);
+    return fresh.length;
+  }, [cleanPhotos, coverUrl, onPhotosChange, onCoverChange]);
+
+  const handleAddManual = () => {
+    const raw = manualUrl.trim();
+    if (!raw) return;
+    const urls = raw.split(/[\s,]+/).filter((u) => /^https?:\/\//i.test(u));
+    if (urls.length === 0) {
+      toast.error("Cole uma URL válida (https://...)");
+      return;
+    }
+    const added = addPhotos(urls.map((url) => ({ url, label: "Manual", category: "outros", source: "manual" })));
+    if (added) toast.success(`${added} foto(s) adicionada(s)`);
     setManualUrl("");
-    toast.success("Foto adicionada");
   };
+
+  const handleFiles = useCallback(async (files: FileList | File[]) => {
+    const list = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    if (list.length === 0) return;
+    setUploading(true);
+    const uploaded: HotelPhoto[] = [];
+    try {
+      for (const file of list) {
+        try {
+          const up = await uploadCompressedImage(file, "media", "proposal-gallery", {
+            maxWidth: 2000,
+            maxHeight: 2000,
+            quality: 0.85,
+          });
+          uploaded.push({
+            url: up.url,
+            label: file.name.replace(/\.[^.]+$/, "") || "Upload",
+            category: "outros",
+            source: "manual",
+          });
+        } catch (err) {
+          console.error("upload failed", file.name, err);
+        }
+      }
+      if (uploaded.length === 0) {
+        toast.error("Falha ao enviar as fotos");
+        return;
+      }
+      addPhotos(uploaded);
+      toast.success(`${uploaded.length} foto(s) enviada(s)`);
+    } finally {
+      setUploading(false);
+    }
+  }, [addPhotos]);
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) handleFiles(e.target.files);
+    e.target.value = "";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (!isDragging) setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget === e.target) setIsDragging(false);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files?.length) {
+      handleFiles(e.dataTransfer.files);
+      return;
+    }
+    const text = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
+    if (text && /^https?:\/\//i.test(text)) {
+      addPhotos([{ url: text, label: "Manual", category: "outros", source: "manual" }]);
+      toast.success("Foto adicionada");
+    }
+  };
+
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (const it of items as any) {
+        if (it.kind === "file") {
+          const f = it.getAsFile();
+          if (f && f.type.startsWith("image/")) files.push(f);
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        handleFiles(files);
+        return;
+      }
+      const text = e.clipboardData?.getData("text") || "";
+      const urls = text.split(/[\s,]+/).filter((u) => /^https?:\/\/.+\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(u));
+      if (urls.length > 0) {
+        e.preventDefault();
+        addPhotos(urls.map((url) => ({ url, label: "Manual", category: "outros", source: "manual" })));
+        toast.success(`${urls.length} foto(s) coladas`);
+      }
+    };
+    node.addEventListener("paste", onPaste);
+    return () => node.removeEventListener("paste", onPaste);
+  }, [handleFiles, addPhotos]);
+
+  const handleExtractFromPage = async () => {
+    const raw = manualUrl.trim();
+    if (!/^https?:\/\//i.test(raw)) {
+      toast.error("Cole o link da página (Booking, site do navio, etc.)");
+      return;
+    }
+    setExtractingUrl(true);
+    try {
+      toast.info("Extraindo fotos da página...", { duration: 4000 });
+      const { data, error } = await supabase.functions.invoke("extract-from-url", {
+        body: { url: raw },
+      });
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.error || "Falha na extração");
+      const photos = (data.data?.photos || []) as Array<{ url: string; description?: string; category?: string }>;
+      if (photos.length === 0) {
+        toast.info("Nenhuma foto encontrada nessa página");
+        return;
+      }
+      const added = addPhotos(
+        photos.map((p) => ({
+          url: p.url,
+          label: p.description || "Foto extraída",
+          category: p.category || "outros",
+          source: "official",
+        })),
+      );
+      toast.success(`${added || 0} foto(s) extraída(s) da página`);
+      setManualUrl("");
+    } catch (err: any) {
+      console.error("[extract-from-url]", err);
+      toast.error(err?.message || "Não foi possível extrair fotos da página");
+    } finally {
+      setExtractingUrl(false);
+    }
+  };
+
 
   const current = lightboxIndex !== null ? cleanPhotos[lightboxIndex] : null;
   const currentIsCover = current ? current.url === coverUrl : false;
