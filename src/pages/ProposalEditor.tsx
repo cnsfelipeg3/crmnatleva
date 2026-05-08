@@ -992,7 +992,7 @@ export default function ProposalEditor() {
                   <Label>Imagem de capa</Label>
                   <div className="flex items-center gap-1">
                     <CoverUploadButton
-                      onUploaded={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+                      onUploaded={applyCoverImageUrl}
                     />
                     <Button
                       type="button"
@@ -1005,7 +1005,7 @@ export default function ProposalEditor() {
                     </Button>
                   </div>
                 </div>
-                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} placeholder="Cole uma URL ou clique em Enviar arquivo" />
+                <Input value={form.cover_image_url} onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))} onBlur={(e) => applyCoverImageUrl(e.target.value)} placeholder="Cole uma URL ou clique em Enviar arquivo" />
                 {form.cover_image_url?.trim() && /^https?:\/\//i.test(form.cover_image_url.trim()) && (
                   <div className="mt-2 rounded-lg overflow-hidden border border-border/30 bg-muted/30 aspect-[16/6] max-h-[180px]">
                     <img
@@ -1685,7 +1685,7 @@ export default function ProposalEditor() {
         open={coverDialogOpen}
         onOpenChange={setCoverDialogOpen}
         initialDestination={form.title || ""}
-        onSelect={(url) => setForm((f) => ({ ...f, cover_image_url: url }))}
+        onSelect={applyCoverImageUrl}
       />
       <AddFlightWizard
         open={flightWizardOpen}
