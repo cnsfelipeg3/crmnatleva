@@ -58,9 +58,9 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
         transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
         className="relative z-10 w-full max-w-md mx-4"
       >
-        <div className="rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-2xl shadow-2xl shadow-black/40 overflow-hidden">
+        <div className="rounded-3xl border border-neutral-200 bg-white shadow-2xl shadow-black/50 overflow-hidden ring-1 ring-black/5">
           {/* Header */}
-          <div className="px-8 pt-10 pb-6 text-center">
+          <div className="px-8 pt-10 pb-6 text-center bg-white">
             <motion.img
               src={logoNatleva}
               alt="NatLeva Viagens"
@@ -75,20 +75,20 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
               animate={{ opacity: 1 }}
               transition={{ delay: 0.4 }}
             >
-              <div className="flex items-center justify-center gap-2 text-white/40 text-xs tracking-[0.2em] uppercase mb-3">
+              <div className="flex items-center justify-center gap-2 text-neutral-500 text-xs tracking-[0.2em] uppercase mb-3">
                 <Globe className="w-3.5 h-3.5" />
                 <span>Proposta Exclusiva</span>
               </div>
 
               {proposalTitle && (
-                <h1 className="text-2xl font-bold text-white mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                <h1 className="text-2xl font-bold text-neutral-900 mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
                   {proposalTitle}
                 </h1>
               )}
 
               {destination && (
-                <p className="text-white/50 text-sm flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400/70" />
+                <p className="text-neutral-600 text-sm flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                   {destination}
                 </p>
               )}
@@ -98,12 +98,12 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
           {/* Form */}
           <motion.form
             onSubmit={handleSubmit}
-            className="px-8 pb-10"
+            className="px-8 pb-10 bg-white"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
           >
-            <p className="text-white/60 text-sm text-center mb-6 leading-relaxed">
+            <p className="text-neutral-600 text-sm text-center mb-6 leading-relaxed">
               Insira seu e-mail para visualizar todos os detalhes da sua viagem personalizada.
             </p>
 
@@ -114,22 +114,22 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Seu nome (opcional)"
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] px-4 py-3.5 text-white placeholder:text-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400/30 transition-all"
+                  className="w-full rounded-xl border border-neutral-300 bg-white px-4 py-3.5 text-neutral-900 placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all"
                 />
               </div>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(""); }}
                   placeholder="seu@email.com"
                   required
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.06] pl-11 pr-4 py-3.5 text-white placeholder:text-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400/30 focus:border-amber-400/30 transition-all"
+                  className="w-full rounded-xl border border-neutral-300 bg-white pl-11 pr-4 py-3.5 text-neutral-900 placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all"
                 />
               </div>
               {error && (
-                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-400 text-xs px-1">
+                <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-red-600 text-xs px-1">
                   {error}
                 </motion.p>
               )}
@@ -138,7 +138,7 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold py-3.5 rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              className="w-full flex items-center justify-center gap-2.5 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold py-3.5 rounded-xl hover:from-amber-400 hover:to-amber-500 transition-all duration-300 shadow-lg shadow-amber-500/30 hover:shadow-xl hover:shadow-amber-500/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               style={{ fontFamily: "'Space Grotesk', sans-serif" }}
             >
               {loading ? (
@@ -150,7 +150,7 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
               )}
             </button>
 
-            <div className="flex items-center justify-center gap-1.5 mt-5 text-white/25 text-[10px]">
+            <div className="flex items-center justify-center gap-1.5 mt-5 text-neutral-500 text-[10px]">
               <Shield className="w-3 h-3" />
               <span>Seus dados estão protegidos e não serão compartilhados</span>
             </div>
