@@ -13,6 +13,7 @@ import {
   Trash2, WifiOff, Pin, PinOff, Pencil,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
   ChevronDown, UserPlus, MoreVertical, Images, MapPin,
+  Sticker as StickerIcon, BookmarkPlus, Download as DownloadIcon,
 } from "lucide-react";
 import { SendLocationDialog } from "@/components/inbox/SendLocationDialog";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
@@ -64,6 +65,8 @@ import { TypingIndicator } from "@/components/shared/inbox/TypingIndicator";
 import { BuyingMomentAlert } from "@/components/shared/inbox/BuyingMomentAlert";
 import { PdfThumbnail } from "@/components/inbox/PdfThumbnail";
 import { MessageInfoDialog } from "@/components/inbox/MessageInfoDialog";
+import { StickerPicker } from "@/components/inbox/StickerPicker";
+import { saveStickerFromUrl, touchSavedSticker, type SavedSticker } from "@/lib/savedStickers";
 
 // ─── Extracted shared modules ───
 import type { Stage, MsgType, MsgStatus, Conversation, Message } from "@/components/inbox/types";
@@ -653,6 +656,8 @@ function OperacaoInboxInner() {
   const [locationDialogOpen, setLocationDialogOpen] = useState(false);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [savingStickerIds, setSavingStickerIds] = useState<Set<string>>(new Set());
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [editingMsg, setEditingMsg] = useState<Message | null>(null);
@@ -748,7 +753,7 @@ function OperacaoInboxInner() {
     else if (msg.audio) { msgType = "audio"; mediaUrl = msg.audio.audioUrl || msg.audio; }
     else if (msg.video) { msgType = "video"; mediaUrl = msg.video.videoUrl || msg.video; text = msg.video.caption || msg.caption || text; }
     else if (msg.document) { msgType = "document"; text = `${msg.document.fileName || "Documento"}`; mediaUrl = msg.document.documentUrl || msg.document; }
-    else if (msg.sticker) { msgType = "image"; mediaUrl = msg.sticker.stickerUrl || msg.sticker; }
+    else if (msg.sticker) { msgType = "sticker"; mediaUrl = msg.sticker.stickerUrl || msg.sticker; }
 
     if (msg.type === "image" && !mediaUrl) msgType = "image";
     if (msg.type === "audio" && !mediaUrl) msgType = "audio";
@@ -1948,6 +1953,79 @@ function OperacaoInboxInner() {
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
   }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
+
+  // ─── Stickers ───
+  const handleSendSticker = useCallback(async (sticker: SavedSticker) => {
+    if (!selectedId) return;
+    setShowStickerPicker(false);
+    const phone = selectedId.replace("wa_", "");
+    const tempId = `temp_sticker_${Date.now()}`;
+    const action = "send-sticker";
+    const sendPayload = { phone, sticker: sticker.file_url };
+
+    // Optimistic
+    setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
+      id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+      message_type: "sticker" as MsgType, text: "", status: "pending" as MsgStatus,
+      created_at: new Date().toISOString(),
+      media_url: sticker.file_url, media_storage_url: sticker.file_url,
+      media_mimetype: sticker.mime_type || "image/webp", media_status: "downloaded",
+    }] }));
+
+    let messageDbId: string | null = null;
+    try {
+      messageDbId = await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: "sticker" as MsgType,
+        text: "",
+        mediaUrl: sticker.file_url,
+        mediaStorageUrl: sticker.file_url,
+        mediaMimetype: sticker.mime_type || "image/webp",
+        mediaStatus: "downloaded",
+        externalMessageId: tempId,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        originalPayload: { action, payload: sendPayload },
+      });
+    } catch (e) {
+      console.error("[SEND-STICKER] persist falhou:", e);
+    }
+
+    const outcome = await sendViaZapi(action, sendPayload);
+    const realId = outcome.data?.messageId || outcome.data?.id || tempId;
+    if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+    if (outcome.ok) {
+      lastMsgIdsRef.current.add(realId);
+      touchSavedSticker(sticker.id).catch(() => {});
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+      ) }));
+    } else {
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+      ) }));
+      toast({ title: "Falha ao enviar figurinha", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+    }
+  }, [selectedId, persistOutgoingMessage, finalizeMessageStatus]);
+
+  const handleSaveStickerFromMessage = useCallback(async (msg: Message) => {
+    const url = msg.media_storage_url || msg.media_url;
+    if (!url) {
+      toast({ title: "Figurinha indisponível", variant: "destructive" });
+      return;
+    }
+    setSavingStickerIds(prev => new Set(prev).add(msg.id));
+    try {
+      await saveStickerFromUrl({ url, sourceMessageId: msg.id });
+      toast({ title: "Figurinha salva!", description: "Disponível na sua galeria." });
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingStickerIds(prev => { const n = new Set(prev); n.delete(msg.id); return n; });
+    }
+  }, []);
+
 
   // Send pending image with caption
   const handleSendPendingMedia = useCallback(async () => {
@@ -3180,7 +3258,7 @@ function OperacaoInboxInner() {
                                   </button>
                                 )}
                               </div>
-                              <div className={`rounded-2xl px-4 py-2.5 transition-all ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"} ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${(msg as any).is_deleted ? "opacity-50 ring-1 ring-dashed ring-muted-foreground/40 grayscale" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
+                              <div className={`${msg.message_type === "sticker" ? "bg-transparent p-0" : `rounded-2xl px-4 py-2.5 ${msg.sender_type === "atendente" ? "bg-primary text-primary-foreground rounded-br-md" : "bg-secondary text-secondary-foreground rounded-bl-md"}`} transition-all ${msg.status === "queued" || msg.status === "sending" ? "opacity-70" : ""} ${msg.status === "retrying" ? "opacity-80 ring-1 ring-amber-400/40" : ""} ${msg.status === "failed" ? "opacity-80 ring-1 ring-destructive/30" : ""} ${(msg as any).is_deleted ? "opacity-50 ring-1 ring-dashed ring-muted-foreground/40 grayscale" : ""} ${highlightMsgId === msg.id ? "ring-2 ring-destructive animate-pulse" : ""}`}>
                                 {(msg as any).is_deleted && (
                                   <div className={`flex items-center gap-1 mb-1 text-[10px] italic ${msg.sender_type === "atendente" ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                                     <Trash2 className="h-2.5 w-2.5" />
@@ -3206,6 +3284,41 @@ function OperacaoInboxInner() {
                                     <p className={`text-xs truncate ${msg.sender_type === "atendente" ? "text-primary-foreground/60" : "text-muted-foreground"}`}>{stripQuotes(msg.quoted_msg.text)}</p>
                                   </div>
                                 )}
+                                {/* Sticker */}
+                                {msg.message_type === "sticker" && (() => {
+                                  const stickerUrl = msg.media_storage_url || msg.media_url;
+                                  const isSaving = savingStickerIds.has(msg.id);
+                                  return (
+                                    <div className="relative group/sticker">
+                                      {stickerUrl ? (
+                                        <img
+                                          src={stickerUrl}
+                                          alt="Figurinha"
+                                          loading="lazy"
+                                          decoding="async"
+                                          className="w-44 h-44 object-contain cursor-pointer drop-shadow-sm"
+                                          onClick={() => setLightboxUrl(stickerUrl)}
+                                        />
+                                      ) : (
+                                        <div className="flex items-center gap-2 text-xs opacity-60 py-6 px-3 bg-muted/40 rounded-lg">
+                                          <StickerIcon className="h-4 w-4" />
+                                          <span>Figurinha indisponível</span>
+                                        </div>
+                                      )}
+                                      {stickerUrl && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => { e.stopPropagation(); handleSaveStickerFromMessage(msg); }}
+                                          disabled={isSaving}
+                                          className="absolute -top-1 -right-1 h-7 w-7 rounded-full bg-background/95 border border-border shadow-md flex items-center justify-center opacity-0 group-hover/sticker:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground disabled:opacity-100"
+                                          title="Salvar na galeria"
+                                        >
+                                          {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <BookmarkPlus className="h-3.5 w-3.5" />}
+                                        </button>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 {/* Audio */}
                                 {msg.message_type === "audio" && (
                                   <div className="min-w-[220px]">
@@ -3319,7 +3432,7 @@ function OperacaoInboxInner() {
                                 })()}
                                 {/* Text */}
                                 {msg.message_type === "text" && <p className="text-sm leading-relaxed whitespace-pre-wrap"><Linkify text={stripQuotes(msg.text)} /></p>}
-                                <div className="flex items-center justify-end gap-1 mt-1">
+                                <div className={`flex items-center justify-end gap-1 mt-1 ${msg.message_type === "sticker" ? "px-1" : ""}`}>
                                   {msg.edited && <span className="text-[8px] opacity-50 italic">editada</span>}
                                   {msg.status === "failed" && (
                                     <button onClick={() => handleRetryMessage(msg)} className="text-[9px] text-destructive hover:underline flex items-center gap-0.5 mr-1" title="Reenviar">
@@ -3348,6 +3461,11 @@ function OperacaoInboxInner() {
                               {msg.sender_type === "atendente" && msg.external_message_id && (
                                 <ContextMenuItem onClick={() => setMessageInfoId(msg.external_message_id!)}>
                                   <Eye className="h-4 w-4 mr-2" /> Dados da mensagem
+                                </ContextMenuItem>
+                              )}
+                              {msg.message_type === "sticker" && (msg.media_storage_url || msg.media_url) && (
+                                <ContextMenuItem onClick={() => handleSaveStickerFromMessage(msg)}>
+                                  <BookmarkPlus className="h-4 w-4 mr-2" /> Salvar figurinha
                                 </ContextMenuItem>
                               )}
                               <ContextMenuSeparator />
@@ -3578,6 +3696,22 @@ function OperacaoInboxInner() {
                         </PopoverTrigger>
                         <PopoverContent className="w-auto p-0" side="top" align="start">
                           <LazyEmojiPicker onEmojiSelect={handleEmojiSelect} theme="dark" locale="pt" previewPosition="none" skinTonePosition="none" />
+                        </PopoverContent>
+                      </Popover>
+
+                      <Popover open={showStickerPicker} onOpenChange={setShowStickerPicker}>
+                        <PopoverTrigger asChild>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
+                                <StickerIcon className="h-5 w-5 text-muted-foreground" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p className="text-xs">Figurinhas salvas</p></TooltipContent>
+                          </Tooltip>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" side="top" align="start">
+                          <StickerPicker onSelect={handleSendSticker} />
                         </PopoverContent>
                       </Popover>
 

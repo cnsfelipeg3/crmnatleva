@@ -7750,6 +7750,48 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_stickers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_url: string
+          height: number | null
+          id: string
+          is_animated: boolean | null
+          last_used_at: string | null
+          mime_type: string | null
+          source_message_id: string | null
+          storage_path: string | null
+          width: number | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_url: string
+          height?: number | null
+          id?: string
+          is_animated?: boolean | null
+          last_used_at?: string | null
+          mime_type?: string | null
+          source_message_id?: string | null
+          storage_path?: string | null
+          width?: number | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_url?: string
+          height?: number | null
+          id?: string
+          is_animated?: boolean | null
+          last_used_at?: string | null
+          mime_type?: string | null
+          source_message_id?: string | null
+          storage_path?: string | null
+          width?: number | null
+        }
+        Relationships: []
+      }
       scheduled_messages: {
         Row: {
           cancelled_at: string | null
