@@ -1805,68 +1805,54 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
     >
       {/* ──── HERO COVER ──── */}
       {showHero && (
-      <section data-track-section="hero" className={`relative ${embedded ? "aspect-[16/9] max-h-[480px] min-h-[280px]" : "h-screen"} w-full flex items-end justify-center overflow-hidden`}>
-        <img
-          src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
-          alt={proposal.title || "Capa da proposta"}
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
-          decoding="async"
-          onError={(e) => {
-            const t = e.currentTarget as HTMLImageElement;
-            if (t.src !== orlandoFamilyCover) t.src = orlandoFamilyCover;
-          }}
-        />
-        {/* Subtle gradient overlay - keeps image visible */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
-
+      <section data-track-section="hero" className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-2">
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.3 }}
-          className="relative z-10 text-center text-white pb-5 sm:pb-10 px-4 sm:px-6 max-w-3xl w-full"
+          transition={{ duration: 0.7 }}
+          className="text-center mb-6 sm:mb-8"
         >
           {proposal.client_name && (
-            <p className="text-[10px] sm:text-xs tracking-[0.25em] sm:tracking-[0.35em] uppercase opacity-70 mb-2 sm:mb-4 truncate" style={{ fontFamily: headingFont }}>
+            <p className="text-[10px] sm:text-xs tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: headingFont }}>
               {proposal.client_name}
             </p>
           )}
           <h1
-            className={`${embedded ? "text-xl sm:text-3xl" : "text-2xl sm:text-4xl md:text-5xl"} font-bold leading-tight mb-2 sm:mb-4 break-words`}
+            className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-foreground break-words"
             style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
           {dateRange && (
-            <p className="text-xs sm:text-lg opacity-80 font-light tracking-wide">{dateRange}</p>
+            <p className="mt-3 text-sm sm:text-base text-muted-foreground font-light tracking-wide">{dateRange}</p>
           )}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 sm:mt-7 opacity-50">
-            <div className="h-px w-5 sm:w-8 bg-white/50" />
-            <span className="text-[8px] sm:text-[10px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-white/80" style={{ fontFamily: headingFont }}>
+          <div className="flex items-center justify-center gap-3 mt-5">
+            <div className="h-px w-8 bg-accent/40" />
+            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground" style={{ fontFamily: headingFont }}>
               Proposta exclusiva
             </span>
-            <div className="h-px w-5 sm:w-8 bg-white/50" />
+            <div className="h-px w-8 bg-accent/40" />
           </div>
+        </motion.div>
 
-          {/* NatLeva Logo - centered below "Proposta exclusiva" */}
-          <motion.img
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            src={logoNatlevaChampagne}
-            alt="NatLeva Viagens"
-            className="h-4 sm:h-7 w-auto mx-auto mt-5 sm:mt-14"
-            style={{
-              filter: "drop-shadow(0 2px 4px hsla(0,0%,0%,0.95)) drop-shadow(0 8px 24px hsla(0,0%,0%,0.7))",
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-muted shadow-lg"
+        >
+          <img
+            src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
+            alt={proposal.title || "Capa da proposta"}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="eager"
+            decoding="async"
+            onError={(e) => {
+              const t = e.currentTarget as HTMLImageElement;
+              if (t.src !== orlandoFamilyCover) t.src = orlandoFamilyCover;
             }}
           />
         </motion.div>
-
-        {!embedded && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.5 }} className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-            <ChevronDown className="w-6 h-6 text-white/40 animate-bounce" />
-          </motion.div>
-        )}
       </section>
       )}
 
