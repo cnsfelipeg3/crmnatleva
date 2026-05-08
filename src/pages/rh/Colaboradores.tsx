@@ -160,6 +160,24 @@ export default function Colaboradores() {
     }
   };
 
+  const toggleActive = async (emp: any, active: boolean) => {
+    const newStatus = active ? "ativo" : "inativo";
+    const prev = employees;
+    // Optimistic update
+    setEmployees((list) => list.map((x) => (x.id === emp.id ? { ...x, status: newStatus } : x)));
+    const patch: any = { status: newStatus };
+    if (!active && !emp.termination_date) {
+      patch.termination_date = new Date().toISOString().slice(0, 10);
+    }
+    const { error } = await supabase.from("employees").update(patch).eq("id", emp.id);
+    if (error) {
+      setEmployees(prev);
+      toast.error("Falha ao atualizar status: " + error.message);
+    } else {
+      toast.success(`${emp.full_name} ${active ? "ativado" : "desativado"}`);
+    }
+  };
+
   const exportCSV = () => {
     const headers = "Nome,Cargo,Área,Contrato,Status,Salário,Admissão\n";
     const rows = filtered.map(e => `"${e.full_name}","${e.position}","${e.department}","${e.contract_type}","${e.status}",${e.base_salary},"${e.hire_date}"`).join("\n");
