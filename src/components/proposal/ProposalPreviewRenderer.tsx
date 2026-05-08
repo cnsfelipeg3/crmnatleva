@@ -1017,28 +1017,13 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
       )}
 
       {/* Galeria */}
-      {galleryPhotos.length > 0 && (
-        <div className="px-5 sm:px-8 pt-4 pb-2">
+      {galleryUrls.length > 0 && (
+        <div className="px-5 sm:px-8 pt-6 pb-4">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Camera className="w-4 h-4 text-accent" />
             <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Galeria</h4>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
-            {galleryPhotos.map((p, i) => (
-              <button
-                key={i}
-                onClick={() => setLightbox(i)}
-                className="aspect-[4/3] overflow-hidden rounded-xl bg-muted relative group"
-              >
-                <img src={p.url} alt={p.label || `Foto ${i + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy" />
-                {p.label && (
-                  <span className="absolute bottom-1.5 left-1.5 right-1.5 text-[10px] text-white bg-black/55 backdrop-blur-sm rounded px-1.5 py-0.5 truncate">
-                    {p.label}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+          <PhotoGallery photos={galleryUrls} name={cruise.title || "Cruzeiro"} captions={galleryCaptions} />
         </div>
       )}
 
