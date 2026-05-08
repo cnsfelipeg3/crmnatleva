@@ -794,7 +794,6 @@ export default function ProposalEditor() {
             .update({ cover_image_url: cleanUrl, updated_at: new Date().toISOString() } as any)
             .eq("id", id);
           if (error) throw error;
-          if (error) throw error;
           lastAutoSavedSnapshotRef.current = "";
           setLastSavedAt(new Date());
           setAutoSaveStatus("saved");
