@@ -783,6 +783,7 @@ export default function ProposalEditor() {
 
   const applyCoverImageUrl = useCallback((url: string) => {
     const cleanUrl = url.trim();
+    formRef.current = { ...formRef.current, cover_image_url: cleanUrl };
     setForm((f) => ({ ...f, cover_image_url: cleanUrl }));
 
     if (!isNew && id && cleanUrl) {
