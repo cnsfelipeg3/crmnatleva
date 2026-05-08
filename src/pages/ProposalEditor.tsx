@@ -549,6 +549,53 @@ export default function ProposalEditor() {
     },
   });
 
+  // ── Autosave: grava no banco automaticamente após cada alteração ────
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (!form.title || !form.title.trim()) return;
+
+    const snapshot = JSON.stringify({
+      f: debouncedForm,
+      i: debouncedItems,
+      v: debouncedVisualOverrides,
+    });
+    if (snapshot === lastAutoSavedSnapshotRef.current) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (saveMutation.isPending) return;
+      isAutoSavingRef.current = true;
+      setAutoSaveStatus("saving");
+      try {
+        await saveMutation.mutateAsync();
+        lastAutoSavedSnapshotRef.current = snapshot;
+        setLastSavedAt(new Date());
+        setAutoSaveStatus("saved");
+      } catch {
+        setAutoSaveStatus("error");
+      } finally {
+        isAutoSavingRef.current = false;
+      }
+    }, 1500);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedForm, debouncedItems, debouncedVisualOverrides]);
+
+  // Avisa antes de sair se ainda houver gravação em andamento
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (autoSaveStatus === "saving") {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [autoSaveStatus]);
+
   const addDest = () => {
     if (destInput.trim()) {
       setForm((f) => ({ ...f, destinations: [...f.destinations, destInput.trim()] }));
