@@ -1809,33 +1809,45 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
     >
       {/* ──── HERO COVER ──── */}
       {showHero && (
-      <section data-track-section="hero" className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 pb-2">
+      <section
+        data-track-section="hero"
+        className="w-full max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 md:pt-12 pb-2 overflow-hidden"
+        style={{ paddingTop: "max(1.5rem, env(safe-area-inset-top))" }}
+      >
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7 }}
-          className="text-center mb-6 sm:mb-8"
+          className="text-center mb-5 sm:mb-7 md:mb-8 px-1"
         >
           {proposal.client_name && (
-            <p className="text-[10px] sm:text-xs tracking-[0.3em] uppercase text-muted-foreground mb-3" style={{ fontFamily: headingFont }}>
+            <p
+              className="text-[9px] sm:text-[11px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-muted-foreground mb-2 sm:mb-3 break-words"
+              style={{ fontFamily: headingFont }}
+            >
               {proposal.client_name}
             </p>
           )}
           <h1
-            className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight text-foreground break-words"
-            style={{ fontFamily: headingFont, letterSpacing: "-0.02em" }}
+            className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-[1.15] sm:leading-tight text-foreground break-words hyphens-auto"
+            style={{ fontFamily: headingFont, letterSpacing: "-0.02em", wordBreak: "break-word" }}
           >
             {proposal.title || "Sua Viagem"}
           </h1>
           {dateRange && (
-            <p className="mt-3 text-sm sm:text-base text-muted-foreground font-light tracking-wide">{dateRange}</p>
+            <p className="mt-2 sm:mt-3 text-xs sm:text-sm md:text-base text-muted-foreground font-light tracking-wide break-words">
+              {dateRange}
+            </p>
           )}
-          <div className="flex items-center justify-center gap-3 mt-5">
-            <div className="h-px w-8 bg-accent/40" />
-            <span className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground" style={{ fontFamily: headingFont }}>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 sm:mt-5">
+            <div className="h-px w-6 sm:w-8 bg-accent/40" />
+            <span
+              className="text-[9px] sm:text-[10px] tracking-[0.25em] sm:tracking-[0.3em] uppercase text-muted-foreground whitespace-nowrap"
+              style={{ fontFamily: headingFont }}
+            >
               Proposta exclusiva
             </span>
-            <div className="h-px w-8 bg-accent/40" />
+            <div className="h-px w-6 sm:w-8 bg-accent/40" />
           </div>
         </motion.div>
 
@@ -1843,7 +1855,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.2 }}
-          className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden bg-muted shadow-lg"
+          className="relative w-full aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-muted shadow-md sm:shadow-lg"
         >
           <img
             src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
