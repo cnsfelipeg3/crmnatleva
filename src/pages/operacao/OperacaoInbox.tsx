@@ -13,6 +13,7 @@ import {
   Trash2, WifiOff, Pin, PinOff, Pencil,
   AlertTriangle, Link2, LayoutGrid, List, Forward,
   ChevronDown, UserPlus, MoreVertical, Images, MapPin,
+  Sticker as StickerIcon, BookmarkPlus, Download as DownloadIcon,
 } from "lucide-react";
 import { SendLocationDialog } from "@/components/inbox/SendLocationDialog";
 import { useConversationDelegation } from "@/hooks/useConversationDelegation";
