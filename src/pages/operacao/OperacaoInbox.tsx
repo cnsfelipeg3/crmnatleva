@@ -1954,6 +1954,79 @@ function OperacaoInboxInner() {
     e.target.value = ""; setShowMediaMenu(false);
   }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
 
+  // ─── Stickers ───
+  const handleSendSticker = useCallback(async (sticker: SavedSticker) => {
+    if (!selectedId) return;
+    setShowStickerPicker(false);
+    const phone = selectedId.replace("wa_", "");
+    const tempId = `temp_sticker_${Date.now()}`;
+    const action = "send-sticker";
+    const sendPayload = { phone, sticker: sticker.file_url };
+
+    // Optimistic
+    setMessages(prev => ({ ...prev, [selectedId]: [...(prev[selectedId] || []), {
+      id: tempId, conversation_id: selectedId, sender_type: "atendente" as const,
+      message_type: "sticker" as MsgType, text: "", status: "pending" as MsgStatus,
+      created_at: new Date().toISOString(),
+      media_url: sticker.file_url, media_storage_url: sticker.file_url,
+      media_mimetype: sticker.mime_type || "image/webp", media_status: "downloaded",
+    }] }));
+
+    let messageDbId: string | null = null;
+    try {
+      messageDbId = await persistOutgoingMessage({
+        conversationId: selectedId,
+        messageType: "sticker" as MsgType,
+        text: "",
+        mediaUrl: sticker.file_url,
+        mediaStorageUrl: sticker.file_url,
+        mediaMimetype: sticker.mime_type || "image/webp",
+        mediaStatus: "downloaded",
+        externalMessageId: tempId,
+        createdAt: new Date().toISOString(),
+        status: "pending",
+        originalPayload: { action, payload: sendPayload },
+      });
+    } catch (e) {
+      console.error("[SEND-STICKER] persist falhou:", e);
+    }
+
+    const outcome = await sendViaZapi(action, sendPayload);
+    const realId = outcome.data?.messageId || outcome.data?.id || tempId;
+    if (messageDbId) await finalizeMessageStatus(messageDbId, outcome, outcome.ok ? realId : null);
+
+    if (outcome.ok) {
+      lastMsgIdsRef.current.add(realId);
+      touchSavedSticker(sticker.id).catch(() => {});
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, id: realId, status: "sent" as MsgStatus } : m
+      ) }));
+    } else {
+      setMessages(prev => ({ ...prev, [selectedId]: (prev[selectedId] || []).map(m =>
+        m.id === tempId ? { ...m, status: "failed" as MsgStatus } : m
+      ) }));
+      toast({ title: "Falha ao enviar figurinha", description: humanizeFailureReason(outcome.reason), variant: "destructive" });
+    }
+  }, [selectedId, persistOutgoingMessage, finalizeMessageStatus]);
+
+  const handleSaveStickerFromMessage = useCallback(async (msg: Message) => {
+    const url = msg.media_storage_url || msg.media_url;
+    if (!url) {
+      toast({ title: "Figurinha indisponível", variant: "destructive" });
+      return;
+    }
+    setSavingStickerIds(prev => new Set(prev).add(msg.id));
+    try {
+      await saveStickerFromUrl({ url, sourceMessageId: msg.id });
+      toast({ title: "Figurinha salva!", description: "Disponível na sua galeria." });
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e.message, variant: "destructive" });
+    } finally {
+      setSavingStickerIds(prev => { const n = new Set(prev); n.delete(msg.id); return n; });
+    }
+  }, []);
+
+
   // Send pending image with caption
   const handleSendPendingMedia = useCallback(async () => {
     if (!mediaPendingFile || !selectedId || isSending) return;
