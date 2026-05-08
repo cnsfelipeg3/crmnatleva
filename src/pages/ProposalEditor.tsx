@@ -514,7 +514,9 @@ export default function ProposalEditor() {
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
-      toast.success("Proposta salva com sucesso!");
+      if (!isAutoSavingRef.current) {
+        toast.success("Proposta salva com sucesso!");
+      }
 
       // Emit learning events
       if (isNew) {
@@ -542,7 +544,9 @@ export default function ProposalEditor() {
 
       if (isNew) navigate(`/propostas/${proposalId}`, { replace: true });
     },
-    onError: (err: any) => toast.error(err.message),
+    onError: (err: any) => {
+      if (!isAutoSavingRef.current) toast.error(err.message);
+    },
   });
 
   const addDest = () => {
