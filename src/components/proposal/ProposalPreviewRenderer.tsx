@@ -895,6 +895,166 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
   );
 }
 
+/* ═══ Cruise Card ═══ */
+function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
+  const d = cruise.data || {};
+  const itinerary: any[] = Array.isArray(d.itinerary) ? d.itinerary : [];
+  const nights = d.nights || (d.embarkation_date && d.disembarkation_date
+    ? Math.max(0, Math.round((new Date(d.disembarkation_date).getTime() - new Date(d.embarkation_date).getTime()) / 86400000))
+    : itinerary.length > 0 ? itinerary.length - 1 : null);
+
+  const fmtPortDate = (raw: any) => {
+    if (!raw) return "";
+    try { return format(new Date(String(raw).length <= 10 ? `${raw}T00:00:00` : raw), "dd/MM", { locale: ptBR }); }
+    catch { return String(raw); }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: idx * 0.1 }}
+      className="rounded-3xl border border-accent/15 bg-card overflow-hidden shadow-xl shadow-accent/5"
+    >
+      {/* Cover */}
+      {cruise.image_url && (
+        <div className="aspect-[16/8] overflow-hidden bg-muted relative">
+          <img src={cruise.image_url} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full object-cover" loading="lazy" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 p-5 sm:p-6 text-white">
+            <div className="flex items-center gap-2 mb-1.5">
+              <Ship className="w-4 h-4 text-accent" />
+              <span className="text-[10px] uppercase tracking-[0.25em] text-white/80 font-semibold">Cruzeiro</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+              {cruise.title || d.ship_name || "Cruzeiro"}
+            </h3>
+            {(d.cruise_line || d.region) && (
+              <p className="text-sm text-white/85 mt-0.5">
+                {d.cruise_line}{d.cruise_line && d.region ? " · " : ""}{d.region}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Header (sem cover) */}
+      {!cruise.image_url && (
+        <div className="px-5 sm:px-7 pt-6">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Ship className="w-4 h-4 text-accent" />
+            <span className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground font-semibold">Cruzeiro</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            {cruise.title || d.ship_name || "Cruzeiro"}
+          </h3>
+          {(d.cruise_line || d.region) && (
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {d.cruise_line}{d.cruise_line && d.region ? " · " : ""}{d.region}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Info pills */}
+      <div className="px-5 sm:px-7 py-5 grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {nights != null && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Moon className="w-3 h-3 text-accent" /> Noites</div>
+            <p className="mt-1 text-base font-bold text-foreground">{nights}</p>
+          </div>
+        )}
+        {d.embarkation_port && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Anchor className="w-3 h-3 text-accent" /> Embarque</div>
+            <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.embarkation_port}</p>
+            {d.embarkation_date && <p className="text-[11px] text-muted-foreground">{fmtPortDate(d.embarkation_date)}</p>}
+          </div>
+        )}
+        {d.disembarkation_port && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><Anchor className="w-3 h-3 text-accent" /> Desembarque</div>
+            <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.disembarkation_port}</p>
+            {d.disembarkation_date && <p className="text-[11px] text-muted-foreground">{fmtPortDate(d.disembarkation_date)}</p>}
+          </div>
+        )}
+        {(d.cabin_category || d.cabin_type) && (
+          <div className="rounded-xl border border-border/40 bg-background/60 px-3 py-2.5 text-center">
+            <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-[0.18em] text-muted-foreground"><BedDouble className="w-3 h-3 text-accent" /> Cabine</div>
+            <p className="mt-1 text-sm font-semibold text-foreground truncate">{d.cabin_category || d.cabin_type}</p>
+            {d.cabin_number && <p className="text-[11px] text-muted-foreground">Nº {d.cabin_number}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* Itinerary */}
+      {itinerary.length > 0 && (
+        <div className="px-5 sm:px-7 pb-7">
+          <div className="flex items-center gap-2 mb-4">
+            <Navigation className="w-4 h-4 text-accent" />
+            <h4 className="text-sm font-bold uppercase tracking-[0.2em] text-foreground" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Itinerário</h4>
+          </div>
+          <div className="relative pl-6 sm:pl-7">
+            {/* Timeline line */}
+            <div className="absolute left-2 sm:left-2.5 top-1.5 bottom-1.5 w-px bg-gradient-to-b from-accent/40 via-accent/20 to-transparent" />
+            <ul className="space-y-3">
+              {itinerary.map((stop: any, i: number) => {
+                const isSeaDay = !!stop.is_sea_day;
+                return (
+                  <li key={i} className="relative">
+                    <span className={`absolute -left-[18px] sm:-left-[22px] top-3 w-3 h-3 rounded-full ring-2 ring-background ${isSeaDay ? "bg-accent/40" : "bg-accent"}`} />
+                    <div className="rounded-xl border border-border/40 bg-background/40 px-4 py-3 hover:border-accent/30 transition-colors">
+                      <div className="flex items-start justify-between gap-3 flex-wrap">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">Dia {stop.day || i + 1}</span>
+                            {stop.date && <span className="text-[11px] text-muted-foreground">· {fmtPortDate(stop.date)}</span>}
+                            {isSeaDay && (
+                              <span className="inline-flex items-center gap-1 text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-full font-semibold">
+                                <Sun className="w-3 h-3" /> Dia no mar
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-sm sm:text-base font-semibold text-foreground">
+                            {isSeaDay ? "Navegação" : (stop.port || "Porto a confirmar")}
+                          </p>
+                          {!isSeaDay && stop.country && (
+                            <p className="text-[11px] text-muted-foreground">{stop.country}</p>
+                          )}
+                          {stop.description && (
+                            <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{stop.description}</p>
+                          )}
+                        </div>
+                        {!isSeaDay && (stop.arrival_time || stop.departure_time) && (
+                          <div className="flex flex-col items-end gap-0.5 text-[11px] shrink-0">
+                            {stop.arrival_time && (
+                              <span className="text-foreground"><span className="text-muted-foreground">Chegada</span> {String(stop.arrival_time).slice(0, 5)}</span>
+                            )}
+                            {stop.departure_time && (
+                              <span className="text-foreground"><span className="text-muted-foreground">Partida</span> {String(stop.departure_time).slice(0, 5)}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {cruise.description && (
+        <div className="px-5 sm:px-7 pb-6 -mt-2">
+          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{cruise.description}</p>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
 /* ═══ Hotel Card ═══ */
 function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
   const d = hotel.data || {};
