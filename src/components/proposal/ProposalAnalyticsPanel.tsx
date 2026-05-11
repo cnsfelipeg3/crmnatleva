@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Eye, Clock, Monitor, Smartphone, MapPin, MousePointerClick,
-  Users, TrendingUp, Flame, Globe, BarChart3, Activity,
+  Users, TrendingUp, Flame, Globe, BarChart3, Activity, Share2, Target,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -62,6 +62,33 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
     refetchInterval: 30000,
   });
 
+  const { data: clicks } = useQuery({
+    queryKey: ["proposal-clicks", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_clicks" as any)
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      return (data || []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: shares } = useQuery({
+    queryKey: ["proposal-shares", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_shares" as any)
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("created_at", { ascending: false });
+      return (data || []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
   const totalViews = viewers?.reduce((sum: number, v: any) => sum + (v.total_views || 1), 0) || 0;
   const uniqueViewers = viewers?.length || 0;
   const totalTime = viewers?.reduce((sum: number, v: any) => sum + (v.total_time_seconds || 0), 0) || 0;
@@ -86,6 +113,19 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
     .slice(0, 6);
   const maxSectionHits = topSections.length > 0 ? (topSections[0][1] as number) : 1;
 
+  // Time per section (sums time_on_section events)
+  const sectionTime = (interactions || []).reduce((acc: Record<string, number>, i: any) => {
+    if (i.event_type === "time_on_section" && i.section_name) {
+      acc[i.section_name] = (acc[i.section_name] || 0) + (Number(i.event_data?.seconds) || 0);
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  const topSectionTime = Object.entries(sectionTime).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
+  const maxSectionTime = topSectionTime.length > 0 ? (topSectionTime[0][1] as number) : 1;
+
+  const totalShares = shares?.length || 0;
+  const totalShareOpens = (shares || []).reduce((s: number, x: any) => s + (x.open_count || 0), 0);
+
   if (loadingViewers) {
     return (
       <Card className="p-6">
@@ -107,13 +147,14 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         <MiniKpi icon={Eye} label="Visualizações" value={totalViews} />
         <MiniKpi icon={Users} label="Visitantes" value={uniqueViewers} />
         <MiniKpi icon={Clock} label="Tempo total" value={formatTime(totalTime)} />
         <MiniKpi icon={TrendingUp} label="Engajamento" value={`${avgEngagement}%`} accent={avgEngagement >= 60} />
         <MiniKpi icon={MousePointerClick} label="CTAs" value={ctaClicks} accent={ctaClicks > 0} />
         <MiniKpi icon={Flame} label="WhatsApp" value={whatsappClicks} accent={whatsappClicks > 0} />
+        <MiniKpi icon={Share2} label="Compartilh." value={`${totalShares}/${totalShareOpens}`} accent={totalShares > 0} />
       </div>
 
       {/* Devices */}
@@ -163,6 +204,74 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
           </div>
         </Card>
       </div>
+
+      {/* Time per section */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" /> Tempo gasto em cada seção
+          </CardTitle>
+        </CardHeader>
+        <div className="space-y-2">
+          {topSectionTime.map(([section, secs]) => (
+            <div key={section} className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span className="capitalize">{section}</span>
+                <span>{formatTime(secs as number)}</span>
+              </div>
+              <Progress value={Math.round(((secs as number) / maxSectionTime) * 100)} className="h-1.5" />
+            </div>
+          ))}
+          {topSectionTime.length === 0 && (
+            <p className="text-[10px] text-muted-foreground">Sem dados de tempo por seção ainda</p>
+          )}
+        </div>
+      </Card>
+
+      {/* Click heatmap */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5" /> Mapa de calor de cliques
+            <Badge variant="neutral" className="text-[9px] ml-auto">{clicks?.length || 0} cliques</Badge>
+          </CardTitle>
+        </CardHeader>
+        <ClickHeatmap clicks={clicks || []} />
+        <ClickedTargetsList clicks={clicks || []} />
+      </Card>
+
+      {/* Shares */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Share2 className="w-3.5 h-3.5" /> Compartilhamentos
+            <Badge variant="neutral" className="text-[9px] ml-auto">
+              {totalShares} link{totalShares === 1 ? "" : "s"} · {totalShareOpens} abertura{totalShareOpens === 1 ? "" : "s"}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <div className="space-y-2">
+          {(shares || []).length === 0 && (
+            <p className="text-[10px] text-muted-foreground">Ninguém compartilhou esta proposta ainda.</p>
+          )}
+          {(shares || []).map((s: any) => (
+            <div key={s.id} className="flex items-center justify-between text-[11px] border border-border/30 rounded-lg p-2.5">
+              <div className="min-w-0">
+                <p className="text-foreground truncate font-medium">
+                  {s.shared_by_name || s.shared_by_email || "Visitante anônimo"}
+                </p>
+                <p className="text-muted-foreground text-[10px]">
+                  {s.channel} · {format(new Date(s.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                  {s.last_opened_at && ` · último acesso ${formatDistanceToNow(new Date(s.last_opened_at), { locale: ptBR, addSuffix: true })}`}
+                </p>
+              </div>
+              <Badge className={cn("text-[9px] border-0", s.open_count > 0 ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                {s.open_count || 0}x aberto
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Viewers list */}
       <Card className="p-4 space-y-3">
@@ -258,4 +367,67 @@ function formatTime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}min`;
+}
+
+function ClickHeatmap({ clicks }: { clicks: any[] }) {
+  if (!clicks || clicks.length === 0) {
+    return (
+      <div className="aspect-[3/4] sm:aspect-[16/10] w-full rounded-lg border border-dashed border-border/50 flex items-center justify-center text-[10px] text-muted-foreground">
+        Sem cliques registrados ainda
+      </div>
+    );
+  }
+
+  // Pretend the proposal is a long vertical canvas (aspect ratio 9:16).
+  // rel_x is 0..1 horizontal; rel_y is 0..1 of total page height.
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-lg border border-border/40 bg-gradient-to-b from-muted/40 to-muted/10"
+      style={{ aspectRatio: "9 / 18" }}
+    >
+      {/* Section guide bands */}
+      {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((y) => (
+        <div key={y} className="absolute left-0 right-0 border-t border-border/20" style={{ top: `${y * 100}%` }} />
+      ))}
+      {clicks.map((c, idx) => {
+        const left = `${Math.max(0, Math.min(100, (c.rel_x || 0) * 100))}%`;
+        const top = `${Math.max(0, Math.min(100, (c.rel_y || 0) * 100))}%`;
+        return (
+          <span
+            key={c.id || idx}
+            title={`${c.section_name || "?"} · ${c.target_text || c.target_tag || ""}`}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-multiply"
+            style={{
+              left,
+              top,
+              width: 22,
+              height: 22,
+              background: "radial-gradient(circle, hsl(var(--accent) / 0.55) 0%, hsl(var(--accent) / 0.25) 45%, transparent 70%)",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function ClickedTargetsList({ clicks }: { clicks: any[] }) {
+  const map = clicks.reduce((acc: Record<string, number>, c: any) => {
+    const label = (c.target_text || c.target_tag || "elemento").toString().slice(0, 50);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const top = Object.entries(map).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
+  if (top.length === 0) return null;
+  return (
+    <div className="space-y-1.5 pt-1">
+      <p className="text-[10px] text-muted-foreground">Elementos mais clicados</p>
+      {top.map(([label, count]) => (
+        <div key={label} className="flex items-center justify-between text-[10px]">
+          <span className="truncate text-foreground">{label}</span>
+          <Badge variant="neutral" className="text-[9px]">{String(count)}x</Badge>
+        </div>
+      ))}
+    </div>
+  );
 }

@@ -6755,6 +6755,69 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_clicks: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          id: string
+          page_y: number | null
+          proposal_id: string
+          rel_x: number
+          rel_y: number
+          section_name: string | null
+          target_tag: string | null
+          target_text: string | null
+          viewer_id: string | null
+          viewport_h: number
+          viewport_w: number
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_y?: number | null
+          proposal_id: string
+          rel_x: number
+          rel_y: number
+          section_name?: string | null
+          target_tag?: string | null
+          target_text?: string | null
+          viewer_id?: string | null
+          viewport_h: number
+          viewport_w: number
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          id?: string
+          page_y?: number | null
+          proposal_id?: string
+          rel_x?: number
+          rel_y?: number
+          section_name?: string | null
+          target_tag?: string | null
+          target_text?: string | null
+          viewer_id?: string | null
+          viewport_h?: number
+          viewport_w?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_clicks_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_clicks_viewer_id_fkey"
+            columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_viewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_interactions: {
         Row: {
           created_at: string
@@ -6844,6 +6907,66 @@ export type Database = {
           },
         ]
       }
+      proposal_shares: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          last_opened_at: string | null
+          metadata: Json | null
+          open_count: number
+          proposal_id: string
+          recipient_hint: string | null
+          share_token: string
+          shared_by_email: string | null
+          shared_by_name: string | null
+          shared_by_viewer_id: string | null
+        }
+        Insert: {
+          channel?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          metadata?: Json | null
+          open_count?: number
+          proposal_id: string
+          recipient_hint?: string | null
+          share_token: string
+          shared_by_email?: string | null
+          shared_by_name?: string | null
+          shared_by_viewer_id?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          metadata?: Json | null
+          open_count?: number
+          proposal_id?: string
+          recipient_hint?: string | null
+          share_token?: string
+          shared_by_email?: string | null
+          shared_by_name?: string | null
+          shared_by_viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_shares_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_shares_shared_by_viewer_id_fkey"
+            columns: ["shared_by_viewer_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_viewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_templates: {
         Row: {
           accent_color: string | null
@@ -6900,6 +7023,7 @@ export type Database = {
       }
       proposal_viewers: {
         Row: {
+          active_seconds: number
           browser: string | null
           city: string | null
           country: string | null
@@ -6918,15 +7042,18 @@ export type Database = {
           os: string | null
           phone: string | null
           proposal_id: string
+          referred_by_share_id: string | null
           region: string | null
           scroll_depth_max: number
           sections_viewed: string[] | null
+          share_count: number
           total_time_seconds: number
           total_views: number
           user_agent: string | null
           whatsapp_clicked: boolean
         }
         Insert: {
+          active_seconds?: number
           browser?: string | null
           city?: string | null
           country?: string | null
@@ -6945,15 +7072,18 @@ export type Database = {
           os?: string | null
           phone?: string | null
           proposal_id: string
+          referred_by_share_id?: string | null
           region?: string | null
           scroll_depth_max?: number
           sections_viewed?: string[] | null
+          share_count?: number
           total_time_seconds?: number
           total_views?: number
           user_agent?: string | null
           whatsapp_clicked?: boolean
         }
         Update: {
+          active_seconds?: number
           browser?: string | null
           city?: string | null
           country?: string | null
@@ -6972,9 +7102,11 @@ export type Database = {
           os?: string | null
           phone?: string | null
           proposal_id?: string
+          referred_by_share_id?: string | null
           region?: string | null
           scroll_depth_max?: number
           sections_viewed?: string[] | null
+          share_count?: number
           total_time_seconds?: number
           total_views?: number
           user_agent?: string | null
@@ -6986,6 +7118,13 @@ export type Database = {
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_viewers_referred_by_share_id_fkey"
+            columns: ["referred_by_share_id"]
+            isOneToOne: false
+            referencedRelation: "proposal_shares"
             referencedColumns: ["id"]
           },
         ]

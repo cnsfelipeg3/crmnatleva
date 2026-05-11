@@ -19,6 +19,7 @@ export default function ProposalPublicView() {
 
   // Print mode bypasses the email gate (used by PDF export)
   const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
+  const viaToken = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("via") : null;
 
   // Email gate state
   const [viewerEmail, setViewerEmail] = useState<string | null>(() => {
@@ -102,6 +103,28 @@ export default function ProposalPublicView() {
         if (geoRes.ok) geo = await geoRes.json();
       } catch {}
 
+      // Resolve share referrer (if any)
+      let referredByShareId: string | null = null;
+      if (viaToken) {
+        try {
+          const { data: share } = await supabase
+            .from("proposal_shares" as any)
+            .select("id, open_count")
+            .eq("share_token", viaToken)
+            .eq("proposal_id", proposal.id)
+            .maybeSingle();
+          if (share) {
+            referredByShareId = (share as any).id;
+            await supabase.from("proposal_shares" as any).update({
+              open_count: ((share as any).open_count || 0) + 1,
+              last_opened_at: new Date().toISOString(),
+            }).eq("id", referredByShareId);
+          }
+        } catch (err) {
+          console.warn("[ProposalView] share resolve failed", err);
+        }
+      }
+
       // Upsert viewer record
       const { data: existing } = await supabase
         .from("proposal_viewers" as any)
@@ -125,6 +148,7 @@ export default function ProposalPublicView() {
           country: geo.country_name || null,
           latitude: geo.latitude || null,
           longitude: geo.longitude || null,
+          ...(referredByShareId ? { referred_by_share_id: referredByShareId } : {}),
         }).eq("id", vid);
       } else {
         const { data: newViewer } = await supabase
@@ -141,6 +165,7 @@ export default function ProposalPublicView() {
             country: geo.country_name || null,
             latitude: geo.latitude || null,
             longitude: geo.longitude || null,
+            referred_by_share_id: referredByShareId,
           })
           .select("id")
           .single();
@@ -188,7 +213,7 @@ export default function ProposalPublicView() {
     } finally {
       setGateLoading(false);
     }
-  }, [proposal, slug]);
+  }, [proposal, slug, viaToken]);
 
   // Extract destination from items for the gate
   const destination = proposal?.destinations

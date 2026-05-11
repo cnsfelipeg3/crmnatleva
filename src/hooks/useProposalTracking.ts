@@ -14,26 +14,40 @@ interface TrackingConfig {
  */
 export function useProposalTracking({ proposalId, viewerId, enabled }: TrackingConfig) {
   const startTime = useRef(Date.now());
+  const activeMs = useRef(0);
+  const lastTickAt = useRef(Date.now());
+  const isVisible = useRef(true);
   const maxScroll = useRef(0);
   const sectionsViewed = useRef(new Set<string>());
   const sectionTimers = useRef<Record<string, number>>({});
   const currentSection = useRef<string | null>(null);
   const sectionStartTime = useRef<number>(Date.now());
   const interactionQueue = useRef<any[]>([]);
-  const flushTimer = useRef<ReturnType<typeof setTimeout>>();
+  const clickQueue = useRef<any[]>([]);
+  const flushTimer = useRef<ReturnType<typeof setInterval>>();
 
   // Batch flush interactions every 5 seconds
   const flushQueue = useCallback(async () => {
-    if (!enabled || interactionQueue.current.length === 0) return;
-    const batch = [...interactionQueue.current];
-    interactionQueue.current = [];
-
-    try {
-      await supabase.from("proposal_interactions" as any).insert(batch);
-    } catch (err) {
-      console.warn("[ProposalTrack] flush error:", err);
-      // Re-queue on failure
-      interactionQueue.current.unshift(...batch);
+    if (!enabled) return;
+    if (interactionQueue.current.length > 0) {
+      const batch = [...interactionQueue.current];
+      interactionQueue.current = [];
+      try {
+        await supabase.from("proposal_interactions" as any).insert(batch);
+      } catch (err) {
+        console.warn("[ProposalTrack] flush error:", err);
+        interactionQueue.current.unshift(...batch);
+      }
+    }
+    if (clickQueue.current.length > 0) {
+      const batch = [...clickQueue.current];
+      clickQueue.current = [];
+      try {
+        await supabase.from("proposal_clicks" as any).insert(batch);
+      } catch (err) {
+        console.warn("[ProposalTrack] click flush error:", err);
+        clickQueue.current.unshift(...batch);
+      }
     }
   }, [enabled]);
 
@@ -142,14 +156,72 @@ export function useProposalTracking({ proposalId, viewerId, enabled }: TrackingC
     };
     window.addEventListener("scroll", throttledScroll, { passive: true });
 
+    // Click heatmap capture (delegated)
+    const handleClick = (e: MouseEvent) => {
+      try {
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        const rect = target.getBoundingClientRect();
+        const sectionEl = (target.closest("[data-track-section]") as HTMLElement | null);
+        const vw = window.innerWidth || 1;
+        const vh = window.innerHeight || 1;
+        clickQueue.current.push({
+          proposal_id: proposalId,
+          viewer_id: viewerId,
+          section_name: sectionEl?.dataset.trackSection || null,
+          target_tag: target.tagName?.toLowerCase() || null,
+          target_text: (target.innerText || target.getAttribute("aria-label") || "").trim().slice(0, 80) || null,
+          rel_x: Math.max(0, Math.min(1, e.clientX / vw)),
+          rel_y: Math.max(0, Math.min(1, (e.clientY + window.scrollY) / Math.max(document.documentElement.scrollHeight, 1))),
+          viewport_w: vw,
+          viewport_h: vh,
+          page_y: Math.round(e.clientY + window.scrollY),
+          device_type: /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop",
+        });
+        // Flush quickly when click near CTAs
+        if (target.closest("a,button")) flushQueue();
+      } catch { /* noop */ }
+    };
+    document.addEventListener("click", handleClick, { capture: true });
+
+    // Active-time heartbeat (only counts time when tab is visible)
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (isVisible.current) activeMs.current += Date.now() - lastTickAt.current;
+        isVisible.current = false;
+      } else {
+        isVisible.current = true;
+        lastTickAt.current = Date.now();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    const heartbeat = setInterval(() => {
+      if (isVisible.current) {
+        activeMs.current += Date.now() - lastTickAt.current;
+        lastTickAt.current = Date.now();
+        // Persist incremental progress every 15s
+        const seconds = Math.round(activeMs.current / 1000);
+        supabase.from("proposal_viewers" as any).update({
+          active_seconds: seconds,
+          last_active_at: new Date().toISOString(),
+        }).eq("id", viewerId).then(() => {});
+      } else {
+        lastTickAt.current = Date.now();
+      }
+    }, 15000);
+
     // Periodic flush
     flushTimer.current = setInterval(flushQueue, 5000);
 
     // Cleanup + final data push
     return () => {
       window.removeEventListener("scroll", throttledScroll);
+      document.removeEventListener("click", handleClick, { capture: true } as any);
+      document.removeEventListener("visibilitychange", handleVisibility);
       sectionObserver.disconnect();
       clearInterval(flushTimer.current);
+      clearInterval(heartbeat);
 
       // Final section time
       if (currentSection.current) {
@@ -161,12 +233,15 @@ export function useProposalTracking({ proposalId, viewerId, enabled }: TrackingC
       const totalTime = Math.round((Date.now() - startTime.current) / 1000);
 
       // Update viewer summary
+      if (isVisible.current) activeMs.current += Date.now() - lastTickAt.current;
+      const activeSec = Math.round(activeMs.current / 1000);
       supabase.from("proposal_viewers" as any).update({
         last_active_at: new Date().toISOString(),
         total_time_seconds: totalTime,
+        active_seconds: activeSec,
         scroll_depth_max: maxScroll.current,
         sections_viewed: Array.from(sectionsViewed.current),
-        engagement_score: calculateScore(maxScroll.current, sectionsViewed.current.size, totalTime),
+        engagement_score: calculateScore(maxScroll.current, sectionsViewed.current.size, activeSec),
       }).eq("id", viewerId).then(() => {});
 
       // Emit learning event with engagement summary
