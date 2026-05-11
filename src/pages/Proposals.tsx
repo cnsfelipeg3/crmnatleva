@@ -363,6 +363,9 @@ export default function Proposals() {
                         <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(`/proposta/${p.slug}`, "_blank"); }}>
                           <ExternalLink className="w-4 h-4 mr-2" /> Ver proposta
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={(e) => { e.stopPropagation(); duplicateProposal(p.id); }}>
+                          <CopyPlus className="w-4 h-4 mr-2" /> Duplicar
+                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
