@@ -233,12 +233,15 @@ export function useProposalTracking({ proposalId, viewerId, enabled }: TrackingC
       const totalTime = Math.round((Date.now() - startTime.current) / 1000);
 
       // Update viewer summary
+      if (isVisible.current) activeMs.current += Date.now() - lastTickAt.current;
+      const activeSec = Math.round(activeMs.current / 1000);
       supabase.from("proposal_viewers" as any).update({
         last_active_at: new Date().toISOString(),
         total_time_seconds: totalTime,
+        active_seconds: activeSec,
         scroll_depth_max: maxScroll.current,
         sections_viewed: Array.from(sectionsViewed.current),
-        engagement_score: calculateScore(maxScroll.current, sectionsViewed.current.size, totalTime),
+        engagement_score: calculateScore(maxScroll.current, sectionsViewed.current.size, activeSec),
       }).eq("id", viewerId).then(() => {});
 
       // Emit learning event with engagement summary
