@@ -336,6 +336,48 @@ export default function ProposalEditor() {
     }
   }, [isNew, existing, existingItems]);
 
+  // ── Recuperação de rascunho local para NOVA proposta ──────────────────
+  // Hidrata automaticamente o que o usuário tinha preenchido antes de
+  // fechar/voltar/recarregar (mesmo sem título). Roda apenas no mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isNew) return;
+    try {
+      const raw = localStorage.getItem(NEW_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft?.form && typeof draft.form === "object") {
+        setForm((prev) => ({ ...prev, ...draft.form }));
+      }
+      if (Array.isArray(draft?.items) && draft.items.length > 0) {
+        setItems(draft.items);
+      }
+      if (draft?.visualOverrides && typeof draft.visualOverrides === "object") {
+        setVisualOverrides({
+          styles: draft.visualOverrides.styles ?? {},
+          groups: draft.visualOverrides.groups ?? [],
+        });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Espelha rascunho local em todo keystroke (debounced) para nunca perder
+  // — mesmo sem título e mesmo offline. Limpa quando a proposta é persistida.
+  useEffect(() => {
+    if (!isNew) return;
+    try {
+      localStorage.setItem(
+        NEW_DRAFT_KEY,
+        JSON.stringify({
+          form: debouncedForm,
+          items: debouncedItems,
+          visualOverrides: debouncedVisualOverrides,
+          savedAt: new Date().toISOString(),
+        })
+      );
+    } catch { /* ignore quota */ }
+  }, [isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
+
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
     if (!isNew || !hasAiStructure) return;
