@@ -213,7 +213,7 @@ export default function ProposalPublicView() {
     } finally {
       setGateLoading(false);
     }
-  }, [proposal, slug]);
+  }, [proposal, slug, viaToken]);
 
   // Extract destination from items for the gate
   const destination = proposal?.destinations
