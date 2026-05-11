@@ -49,7 +49,50 @@ requestAnimationFrame(() => {
 
   import("virtual:pwa-register")
     .then(({ registerSW }) => {
-      registerSW({ immediate: true });
+      const updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          // Nova versão detectada · ativa skipWaiting e recarrega imediatamente
+          // pra que TODA mudança (desktop e mobile) apareça sem clicar nada.
+          try { updateSW(true); } catch { /* ignore */ }
+          // fallback: força reload caso o SW novo demore
+          setTimeout(() => {
+            try { window.location.reload(); } catch { /* ignore */ }
+          }, 1500);
+        },
+        onOfflineReady() {
+          // app pronto pra uso offline · sem ruído
+        },
+      });
+
+      // Revalidação proativa · checa nova versão periodicamente e em
+      // pontos críticos (volta da aba, reconexão de rede, foco da janela).
+      const checkForUpdate = () => {
+        try { updateSW(); } catch { /* ignore */ }
+        navigator.serviceWorker?.getRegistrations()
+          .then((regs) => regs.forEach((r) => r.update().catch(() => {})))
+          .catch(() => {});
+      };
+
+      // a cada 60s
+      setInterval(checkForUpdate, 60_000);
+      // ao voltar pra aba (típico no PWA mobile)
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") checkForUpdate();
+      });
+      // ao recuperar conexão
+      window.addEventListener("online", checkForUpdate);
+      // ao focar a janela (desktop)
+      window.addEventListener("focus", checkForUpdate);
+
+      // Quando o SW assume controle (skipWaiting + clientsClaim), recarrega
+      // a página automaticamente · garante que o usuário sempre veja o build novo.
+      let reloadingFromSW = false;
+      navigator.serviceWorker?.addEventListener("controllerchange", () => {
+        if (reloadingFromSW) return;
+        reloadingFromSW = true;
+        try { window.location.reload(); } catch { /* ignore */ }
+      });
     })
     .catch(() => {});
 })();
