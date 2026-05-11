@@ -205,6 +205,74 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
         </Card>
       </div>
 
+      {/* Time per section */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" /> Tempo gasto em cada seção
+          </CardTitle>
+        </CardHeader>
+        <div className="space-y-2">
+          {topSectionTime.map(([section, secs]) => (
+            <div key={section} className="space-y-1">
+              <div className="flex justify-between text-[10px] text-muted-foreground">
+                <span className="capitalize">{section}</span>
+                <span>{formatTime(secs as number)}</span>
+              </div>
+              <Progress value={Math.round(((secs as number) / maxSectionTime) * 100)} className="h-1.5" />
+            </div>
+          ))}
+          {topSectionTime.length === 0 && (
+            <p className="text-[10px] text-muted-foreground">Sem dados de tempo por seção ainda</p>
+          )}
+        </div>
+      </Card>
+
+      {/* Click heatmap */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Target className="w-3.5 h-3.5" /> Mapa de calor de cliques
+            <Badge variant="neutral" className="text-[9px] ml-auto">{clicks?.length || 0} cliques</Badge>
+          </CardTitle>
+        </CardHeader>
+        <ClickHeatmap clicks={clicks || []} />
+        <ClickedTargetsList clicks={clicks || []} />
+      </Card>
+
+      {/* Shares */}
+      <Card className="p-4 space-y-3">
+        <CardHeader className="p-0">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            <Share2 className="w-3.5 h-3.5" /> Compartilhamentos
+            <Badge variant="neutral" className="text-[9px] ml-auto">
+              {totalShares} link{totalShares === 1 ? "" : "s"} · {totalShareOpens} abertura{totalShareOpens === 1 ? "" : "s"}
+            </Badge>
+          </CardTitle>
+        </CardHeader>
+        <div className="space-y-2">
+          {(shares || []).length === 0 && (
+            <p className="text-[10px] text-muted-foreground">Ninguém compartilhou esta proposta ainda.</p>
+          )}
+          {(shares || []).map((s: any) => (
+            <div key={s.id} className="flex items-center justify-between text-[11px] border border-border/30 rounded-lg p-2.5">
+              <div className="min-w-0">
+                <p className="text-foreground truncate font-medium">
+                  {s.shared_by_name || s.shared_by_email || "Visitante anônimo"}
+                </p>
+                <p className="text-muted-foreground text-[10px]">
+                  {s.channel} · {format(new Date(s.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                  {s.last_opened_at && ` · último acesso ${formatDistanceToNow(new Date(s.last_opened_at), { locale: ptBR, addSuffix: true })}`}
+                </p>
+              </div>
+              <Badge className={cn("text-[9px] border-0", s.open_count > 0 ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                {s.open_count || 0}x aberto
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </Card>
+
       {/* Viewers list */}
       <Card className="p-4 space-y-3">
         <CardHeader className="p-0">
