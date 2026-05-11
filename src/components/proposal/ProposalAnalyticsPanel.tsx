@@ -62,6 +62,33 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
     refetchInterval: 30000,
   });
 
+  const { data: clicks } = useQuery({
+    queryKey: ["proposal-clicks", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_clicks" as any)
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      return (data || []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
+  const { data: shares } = useQuery({
+    queryKey: ["proposal-shares", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_shares" as any)
+        .select("*")
+        .eq("proposal_id", proposalId)
+        .order("created_at", { ascending: false });
+      return (data || []) as any[];
+    },
+    refetchInterval: 30000,
+  });
+
   const totalViews = viewers?.reduce((sum: number, v: any) => sum + (v.total_views || 1), 0) || 0;
   const uniqueViewers = viewers?.length || 0;
   const totalTime = viewers?.reduce((sum: number, v: any) => sum + (v.total_time_seconds || 0), 0) || 0;
