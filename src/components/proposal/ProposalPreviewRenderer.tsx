@@ -2069,16 +2069,60 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               Pronto para viver essa experiência?
             </h2>
             <p className="text-muted-foreground mb-10">Entre em contato e garanta sua reserva</p>
-            <a
-              href={`https://wa.me/5511966396692?text=${encodeURIComponent(`Olá! Vim pela proposta "${proposal.title}" e gostaria de reservar este pacote. Pode me ajudar com os próximos passos?`)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => tracking?.trackCTA("whatsapp")}
-              className="inline-flex items-center gap-2.5 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30"
-              style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-            >
-              <CheckCircle className="w-5 h-5" /> Quero reservar esta viagem
-            </a>
+            <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+              <a
+                href={`https://wa.me/5511966396692?text=${encodeURIComponent(`Olá! Vim pela proposta "${proposal.title}" e gostaria de reservar este pacote. Pode me ajudar com os próximos passos?`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => tracking?.trackCTA("whatsapp")}
+                className="inline-flex items-center justify-center gap-2.5 bg-gradient-to-r from-accent to-accent/80 text-accent-foreground px-10 py-4 rounded-full text-lg font-semibold hover:scale-[1.02] transition-all duration-300 shadow-lg shadow-accent/25 hover:shadow-xl hover:shadow-accent/30 w-full sm:w-auto"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                <CheckCircle className="w-5 h-5" /> Quero reservar esta viagem
+              </a>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const token = (crypto as any)?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+                    let viewerInfo: any = null;
+                    try {
+                      const vid = sessionStorage.getItem(`proposal_viewer_id_${proposal.slug}`);
+                      const vemail = sessionStorage.getItem(`proposal_viewer_${proposal.slug}`);
+                      if (vid) viewerInfo = { id: vid, email: vemail };
+                    } catch { /* noop */ }
+
+                    await supabase.from("proposal_shares" as any).insert({
+                      proposal_id: proposal.id,
+                      shared_by_viewer_id: viewerInfo?.id || null,
+                      shared_by_email: viewerInfo?.email || null,
+                      channel: "whatsapp",
+                      share_token: token,
+                      metadata: { user_agent: navigator.userAgent.slice(0, 200) },
+                    });
+
+                    if (viewerInfo?.id) {
+                      await supabase.rpc("increment_shortcut_usage", { p_id: viewerInfo.id }).then(() => {}).catch(() => {});
+                    }
+
+                    tracking?.trackCTA("share_whatsapp", { share_token: token });
+
+                    const baseUrl = `${window.location.origin}/proposta/${proposal.slug}?via=${token}`;
+                    const text = `Olha essa proposta de viagem que recebi da NatLeva: ${proposal.title || ""}\n\n${baseUrl}`;
+                    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+                    window.open(url, "_blank", "noopener,noreferrer");
+                    toast.success("Link de compartilhamento gerado");
+                  } catch (err) {
+                    console.error("[Share] failed", err);
+                    toast.error("Não foi possível gerar o link agora");
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2.5 bg-card border border-accent/30 text-foreground px-8 py-4 rounded-full text-base font-semibold hover:bg-accent/5 transition-all duration-300 w-full sm:w-auto"
+                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+              >
+                <Share2 className="w-5 h-5" /> Compartilhar no WhatsApp
+              </button>
+            </div>
           </motion.div>
         </section>
       )}
