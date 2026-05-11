@@ -6,7 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Eye, Clock, Monitor, Smartphone, MapPin, MousePointerClick,
-  Users, TrendingUp, Flame, Globe, BarChart3, Activity,
+  Users, TrendingUp, Flame, Globe, BarChart3, Activity, Share2, Target,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
