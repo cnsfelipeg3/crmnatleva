@@ -187,6 +187,8 @@ export default function ProposalEditor() {
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
+  // Chave única para rascunho local de NOVA proposta (recuperação após fechar/voltar)
+  const NEW_DRAFT_KEY = "proposal-new-draft-v1";
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
@@ -333,6 +335,48 @@ export default function ProposalEditor() {
       return () => clearTimeout(t);
     }
   }, [isNew, existing, existingItems]);
+
+  // ── Recuperação de rascunho local para NOVA proposta ──────────────────
+  // Hidrata automaticamente o que o usuário tinha preenchido antes de
+  // fechar/voltar/recarregar (mesmo sem título). Roda apenas no mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!isNew) return;
+    try {
+      const raw = localStorage.getItem(NEW_DRAFT_KEY);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft?.form && typeof draft.form === "object") {
+        setForm((prev) => ({ ...prev, ...draft.form }));
+      }
+      if (Array.isArray(draft?.items) && draft.items.length > 0) {
+        setItems(draft.items);
+      }
+      if (draft?.visualOverrides && typeof draft.visualOverrides === "object") {
+        setVisualOverrides({
+          styles: draft.visualOverrides.styles ?? {},
+          groups: draft.visualOverrides.groups ?? [],
+        });
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  // Espelha rascunho local em todo keystroke (debounced) para nunca perder
+  // — mesmo sem título e mesmo offline. Limpa quando a proposta é persistida.
+  useEffect(() => {
+    if (!isNew) return;
+    try {
+      localStorage.setItem(
+        NEW_DRAFT_KEY,
+        JSON.stringify({
+          form: debouncedForm,
+          items: debouncedItems,
+          visualOverrides: debouncedVisualOverrides,
+          savedAt: new Date().toISOString(),
+        })
+      );
+    } catch { /* ignore quota */ }
+  }, [isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
 
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
@@ -533,6 +577,7 @@ export default function ProposalEditor() {
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
+      try { if (isNew) localStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
       if (!isAutoSavingRef.current) {
         toast.success("Proposta salva com sucesso!");
       }
@@ -571,7 +616,23 @@ export default function ProposalEditor() {
   // ── Autosave: grava no banco automaticamente após cada alteração ────
   useEffect(() => {
     if (!hydratedRef.current) return;
-    if (!form.title || !form.title.trim()) return;
+    // Permite autosave mesmo sem título: gera um automático se houver
+    // qualquer dado relevante preenchido. Garante que nada se perca.
+    const hasAnyContent =
+      (form.title && form.title.trim()) ||
+      (form.client_name && form.client_name.trim()) ||
+      (form.origin && form.origin.trim()) ||
+      (form.destinations && form.destinations.length > 0) ||
+      form.travel_start_date ||
+      form.travel_end_date ||
+      (items && items.length > 0) ||
+      (form.cover_image_url && form.cover_image_url.trim());
+    if (!hasAnyContent) return;
+    if (!form.title || !form.title.trim()) {
+      const auto = `Rascunho · ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+      setForm((f) => ({ ...f, title: auto }));
+      return; // próximo ciclo dispara o autosave já com título
+    }
 
     const snapshot = JSON.stringify({
       f: debouncedForm,
