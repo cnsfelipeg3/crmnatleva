@@ -4,8 +4,15 @@ import { normalizeProductsToSlugs, inferProductSlugsFromSale } from "../_shared/
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-admin-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 function cleanCpf(raw: string | null | undefined): string | null {
   if (!raw) return null;
@@ -75,6 +82,18 @@ function smartCapitalizeName(name: string): string {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Guard: shared admin secret. Importa PII de passageiros e vendas com
+  // service-role · qualquer chamada não autenticada poderia poluir a base.
+  const expected = Deno.env.get("ADMIN_TASK_TOKEN") ?? "";
+  const provided = req.headers.get("x-admin-token") ?? "";
+  if (!expected || !provided || !timingSafeEqual(expected, provided)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
 
   try {
     const sb = createClient(
