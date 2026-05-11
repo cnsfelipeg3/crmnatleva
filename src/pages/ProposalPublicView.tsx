@@ -19,6 +19,7 @@ export default function ProposalPublicView() {
 
   // Print mode bypasses the email gate (used by PDF export)
   const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
+  const viaToken = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("via") : null;
 
   // Email gate state
   const [viewerEmail, setViewerEmail] = useState<string | null>(() => {
