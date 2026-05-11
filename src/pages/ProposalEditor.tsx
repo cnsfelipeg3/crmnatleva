@@ -187,6 +187,8 @@ export default function ProposalEditor() {
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
+  // Chave única para rascunho local de NOVA proposta (recuperação após fechar/voltar)
+  const NEW_DRAFT_KEY = "proposal-new-draft-v1";
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
