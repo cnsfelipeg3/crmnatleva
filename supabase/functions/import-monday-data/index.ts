@@ -76,6 +76,18 @@ function smartCapitalizeName(name: string): string {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Guard: shared admin secret. Importa PII de passageiros e vendas com
+  // service-role · qualquer chamada não autenticada poderia poluir a base.
+  const expected = Deno.env.get("ADMIN_TASK_TOKEN") ?? "";
+  const provided = req.headers.get("x-admin-token") ?? "";
+  if (!expected || !provided || !timingSafeEqual(expected, provided)) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+
   try {
     const sb = createClient(
       Deno.env.get("SUPABASE_URL")!,
