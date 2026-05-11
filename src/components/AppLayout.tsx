@@ -155,6 +155,7 @@ export default function AppLayout() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
+        <TabBar />
         {!isImmersive && (
           <header className="flex items-center justify-between px-5 h-[3.25rem] border-b border-border/12 bg-card/95 shrink-0 z-20">
             <DeferredRender fallback={<div className="w-full max-w-[240px] h-8 rounded-lg border border-border/60 bg-muted/20" />}>
