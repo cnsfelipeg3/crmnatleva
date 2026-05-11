@@ -1591,8 +1591,52 @@ export default function ProposalEditor() {
                                 <Input value={item.data?.stars || ""} onChange={(e) => updateItemData(idx, "stars", e.target.value)} placeholder="5" />
                               </div>
                               <div className="space-y-1">
-                                <Label className="text-xs">Localização</Label>
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label className="text-xs">Localização</Label>
+                                  {item.data?.location && (
+                                    <button
+                                      type="button"
+                                      onClick={() => updateItemData(idx, "location", "")}
+                                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                                      title="Remover localização da proposta"
+                                    >
+                                      Remover
+                                    </button>
+                                  )}
+                                </div>
                                 <Input value={item.data?.location || ""} onChange={(e) => updateItemData(idx, "location", e.target.value)} placeholder="Centro de Roma" />
+                              </div>
+                              <div className="space-y-1 md:col-span-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <Label className="text-xs">Avaliação · Nota e nº de avaliações</Label>
+                                  {(item.data?.rating || item.data?.user_ratings_total) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        updateItemData(idx, "rating", "");
+                                        updateItemData(idx, "user_ratings_total", "");
+                                      }}
+                                      className="text-[10px] text-muted-foreground hover:text-destructive transition-colors"
+                                      title="Remover bloco de avaliação da proposta"
+                                    >
+                                      Remover avaliação
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <Input
+                                    inputMode="decimal"
+                                    value={item.data?.rating ?? ""}
+                                    onChange={(e) => updateItemData(idx, "rating", e.target.value)}
+                                    placeholder="Nota (ex: 4.5)"
+                                  />
+                                  <Input
+                                    inputMode="numeric"
+                                    value={item.data?.user_ratings_total ?? ""}
+                                    onChange={(e) => updateItemData(idx, "user_ratings_total", e.target.value)}
+                                    placeholder="Nº de avaliações"
+                                  />
+                                </div>
                               </div>
                               <div className="space-y-1">
                                 <Label className="text-xs">Tipo de quarto</Label>
