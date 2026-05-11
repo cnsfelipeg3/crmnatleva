@@ -151,6 +151,57 @@ export default function Proposals() {
     toast.success("Link copiado!");
   };
 
+  const duplicateProposal = async (id: string) => {
+    const t = toast.loading("Duplicando proposta...");
+    try {
+      const { data: original, error: fetchErr } = await supabase
+        .from("proposals")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+      if (fetchErr) throw fetchErr;
+      if (!original) throw new Error("Proposta não encontrada");
+
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const {
+        id: _id,
+        created_at: _ca,
+        updated_at: _ua,
+        views_count: _vc,
+        last_viewed_at: _lva,
+        slug: _slug,
+        public_token: _pt,
+        display_id: _did,
+        ...rest
+      } = original as any;
+
+      const baseSlug = (original.slug || "proposta").replace(/-copia(-\d+)?$/, "");
+      const newSlug = `${baseSlug}-copia-${Date.now().toString(36)}`;
+
+      const payload: any = {
+        ...rest,
+        title: `${original.title || "Proposta"} (Cópia)`,
+        slug: newSlug,
+        status: "draft",
+        created_by: user?.id || original.created_by,
+      };
+
+      const { data: inserted, error: insErr } = await supabase
+        .from("proposals")
+        .insert(payload)
+        .select("id")
+        .single();
+      if (insErr) throw insErr;
+
+      toast.success("Proposta duplicada!", { id: t });
+      await queryClient.invalidateQueries({ queryKey: ["proposals"] });
+      navigate(`/propostas/${inserted.id}`);
+    } catch (err: any) {
+      toast.error("Erro ao duplicar", { id: t, description: err.message });
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setIsDeleting(true);
