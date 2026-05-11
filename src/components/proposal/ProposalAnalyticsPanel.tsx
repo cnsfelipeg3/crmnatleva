@@ -113,6 +113,19 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
     .slice(0, 6);
   const maxSectionHits = topSections.length > 0 ? (topSections[0][1] as number) : 1;
 
+  // Time per section (sums time_on_section events)
+  const sectionTime = (interactions || []).reduce((acc: Record<string, number>, i: any) => {
+    if (i.event_type === "time_on_section" && i.section_name) {
+      acc[i.section_name] = (acc[i.section_name] || 0) + (Number(i.event_data?.seconds) || 0);
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  const topSectionTime = Object.entries(sectionTime).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
+  const maxSectionTime = topSectionTime.length > 0 ? (topSectionTime[0][1] as number) : 1;
+
+  const totalShares = shares?.length || 0;
+  const totalShareOpens = (shares || []).reduce((s: number, x: any) => s + (x.open_count || 0), 0);
+
   if (loadingViewers) {
     return (
       <Card className="p-6">
