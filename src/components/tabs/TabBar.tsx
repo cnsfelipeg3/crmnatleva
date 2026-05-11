@@ -22,7 +22,7 @@ import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 
 export default function TabBar() {
-  const { tabs, activeId, open, close, closeOthers, activate, togglePin } = useTabManager();
+  const { tabs, activeId, open, close, closeOthers, activate, togglePin, reorder } = useTabManager();
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const location = useLocation();
 
@@ -54,11 +54,7 @@ export default function TabBar() {
                 onDragStart={() => setDragIdx(idx)}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={() => {
-                  if (dragIdx !== null && dragIdx !== idx) {
-                    // reorder via context
-                    const ev = new CustomEvent("__tab_reorder__", { detail: { from: dragIdx, to: idx } });
-                    window.dispatchEvent(ev);
-                  }
+                  if (dragIdx !== null && dragIdx !== idx) reorder(dragIdx, idx);
                   setDragIdx(null);
                 }}
                 onMouseDown={(e) => {
