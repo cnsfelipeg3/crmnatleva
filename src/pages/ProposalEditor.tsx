@@ -577,6 +577,7 @@ export default function ProposalEditor() {
     onSuccess: (proposalId) => {
       queryClient.invalidateQueries({ queryKey: ["proposals"] });
       try { localStorage.removeItem(visualDraftKey); } catch { /* ignore */ }
+      try { if (isNew) localStorage.removeItem(NEW_DRAFT_KEY); } catch { /* ignore */ }
       if (!isAutoSavingRef.current) {
         toast.success("Proposta salva com sucesso!");
       }
