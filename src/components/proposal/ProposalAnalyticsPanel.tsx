@@ -368,3 +368,66 @@ function formatTime(seconds: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}min`;
 }
+
+function ClickHeatmap({ clicks }: { clicks: any[] }) {
+  if (!clicks || clicks.length === 0) {
+    return (
+      <div className="aspect-[3/4] sm:aspect-[16/10] w-full rounded-lg border border-dashed border-border/50 flex items-center justify-center text-[10px] text-muted-foreground">
+        Sem cliques registrados ainda
+      </div>
+    );
+  }
+
+  // Pretend the proposal is a long vertical canvas (aspect ratio 9:16).
+  // rel_x is 0..1 horizontal; rel_y is 0..1 of total page height.
+  return (
+    <div
+      className="relative w-full overflow-hidden rounded-lg border border-border/40 bg-gradient-to-b from-muted/40 to-muted/10"
+      style={{ aspectRatio: "9 / 18" }}
+    >
+      {/* Section guide bands */}
+      {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((y) => (
+        <div key={y} className="absolute left-0 right-0 border-t border-border/20" style={{ top: `${y * 100}%` }} />
+      ))}
+      {clicks.map((c, idx) => {
+        const left = `${Math.max(0, Math.min(100, (c.rel_x || 0) * 100))}%`;
+        const top = `${Math.max(0, Math.min(100, (c.rel_y || 0) * 100))}%`;
+        return (
+          <span
+            key={c.id || idx}
+            title={`${c.section_name || "?"} · ${c.target_text || c.target_tag || ""}`}
+            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-multiply"
+            style={{
+              left,
+              top,
+              width: 22,
+              height: 22,
+              background: "radial-gradient(circle, hsl(var(--accent) / 0.55) 0%, hsl(var(--accent) / 0.25) 45%, transparent 70%)",
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function ClickedTargetsList({ clicks }: { clicks: any[] }) {
+  const map = clicks.reduce((acc: Record<string, number>, c: any) => {
+    const label = (c.target_text || c.target_tag || "elemento").toString().slice(0, 50);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const top = Object.entries(map).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
+  if (top.length === 0) return null;
+  return (
+    <div className="space-y-1.5 pt-1">
+      <p className="text-[10px] text-muted-foreground">Elementos mais clicados</p>
+      {top.map(([label, count]) => (
+        <div key={label} className="flex items-center justify-between text-[10px]">
+          <span className="truncate text-foreground">{label}</span>
+          <Badge variant="neutral" className="text-[9px]">{String(count)}x</Badge>
+        </div>
+      ))}
+    </div>
+  );
+}
