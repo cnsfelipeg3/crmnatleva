@@ -194,7 +194,25 @@ export default function Proposals() {
         .single();
       if (insErr) throw insErr;
 
-      toast.success("Proposta duplicada!", { id: t });
+      // Duplicar todos os itens da viagem (aéreo, hospedagem, cruzeiro, seguro, anexos, etc.)
+      const { data: items, error: itemsErr } = await supabase
+        .from("proposal_items")
+        .select("item_type, position, title, description, image_url, data")
+        .eq("proposal_id", id);
+      if (itemsErr) throw itemsErr;
+
+      if (items && items.length > 0) {
+        const newItems = items.map((it: any) => ({
+          ...it,
+          proposal_id: inserted.id,
+        }));
+        const { error: insItemsErr } = await supabase
+          .from("proposal_items")
+          .insert(newItems);
+        if (insItemsErr) throw insItemsErr;
+      }
+
+      toast.success(`Proposta duplicada! ${items?.length || 0} itens copiados`, { id: t });
       await queryClient.invalidateQueries({ queryKey: ["proposals"] });
       navigate(`/propostas/${inserted.id}`);
     } catch (err: any) {
