@@ -2101,10 +2101,6 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                       metadata: { user_agent: navigator.userAgent.slice(0, 200) },
                     });
 
-                    if (viewerInfo?.id) {
-                      await supabase.rpc("increment_shortcut_usage", { p_id: viewerInfo.id }).then(() => {}).catch(() => {});
-                    }
-
                     tracking?.trackCTA("share_whatsapp", { share_token: token });
 
                     const baseUrl = `${window.location.origin}/proposta/${proposal.slug}?via=${token}`;
