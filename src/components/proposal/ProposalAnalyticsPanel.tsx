@@ -147,13 +147,14 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
         <MiniKpi icon={Eye} label="Visualizações" value={totalViews} />
         <MiniKpi icon={Users} label="Visitantes" value={uniqueViewers} />
         <MiniKpi icon={Clock} label="Tempo total" value={formatTime(totalTime)} />
         <MiniKpi icon={TrendingUp} label="Engajamento" value={`${avgEngagement}%`} accent={avgEngagement >= 60} />
         <MiniKpi icon={MousePointerClick} label="CTAs" value={ctaClicks} accent={ctaClicks > 0} />
         <MiniKpi icon={Flame} label="WhatsApp" value={whatsappClicks} accent={whatsappClicks > 0} />
+        <MiniKpi icon={Share2} label="Compartilh." value={`${totalShares}/${totalShareOpens}`} accent={totalShares > 0} />
       </div>
 
       {/* Devices */}
