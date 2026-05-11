@@ -14,26 +14,40 @@ interface TrackingConfig {
  */
 export function useProposalTracking({ proposalId, viewerId, enabled }: TrackingConfig) {
   const startTime = useRef(Date.now());
+  const activeMs = useRef(0);
+  const lastTickAt = useRef(Date.now());
+  const isVisible = useRef(true);
   const maxScroll = useRef(0);
   const sectionsViewed = useRef(new Set<string>());
   const sectionTimers = useRef<Record<string, number>>({});
   const currentSection = useRef<string | null>(null);
   const sectionStartTime = useRef<number>(Date.now());
   const interactionQueue = useRef<any[]>([]);
-  const flushTimer = useRef<ReturnType<typeof setTimeout>>();
+  const clickQueue = useRef<any[]>([]);
+  const flushTimer = useRef<ReturnType<typeof setInterval>>();
 
   // Batch flush interactions every 5 seconds
   const flushQueue = useCallback(async () => {
-    if (!enabled || interactionQueue.current.length === 0) return;
-    const batch = [...interactionQueue.current];
-    interactionQueue.current = [];
-
-    try {
-      await supabase.from("proposal_interactions" as any).insert(batch);
-    } catch (err) {
-      console.warn("[ProposalTrack] flush error:", err);
-      // Re-queue on failure
-      interactionQueue.current.unshift(...batch);
+    if (!enabled) return;
+    if (interactionQueue.current.length > 0) {
+      const batch = [...interactionQueue.current];
+      interactionQueue.current = [];
+      try {
+        await supabase.from("proposal_interactions" as any).insert(batch);
+      } catch (err) {
+        console.warn("[ProposalTrack] flush error:", err);
+        interactionQueue.current.unshift(...batch);
+      }
+    }
+    if (clickQueue.current.length > 0) {
+      const batch = [...clickQueue.current];
+      clickQueue.current = [];
+      try {
+        await supabase.from("proposal_clicks" as any).insert(batch);
+      } catch (err) {
+        console.warn("[ProposalTrack] click flush error:", err);
+        clickQueue.current.unshift(...batch);
+      }
     }
   }, [enabled]);
 
