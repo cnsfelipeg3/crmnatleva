@@ -615,7 +615,23 @@ export default function ProposalEditor() {
   // ── Autosave: grava no banco automaticamente após cada alteração ────
   useEffect(() => {
     if (!hydratedRef.current) return;
-    if (!form.title || !form.title.trim()) return;
+    // Permite autosave mesmo sem título: gera um automático se houver
+    // qualquer dado relevante preenchido. Garante que nada se perca.
+    const hasAnyContent =
+      (form.title && form.title.trim()) ||
+      (form.client_name && form.client_name.trim()) ||
+      (form.origin && form.origin.trim()) ||
+      (form.destinations && form.destinations.length > 0) ||
+      form.travel_start_date ||
+      form.travel_end_date ||
+      (items && items.length > 0) ||
+      (form.cover_image_url && form.cover_image_url.trim());
+    if (!hasAnyContent) return;
+    if (!form.title || !form.title.trim()) {
+      const auto = `Rascunho · ${new Date().toLocaleDateString("pt-BR")} ${new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}`;
+      setForm((f) => ({ ...f, title: auto }));
+      return; // próximo ciclo dispara o autosave já com título
+    }
 
     const snapshot = JSON.stringify({
       f: debouncedForm,
