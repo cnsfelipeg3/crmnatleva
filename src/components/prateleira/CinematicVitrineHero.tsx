@@ -33,10 +33,19 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [idx, setIdx] = useState(0);
+  const reduced = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(false);
   const valid = useMemo(() => slides.filter((s) => !!s.cover).slice(0, 6), [slides]);
   const active = valid[idx];
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = () => setIsMobile(mq.matches);
+    handler();
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // Auto rotate every 6s
   useEffect(() => {
