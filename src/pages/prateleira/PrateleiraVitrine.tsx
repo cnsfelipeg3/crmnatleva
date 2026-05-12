@@ -237,6 +237,7 @@ export default function PrateleiraVitrine() {
               title="Resultados da busca"
               subtitle={`${filtered.length} viagem(ns) prontas para embarcar`}
               items={filtered.map(toRowItem)}
+              whatsapp={whatsapp}
             />
           )
         ) : (
@@ -246,18 +247,21 @@ export default function PrateleiraVitrine() {
                 title="Promoções imperdíveis"
                 subtitle="Ofertas com desconto real, por tempo limitado"
                 items={promos}
+                whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Em alta na NatLeva"
               subtitle="As viagens mais procuradas da semana"
               items={trending}
+              whatsapp={whatsapp}
             />
             {soon.length > 0 && (
               <NetflixRow
                 title="Saídas mais próximas"
                 subtitle="Embarque já com tudo organizado"
                 items={soon}
+                whatsapp={whatsapp}
               />
             )}
             {byDestination.map(([dest, arr]) => (
@@ -266,12 +270,14 @@ export default function PrateleiraVitrine() {
                 title={dest}
                 subtitle={`${arr.length} experiência(s) selecionadas`}
                 items={arr.map(toRowItem)}
+                whatsapp={whatsapp}
               />
             ))}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
               items={fresh}
+              whatsapp={whatsapp}
             />
           </>
         )}
