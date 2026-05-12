@@ -3781,82 +3781,178 @@ export type Database = {
       }
       experience_products: {
         Row: {
+          airline: string | null
+          available_dates: Json
           category: string | null
           cover_image_url: string | null
           created_at: string
           currency: string | null
+          departure_date: string | null
           description: string | null
           destination: string
           destination_country: string | null
+          destination_iata: string | null
           display_order: number
           duration: string | null
           excludes: Json
+          flexible_dates: boolean
           gallery: Json
           highlights: Json
+          hotel_name: string | null
+          hotel_stars: number | null
           how_it_works: string | null
           id: string
           includes: Json
+          installments_max: number | null
+          installments_no_interest: number | null
           is_active: boolean
+          is_promo: boolean
+          lead_count: number
           meta: Json
+          nights: number | null
+          og_image: string | null
+          origin_city: string | null
+          origin_iata: string | null
+          pax_max: number | null
+          pax_min: number | null
+          payment_terms: Json
           pickup_info: string | null
+          pix_discount_percent: number | null
           price_from: number | null
+          price_label: string | null
+          price_promo: number | null
+          product_kind: string
+          promo_badge: string | null
           recommendations: string | null
+          return_date: string | null
+          sale_page_enabled: boolean
+          seats_left: number | null
+          seats_total: number | null
+          seo_description: string | null
+          seo_title: string | null
           short_description: string | null
           slug: string
+          status: string
           title: string
           updated_at: string
+          view_count: number
+          whatsapp_cta_text: string | null
         }
         Insert: {
+          airline?: string | null
+          available_dates?: Json
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
           currency?: string | null
+          departure_date?: string | null
           description?: string | null
           destination: string
           destination_country?: string | null
+          destination_iata?: string | null
           display_order?: number
           duration?: string | null
           excludes?: Json
+          flexible_dates?: boolean
           gallery?: Json
           highlights?: Json
+          hotel_name?: string | null
+          hotel_stars?: number | null
           how_it_works?: string | null
           id?: string
           includes?: Json
+          installments_max?: number | null
+          installments_no_interest?: number | null
           is_active?: boolean
+          is_promo?: boolean
+          lead_count?: number
           meta?: Json
+          nights?: number | null
+          og_image?: string | null
+          origin_city?: string | null
+          origin_iata?: string | null
+          pax_max?: number | null
+          pax_min?: number | null
+          payment_terms?: Json
           pickup_info?: string | null
+          pix_discount_percent?: number | null
           price_from?: number | null
+          price_label?: string | null
+          price_promo?: number | null
+          product_kind?: string
+          promo_badge?: string | null
           recommendations?: string | null
+          return_date?: string | null
+          sale_page_enabled?: boolean
+          seats_left?: number | null
+          seats_total?: number | null
+          seo_description?: string | null
+          seo_title?: string | null
           short_description?: string | null
           slug: string
+          status?: string
           title: string
           updated_at?: string
+          view_count?: number
+          whatsapp_cta_text?: string | null
         }
         Update: {
+          airline?: string | null
+          available_dates?: Json
           category?: string | null
           cover_image_url?: string | null
           created_at?: string
           currency?: string | null
+          departure_date?: string | null
           description?: string | null
           destination?: string
           destination_country?: string | null
+          destination_iata?: string | null
           display_order?: number
           duration?: string | null
           excludes?: Json
+          flexible_dates?: boolean
           gallery?: Json
           highlights?: Json
+          hotel_name?: string | null
+          hotel_stars?: number | null
           how_it_works?: string | null
           id?: string
           includes?: Json
+          installments_max?: number | null
+          installments_no_interest?: number | null
           is_active?: boolean
+          is_promo?: boolean
+          lead_count?: number
           meta?: Json
+          nights?: number | null
+          og_image?: string | null
+          origin_city?: string | null
+          origin_iata?: string | null
+          pax_max?: number | null
+          pax_min?: number | null
+          payment_terms?: Json
           pickup_info?: string | null
+          pix_discount_percent?: number | null
           price_from?: number | null
+          price_label?: string | null
+          price_promo?: number | null
+          product_kind?: string
+          promo_badge?: string | null
           recommendations?: string | null
+          return_date?: string | null
+          sale_page_enabled?: boolean
+          seats_left?: number | null
+          seats_total?: number | null
+          seo_description?: string | null
+          seo_title?: string | null
           short_description?: string | null
           slug?: string
+          status?: string
           title?: string
           updated_at?: string
+          view_count?: number
+          whatsapp_cta_text?: string | null
         }
         Relationships: []
       }
@@ -6670,6 +6766,83 @@ export type Database = {
             columns: ["budget_id"]
             isOneToOne: false
             referencedRelation: "portal_travel_budgets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prateleira_leads: {
+        Row: {
+          country_code: string | null
+          created_at: string
+          device: string | null
+          email: string | null
+          id: string
+          ip: string | null
+          message: string | null
+          name: string
+          phone: string
+          product_id: string | null
+          product_slug: string | null
+          product_title: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          country_code?: string | null
+          created_at?: string
+          device?: string | null
+          email?: string | null
+          id?: string
+          ip?: string | null
+          message?: string | null
+          name: string
+          phone: string
+          product_id?: string | null
+          product_slug?: string | null
+          product_title?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          country_code?: string | null
+          created_at?: string
+          device?: string | null
+          email?: string | null
+          id?: string
+          ip?: string | null
+          message?: string | null
+          name?: string
+          phone?: string
+          product_id?: string | null
+          product_slug?: string | null
+          product_title?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prateleira_leads_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "experience_products"
             referencedColumns: ["id"]
           },
         ]

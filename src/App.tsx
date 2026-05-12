@@ -156,10 +156,12 @@ const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const PassengerSelfSignup = lazy(() => import("@/pages/PassengerSelfSignup"));
 const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
 
-// Produtos / Experiências
+// Prateleira NatLeva (ex-Produtos)
 const Produtos = lazy(() => import("@/pages/produtos/Produtos"));
 const ProdutoDetalhe = lazy(() => import("@/pages/produtos/ProdutoDetalhe"));
 const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
+const PrateleiraVitrine = lazy(() => import("@/pages/prateleira/PrateleiraVitrine"));
+const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraVendaPublica"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
@@ -215,7 +217,9 @@ function AppRoutes() {
     location.pathname.startsWith("/proposta/") ||
     location.pathname.startsWith("/portal/") ||
     location.pathname.startsWith("/cadastro-passageiro/") ||
-    location.pathname === "/cadastro-fornecedor";
+    location.pathname === "/cadastro-fornecedor" ||
+    location.pathname === "/p" ||
+    location.pathname.startsWith("/p/");
 
   // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
   // Pula em conexão lenta/saveData. Faz navegação entre menus quase instantânea.
@@ -259,10 +263,14 @@ function AppRoutes() {
           <Route path="/checkin" element={<Checkin />} />
           <Route path="/hospedagem" element={<Lodging />} />
           <Route path="/alteracoes" element={<TripAlterations />} />
-          <Route path="/produtos" element={<Produtos />} />
-          <Route path="/produtos/novo" element={<ProdutoEditor />} />
+          <Route path="/produtos" element={<Navigate to="/prateleira" replace />} />
+          <Route path="/produtos/novo" element={<Navigate to="/prateleira/novo" replace />} />
           <Route path="/produtos/:slug" element={<ProdutoDetalhe />} />
           <Route path="/produtos/:slug/editar" element={<ProdutoEditor />} />
+          <Route path="/prateleira" element={<Produtos />} />
+          <Route path="/prateleira/novo" element={<ProdutoEditor />} />
+          <Route path="/prateleira/:slug" element={<ProdutoDetalhe />} />
+          <Route path="/prateleira/:slug/editar" element={<ProdutoEditor />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerProfile />} />
@@ -413,6 +421,10 @@ function AppRoutes() {
 
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
+
+        {/* Prateleira NatLeva pública */}
+        <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
+        <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
 
         {/* Diagnóstico de performance — rota leve fora do layout pesado */}
         <Route path="/diagnostico" element={<Suspense fallback={<MinimalLoader />}><Diagnostico /></Suspense>} />
