@@ -1183,14 +1183,47 @@ Deno.serve(async (req) => {
       };
     }
 
+    // ─── Anti-dup de edição: se for outgoing (fromMe) e já existe uma row recente
+    // (≤15min) na mesma conversa com o MESMO conteúdo mas external_message_id diferente,
+    // é uma callback de edição da Z-API · só atualizamos o id e marcamos is_edited.
+    const insertContent = msgType === "location"
+      ? (body.location?.name || body.location?.address || `${body.location?.latitude}, ${body.location?.longitude}`)
+      : (textContent || "");
+    if (fromMe && msgType === "text" && insertContent && insertContent.trim().length > 0) {
+      try {
+        const cutoff = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const { data: existingTwin } = await supabase
+          .from("conversation_messages")
+          .select("id, external_message_id")
+          .eq("conversation_id", conversationId)
+          .eq("direction", "outgoing")
+          .eq("content", insertContent)
+          .gte("created_at", cutoff)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const twin = existingTwin?.[0];
+        if (twin && twin.external_message_id !== messageId) {
+          await supabase
+            .from("conversation_messages")
+            .update({ external_message_id: messageId, is_edited: true, edited_at: new Date().toISOString() })
+            .eq("id", twin.id);
+          console.log(`[Webhook] ⚡ Edit-callback consolidada · row=${twin.id} novo_id=${messageId}`);
+          if (rawEventId) await supabase.from("whatsapp_events_raw").update({ processed: true, processed_at: new Date().toISOString() }).eq("id", rawEventId);
+          return new Response(JSON.stringify({ success: true, type: "outgoing_edit_consolidated" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      } catch (e: any) {
+        console.warn("[Webhook] anti-dup edit check failed:", e?.message);
+      }
+    }
+
     const { error: unifiedErr } = await supabase.from("conversation_messages").insert({
       conversation_id: conversationId,
       external_message_id: messageId,
       direction,
       sender_type: senderType,
-      content: msgType === "location"
-        ? (body.location?.name || body.location?.address || `${body.location?.latitude}, ${body.location?.longitude}`)
-        : (textContent || ""),
+      content: insertContent,
       message_type: msgType,
       media_url: mediaUrl,
       media_original_url: mediaUrl,

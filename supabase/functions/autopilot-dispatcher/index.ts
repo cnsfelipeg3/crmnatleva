@@ -233,6 +233,55 @@ serve(async (req) => {
       });
     }
 
+    // ─── Sanity check anti-repetição (pré-envio) ───
+    // Evita que a IA reenvie a mesma resposta (ou quase) que ela já mandou
+    // nas últimas N mensagens · proteção contra loops e respostas redundantes.
+    const norm = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, " ").replace(/\s+/g, " ").trim();
+    const tokens = (s: string) => new Set(norm(s).split(" ").filter(w => w.length > 3));
+    const jaccard = (a: Set<string>, b: Set<string>) => {
+      if (a.size === 0 || b.size === 0) return 0;
+      let inter = 0;
+      a.forEach(w => { if (b.has(w)) inter++; });
+      return inter / (a.size + b.size - inter);
+    };
+    const newNorm = norm(fullText);
+    const newTokens = tokens(fullText);
+    const recentAssistant = msgs.filter((m: any) => m.sender_type !== "cliente").slice(-5);
+    let blockedReason: string | null = null;
+    for (const prev of recentAssistant) {
+      const prevText = String(prev.content || "");
+      const prevNorm = norm(prevText);
+      if (!prevNorm) continue;
+      if (prevNorm === newNorm) { blockedReason = "exact_duplicate"; break; }
+      if (newNorm.length > 40 && (prevNorm.includes(newNorm) || newNorm.includes(prevNorm))) {
+        blockedReason = "substring_duplicate"; break;
+      }
+      const sim = jaccard(newTokens, tokens(prevText));
+      if (sim >= 0.78) { blockedReason = `similarity_${sim.toFixed(2)}`; break; }
+    }
+    if (blockedReason) {
+      log("blocked:repetition", { reason: blockedReason, preview: fullText.slice(0, 80) });
+      // grava log auditável (não envia ao cliente)
+      try {
+        await sb.from("conversation_messages").insert({
+          conversation_id,
+          direction: "outgoing",
+          sender_type: "system",
+          content: `[Autopilot bloqueou resposta repetitiva · ${blockedReason}] ${fullText.slice(0, 200)}`,
+          message_type: "text",
+          status: "blocked",
+          timestamp: new Date().toISOString(),
+          created_at: new Date().toISOString(),
+          sender_name: "Autopilot Guard",
+          metadata: { source: "autopilot_guard", blocked_reason: blockedReason, full_text: fullText },
+          is_deleted: true, // não polui a UI
+        });
+      } catch { /* best-effort */ }
+      return new Response(JSON.stringify({ ok: false, reason: "repetition_blocked", detail: blockedReason }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ─── Envia via Z-API ───
     const zapiResp = await fetch(`${supabaseUrl}/functions/v1/zapi-proxy`, {
       method: "POST",
