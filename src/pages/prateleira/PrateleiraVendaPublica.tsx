@@ -8,6 +8,7 @@ import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, A
 import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/prateleira/LeadCaptureModal";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
+import CinematicHero from "@/components/prateleira/CinematicHero";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -104,54 +105,20 @@ export default function PrateleiraVendaPublica() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <div className="relative w-full overflow-hidden">
-        <div className="relative w-full h-[55vh] min-h-[360px] max-h-[680px] sm:h-[65vh] bg-muted">
-          {cover && (
-            <motion.img
-              key={cover}
-              src={cover}
-              alt={p.title}
-              initial={{ opacity: 0, scale: 1.06 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
-        </div>
-
-        <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
-          <Button variant="secondary" size="sm" onClick={() => navigate("/p")} className="bg-white/90 backdrop-blur">
-            <ArrowLeft className="w-4 h-4 mr-1.5" /> Vitrine
-          </Button>
-          <Button variant="secondary" size="sm" onClick={share} className="bg-white/90 backdrop-blur">
-            <Share2 className="w-4 h-4 mr-1.5" /> Compartilhar
-          </Button>
-        </div>
-
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10 text-white">
-          <div className="max-w-5xl mx-auto">
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <Badge variant="secondary" className="bg-white/20 backdrop-blur text-white border-white/30">
-                {KIND_LABEL[p.product_kind] || "Experiência"}
-              </Badge>
-              {p.is_promo && p.promo_badge && (
-                <Badge className="bg-amber-500 text-black hover:bg-amber-500"><Sparkles className="w-3 h-3 mr-1" /> {p.promo_badge}</Badge>
-              )}
-              <span className="text-xs text-white/80 flex items-center gap-1"><MapPin className="w-3 h-3" /> {p.destination}{p.destination_country ? `, ${p.destination_country}` : ""}</span>
-            </div>
-            <h1 className="text-3xl sm:text-5xl font-serif leading-tight max-w-3xl">{p.title}</h1>
-            {p.short_description && <p className="mt-3 text-white/90 text-sm sm:text-base max-w-2xl">{p.short_description}</p>}
-            {dateRange && (
-              <div className="mt-4 inline-flex items-center gap-2 text-sm bg-white/15 backdrop-blur px-3 py-1.5 rounded-full">
-                <Calendar className="w-4 h-4" /> {dateRange}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+      {/* Hero cinematográfico */}
+      <CinematicHero
+        cover={cover}
+        title={p.title}
+        shortDescription={p.short_description}
+        destination={p.destination}
+        destinationCountry={p.destination_country}
+        kindLabel={KIND_LABEL[p.product_kind] || "Experiência"}
+        promoBadge={p.promo_badge}
+        isPromo={!!p.is_promo}
+        dateRange={dateRange}
+        onBack={() => navigate("/p")}
+        onShare={share}
+      />
 
       {/* Thumb strip */}
       {allImages.length > 1 && (
