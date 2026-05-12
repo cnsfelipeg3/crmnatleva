@@ -242,22 +242,29 @@ export default function CinematicHero({
             )}
           </motion.div>
 
-          {/* Title with word-by-word stagger + 3D */}
-          <h1 className="font-serif text-white leading-[0.95] tracking-tight text-4xl sm:text-6xl lg:text-[5.5rem] xl:text-[6.5rem] max-w-5xl drop-shadow-[0_8px_30px_rgba(0,0,0,0.6)]">
-            {titleWords.map((word, i) => (
-              <span key={i} className="inline-block overflow-hidden align-baseline mr-[0.25em]">
-                <motion.span
-                  className="inline-block"
-                  initial={{ y: "110%", rotateX: -50, opacity: 0 }}
-                  animate={{ y: "0%", rotateX: 0, opacity: 1 }}
-                  transition={{
-                    delay: 0.6 + i * 0.08,
-                    duration: 1.0,
-                    ease: [0.16, 1, 0.3, 1],
-                  }}
-                  style={{ transformOrigin: "50% 100%" }}
+          {/* Title · Netflix-style: primary + secondary line, letter stagger + shimmer */}
+          {(() => {
+            const parts = title.split(" · ");
+            const primary = parts[0] ?? title;
+            const secondary = parts.slice(1).join(" · ");
+            const letters = Array.from(primary);
+            return (
+              <div className="max-w-[95%]">
+                <h1
+                  className="font-serif text-white leading-[1.02] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] relative"
+                  style={{ fontSize: "clamp(2.5rem, 6.2vw, 6rem)" }}
                 >
-                  {word}
+                  <span className="inline-block overflow-hidden align-baseline relative">
+                    {letters.map((ch, i) => (
+                      <motion.span
+                        key={i}
+                        className="inline-block"
+                        initial={{ y: "100%", opacity: 0, rotateX: -60 }}
+                        animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+                        transition={{ delay: 0.55 + i * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ transformOrigin: "50% 100%", whiteSpace: ch === " " ? "pre" : "normal" }}
+                      >
+                        {ch}
                 </motion.span>
               </span>
             ))}
