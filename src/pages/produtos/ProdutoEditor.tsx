@@ -433,21 +433,19 @@ export default function ProdutoEditor() {
                 <Input value={form.price_label} onChange={(e) => set("price_label", e.target.value)} placeholder="por pessoa, casal, total..." />
               </div>
               <div>
-                <Label>Parcelas máx</Label>
-                <Input type="number" value={form.installments_max} onChange={(e) => set("installments_max", e.target.value)} placeholder="12" />
+                <Label>Entrada à vista (%)</Label>
+                <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
               </div>
               <div>
-                <Label>Parcelas sem juros</Label>
-                <Input type="number" value={form.installments_no_interest} onChange={(e) => set("installments_no_interest", e.target.value)} placeholder="6" />
-              </div>
-              <div>
-                <Label>Desconto PIX (%)</Label>
-                <Input type="number" value={form.pix_discount_percent} onChange={(e) => set("pix_discount_percent", e.target.value)} placeholder="5" />
+                <Label>Quitação até (dias antes)</Label>
+                <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
               </div>
             </div>
-            <div>
-              <Label>Condições especiais (texto livre)</Label>
-              <Textarea rows={3} value={form.payment_special} onChange={(e) => set("payment_special", e.target.value)} placeholder="Ex: Entrada de 30% e saldo em até 10x sem juros · válido até 30/06" />
+            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-50/30 dark:bg-amber-500/5 p-4 text-sm space-y-2">
+              <div className="font-semibold text-foreground">Plano padrão Natleva</div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Todos os produtos da Prateleira usam o mesmo modelo: entrada à vista (PIX, cartão ou link de pagamento) e saldo no boleto sem juros, com quitação até X dias antes do embarque. O número de parcelas é calculado automaticamente conforme a data de saída do produto.
+              </p>
             </div>
             <div className="flex flex-wrap items-end gap-4 pt-2">
               <div className="flex items-center gap-2">
