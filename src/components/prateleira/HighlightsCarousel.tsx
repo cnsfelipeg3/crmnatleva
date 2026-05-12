@@ -221,11 +221,36 @@ export default function HighlightsCarousel({ items, title = "Destaques da semana
           )}
           style={{ overscrollBehaviorX: "contain" }}
         >
-          {items.map((it, i) => (
-            <div data-card key={it.id}>
-              <TiltCard item={it} index={i} />
-            </div>
-          ))}
+          {loading
+            ? Array.from({ length: 6 }).map((_, i) => (
+                <div
+                  key={`sk-${i}`}
+                  data-card
+                  className="snap-start shrink-0 w-[78vw] sm:w-[340px] lg:w-[360px]"
+                  aria-hidden
+                >
+                  <div className="rounded-2xl overflow-hidden border border-border bg-card">
+                    <div className="relative aspect-[4/5] bg-muted overflow-hidden">
+                      <div className="absolute inset-0 animate-shimmer bg-[linear-gradient(110deg,transparent_30%,rgba(255,255,255,0.06)_50%,transparent_70%)] bg-[length:200%_100%]" />
+                      <div className="absolute top-3 left-3 h-6 w-24 rounded-full bg-white/5" />
+                      <div className="absolute bottom-5 left-5 right-5 space-y-2">
+                        <div className="h-3 w-16 rounded-full bg-white/10" />
+                        <div className="h-5 w-3/4 rounded bg-white/15" />
+                        <div className="h-3 w-2/3 rounded bg-white/10" />
+                        <div className="flex justify-between items-center pt-2">
+                          <div className="h-5 w-20 rounded bg-white/15" />
+                          <div className="h-7 w-24 rounded-full bg-white/20" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            : items.map((it, i) => (
+                <div data-card key={it.id}>
+                  <TiltCard item={it} index={i} />
+                </div>
+              ))}
         </div>
       </div>
     </section>
