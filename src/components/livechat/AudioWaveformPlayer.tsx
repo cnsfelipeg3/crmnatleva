@@ -145,7 +145,7 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
   }
 
   return (
-    <div className="flex items-center gap-2.5 min-w-[260px] py-1">
+    <div className="flex items-center gap-2.5 w-full max-w-full min-w-0 py-1 overflow-hidden">
       <audio ref={audioRef} src={src} preload="metadata" />
       {/* Play button - WhatsApp style circle */}
       <button
