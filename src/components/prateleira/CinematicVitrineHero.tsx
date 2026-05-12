@@ -251,21 +251,21 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
 
           {/* Big headline · split em palavras para quebra inteligente e sem corte de descendentes */}
           <h1
-            className="font-serif text-white leading-[1.18] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
-            style={{ fontSize: "clamp(2.1rem, 6.2vw, 6rem)" }}
+            className="font-serif text-white leading-[1.32] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%] overflow-visible py-[0.08em]"
+            style={{ fontSize: "clamp(2rem, 5.8vw, 5.65rem)" }}
             aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
             <span className="block">
               <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
                 {HEADLINE_PRIMARY.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pb-[0.25em]">
-                    <span className="inline-block whitespace-nowrap">
+                  <span key={wi} className="inline-block pt-[0.1em] pb-[0.36em] pr-[0.08em] overflow-visible">
+                    <span className="inline-block whitespace-nowrap overflow-visible">
                       {Array.from(word).map((ch, i) => {
                         const idx = HEADLINE_PRIMARY.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
                         return (
                           <motion.span
                             key={i}
-                            className="inline-block"
+                            className="inline-block leading-[1.32] pt-[0.08em] pb-[0.1em] overflow-visible"
                             initial={{ y: "100%", opacity: 0, rotateX: -60 }}
                             animate={{ y: "0%", opacity: 1, rotateX: 0 }}
                             transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
@@ -281,15 +281,15 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             <span className="block">
               <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
                 {HEADLINE_ACCENT.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pb-[0.35em] pr-[0.12em]">
-                    <span className="inline-block whitespace-nowrap italic">
+                  <span key={wi} className="inline-block pt-[0.12em] pb-[0.5em] pr-[0.2em] overflow-visible">
+                    <span className="inline-block whitespace-nowrap italic overflow-visible">
                       {Array.from(word).map((ch, i) => {
                         const baseIdx = primaryLetters.length;
                         const idx = baseIdx + HEADLINE_ACCENT.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
                         return (
                           <motion.span
                             key={i}
-                            className="inline-block"
+                            className="inline-block leading-[1.32] pt-[0.1em] pb-[0.14em] overflow-visible"
                             initial={{ y: "100%", opacity: 0, rotateX: -60 }}
                             animate={{ y: "0%", opacity: 1, rotateX: 0 }}
                             transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
