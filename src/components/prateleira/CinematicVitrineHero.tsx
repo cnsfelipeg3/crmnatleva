@@ -88,9 +88,6 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
     [particleCount]
   );
 
-  const primaryLetters = Array.from(HEADLINE_PRIMARY);
-  const accentLetters = Array.from(HEADLINE_ACCENT);
-
   return (
     <section
       ref={ref}
@@ -249,65 +246,34 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             </span>
           </motion.div>
 
-          {/* Big headline · split em palavras para quebra inteligente e sem corte de descendentes */}
+          {/* Big headline · animação por palavra para preservar serifas, acentos e itálico sem corte */}
           <h1
-            className="font-serif text-white leading-[1.32] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%] overflow-visible py-[0.08em]"
-            style={{ fontSize: "clamp(2rem, 5.8vw, 5.65rem)" }}
+            className="font-serif text-white leading-[1.28] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[98%] overflow-visible py-[0.14em]"
+            style={{ fontSize: "clamp(2rem, 5.6vw, 5.45rem)" }}
             aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
-            <span className="block">
-              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
-                {HEADLINE_PRIMARY.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pt-[0.1em] pb-[0.36em] pr-[0.08em] overflow-visible">
-                    <span className="inline-block whitespace-nowrap overflow-visible">
-                      {Array.from(word).map((ch, i) => {
-                        const idx = HEADLINE_PRIMARY.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
-                        return (
-                          <motion.span
-                            key={i}
-                            className="inline-block leading-[1.32] pt-[0.08em] pb-[0.1em] overflow-visible"
-                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                            style={{ transformOrigin: "50% 100%" }}
-                          >{ch}</motion.span>
-                        );
-                      })}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </span>
-            <span className="block">
-              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
-                {HEADLINE_ACCENT.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pt-[0.12em] pb-[0.5em] pr-[0.2em] overflow-visible">
-                    <span className="inline-block whitespace-nowrap italic overflow-visible">
-                      {Array.from(word).map((ch, i) => {
-                        const baseIdx = primaryLetters.length;
-                        const idx = baseIdx + HEADLINE_ACCENT.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
-                        return (
-                          <motion.span
-                            key={i}
-                            className="inline-block leading-[1.32] pt-[0.1em] pb-[0.14em] overflow-visible"
-                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                            style={{
-                              transformOrigin: "50% 100%",
-                              backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
-                              WebkitBackgroundClip: "text",
-                              backgroundClip: "text",
-                              color: "transparent",
-                            }}
-                          >{ch}</motion.span>
-                        );
-                      })}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </span>
+            <motion.span
+              className="block overflow-visible py-[0.08em]"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.55, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {HEADLINE_PRIMARY}
+            </motion.span>
+            <motion.span
+              className="block w-fit overflow-visible py-[0.18em] pr-[0.24em] italic leading-[1.22]"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.75, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {HEADLINE_ACCENT}
+            </motion.span>
           </h1>
 
           {/* Slide caption (live) */}
