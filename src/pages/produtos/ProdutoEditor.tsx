@@ -36,8 +36,7 @@ type ProductForm = {
   duration: string;
   // price
   price_from: string; price_promo: string; price_label: string; currency: string;
-  installments_max: string; installments_no_interest: string; pix_discount_percent: string;
-  payment_special: string;
+  payment_entry_percent: string; payment_days_before: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
