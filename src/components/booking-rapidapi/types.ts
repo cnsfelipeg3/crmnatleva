@@ -97,6 +97,10 @@ export interface HotelFiltersState {
   priceMin?: number;
   priceMax?: number;
   sortBy?: string;
+  /** Modalidades de pagamento exigidas · client-side via hotel_payment_cache */
+  paymentModalities: Set<string>;
+  /** Só hotéis com pelo menos 1 oferta com cancelamento grátis */
+  freeCancellationOnly: boolean;
 }
 
 export function emptyHotelFiltersState(): HotelFiltersState {
@@ -105,6 +109,8 @@ export function emptyHotelFiltersState(): HotelFiltersState {
     priceMin: undefined,
     priceMax: undefined,
     sortBy: undefined,
+    paymentModalities: new Set(),
+    freeCancellationOnly: false,
   };
 }
 
@@ -113,7 +119,9 @@ export function hotelFiltersStateIsEmpty(s: HotelFiltersState): boolean {
     s.categoriesSelected.size === 0 &&
     s.priceMin === undefined &&
     s.priceMax === undefined &&
-    !s.sortBy
+    !s.sortBy &&
+    s.paymentModalities.size === 0 &&
+    !s.freeCancellationOnly
   );
 }
 
