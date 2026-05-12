@@ -212,19 +212,10 @@ export default function PrateleiraVitrine() {
       {/* Body */}
       <div className="relative">
         {loading ? (
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-16">
-            <div className="space-y-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className="h-6 w-48 bg-white/5 rounded mb-4 animate-pulse" />
-                  <div className="flex gap-4 overflow-hidden">
-                    {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="shrink-0 w-[300px] aspect-[16/10] rounded-xl bg-white/5 animate-pulse" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div aria-busy="true" aria-live="polite">
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
           </div>
         ) : filtersActive ? (
           filtered.length === 0 ? (
