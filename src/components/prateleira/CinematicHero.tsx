@@ -103,25 +103,27 @@ export default function CinematicHero({
       className="relative w-full h-[88vh] sm:h-[92vh] min-h-[500px] max-h-[920px] overflow-hidden bg-black isolate"
       style={{ perspective: 1400, maxWidth: "100vw" }}
     >
-      {/* === BACKGROUND IMAGE LAYER === */}
+      {/* === BACKGROUND IMAGE LAYER (GPU-friendly · sem filter blur em mobile) === */}
       <motion.div
         className="absolute inset-0 will-change-transform"
-        style={{ y, scale, x: tiltEnabled ? tilt.x * -30 : 0 }}
+        style={{ y, scale, x: tiltEnabled ? tilt.x * -30 : 0, transform: "translateZ(0)" }}
       >
         <motion.div
-          initial={{ scale: 1.25, filter: "blur(12px)" }}
-          animate={{ scale: 1.05, filter: "blur(0px)" }}
-          transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ scale: isSmall ? 1.12 : 1.25, opacity: 0 }}
+          animate={{ scale: 1.05, opacity: 1 }}
+          transition={{ duration: isSmall ? 1.4 : 2.4, ease: [0.16, 1, 0.3, 1] }}
           className="absolute inset-0"
+          style={{ willChange: "transform, opacity" }}
         >
           <motion.img
             src={cover || ""}
             alt=""
             initial={{ scale: 1.0 }}
-            animate={{ scale: 1.18 }}
-            transition={{ duration: 26, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
+            animate={{ scale: isSmall ? 1.1 : 1.18 }}
+            transition={{ duration: isSmall ? 36 : 26, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
             className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
+            style={{ willChange: "transform", backfaceVisibility: "hidden" }}
           />
         </motion.div>
       </motion.div>
