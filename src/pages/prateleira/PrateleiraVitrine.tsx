@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
+import HighlightsCarousel from "@/components/prateleira/HighlightsCarousel";
 
 type Product = any;
 
@@ -91,6 +92,26 @@ export default function PrateleiraVitrine() {
         sort={sort}
         setSort={setSort}
       />
+
+      {/* Carrossel de destaques */}
+      {!loading && items.length > 0 && (
+        <HighlightsCarousel
+          items={(items.filter((p) => p.is_promo).concat(items).slice(0, 10)).map((p) => ({
+            id: p.id,
+            slug: p.slug,
+            title: p.title,
+            cover: p.cover_image_url,
+            destination: p.destination,
+            shortDescription: p.short_description,
+            kindLabel: p.product_kind,
+            isPromo: p.is_promo,
+            promoBadge: p.promo_badge,
+            pricePromo: p.price_promo,
+            priceFrom: p.price_from,
+            currency: p.currency,
+          }))}
+        />
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Kind chips */}
