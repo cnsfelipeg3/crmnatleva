@@ -251,14 +251,14 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
 
           {/* Big headline · split em palavras para quebra inteligente e sem corte de descendentes */}
           <h1
-            className="font-serif text-white leading-[1.08] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
+            className="font-serif text-white leading-[1.18] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
             style={{ fontSize: "clamp(2.1rem, 6.2vw, 6rem)" }}
             aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
             <span className="block">
               <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
                 {HEADLINE_PRIMARY.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block overflow-hidden pb-[0.18em] -mb-[0.15em]">
+                  <span key={wi} className="inline-block pb-[0.25em]">
                     <span className="inline-block whitespace-nowrap">
                       {Array.from(word).map((ch, i) => {
                         const idx = HEADLINE_PRIMARY.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
@@ -281,7 +281,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             <span className="block">
               <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
                 {HEADLINE_ACCENT.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block overflow-hidden pb-[0.22em] -mb-[0.18em]">
+                  <span key={wi} className="inline-block pb-[0.35em] pr-[0.12em]">
                     <span className="inline-block whitespace-nowrap italic">
                       {Array.from(word).map((ch, i) => {
                         const baseIdx = primaryLetters.length;
