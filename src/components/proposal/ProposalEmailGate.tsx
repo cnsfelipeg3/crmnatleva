@@ -3,18 +3,23 @@ import { motion } from "framer-motion";
 import { Mail, ArrowRight, Sparkles, Globe, Shield } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
+import { PhoneInput } from "@/components/ui/phone-input";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 interface Props {
   proposalTitle?: string;
   destination?: string;
   coverImage?: string;
-  onSubmit: (email: string, name?: string) => void;
+  onSubmit: (email: string, name?: string, phone?: string) => void;
   loading?: boolean;
 }
 
 export default function ProposalEmailGate({ proposalTitle, destination, coverImage, onSubmit, loading }: Props) {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneCountry, setPhoneCountry] = useState("BR");
+  const [phoneDigits, setPhoneDigits] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -24,8 +29,12 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
       setError("Por favor, insira um e-mail válido.");
       return;
     }
+    if (!phone || phoneDigits.length < 8) {
+      setError("Por favor, insira um WhatsApp válido.");
+      return;
+    }
     setError("");
-    onSubmit(trimmed, name.trim() || undefined);
+    onSubmit(trimmed, name.trim() || undefined, phone);
   };
 
   const safeCover = sanitizeProposalCoverUrl(coverImage);
@@ -104,7 +113,7 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
             transition={{ delay: 0.5 }}
           >
             <p className="text-neutral-600 text-sm text-center mb-6 leading-relaxed">
-              Insira seu e-mail para visualizar todos os detalhes da sua viagem personalizada.
+              Preencha seus dados para visualizar todos os detalhes da sua viagem personalizada.
             </p>
 
             <div className="space-y-3 mb-5">
@@ -126,6 +135,22 @@ export default function ProposalEmailGate({ proposalTitle, destination, coverIma
                   placeholder="seu@email.com"
                   required
                   className="w-full rounded-xl border border-neutral-300 bg-white pl-11 pr-4 py-3.5 text-neutral-900 placeholder:text-neutral-400 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-600 mb-1.5 px-1">
+                  <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                  WhatsApp para contato
+                </label>
+                <PhoneInput
+                  value={phone}
+                  countryCode={phoneCountry}
+                  onChange={(e164, parts) => {
+                    setPhone(e164);
+                    setPhoneDigits(parts.nationalDigits);
+                    setError("");
+                  }}
+                  onCountryChange={(c) => setPhoneCountry(c.code)}
                 />
               </div>
               {error && (
