@@ -13,18 +13,19 @@ const corsHeaders = {
 const COOLDOWN_SECONDS = 8;
 const MAX_HISTORY = 30;
 
-const AGENTS: Record<string, { name: string; role: string; behavior: string }> = {
+// Fallback mínimo · só usado se a busca no DB falhar.
+const FALLBACK_AGENTS: Record<string, { name: string; role: string; behavior: string }> = {
   maya: {
     name: "Maya",
-    role: "Acolhimento e qualificação inicial via WhatsApp",
+    role: "Boas-vindas & Primeiro Contato",
     behavior:
-      "Você é Maya, recepcionista da NatLeva Viagens. Sua missão é ACOLHER o lead com calor humano, validar o destino/intenção e fazer no MÁXIMO uma pergunta de cada vez. NUNCA fale de preços, voos, hotéis, datas exatas, dólar, condições comerciais ou logística. Se o lead pedir, diga que vai conectar com o consultor. Tom: humano, leve, profissional, em pt-BR. Use mid-dot (·) em vez de hífen ou travessão.",
+      "Você é a Nath da NatLeva Viagens. Acolha com calor humano, valide o destino e a intenção, e faça UMA pergunta por vez. NUNCA fale de preços, voos, hotéis específicos ou condições comerciais. Tom: humano, leve, entusiasmado, em pt-BR. Use mid-dot (·) em vez de hífen ou travessão.",
   },
   atlas: {
     name: "Atlas",
-    role: "SDR · qualificação completa para repasse ao consultor",
+    role: "SDR / Qualificação",
     behavior:
-      "Você é Atlas, SDR da NatLeva Viagens. Sua missão é coletar (de forma natural, NUNCA como formulário) os 5 campos: destino, datas (período aproximado), quantidade de pessoas, perfil/estilo (econômico/conforto/premium) e faixa de orçamento. Faça UMA pergunta por mensagem. Não fale de preços específicos, voos, hotéis ou condições · só repasse para o consultor humano quando tiver o necessário. Máximo 90 palavras por mensagem. Use mid-dot (·) em vez de hífen.",
+      "Você é a Nath da NatLeva Viagens. Colete (de forma natural, NUNCA como formulário) os 5 campos: destino, datas, pessoas, perfil e faixa de orçamento. Faça UMA pergunta por mensagem. Não fale de preços específicos · só repasse para o consultor humano quando tiver o necessário. Use mid-dot (·) em vez de hífen.",
   },
 };
 
@@ -152,13 +153,28 @@ serve(async (req) => {
 
     // ─── Chama agent-chat (streaming, mas vamos consumir completo) ───
     const agentKey = String(conv.ai_autopilot_agent || "").toLowerCase();
-    const agent = AGENTS[agentKey];
-    if (!agent) {
+
+    // Carrega agente REAL do banco (behavior_prompt completo · identidade Nath, tom, etc).
+    const { data: dbAgent } = await sb
+      .from("ai_team_agents")
+      .select("name, role, behavior_prompt")
+      .ilike("name", agentKey)
+      .maybeSingle();
+
+    const fb = FALLBACK_AGENTS[agentKey];
+    const agentName = dbAgent?.name ? String(dbAgent.name).charAt(0) + String(dbAgent.name).slice(1).toLowerCase() : fb?.name;
+    const agentRole = dbAgent?.role || fb?.role;
+    const agentBehavior = dbAgent?.behavior_prompt || fb?.behavior;
+
+    if (!agentName || !agentBehavior) {
       log("blocked:unknown_agent", { agentKey });
       return new Response(JSON.stringify({ ok: false, reason: "unknown_agent" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Reforço de tom · injetado por cima do prompt do agente para garantir entusiasmo natural.
+    const toneOverlay = `\n\n[TOM OBRIGATÓRIO · WhatsApp real]\n· Você se identifica como Nath (NUNCA mencione 'Maya', 'Atlas' ou qualquer nome interno).\n· Cumprimento na 1ª mensagem: saudação temporal (Bom dia/Boa tarde/Boa noite UTC-3) + acolhimento empático + um próximo passo curto. Sem firula.\n· Entusiasmo genuíno, leve, humano · "a gente" no lugar de "nós".\n· Use mid-dot (·) em vez de hífen ou travessão.\n· Uma pergunta por mensagem. Sem listas longas. Sem emojis exagerados.\n· NUNCA cite preços, hotéis específicos, voos ou condições comerciais.`;
 
     const aiResp = await fetch(`${supabaseUrl}/functions/v1/agent-chat`, {
       method: "POST",
@@ -169,9 +185,9 @@ serve(async (req) => {
       body: JSON.stringify({
         question: lastUserMsg.content,
         history,
-        agentName: agent.name,
-        agentRole: agent.role,
-        agentBehaviorPrompt: agent.behavior,
+        agentName,
+        agentRole,
+        agentBehaviorPrompt: agentBehavior + toneOverlay,
         provider: "lovable",
         model: "google/gemini-2.5-flash",
       }),
@@ -231,7 +247,9 @@ serve(async (req) => {
       }),
     });
     const zapiBody = await zapiResp.json().catch(() => ({}));
-    const externalId = zapiBody?.zaapId || zapiBody?.messageId || zapiBody?.id || null;
+    // IMPORTANTE: usamos `messageId` (id do WhatsApp) · webhook de delivery callback
+    // insere com esse mesmo campo. Sem isso, gera linha duplicada no chat.
+    const externalId = zapiBody?.messageId || zapiBody?.id || zapiBody?.zaapId || null;
 
     if (!zapiResp.ok || zapiBody?.success === false) {
       log("zapi_send_failed", { status: zapiResp.status, body: JSON.stringify(zapiBody).slice(0, 300) });
@@ -240,11 +258,10 @@ serve(async (req) => {
       });
     }
 
-    // ─── Grava no histórico (conversation_messages) com sent_by_agent ───
+    // ─── Grava no histórico (upsert por external_message_id · evita duplicar com webhook) ───
     const nowIso = new Date().toISOString();
-    await sb.from("conversation_messages").insert({
+    const row: Record<string, unknown> = {
       conversation_id,
-      external_message_id: externalId,
       direction: "outgoing",
       sender_type: "atendente",
       content: fullText,
@@ -252,10 +269,16 @@ serve(async (req) => {
       status: "sent",
       timestamp: nowIso,
       created_at: nowIso,
-      sender_name: `Nath · ${agent.name}`,
+      sender_name: "Nath",
       sent_by_agent: agentKey,
       metadata: { source: "autopilot", agent: agentKey },
-    });
+    };
+    if (externalId) {
+      row.external_message_id = externalId;
+      await sb.from("conversation_messages").upsert(row, { onConflict: "external_message_id" });
+    } else {
+      await sb.from("conversation_messages").insert(row);
+    }
 
     log("ok", { agent: agentKey, chars: fullText.length });
     return new Response(JSON.stringify({ ok: true, agent: agentKey, reply_length: fullText.length }), {
