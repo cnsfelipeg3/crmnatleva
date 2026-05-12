@@ -1,16 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Calendar, Sparkles, Plane, Hotel, Package, Ship, Compass } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { Sparkles, Plane, Hotel, Package, Ship, Compass, MapPin, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
-import HighlightsCarousel from "@/components/prateleira/HighlightsCarousel";
+import NetflixRow, { type RowItem } from "@/components/prateleira/NetflixRow";
 
 type Product = any;
 
@@ -23,14 +16,24 @@ const KINDS = [
   { slug: "cruzeiro", label: "Cruzeiros", icon: Ship },
 ];
 
-function formatDate(d?: string | null) {
-  if (!d) return null;
-  try { return format(parseISO(d), "dd/MM", { locale: ptBR }); } catch { return d; }
-}
-function formatMoney(v?: number | null, currency = "BRL") {
-  if (v == null) return null;
-  const symbol = currency === "USD" ? "US$" : currency === "EUR" ? "€" : "R$";
-  return `${symbol} ${Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+function toRowItem(p: Product): RowItem {
+  return {
+    id: p.id,
+    slug: p.slug,
+    title: p.title,
+    cover: p.cover_image_url,
+    destination: p.destination,
+    shortDescription: p.short_description,
+    kindLabel: p.product_kind,
+    isPromo: p.is_promo,
+    promoBadge: p.promo_badge,
+    pricePromo: p.price_promo,
+    priceFrom: p.price_from,
+    currency: p.currency,
+    departureDate: p.departure_date,
+    returnDate: p.return_date,
+    flexibleDates: p.flexible_dates,
+  };
 }
 
 export default function PrateleiraVitrine() {
@@ -55,7 +58,10 @@ export default function PrateleiraVitrine() {
     })();
   }, []);
 
-  const destinations = useMemo(() => Array.from(new Set(items.map((p) => p.destination))).sort(), [items]);
+  const destinations = useMemo(
+    () => Array.from(new Set(items.map((p) => p.destination).filter(Boolean))).sort(),
+    [items]
+  );
 
   const filtered = useMemo(() => {
     let arr = items.filter((p) => {
@@ -71,8 +77,43 @@ export default function PrateleiraVitrine() {
     return arr;
   }, [items, kind, destination, q, onlyPromo, sort]);
 
+  const filtersActive = kind !== "all" || destination !== "all" || onlyPromo || q.trim() !== "";
+
+  // Rows
+  const promos = useMemo(() => items.filter((p) => p.is_promo).map(toRowItem), [items]);
+  const trending = useMemo(
+    () => items.slice().sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)).slice(0, 12).map(toRowItem),
+    [items]
+  );
+  const soon = useMemo(
+    () => items
+      .filter((p) => p.departure_date)
+      .slice()
+      .sort((a, b) => (a.departure_date || "").localeCompare(b.departure_date || ""))
+      .slice(0, 12)
+      .map(toRowItem),
+    [items]
+  );
+  const fresh = useMemo(
+    () => items.slice().sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 12).map(toRowItem),
+    [items]
+  );
+  const byDestination = useMemo(() => {
+    const map = new Map<string, Product[]>();
+    items.forEach((p) => {
+      if (!p.destination) return;
+      if (!map.has(p.destination)) map.set(p.destination, []);
+      map.get(p.destination)!.push(p);
+    });
+    return Array.from(map.entries())
+      .filter(([, arr]) => arr.length >= 1)
+      .sort((a, b) => b[1].length - a[1].length);
+  }, [items]);
+
+  const clearFilters = () => { setKind("all"); setDestination("all"); setQ(""); setOnlyPromo(false); };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Hero cinematográfico */}
       <CinematicVitrineHero
         slides={items.slice(0, 6).map((p) => ({
@@ -93,116 +134,153 @@ export default function PrateleiraVitrine() {
         setSort={setSort}
       />
 
-      {/* Carrossel de destaques */}
-      {!loading && items.length > 0 && (
-        <HighlightsCarousel
-          items={(items.filter((p) => p.is_promo).concat(items).slice(0, 10)).map((p) => ({
-            id: p.id,
-            slug: p.slug,
-            title: p.title,
-            cover: p.cover_image_url,
-            destination: p.destination,
-            shortDescription: p.short_description,
-            kindLabel: p.product_kind,
-            isPromo: p.is_promo,
-            promoBadge: p.promo_badge,
-            pricePromo: p.price_promo,
-            priceFrom: p.price_from,
-            currency: p.currency,
-          }))}
-        />
-      )}
+      {/* Sticky filters bar (Netflix style) */}
+      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#0a0a0a]/85 border-b border-white/5">
+        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-3">
+          <div className="flex items-center gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+            {KINDS.map((k) => {
+              const Icon = k.icon;
+              const active = kind === k.slug;
+              return (
+                <button
+                  key={k.slug}
+                  onClick={() => setKind(k.slug)}
+                  className={cn(
+                    "shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] font-medium border transition-all flex items-center gap-1.5",
+                    active
+                      ? "bg-white text-black border-white shadow-[0_0_24px_-4px_rgba(255,255,255,0.4)]"
+                      : "bg-white/5 text-white/85 border-white/10 hover:bg-white/10 hover:border-white/25"
+                  )}
+                >
+                  <Icon className="w-3.5 h-3.5" /> {k.label}
+                </button>
+              );
+            })}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-        {/* Kind chips */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-4">
-          {KINDS.map((k) => {
-            const Icon = k.icon;
-            const active = kind === k.slug;
-            return (
-              <button key={k.slug} onClick={() => setKind(k.slug)}
-                className={cn(
-                  "shrink-0 px-4 py-2 rounded-full text-sm font-medium border transition-all flex items-center gap-1.5",
-                  active ? "bg-foreground text-background border-foreground" : "bg-card text-foreground border-border hover:border-foreground/40"
-                )}>
-                <Icon className="w-4 h-4" /> {k.label}
-              </button>
-            );
-          })}
-        </div>
+            <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
 
-        {/* Filters secondary */}
-        <div className="flex flex-wrap items-center gap-2 mb-6">
-          <select value={destination} onChange={(e) => setDestination(e.target.value)}
-            className="bg-card border border-border rounded-md px-3 py-1.5 text-sm">
-            <option value="all">Todos os destinos</option>
-            {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <button onClick={() => setOnlyPromo(!onlyPromo)}
-            className={cn("px-3 py-1.5 rounded-md text-sm border transition-all flex items-center gap-1.5",
-              onlyPromo ? "bg-amber-500 text-black border-amber-500" : "bg-card border-border hover:border-foreground/40")}>
-            <Sparkles className="w-3.5 h-3.5" /> Só promoções
-          </button>
-          <span className="text-xs text-muted-foreground ml-auto">{filtered.length} produto(s)</span>
-        </div>
+            <select
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              className="shrink-0 bg-white/5 border border-white/10 hover:border-white/25 rounded-full px-3.5 py-1.5 text-[12.5px] text-white/90 focus:outline-none focus:ring-2 focus:ring-amber-400/50"
+            >
+              <option value="all" className="bg-neutral-900">Todos os destinos</option>
+              {destinations.map((d) => <option key={d} value={d} className="bg-neutral-900">{d}</option>)}
+            </select>
 
-        {loading ? (
-          <div className="text-muted-foreground text-sm">Carregando...</div>
-        ) : filtered.length === 0 ? (
-          <Card className="p-12 text-center">
-            <p className="text-muted-foreground">Nenhum produto bate com seus filtros.</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => { setKind("all"); setDestination("all"); setQ(""); setOnlyPromo(false); }}>Limpar filtros</Button>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((p) => <ProductCard key={p.id} p={p} />)}
+            <button
+              onClick={() => setOnlyPromo(!onlyPromo)}
+              className={cn(
+                "shrink-0 px-3.5 py-1.5 rounded-full text-[12.5px] border transition-all flex items-center gap-1.5",
+                onlyPromo
+                  ? "bg-amber-400 text-black border-amber-400"
+                  : "bg-white/5 border-white/10 text-white/85 hover:border-white/25"
+              )}
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Promoções
+            </button>
+
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <div className="relative hidden sm:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40" />
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Buscar destino, hotel..."
+                  className="bg-white/5 border border-white/10 rounded-full pl-8 pr-3 py-1.5 text-[12.5px] text-white placeholder:text-white/40 w-56 focus:outline-none focus:ring-2 focus:ring-amber-400/50 focus:border-transparent"
+                />
+              </div>
+              {filtersActive && (
+                <button
+                  onClick={clearFilters}
+                  className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[12px] text-white/70 hover:text-white bg-white/5 hover:bg-white/10 border border-white/10"
+                >
+                  <X className="w-3 h-3" /> Limpar
+                </button>
+              )}
+            </div>
           </div>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="relative">
+        {loading ? (
+          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-16">
+            <div className="space-y-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i}>
+                  <div className="h-6 w-48 bg-white/5 rounded mb-4 animate-pulse" />
+                  <div className="flex gap-4 overflow-hidden">
+                    {[1, 2, 3, 4, 5].map((j) => (
+                      <div key={j} className="shrink-0 w-[300px] aspect-[16/10] rounded-xl bg-white/5 animate-pulse" />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : filtersActive ? (
+          filtered.length === 0 ? (
+            <div className="max-w-2xl mx-auto px-6 py-24 text-center">
+              <div className="inline-flex w-16 h-16 rounded-full bg-white/5 items-center justify-center mb-4">
+                <Search className="w-7 h-7 text-white/40" />
+              </div>
+              <h3 className="font-serif text-2xl text-white mb-2">Nada por aqui ainda</h3>
+              <p className="text-white/60 text-sm mb-6">A gente não encontrou nenhuma viagem com esses filtros.</p>
+              <button
+                onClick={clearFilters}
+                className="inline-flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-amber-400 transition-colors"
+              >
+                Limpar filtros
+              </button>
+            </div>
+          ) : (
+            <NetflixRow
+              title="Resultados da busca"
+              subtitle={`${filtered.length} viagem(ns) prontas para embarcar`}
+              items={filtered.map(toRowItem)}
+            />
+          )
+        ) : (
+          <>
+            {promos.length > 0 && (
+              <NetflixRow
+                title="Promoções imperdíveis"
+                subtitle="Ofertas com desconto real, por tempo limitado"
+                items={promos}
+              />
+            )}
+            <NetflixRow
+              title="Em alta na NatLeva"
+              subtitle="As viagens mais procuradas da semana"
+              items={trending}
+            />
+            {soon.length > 0 && (
+              <NetflixRow
+                title="Saídas mais próximas"
+                subtitle="Embarque já com tudo organizado"
+                items={soon}
+              />
+            )}
+            {byDestination.map(([dest, arr]) => (
+              <NetflixRow
+                key={dest}
+                title={dest}
+                subtitle={`${arr.length} experiência(s) selecionadas`}
+                items={arr.map(toRowItem)}
+              />
+            ))}
+            <NetflixRow
+              title="Acabou de chegar"
+              subtitle="Novidades fresquinhas no nosso catálogo"
+              items={fresh}
+            />
+          </>
         )}
+
+        <div className="h-16" />
       </div>
     </div>
-  );
-}
-
-function ProductCard({ p }: { p: Product }) {
-  const promo = p.price_promo ? formatMoney(p.price_promo, p.currency) : null;
-  const full = p.price_from ? formatMoney(p.price_from, p.currency) : null;
-  const dateRange = p.flexible_dates ? "Datas flexíveis"
-    : p.departure_date && p.return_date ? `${formatDate(p.departure_date)} → ${formatDate(p.return_date)}`
-    : p.departure_date ? `Saída ${formatDate(p.departure_date)}` : null;
-
-  return (
-    <Link to={`/p/${p.slug}`} className="group block">
-      <Card className="overflow-hidden h-full flex flex-col p-0 hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {p.cover_image_url ? (
-            <img src={p.cover_image_url} alt={p.title} loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
-          ) : <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10" />}
-          {p.is_promo && p.promo_badge && (
-            <Badge className="absolute top-3 right-3 bg-amber-500 text-black hover:bg-amber-500"><Sparkles className="w-3 h-3 mr-1" />{p.promo_badge}</Badge>
-          )}
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/60 backdrop-blur px-2.5 py-1 rounded-full text-[11px] text-white">
-            <MapPin className="w-3 h-3" /> {p.destination}
-          </div>
-        </div>
-        <div className="p-4 flex-1 flex flex-col">
-          <h3 className="font-serif text-lg leading-tight text-foreground group-hover:text-amber-600 transition-colors line-clamp-2">{p.title}</h3>
-          {p.short_description && <p className="text-[13px] text-muted-foreground mt-1.5 line-clamp-2">{p.short_description}</p>}
-          {dateRange && (
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-3">
-              <Calendar className="w-3.5 h-3.5" /> {dateRange}
-            </div>
-          )}
-          <div className="flex items-end justify-between mt-auto pt-4 border-t border-border/30">
-            <div>
-              {promo && full && <div className="text-[10px] text-muted-foreground line-through">{full}</div>}
-              <div className="text-base font-bold text-foreground">{promo || full || "Sob consulta"}</div>
-              {p.installments_max && <div className="text-[10px] text-muted-foreground">em até {p.installments_max}x</div>}
-            </div>
-            {p.product_kind && <Badge variant="outline" className="text-[10px]">{p.product_kind}</Badge>}
-          </div>
-        </div>
-      </Card>
-    </Link>
   );
 }
