@@ -1,6 +1,6 @@
 import { useRef, useState, MouseEvent } from "react";
 import { Link } from "react-router-dom";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, MapPin, Sparkles, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,7 @@ function money(v?: number | null, currency = "BRL") {
 
 function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
   const ref = useRef<HTMLAnchorElement>(null);
+  const reduced = useReducedMotion();
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const rx = useSpring(useTransform(my, [-0.5, 0.5], [10, -10]), { stiffness: 200, damping: 18 });
@@ -37,6 +38,7 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
   const [hover, setHover] = useState(false);
 
   const onMove = (e: MouseEvent<HTMLAnchorElement>) => {
+    if (reduced) return;
     const r = ref.current?.getBoundingClientRect();
     if (!r) return;
     mx.set((e.clientX - r.left) / r.width - 0.5);
@@ -49,11 +51,11 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={reduced ? false : { opacity: 0, y: 40 }}
+      whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
-      transition={{ duration: 0.6, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}
-      style={{ perspective: 1200 }}
+      transition={{ duration: 0.6, delay: Math.min(index * 0.06, 0.3), ease: [0.16, 1, 0.3, 1] }}
+      style={{ perspective: reduced ? undefined : 1200 }}
       className="snap-start shrink-0 w-[78vw] sm:w-[340px] lg:w-[360px]"
     >
       <Link
@@ -62,10 +64,10 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
         onMouseMove={onMove}
         onMouseEnter={() => setHover(true)}
         onMouseLeave={reset}
-        className="group block focus:outline-none focus:ring-2 focus:ring-amber-500/60 rounded-2xl"
+        className="group block focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 rounded-2xl"
       >
         <motion.div
-          style={{ rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
+          style={reduced ? undefined : { rotateX: rx, rotateY: ry, transformStyle: "preserve-3d" }}
           className="relative rounded-2xl overflow-hidden border border-border bg-card shadow-[0_10px_40px_-20px_rgba(0,0,0,0.45)] will-change-transform"
         >
           {/* Image */}
@@ -156,7 +158,7 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
   );
 }
 
-export default function HighlightsCarousel({ items, title = "Destaques da semana", subtitle = "Selecionados pela curadoria NatLeva" }: { items: HighlightItem[]; title?: string; subtitle?: string }) {
+export default function HighlightsCarousel({ items, title = "Destaques da semana", subtitle = "Selecionados pela curadoria NatLeva", loading = false }: { items: HighlightItem[]; title?: string; subtitle?: string; loading?: boolean }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
   const scrollBy = (dir: 1 | -1) => {
@@ -167,7 +169,7 @@ export default function HighlightsCarousel({ items, title = "Destaques da semana
     el.scrollBy({ left: dir * step * 1.1, behavior: "smooth" });
   };
 
-  if (!items || items.length === 0) return null;
+  if (!loading && (!items || items.length === 0)) return null;
 
   return (
     <section className="relative py-10 sm:py-14">
