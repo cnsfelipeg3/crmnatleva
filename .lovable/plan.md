@@ -1,108 +1,115 @@
-## Objetivo
+# Piloto controlado: agentes IA respondendo no LiveChat
 
-Transformar a aba **Analytics** da proposta numa central de inteligência completa, em tempo real, sem campos vazios e com leitura clara do comportamento do cliente.
+Vamos colocar Maya e Atlas para responder DE VERDADE no WhatsApp, mas com **três camadas de segurança** para garantir que NENHUMA outra conversa seja afetada por engano. O teste começa exclusivamente com o chat do Bryan Souza (+55 11 97304 5950).
 
-## Diagnóstico do estado atual
+## Princípio central · "Default OFF, opt-in explícito"
 
-A coleta de dados já existe (`proposal_viewers`, `proposal_interactions`, `proposal_clicks`, `proposal_shares`), mas o painel mostra zeros porque:
+Por padrão, NENHUMA conversa terá agente respondendo. Só conversas que você ativar manualmente, uma a uma, recebem resposta automática. E ainda existe uma trava global "kill switch" que desliga TUDO instantaneamente.
 
-1. **Tempo total · Engajamento · Score = 0** · O `useProposalTracking` só persiste `total_time_seconds` e `engagement_score` no `unmount` do componente. Em mobile (Safari/iOS) o cliente fecha a aba e o evento nunca dispara, então só sobra o `active_seconds` parcial.
-2. **0/0 Compartilhamentos** · sem botão visível de compartilhar no público; nada gera registro em `proposal_shares`.
-3. **Mapa de calor vazio** · canvas de aspect 9:18 com poucos cliques, sem referência visual da proposta por trás.
-4. **Sem realtime** · refetch a cada 30s, então nada "pulsa" enquanto o cliente está navegando ao vivo.
-5. **Indicadores faltando** · taxa de retorno, scroll médio, "ao vivo agora", funil de seções, comparação dispositivo, hora de pico, tempo até primeiro engajamento, taxa de CTA, geolocalização visual.
+## As 3 camadas de segurança
 
-## O que será entregue
+```text
+Camada 1 · Kill switch global (ai_config: ai_autopilot_global = on/off)
+Camada 2 · Allowlist de telefones (ai_autopilot_allowlist) · só Bryan no início
+Camada 3 · Toggle por conversa (conversations.ai_autopilot_enabled + active_agent)
+```
 
-### 1. Tracking confiável (corrige os zeros)
+A IA só responde se **as 3 camadas estiverem verdes**. Basta uma estar OFF e a resposta automática não acontece.
 
-Atualizar `src/hooks/useProposalTracking.ts`:
-- Persistir `total_time_seconds` + `engagement_score` + `scroll_depth_max` a cada heartbeat de 15s (hoje só vai `active_seconds`).
-- Usar `navigator.sendBeacon` no `pagehide` para garantir flush no fechamento mobile.
-- Adicionar evento `first_engagement` (primeiro scroll real ou primeiro clique) para calcular tempo até engajar.
-- Registrar evento `return_visit` quando `total_views > 1`.
+## O que o usuário vê no chat (UI)
 
-### 2. Realtime ao vivo
+No header da conversa (ao lado do botão "Opinião da Nath"), aparece um novo controle discreto:
 
-No `ProposalAnalyticsPanel`:
-- Subscrever via Supabase Realtime nas tabelas `proposal_viewers`, `proposal_interactions`, `proposal_clicks` filtradas por `proposal_id` e invalidar as queries do React Query (refetch instantâneo).
-- Indicador "AO VIVO" piscando quando há `last_active_at` < 60s.
-- Card "Visitantes online agora" com avatar + seção atual.
+```text
+[ 🤖 Piloto IA: Desligado ▾ ]
+   ├─ Desligado (padrão)
+   ├─ Ativar Maya · Acolhimento
+   └─ Ativar Atlas · Qualificação SDR
+```
 
-### 3. KPIs reformulados (zero campo vazio)
+Quando ativo, vira um chip verde pulsante:
+```text
+[ ● Maya respondendo · Pausar ]
+```
 
-Substituir os 7 cards atuais por uma grade de **12 indicadores**:
-- Visualizações totais
-- Visitantes únicos
-- Tempo total + tempo médio por visita
-- Engajamento médio (com cor por faixa: frio/morno/quente)
-- Scroll profundo médio (%)
-- Taxa de retorno (% que voltou 2+ vezes)
-- Cliques em CTAs / total
-- Cliques no WhatsApp
-- Compartilhamentos · aberturas
-- Tempo até primeiro engajamento (mediana)
-- Dispositivo dominante (com %)
-- Hora de pico (heatmap horário)
+Cada mensagem enviada pelo agente aparece no chat com um badge discreto **"via Nath · Maya"** para você diferenciar do que é humano.
 
-Quando um KPI tem zero, mostra placeholder explicativo ("aguardando primeiro acesso") em vez de "0".
+Existe ainda um botão **"Pausar 1h"** rápido (auto-religa depois) para casos em que você quer assumir o controle pontualmente sem desativar de vez.
 
-### 4. Novos painéis
+## Fluxo técnico (o que acontece quando chega mensagem)
 
-- **Linha do tempo de atividade** · gráfico de área (recharts) com visualizações por hora dos últimos 7 dias.
-- **Funil de seções** · % de visitantes que chegou em cada seção (Hero -> Voos -> Hotéis -> Valores -> CTA), revelando onde perdem interesse.
-- **Mapa geográfico** · lista compacta agrupada por cidade/país com bandeira e nº de visitantes.
-- **Heatmap melhorado** · usa o screenshot da proposta como fundo (já temos `coverImageUrl`); fallback para grid neutro com labels de seção.
-- **Top elementos clicados** · ranking com texto + nº cliques + % do total (já existe parcial, será polido).
-- **Visitantes detalhados** · adicionar:
-  - Status ao vivo (bolinha verde se < 60s)
-  - Tempo ativo vs tempo total
-  - Histórico de retornos (3x em datas X, Y, Z)
-  - Última seção vista
-  - Botão "Enviar follow-up no WhatsApp" usando o telefone do cliente, com mensagem sugerida pelo score.
-- **Insights da Nath** · 3-5 sugestões automáticas baseadas em regras: "Cliente Karina viu 5x mas não clicou em CTA -> sugerir desconto", "Pico de acessos às 22h -> melhor horário para enviar follow-up", "Mobile concentra 80% -> revisar layout mobile".
+```text
+WhatsApp (Bryan) → Z-API webhook → zapi-webhook (já existe)
+                                         ↓
+                           grava mensagem em messages
+                                         ↓
+                           NOVO: trigger autopilot-dispatcher
+                                         ↓
+                       Verifica as 3 camadas de segurança
+                                         ↓ (todas OK)
+                           Chama agent-chat (Maya OU Atlas)
+                                         ↓
+                       Envia via zapi-proxy (send-text)
+                                         ↓
+                       Grava resposta em messages com flag
+                                         ↓
+                       Atualiza badge "via Nath" no LiveChat
+```
 
-### 5. Compartilhamento
+## Mudanças no banco (migration)
 
-- Adicionar botão "Compartilhar com a família" na view pública (`ProposalPublicView`) que cria registro em `proposal_shares` e gera link com `?ref=share_token`.
-- Quando alguém abre via `?ref=`, incrementa `open_count` e marca `referred_by_share_id` no novo viewer.
+1. **`conversations`** ganha 3 colunas:
+   - `ai_autopilot_enabled boolean default false`
+   - `ai_autopilot_agent text` ('maya' | 'atlas' | null)
+   - `ai_autopilot_paused_until timestamptz` (para pausa temporária)
 
-### 6. Layout · responsivo
+2. **`ai_config`** ganha 2 chaves:
+   - `ai_autopilot_global` ('on' | 'off') · padrão **'off'**
+   - `ai_autopilot_allowlist` (texto, lista de telefones) · começa com `5511973045950`
 
-- Grid mobile-first: 2 colunas em sm, 3 em md, 4 em lg para KPIs.
-- Cards com altura fixa em desktop, scroll interno em mobile.
-- Tema claro/escuro respeitado via tokens semânticos.
-- Sem emojis, ícones lucide-react com semântica clara.
+3. **`messages`** ganha 1 coluna (se não existir):
+   - `sent_by_agent text` ('maya' | 'atlas' | null) para identificar visualmente
 
-## Arquivos afetados
+## Mudanças no código
 
-**Editar:**
-- `src/components/proposal/ProposalAnalyticsPanel.tsx` (reescrita completa)
-- `src/hooks/useProposalTracking.ts` (heartbeat persistindo todos os campos + sendBeacon)
-- `src/pages/ProposalPublicView.tsx` (botão compartilhar)
+**Edge Functions:**
+- `autopilot-dispatcher` (NOVO) · função invocada após cada mensagem recebida. Faz toda a verificação das 3 camadas, monta o histórico, chama `agent-chat`, envia via Z-API e grava com `sent_by_agent`.
+- `zapi-webhook` · adicionar **uma única chamada** ao final do bloco que processa mensagens recebidas: `supabase.functions.invoke('autopilot-dispatcher', { conversation_id, message_id })`. Não bloqueia nem altera o fluxo atual.
 
-**Criar:**
-- `src/components/proposal/analytics/KpiGrid.tsx`
-- `src/components/proposal/analytics/LiveVisitorsCard.tsx`
-- `src/components/proposal/analytics/SectionFunnelCard.tsx`
-- `src/components/proposal/analytics/HourlyActivityChart.tsx`
-- `src/components/proposal/analytics/GeographicCard.tsx`
-- `src/components/proposal/analytics/AiInsightsCard.tsx`
-- `src/components/proposal/analytics/ViewerDetailRow.tsx`
-- `src/lib/proposalAnalytics.ts` (cálculos puros: funil, mediana, score, hora de pico)
+**Frontend:**
+- `src/components/livechat/AutopilotControl.tsx` (NOVO) · o dropdown/chip do header.
+- `src/components/livechat/ConversationHeader.tsx` (existente) · injetar o `AutopilotControl`.
+- `src/components/livechat/MessageBubble.tsx` (existente) · mostrar badge "via Nath · Maya/Atlas" quando `sent_by_agent` estiver setado.
+- `src/pages/AdminAutopilot.tsx` (NOVO, opcional v2) · página em /admin para você ver/gerir kill switch global + allowlist sem mexer no banco.
 
-**Sem mudança em DB** · a estrutura atual já comporta tudo; só vou usar melhor.
+## Garantias contra "vazamento" para outras conversas
 
-## Garantias
+1. **Default OFF no banco**: a coluna `ai_autopilot_enabled` nasce `false` para TODAS as conversas existentes (a migration NÃO faz mass-update).
+2. **Allowlist de telefones**: mesmo se alguém ativar o toggle por engano em outra conversa, o dispatcher rejeita porque o telefone não está na lista.
+3. **Kill switch global**: em caso de qualquer comportamento estranho, você roda 1 update no `ai_config` e todos os agentes param em segundos.
+4. **Logs detalhados**: cada decisão do dispatcher (acionado / rejeitado / motivo) fica em log do edge function · você consegue auditar tudo.
+5. **Cooldown anti-loop**: o dispatcher ignora mensagens com `fromMe = true` e respeita um cooldown de 8s entre respostas da IA por conversa.
+6. **Não responde a mídia complexa**: se a mensagem do cliente for áudio/imagem/documento, o dispatcher pula (v1) e deixa para o humano · evita que a IA responda algo sem ter "ouvido" o áudio.
 
-- Não quebra a coleta existente (campos atuais continuam preenchidos).
-- Sem deletar dados nem migrações destrutivas.
-- Componentes pequenos, isolados, com responsabilidade única.
-- TypeScript estrito, textos pt-BR, design tokens semânticos, sem emojis.
+## Rollout em fases
 
-## Fora do escopo desta entrega
+**Fase 1 (este plano):** Maya OU Atlas, escolhido manualmente, somente Bryan, allowlist 1 número.
+**Fase 2 (depois de validar):** transferência automática Maya → Atlas quando qualificação atingir critério.
+**Fase 3:** ampliar allowlist para mais números teste.
+**Fase 4:** liberar para todas as conversas com flag por usuário.
 
-- Exportar PDF do relatório de analytics (posso adicionar depois se quiser).
-- Comparar performance entre múltiplas propostas (dashboard cross-proposal).
+## Critérios de aceite (Fase 1)
 
-Posso seguir? Confirma e eu construo.
+- [ ] Toggle no header do chat funciona e persiste por conversa.
+- [ ] Bryan envia mensagem → Maya/Atlas responde no WhatsApp em < 15s.
+- [ ] Outras conversas (qualquer outro número) NÃO recebem resposta automática mesmo com toggle errado.
+- [ ] Desligar o toggle interrompe imediatamente (próxima msg do cliente não tem resposta IA).
+- [ ] Kill switch global desliga tudo em qualquer cenário.
+- [ ] Mensagens da IA aparecem no LiveChat com badge "via Nath · Maya/Atlas".
+- [ ] Logs do `autopilot-dispatcher` mostram cada decisão.
+
+## Tempo estimado de implementação
+
+~45 min de build (migration + dispatcher + UI + 1 ajuste no webhook).
+
+Quer que eu siga com a implementação?
