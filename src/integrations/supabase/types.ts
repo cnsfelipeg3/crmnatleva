@@ -4668,6 +4668,36 @@ export type Database = {
         }
         Relationships: []
       }
+      hotel_payment_cache: {
+        Row: {
+          available_modalities: string[]
+          fetched_at: string
+          has_free_cancellation: boolean
+          hotel_id: string
+          offers_count: number
+          raw_offers: Json | null
+          source: string
+        }
+        Insert: {
+          available_modalities?: string[]
+          fetched_at?: string
+          has_free_cancellation?: boolean
+          hotel_id: string
+          offers_count?: number
+          raw_offers?: Json | null
+          source: string
+        }
+        Update: {
+          available_modalities?: string[]
+          fetched_at?: string
+          has_free_cancellation?: boolean
+          hotel_id?: string
+          offers_count?: number
+          raw_offers?: Json | null
+          source?: string
+        }
+        Relationships: []
+      }
       hr_access_log: {
         Row: {
           action: string
@@ -7056,35 +7086,56 @@ export type Database = {
       }
       proposal_items: {
         Row: {
+          cancellation_label: string | null
+          cancellation_policy: string | null
           created_at: string
           data: Json | null
           description: string | null
+          free_cancellation_until: string | null
           id: string
           image_url: string | null
           item_type: string
+          payment_description: string | null
+          payment_label: string | null
+          payment_modality: string | null
           position: number
+          prepayment_amount: number | null
           proposal_id: string
           title: string | null
         }
         Insert: {
+          cancellation_label?: string | null
+          cancellation_policy?: string | null
           created_at?: string
           data?: Json | null
           description?: string | null
+          free_cancellation_until?: string | null
           id?: string
           image_url?: string | null
           item_type: string
+          payment_description?: string | null
+          payment_label?: string | null
+          payment_modality?: string | null
           position?: number
+          prepayment_amount?: number | null
           proposal_id: string
           title?: string | null
         }
         Update: {
+          cancellation_label?: string | null
+          cancellation_policy?: string | null
           created_at?: string
           data?: Json | null
           description?: string | null
+          free_cancellation_until?: string | null
           id?: string
           image_url?: string | null
           item_type?: string
+          payment_description?: string | null
+          payment_label?: string | null
+          payment_modality?: string | null
           position?: number
+          prepayment_amount?: number | null
           proposal_id?: string
           title?: string | null
         }
