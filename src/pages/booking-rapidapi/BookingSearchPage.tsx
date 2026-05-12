@@ -70,6 +70,16 @@ import {
   type UnifiedHotelOffer,
   type HotelSource,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
+import {
+  useHotelPaymentSummaries,
+  usePrefetchHotelPayments,
+  type PaymentKey,
+} from "@/hooks/useHotelPaymentCache";
+import {
+  hotelMatchesPaymentFilters,
+  paymentCacheKey,
+} from "@/lib/hotels/paymentFilter";
+import type { PaymentModality } from "@/types/hotel";
 
 const SORT_OPTIONS = [
   { value: "popularity", label: "Mais populares" },
