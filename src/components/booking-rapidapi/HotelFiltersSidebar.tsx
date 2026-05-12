@@ -198,6 +198,8 @@ export function HotelFiltersSidebar({
       priceMin: undefined,
       priceMax: undefined,
       sortBy: state.sortBy,
+      paymentModalities: new Set(),
+      freeCancellationOnly: false,
     });
     onNameQueryChange?.("");
   };
