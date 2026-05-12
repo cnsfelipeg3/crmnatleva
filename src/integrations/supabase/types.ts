@@ -2899,6 +2899,7 @@ export type Database = {
           sender_phone: string | null
           sender_photo: string | null
           sender_type: string
+          sent_by_agent: string | null
           status: string | null
           timestamp: string | null
         }
@@ -2941,6 +2942,7 @@ export type Database = {
           sender_phone?: string | null
           sender_photo?: string | null
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           timestamp?: string | null
         }
@@ -2983,6 +2985,7 @@ export type Database = {
           sender_phone?: string | null
           sender_photo?: string | null
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           timestamp?: string | null
         }
