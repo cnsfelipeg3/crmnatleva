@@ -36,8 +36,7 @@ type ProductForm = {
   duration: string;
   // price
   price_from: string; price_promo: string; price_label: string; currency: string;
-  installments_max: string; installments_no_interest: string; pix_discount_percent: string;
-  payment_special: string;
+  payment_entry_percent: string; payment_days_before: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
@@ -58,8 +57,7 @@ const empty: ProductForm = {
   how_it_works: "", pickup_info: "", recommendations: "",
   duration: "",
   price_from: "", price_promo: "", price_label: "por pessoa", currency: "BRL",
-  installments_max: "", installments_no_interest: "", pix_discount_percent: "",
-  payment_special: "",
+  payment_entry_percent: "30", payment_days_before: "20",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
@@ -139,10 +137,8 @@ export default function ProdutoEditor() {
           recommendations: data.recommendations ?? "", duration: data.duration ?? "",
           price_from: data.price_from?.toString() ?? "", price_promo: data.price_promo?.toString() ?? "",
           price_label: data.price_label ?? "por pessoa", currency: data.currency ?? "BRL",
-          installments_max: data.installments_max?.toString() ?? "",
-          installments_no_interest: data.installments_no_interest?.toString() ?? "",
-          pix_discount_percent: data.pix_discount_percent?.toString() ?? "",
-          payment_special: data.payment_terms?.special ?? "",
+          payment_entry_percent: (data.payment_terms?.entry_percent ?? 30).toString(),
+          payment_days_before: (data.payment_terms?.min_days_before_checkin ?? 20).toString(),
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
@@ -185,10 +181,14 @@ export default function ProdutoEditor() {
       recommendations: form.recommendations || null, duration: form.duration || null,
       price_from: numOrNull(form.price_from), price_promo: numOrNull(form.price_promo),
       price_label: form.price_label || null, currency: form.currency || "BRL",
-      installments_max: numOrNull(form.installments_max),
-      installments_no_interest: numOrNull(form.installments_no_interest),
-      pix_discount_percent: numOrNull(form.pix_discount_percent),
-      payment_terms: form.payment_special ? { special: form.payment_special } : {},
+      installments_max: null,
+      installments_no_interest: null,
+      pix_discount_percent: null,
+      payment_terms: {
+        plan: "natleva_default",
+        entry_percent: numOrNull(form.payment_entry_percent) ?? 30,
+        min_days_before_checkin: numOrNull(form.payment_days_before) ?? 20,
+      },
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
@@ -433,21 +433,19 @@ export default function ProdutoEditor() {
                 <Input value={form.price_label} onChange={(e) => set("price_label", e.target.value)} placeholder="por pessoa, casal, total..." />
               </div>
               <div>
-                <Label>Parcelas máx</Label>
-                <Input type="number" value={form.installments_max} onChange={(e) => set("installments_max", e.target.value)} placeholder="12" />
+                <Label>Entrada à vista (%)</Label>
+                <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
               </div>
               <div>
-                <Label>Parcelas sem juros</Label>
-                <Input type="number" value={form.installments_no_interest} onChange={(e) => set("installments_no_interest", e.target.value)} placeholder="6" />
-              </div>
-              <div>
-                <Label>Desconto PIX (%)</Label>
-                <Input type="number" value={form.pix_discount_percent} onChange={(e) => set("pix_discount_percent", e.target.value)} placeholder="5" />
+                <Label>Quitação até (dias antes)</Label>
+                <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
               </div>
             </div>
-            <div>
-              <Label>Condições especiais (texto livre)</Label>
-              <Textarea rows={3} value={form.payment_special} onChange={(e) => set("payment_special", e.target.value)} placeholder="Ex: Entrada de 30% e saldo em até 10x sem juros · válido até 30/06" />
+            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-50/30 dark:bg-amber-500/5 p-4 text-sm space-y-2">
+              <div className="font-semibold text-foreground">Plano padrão Natleva</div>
+              <p className="text-muted-foreground text-xs leading-relaxed">
+                Todos os produtos da Prateleira usam o mesmo modelo: entrada à vista (PIX, cartão ou link de pagamento) e saldo no boleto sem juros, com quitação até X dias antes do embarque. O número de parcelas é calculado automaticamente conforme a data de saída do produto.
+              </p>
             </div>
             <div className="flex flex-wrap items-end gap-4 pt-2">
               <div className="flex items-center gap-2">
