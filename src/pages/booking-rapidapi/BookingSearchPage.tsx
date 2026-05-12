@@ -577,6 +577,9 @@ export default function BookingSearchPage() {
                         onStateChange={setFiltersState}
                         nameQuery={nameQuery}
                         onNameQueryChange={setNameQuery}
+                        paymentCounts={paymentCounts.byModality}
+                        freeCancellationCount={paymentCounts.free}
+                        paymentSummariesCount={paymentCounts.summarized}
                       />
                       {sources.hotelscom && (
                         <div className="mt-4">
