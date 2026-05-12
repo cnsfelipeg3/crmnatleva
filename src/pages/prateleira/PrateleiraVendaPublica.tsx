@@ -212,52 +212,30 @@ export default function PrateleiraVendaPublica() {
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.recommendations}</div>
             </Card>
           )}
+          {/* Gatilhos estratégicos · prova social, manifesto, garantias */}
+          <SalesTriggersBlock destination={p.destination} productKind={p.product_kind} />
         </div>
 
-        {/* Sticky price card */}
+        {/* Sticky offer stack */}
         <div className="lg:col-span-1">
-          <Card className="p-6 lg:sticky lg:top-6 space-y-4 border-amber-500/30">
-            {(fullPrice || promoPrice) && (
-              <div>
-                {promoPrice && fullPrice && (
-                  <div className="text-xs text-muted-foreground line-through">De {fullPrice}</div>
-                )}
-                <div className="text-3xl font-bold text-foreground">
-                  {promoPrice || fullPrice}
-                </div>
-                {p.price_label && <div className="text-xs text-muted-foreground mt-0.5">{p.price_label}</div>}
-              </div>
-            )}
-
-            {(() => {
-              const pt = (p.payment_terms ?? {}) as any;
-              const entryPercent = typeof pt.entry_percent === "number" ? pt.entry_percent : 30;
-              const daysBefore = typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20;
-              const priceForPlan = p.price_promo ?? p.price_from;
-              return (
-                <div className="pt-3 border-t border-border/50">
-                  <PaymentPlanCard
-                    price={priceForPlan}
-                    departureDate={p.departure_date}
-                    currency={p.currency || "BRL"}
-                    entryPercent={entryPercent}
-                    daysBefore={daysBefore}
-                  />
-                </div>
-              );
-            })()}
-
-            {p.seats_left != null && p.seats_left <= 5 && p.seats_left > 0 && (
-              <div className="text-xs text-amber-700 dark:text-amber-400 font-medium">
-                Apenas {p.seats_left} vaga(s) restante(s)
-              </div>
-            )}
-
-            <Button size="lg" className="w-full" onClick={() => setLeadOpen(true)}>
-              Tenho interesse
-            </Button>
-            <p className="text-[11px] text-center text-muted-foreground">A NatLeva entra em contato no WhatsApp.</p>
-          </Card>
+          <OfferStack
+            promoPrice={promoPrice}
+            fullPrice={fullPrice}
+            priceLabel={p.price_label}
+            isPromo={!!p.is_promo}
+            promoBadge={p.promo_badge}
+            seatsLeft={p.seats_left}
+            pixDiscountPercent={p.pix_discount_percent}
+            installmentsMax={p.installments_max}
+            installmentsNoInterest={p.installments_no_interest}
+            rawPriceFrom={p.price_from}
+            rawPricePromo={p.price_promo}
+            currency={p.currency || "BRL"}
+            departureDate={p.departure_date}
+            paymentTerms={p.payment_terms}
+            productId={p.id}
+            onCTA={() => setLeadOpen(true)}
+          />
         </div>
       </div>
 
