@@ -23,7 +23,7 @@ type Props = {
   q: string;
   setQ: (v: string) => void;
   sort: string;
-  setSort: (v: any) => void;
+  setSort: (v: "relevance" | "price_asc" | "soon" | "new") => void;
 };
 
 const HEADLINE_PRIMARY = "A próxima viagem";
