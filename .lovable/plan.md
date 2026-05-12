@@ -1,152 +1,83 @@
-## Prateleira NatLeva · Marketplace de Viagens Prontas
+# Pulso Comercial 24h · Painel de Propostas no Dashboard
 
-Transformar o módulo atual de "Produtos" (passeios soltos) em uma **Prateleira NatLeva** completa, capaz de cadastrar qualquer tipo de produto pronto (aéreo, hospedagem, pacote, passeio) com datas, preços, condições de pagamento e página de vendas individual + vitrine pública estilo marketplace.
+Adicionar uma seção de destaque no topo do Dashboard principal (`/`) que, toda vez que você abrir o sistema, mostre o "raio-X" das últimas 24h em propostas: quantas saíram, quanto valem, lucro estimado, quantos clientes abriram, tempo médio na proposta e quantos compartilharam.
 
----
+## O que aparece na tela
 
-### 1. Renomeação e nova navegação
+Bloco fixo logo acima dos KPIs atuais, com 6 cards compactos + uma faixa secundária:
 
-- Renomear o item de menu "Produtos" para **"Prateleira NatLeva"** dentro de Viagens.
-- Rotas:
-  - `/prateleira` (admin · lista interna com filtros, status, busca)
-  - `/prateleira/novo` e `/prateleira/:slug/editar` (editor)
-  - `/prateleira/:slug` (página de vendas individual · pública)
-  - `/p` (vitrine pública estilo marketplace · `crmnatleva.lovable.app/p`)
-- Manter rotas antigas `/produtos*` redirecionando para evitar quebra de links já divulgados.
+```text
+┌─ Pulso Comercial · Últimas 24h ──────────────────────── [24h ▾] ┐
+│  Propostas    │  Valor total   │  Lucro estimado │  Clientes   │
+│  enviadas     │  R$ 218.400    │  ~ R$ 31.200    │  que abriram│
+│      12       │  ticket médio  │   margem ~14%   │   8 de 12   │
+│               │  R$ 18.200     │                 │   (66%)     │
+├───────────────┴────────────────┴─────────────────┴─────────────┤
+│  Tempo médio na proposta: 2m 47s · Engajamento alto (>60s): 5  │
+│  Compartilhamentos: 3 · Cliques no WhatsApp: 4 · CTA: 2        │
+└────────────────────────────────────────────────────────────────┘
+        [ Ver propostas das últimas 24h →  /propostas ]
+```
 
----
+Detalhes:
+- Toggle de janela: **24h · 7d · 30d** (default 24h, persistido em localStorage).
+- Cada card clicável abre `/propostas` já filtrado pela janela selecionada.
+- Lista expansível "Top propostas com mais engajamento nas últimas 24h" (até 5 itens), com nome do cliente, valor, segundos ativos e badge de status (Visualizada · Engajou · Compartilhou · CTA).
+- Skeleton durante carregamento. Mensagem amigável quando não houver propostas no período (sem emojis, ícone Lucide).
 
-### 2. Modelo de dados (extensão da tabela existente)
+## Métricas e como cada uma é calculada
 
-A tabela `experience_products` será expandida (não recriada) para suportar qualquer tipo de produto. Novos campos:
+Tudo das tabelas já existentes (`proposals`, `proposal_viewers`, `proposal_shares`), filtrando `is_fictional = false` e `created_at >= now() - interval '24h'`.
 
-**Tipo e datas**
-- `product_kind` (enum: `aereo`, `hospedagem`, `pacote`, `passeio`, `cruzeiro`, `outros`)
-- `departure_date`, `return_date` (datas fixas)
-- `flexible_dates` (boolean · "saídas sob consulta")
-- `available_dates` (jsonb · múltiplas saídas: `[{departure, return, seats_left}]`)
+| Indicador | Fonte | Cálculo |
+|---|---|---|
+| Propostas enviadas | `proposals` | count onde `status` ∈ ('sent','viewed','accepted','rejected') OU `created_at` na janela. Vamos usar `created_at na janela AND status != 'draft'` para refletir "saíram pro cliente". |
+| Valor total | `proposals.total_value` | sum |
+| Ticket médio | derivado | total / count |
+| Lucro estimado | derivado | aplica margem média histórica das vendas dos últimos 90 dias (`avg(profit/received_value)`). Exibido com prefixo "~" para deixar claro que é estimativa. |
+| Clientes que abriram | `proposal_viewers` | count distinct `proposal_id` com `first_viewed_at` na janela, restrito a propostas criadas na janela. |
+| Tempo médio na proposta | `proposal_viewers.active_seconds` | avg dos viewers com `active_seconds > 5` |
+| Engajamento alto | `proposal_viewers` | count com `active_seconds >= 60` |
+| Compartilhamentos | `proposal_shares` | count com `created_at` na janela |
+| Cliques WhatsApp / CTA | `proposal_viewers` | count `whatsapp_clicked = true` / `cta_clicked = true` |
 
-**Preços e condições**
-- `price_promo` (preço promocional)
-- `price_label` (ex: "por pessoa", "casal", "total")
-- `installments_max`, `installments_no_interest`, `pix_discount_percent`
-- `payment_terms` (jsonb estruturado: cartão, PIX, boleto, condições especiais)
-- `is_promo` + `promo_badge` (ex: "Black Friday", "Últimas vagas")
+## Implementação técnica
 
-**Origem/Destino e logística**
-- `origin_city`, `origin_iata`
-- `destination_iata`
-- `airline`, `hotel_name`, `hotel_stars`
-- `nights`, `pax_min`, `pax_max`, `seats_total`, `seats_left`
+### 1. RPC dedicada (performance, evita N queries do front)
+Migration criando função `public.proposals_pulse(p_hours int default 24)` retornando `jsonb` com todos os campos acima + array `top_engaged` (limit 5). `STABLE SECURITY DEFINER`, `search_path = public`. Margem histórica calculada na própria RPC numa CTE.
 
-**Vendas e SEO**
-- `sale_page_enabled` (toggle página individual ligada/desligada)
-- `seo_title`, `seo_description`, `og_image`
-- `whatsapp_cta_text` (mensagem pré-preenchida ao clicar "Quero esse")
-- `view_count`, `lead_count` (analytics)
+### 2. Hook
+`src/hooks/useProposalsPulse.ts` usando `@tanstack/react-query` (já presente no projeto), `staleTime: 60s`, `refetchOnWindowFocus: true` (assim atualiza ao voltar pra aba).
 
-Todos os arrays (includes, excludes, highlights) e gallery permanecem `jsonb`.
+### 3. Componente
+`src/components/dashboard/ProposalsPulseSection.tsx`:
+- Usa `Card`, `CardHeader`, `CardContent`, `Badge`, `Button`, `Skeleton` do shadcn.
+- Ícones Lucide: `Send`, `DollarSign`, `TrendingUp`, `Eye`, `Clock`, `Share2`, `MessageCircle`, `MousePointerClick`. Sem emojis.
+- Tokens semânticos (`bg-card`, `text-foreground`, `text-muted-foreground`, `border-border`, `text-primary`). Suporte a tema claro/escuro automático.
+- Grid: `grid-cols-2 sm:grid-cols-2 lg:grid-cols-4` para os cards principais, faixa secundária em `flex flex-wrap gap-3`. Mobile-first conforme diretrizes.
+- Linha "Top engajadas" colapsável (`Collapsible` shadcn).
 
-**Nova tabela** `prateleira_leads`:
-- Captura quem clicou em "Tenho interesse" em cada produto
-- Campos: `product_id`, `name`, `email`, `phone` (com country code), `message`, `viewed_at`, `ip`, `device`, `utm_*`
-- Integra com o pipeline existente (vira lead/cotação automaticamente)
+### 4. Integração no Dashboard
+Em `src/pages/Dashboard.tsx`, inserir `<ProposalsPulseSection />` logo após `<DashboardFilters />` e antes de `<KpiCards />`. Carregamento independente — não bloqueia o resto.
 
----
+### 5. Formatação
+- Valores em BRL via `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`.
+- Tempo via util `formatDuration(seconds)` (ex.: `2m 47s`).
+- Mid-dots (·) nos separadores, sem hífens · sem emojis (regra do projeto).
 
-### 3. Editor flexível (admin)
+## Arquivos
 
-Editor em **abas** para não virar formulário gigante:
+**Novos**
+- `supabase/migrations/<timestamp>_proposals_pulse_rpc.sql`
+- `src/hooks/useProposalsPulse.ts`
+- `src/components/dashboard/ProposalsPulseSection.tsx`
 
-1. **Básico** — tipo de produto, título, slug, destino, datas, status (ativo/rascunho/pausado)
-2. **Mídia** — capa + galeria (drag & drop, reorder)
-3. **Conteúdo de venda** — descrição curta, descrição longa (rich text), highlights, includes/excludes, "como funciona"
-4. **Preço & Pagamento** — preço cheio, promocional, parcelamento, PIX, condições especiais (campo livre), badge promocional
-5. **Logística** — origem, destino, cia aérea, hotel, noites, vagas, datas múltiplas
-6. **Página de vendas** — toggle ativo/inativo, SEO (title, description, OG image), mensagem do botão WhatsApp, preview ao vivo
+**Editados**
+- `src/pages/Dashboard.tsx` (1 import + 1 linha de render)
 
-Todos os campos opcionais — flexibilidade total. Validação só no essencial (título + tipo + destino).
+## Fora de escopo (posso entregar depois se quiser)
+- Notificação push/WhatsApp diária com o resumo às 8h.
+- Comparativo "vs ontem" / "vs média 7d" com setinhas de variação.
+- Drill-down clicando num card abrindo modal com a lista completa.
 
----
-
-### 4. Página de vendas individual (`/prateleira/:slug`)
-
-Pública, otimizada para conversão:
-
-- Hero com capa, badge promo, título, datas, preço (de/por quando promocional)
-- Galeria (carrossel)
-- Highlights em cards
-- Bloco de descrição/itinerário
-- Includes vs excludes (lado a lado, com ícones lucide)
-- **Bloco de pagamento destacado** — parcelamento, PIX, condições especiais
-- CTA fixo ("Tenho interesse") → modal com nome + email + WhatsApp (PhoneInput com bandeirinhas, BR pré-selecionado · mesmo padrão do `ProposalEmailGate`)
-- Ao enviar: grava em `prateleira_leads`, dispara WhatsApp para o número da agência com contexto + abre WhatsApp do cliente com mensagem pré-preenchida
-- SEO completo (title, meta, OG, JSON-LD `Product`)
-- Tracking de view_count + tempo na página
-
----
-
-### 5. Vitrine marketplace (`/p`)
-
-Pública, estilo Booking/Airbnb mas com a estética NatLeva:
-
-- Hero com search bar (destino, mês, tipo de produto, faixa de preço)
-- Filtros laterais: tipo de produto, destino, faixa de preço, datas, "só promoções"
-- Grid de cards (capa, badge promo, destino, datas, preço de/por, parcelamento)
-- Ordenação: relevância, menor preço, saindo em breve, novidades
-- Cards clicam → página individual
-- Empty state convidativo quando filtro vazio
-
----
-
-### 6. Admin · lista interna (`/prateleira`)
-
-- Cards/tabela com: capa thumb, título, tipo (badge), destino, datas, preço, status, views, leads
-- Filtros: tipo, status (ativo/rascunho/pausado), destino, com/sem promoção
-- Busca textual
-- Ações em massa: ativar/pausar/duplicar/excluir
-- Botão "Compartilhar" copia link da página individual
-- Atalho "Ver na vitrine pública"
-
----
-
-### 7. Integração com o resto do CRM
-
-- Lead capturado vira automaticamente um item na fila de cotações (status "Lead Prateleira")
-- Conversa no LiveChat já entra com contexto do produto que o cliente clicou
-- Métricas aparecem no dashboard: produtos mais vistos, mais convertidos, taxa de conversão por produto
-
----
-
-### 8. Detalhes técnicos
-
-- Tabela `experience_products` recebe `ALTER TABLE ADD COLUMN` (sem perda de dados · produtos atuais viram `product_kind = 'passeio'`)
-- Nova tabela `prateleira_leads` com índice em `product_id` e `created_at`
-- Rotas públicas com `verify_jwt = false` no edge (se houver função de tracking)
-- PhoneInput reusando o componente já criado para `ProposalEmailGate`
-- Tema escuro/claro mantido em todas as telas novas
-- Mobile-first rigoroso (vitrine e página de venda são as mais críticas · serão consumidas no celular via WhatsApp)
-- Sem emojis · ícones lucide-react
-- Tokens semânticos de cor (sem hex direto)
-
----
-
-### Ordem sugerida de execução (3 fases)
-
-**Fase 1 · Fundação**
-- Migration estendendo `experience_products` + nova tabela `prateleira_leads`
-- Renomear menu, ajustar rotas, redirects de `/produtos`
-- Refatorar lista admin (`/prateleira`) com filtros novos
-
-**Fase 2 · Editor + Página individual**
-- Editor em abas com todos os campos novos
-- Página de vendas pública `/prateleira/:slug` com captura de lead
-
-**Fase 3 · Vitrine marketplace**
-- Página `/p` com search, filtros e grid
-- Integração de leads com pipeline de cotações
-- Dashboard de métricas
-
----
-
-Posso seguir nessa direção? Se quiser, ajusto qualquer parte antes de começar (ex: nome de rota, campos específicos que faltam, ou começar só pela Fase 1 e validar antes de avançar).
+Posso seguir e implementar?

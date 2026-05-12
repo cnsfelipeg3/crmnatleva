@@ -10102,6 +10102,7 @@ export type Database = {
         Returns: boolean
       }
       increment_shortcut_usage: { Args: { p_id: string }; Returns: undefined }
+      proposals_pulse: { Args: { p_hours?: number }; Returns: Json }
       recount_conversation_unread: {
         Args: { conv_id: string }
         Returns: number
