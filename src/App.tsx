@@ -422,6 +422,10 @@ function AppRoutes() {
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
 
+        {/* Prateleira NatLeva pública */}
+        <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
+        <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
+
         {/* Diagnóstico de performance — rota leve fora do layout pesado */}
         <Route path="/diagnostico" element={<Suspense fallback={<MinimalLoader />}><Diagnostico /></Suspense>} />
 
