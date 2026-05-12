@@ -1,41 +1,35 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Eye, Clock, Monitor, Smartphone, MapPin, MousePointerClick,
-  Users, TrendingUp, Flame, Globe, BarChart3, Activity, Share2, Target,
+  Eye, Activity, Share2, Target, Clock, BarChart3, Wifi,
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import {
+  Viewer, Interaction, ClickEvent, timePerSection, topClickedTargets,
+  isOnline, formatTime,
+} from "@/lib/proposalAnalytics";
+import KpiGrid from "./analytics/KpiGrid";
+import LiveVisitorsCard from "./analytics/LiveVisitorsCard";
+import SectionFunnelCard from "./analytics/SectionFunnelCard";
+import HourlyActivityChart from "./analytics/HourlyActivityChart";
+import GeographicCard from "./analytics/GeographicCard";
+import AiInsightsCard from "./analytics/AiInsightsCard";
+import ViewerDetailRow from "./analytics/ViewerDetailRow";
 
 interface Props {
   proposalId: string;
 }
 
-function parseUA(ua: string | null): { browser: string; os: string } {
-  if (!ua) return { browser: "Desconhecido", os: "Desconhecido" };
-  let browser = "Outro";
-  if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
-  else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
-  else if (ua.includes("Firefox")) browser = "Firefox";
-  else if (ua.includes("Edg")) browser = "Edge";
-
-  let os = "Outro";
-  if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
-  else if (ua.includes("Android")) os = "Android";
-  else if (ua.includes("Windows")) os = "Windows";
-  else if (ua.includes("Mac")) os = "macOS";
-  else if (ua.includes("Linux")) os = "Linux";
-
-  return { browser, os };
-}
-
 export default function ProposalAnalyticsPanel({ proposalId }: Props) {
-  const { data: viewers, isLoading: loadingViewers } = useQuery({
+  const qc = useQueryClient();
+
+  const { data: viewers = [], isLoading } = useQuery<Viewer[]>({
     queryKey: ["proposal-viewers", proposalId],
     queryFn: async () => {
       const { data } = await supabase
@@ -43,12 +37,12 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
         .select("*")
         .eq("proposal_id", proposalId)
         .order("last_active_at", { ascending: false });
-      return (data || []) as any[];
+      return ((data as unknown) as Viewer[]) || [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
-  const { data: interactions } = useQuery({
+  const { data: interactions = [] } = useQuery<Interaction[]>({
     queryKey: ["proposal-interactions", proposalId],
     queryFn: async () => {
       const { data } = await supabase
@@ -56,13 +50,13 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
         .select("*")
         .eq("proposal_id", proposalId)
         .order("created_at", { ascending: false })
-        .limit(200);
-      return (data || []) as any[];
+        .limit(500);
+      return ((data as unknown) as Interaction[]) || [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
-  const { data: clicks } = useQuery({
+  const { data: clicks = [] } = useQuery<ClickEvent[]>({
     queryKey: ["proposal-clicks", proposalId],
     queryFn: async () => {
       const { data } = await supabase
@@ -70,13 +64,13 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
         .select("*")
         .eq("proposal_id", proposalId)
         .order("created_at", { ascending: false })
-        .limit(500);
-      return (data || []) as any[];
+        .limit(1000);
+      return ((data as unknown) as ClickEvent[]) || [];
     },
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
-  const { data: shares } = useQuery({
+  const { data: shares = [] } = useQuery<any[]>({
     queryKey: ["proposal-shares", proposalId],
     queryFn: async () => {
       const { data } = await supabase
@@ -89,345 +83,196 @@ export default function ProposalAnalyticsPanel({ proposalId }: Props) {
     refetchInterval: 30000,
   });
 
-  const totalViews = viewers?.reduce((sum: number, v: any) => sum + (v.total_views || 1), 0) || 0;
-  const uniqueViewers = viewers?.length || 0;
-  const totalTime = viewers?.reduce((sum: number, v: any) => sum + (v.total_time_seconds || 0), 0) || 0;
-  const avgEngagement = uniqueViewers > 0
-    ? Math.round(viewers!.reduce((sum: number, v: any) => sum + (v.engagement_score || 0), 0) / uniqueViewers)
-    : 0;
-  const ctaClicks = viewers?.filter((v: any) => v.cta_clicked).length || 0;
-  const whatsappClicks = viewers?.filter((v: any) => v.whatsapp_clicked).length || 0;
-  const devices = viewers?.reduce((acc: Record<string, number>, v: any) => {
-    const d = v.device_type || "unknown";
-    acc[d] = (acc[d] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>) || {};
+  // Realtime: invalidate queries when any analytics row changes
+  useEffect(() => {
+    const channel = supabase
+      .channel(`proposal-analytics-${proposalId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposal_viewers", filter: `proposal_id=eq.${proposalId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["proposal-viewers", proposalId] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_interactions", filter: `proposal_id=eq.${proposalId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["proposal-interactions", proposalId] });
+      })
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "proposal_clicks", filter: `proposal_id=eq.${proposalId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["proposal-clicks", proposalId] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "proposal_shares", filter: `proposal_id=eq.${proposalId}` }, () => {
+        qc.invalidateQueries({ queryKey: ["proposal-shares", proposalId] });
+      })
+      .subscribe();
 
-  // Section heatmap
-  const sectionHeat = (interactions || []).reduce((acc: Record<string, number>, i: any) => {
-    if (i.section_name) acc[i.section_name] = (acc[i.section_name] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const topSections = Object.entries(sectionHeat)
-    .sort(([, a], [, b]) => (b as number) - (a as number))
-    .slice(0, 6);
-  const maxSectionHits = topSections.length > 0 ? (topSections[0][1] as number) : 1;
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [proposalId, qc]);
 
-  // Time per section (sums time_on_section events)
-  const sectionTime = (interactions || []).reduce((acc: Record<string, number>, i: any) => {
-    if (i.event_type === "time_on_section" && i.section_name) {
-      acc[i.section_name] = (acc[i.section_name] || 0) + (Number(i.event_data?.seconds) || 0);
-    }
-    return acc;
-  }, {} as Record<string, number>);
-  const topSectionTime = Object.entries(sectionTime).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
-  const maxSectionTime = topSectionTime.length > 0 ? (topSectionTime[0][1] as number) : 1;
+  const onlineCount = viewers.filter(isOnline).length;
+  const sectionTime = timePerSection(interactions).slice(0, 8);
+  const maxSectionTime = sectionTime[0]?.seconds || 1;
+  const topTargets = topClickedTargets(clicks, 8);
 
-  const totalShares = shares?.length || 0;
-  const totalShareOpens = (shares || []).reduce((s: number, x: any) => s + (x.open_count || 0), 0);
-
-  if (loadingViewers) {
+  if (isLoading) {
     return (
       <Card className="p-6">
-        <p className="text-sm text-muted-foreground animate-pulse">Carregando analytics...</p>
+        <p className="text-sm text-muted-foreground animate-pulse">Carregando central de inteligência...</p>
       </Card>
     );
   }
 
-  if (uniqueViewers === 0) {
+  if (viewers.length === 0) {
     return (
-      <Card className="p-6 text-center space-y-2">
-        <Eye className="w-8 h-8 text-muted-foreground/40 mx-auto" />
-        <p className="text-sm text-muted-foreground">Nenhuma visualização registrada ainda.</p>
-        <p className="text-xs text-muted-foreground/60">Envie a proposta ao cliente para começar a rastrear.</p>
+      <Card className="p-8 text-center space-y-3">
+        <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto">
+          <Eye className="w-5 h-5 text-muted-foreground/50" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-foreground">Aguardando o primeiro acesso</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Envie a proposta para o cliente. Os indicadores aparecem aqui em tempo real assim que ele abrir.
+          </p>
+        </div>
       </Card>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-        <MiniKpi icon={Eye} label="Visualizações" value={totalViews} />
-        <MiniKpi icon={Users} label="Visitantes" value={uniqueViewers} />
-        <MiniKpi icon={Clock} label="Tempo total" value={formatTime(totalTime)} />
-        <MiniKpi icon={TrendingUp} label="Engajamento" value={`${avgEngagement}%`} accent={avgEngagement >= 60} />
-        <MiniKpi icon={MousePointerClick} label="CTAs" value={ctaClicks} accent={ctaClicks > 0} />
-        <MiniKpi icon={Flame} label="WhatsApp" value={whatsappClicks} accent={whatsappClicks > 0} />
-        <MiniKpi icon={Share2} label="Compartilh." value={`${totalShares}/${totalShareOpens}`} accent={totalShares > 0} />
-      </div>
-
-      {/* Devices */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <Card className="p-4 space-y-3">
-          <CardHeader className="p-0">
-            <CardTitle className="text-xs flex items-center gap-1.5">
-              <Monitor className="w-3.5 h-3.5" /> Dispositivos
-            </CardTitle>
-          </CardHeader>
-          <div className="space-y-2">
-            {Object.entries(devices).map(([type, count]) => (
-              <div key={type} className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-1.5">
-                  {type === "mobile" ? <Smartphone className="w-3 h-3" /> : <Monitor className="w-3 h-3" />}
-                  {type === "mobile" ? "Mobile" : "Desktop"}
-                </span>
-                <Badge variant="neutral" className="text-[10px]">{String(count)}</Badge>
-              </div>
-            ))}
-          </div>
-        </Card>
-
-        {/* Section Heatmap */}
-        <Card className="p-4 space-y-3">
-          <CardHeader className="p-0">
-            <CardTitle className="text-xs flex items-center gap-1.5">
-              <BarChart3 className="w-3.5 h-3.5" /> Seções mais vistas
-            </CardTitle>
-          </CardHeader>
-          <div className="space-y-2">
-            {topSections.map(([section, hits]) => (
-              <div key={section} className="space-y-1">
-                <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span className="capitalize">{section}</span>
-                  <span>{String(hits)}x</span>
-                </div>
-                <Progress
-                  value={Math.round(((hits as number) / maxSectionHits) * 100)}
-                  className="h-1.5"
-                />
-              </div>
-            ))}
-            {topSections.length === 0 && (
-              <p className="text-[10px] text-muted-foreground">Sem dados de seções ainda</p>
+      {/* Header com status ao vivo */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Wifi className={cn("w-4 h-4", onlineCount > 0 ? "text-emerald-500 animate-pulse" : "text-muted-foreground/50")} />
+          <p className="text-xs text-muted-foreground">
+            {onlineCount > 0 ? (
+              <span className="font-semibold text-emerald-600">{onlineCount} {onlineCount === 1 ? "pessoa visualizando" : "pessoas visualizando"} agora</span>
+            ) : (
+              "Atualizado em tempo real"
             )}
-          </div>
-        </Card>
+          </p>
+        </div>
+        <Badge variant="neutral" className="text-[9px]">
+          {viewers.length} {viewers.length === 1 ? "visitante" : "visitantes"} no total
+        </Badge>
       </div>
 
-      {/* Time per section */}
+      <KpiGrid viewers={viewers} interactions={interactions} clicks={clicks} shares={shares} />
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <LiveVisitorsCard viewers={viewers} />
+        <AiInsightsCard viewers={viewers} interactions={interactions} clicks={clicks} />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <SectionFunnelCard viewers={viewers} />
+        <GeographicCard viewers={viewers} />
+      </div>
+
+      <HourlyActivityChart interactions={interactions} />
+
+      {/* Tempo por seção */}
       <Card className="p-4 space-y-3">
         <CardHeader className="p-0">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" /> Tempo gasto em cada seção
           </CardTitle>
         </CardHeader>
-        <div className="space-y-2">
-          {topSectionTime.map(([section, secs]) => (
-            <div key={section} className="space-y-1">
-              <div className="flex justify-between text-[10px] text-muted-foreground">
-                <span className="capitalize">{section}</span>
-                <span>{formatTime(secs as number)}</span>
+        {sectionTime.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground">Sem dados de tempo por seção ainda.</p>
+        ) : (
+          <div className="space-y-2">
+            {sectionTime.map((s) => (
+              <div key={s.section} className="space-y-1">
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-foreground">{s.label}</span>
+                  <span className="text-muted-foreground tabular-nums">{formatTime(s.seconds)}</span>
+                </div>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div
+                    className="h-full bg-accent/70"
+                    style={{ width: `${Math.round((s.seconds / maxSectionTime) * 100)}%` }}
+                  />
+                </div>
               </div>
-              <Progress value={Math.round(((secs as number) / maxSectionTime) * 100)} className="h-1.5" />
-            </div>
-          ))}
-          {topSectionTime.length === 0 && (
-            <p className="text-[10px] text-muted-foreground">Sem dados de tempo por seção ainda</p>
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
-      {/* Click heatmap */}
+      {/* Top elementos clicados */}
       <Card className="p-4 space-y-3">
         <CardHeader className="p-0">
           <CardTitle className="text-xs flex items-center gap-1.5">
-            <Target className="w-3.5 h-3.5" /> Mapa de calor de cliques
-            <Badge variant="neutral" className="text-[9px] ml-auto">{clicks?.length || 0} cliques</Badge>
+            <Target className="w-3.5 h-3.5" /> Elementos mais clicados
+            <Badge variant="neutral" className="text-[9px] ml-auto">{clicks.length} cliques no total</Badge>
           </CardTitle>
         </CardHeader>
-        <ClickHeatmap clicks={clicks || []} />
-        <ClickedTargetsList clicks={clicks || []} />
+        {topTargets.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground">Nenhum clique registrado ainda.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {topTargets.map((t) => (
+              <div key={t.label} className="flex items-center justify-between gap-2 text-[11px] py-1.5 px-2 rounded-lg hover:bg-muted/50">
+                <span className="text-foreground truncate flex-1">{t.label}</span>
+                <Badge variant="neutral" className="text-[9px] flex-shrink-0">
+                  {t.count}x · {t.pct}%
+                </Badge>
+              </div>
+            ))}
+          </div>
+        )}
       </Card>
 
-      {/* Shares */}
+      {/* Compartilhamentos */}
       <Card className="p-4 space-y-3">
         <CardHeader className="p-0">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <Share2 className="w-3.5 h-3.5" /> Compartilhamentos
             <Badge variant="neutral" className="text-[9px] ml-auto">
-              {totalShares} link{totalShares === 1 ? "" : "s"} · {totalShareOpens} abertura{totalShareOpens === 1 ? "" : "s"}
+              {shares.length} {shares.length === 1 ? "link" : "links"} · {shares.reduce((s, x) => s + (x.open_count || 0), 0)} aberturas
             </Badge>
           </CardTitle>
         </CardHeader>
-        <div className="space-y-2">
-          {(shares || []).length === 0 && (
-            <p className="text-[10px] text-muted-foreground">Ninguém compartilhou esta proposta ainda.</p>
-          )}
-          {(shares || []).map((s: any) => (
-            <div key={s.id} className="flex items-center justify-between text-[11px] border border-border/30 rounded-lg p-2.5">
-              <div className="min-w-0">
-                <p className="text-foreground truncate font-medium">
-                  {s.shared_by_name || s.shared_by_email || "Visitante anônimo"}
-                </p>
-                <p className="text-muted-foreground text-[10px]">
-                  {s.channel} · {format(new Date(s.created_at), "dd/MM HH:mm", { locale: ptBR })}
-                  {s.last_opened_at && ` · último acesso ${formatDistanceToNow(new Date(s.last_opened_at), { locale: ptBR, addSuffix: true })}`}
-                </p>
+        {shares.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground">Ninguém compartilhou esta proposta ainda.</p>
+        ) : (
+          <div className="space-y-2">
+            {shares.map((s: any) => (
+              <div key={s.id} className="flex items-center justify-between text-[11px] border border-border/30 rounded-lg p-2.5">
+                <div className="min-w-0">
+                  <p className="text-foreground truncate font-medium">
+                    {s.shared_by_name || s.shared_by_email || "Visitante anônimo"}
+                  </p>
+                  <p className="text-muted-foreground text-[10px]">
+                    {s.channel} · {format(new Date(s.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                    {s.last_opened_at && ` · último acesso ${formatDistanceToNow(new Date(s.last_opened_at), { locale: ptBR, addSuffix: true })}`}
+                  </p>
+                </div>
+                <Badge className={cn("text-[9px] border-0", s.open_count > 0 ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground")}>
+                  {s.open_count || 0}x aberto
+                </Badge>
               </div>
-              <Badge className={cn("text-[9px] border-0", s.open_count > 0 ? "bg-emerald-500/15 text-emerald-600" : "bg-muted text-muted-foreground")}>
-                {s.open_count || 0}x aberto
-              </Badge>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </Card>
 
-      {/* Viewers list */}
+      {/* Visitantes detalhados */}
       <Card className="p-4 space-y-3">
         <CardHeader className="p-0">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5" /> Visitantes detalhados
+            <Badge variant="neutral" className="text-[9px] ml-auto">
+              {viewers.length} {viewers.length === 1 ? "pessoa" : "pessoas"}
+            </Badge>
           </CardTitle>
         </CardHeader>
-        <ScrollArea className="max-h-[400px]">
-          <div className="space-y-3">
-            {(viewers || []).map((v: any) => {
-              const { browser, os } = parseUA(v.user_agent);
-              const location = [v.city, v.region, v.country].filter(Boolean).join(", ");
-              return (
-                <div key={v.id} className="border border-border/30 rounded-lg p-3 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">
-                        {v.name || v.email}
-                      </p>
-                      {v.name && (
-                        <p className="text-[10px] text-muted-foreground">{v.email}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      {v.engagement_score >= 60 && (
-                        <Badge className="text-[9px] bg-red-500/10 text-red-500 border-0">🔥 Quente</Badge>
-                      )}
-                      {v.cta_clicked && (
-                        <Badge className="text-[9px] bg-emerald-500/10 text-emerald-500 border-0">CTA ✓</Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-2.5 h-2.5" /> {v.total_views || 1}x visto
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" /> {formatTime(v.total_time_seconds || 0)}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      {v.device_type === "mobile" ? <Smartphone className="w-2.5 h-2.5" /> : <Monitor className="w-2.5 h-2.5" />}
-                      {browser} / {os}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <TrendingUp className="w-2.5 h-2.5" /> Score: {v.engagement_score || 0}%
-                    </span>
-                  </div>
-
-                  {location && (
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                      <MapPin className="w-2.5 h-2.5" /> {location}
-                    </div>
-                  )}
-
-                  {(v.sections_viewed || []).length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {(v.sections_viewed as string[]).map((s: string) => (
-                        <Badge key={s} variant="neutral" className="text-[8px] capitalize">{s}</Badge>
-                      ))}
-                    </div>
-                  )}
-
-                  <p className="text-[9px] text-muted-foreground/60">
-                    Último acesso: {formatDistanceToNow(new Date(v.last_active_at), { locale: ptBR, addSuffix: true })}
-                  </p>
-                </div>
-              );
-            })}
+        <ScrollArea className="max-h-[500px] pr-2">
+          <div className="space-y-2.5">
+            {viewers.map((v) => (
+              <ViewerDetailRow key={v.id} viewer={v} />
+            ))}
           </div>
         </ScrollArea>
       </Card>
-    </div>
-  );
-}
-
-function MiniKpi({ icon: Icon, label, value, accent }: { icon: any; label: string; value: string | number; accent?: boolean }) {
-  return (
-    <Card className={cn("p-3 flex items-center gap-2.5", accent && "border-accent/30 bg-accent/5")}>
-      <div className={cn("w-7 h-7 rounded-lg flex items-center justify-center", accent ? "bg-accent/15" : "bg-muted")}>
-        <Icon className={cn("w-3.5 h-3.5", accent ? "text-accent" : "text-muted-foreground")} />
-      </div>
-      <div>
-        <p className="text-sm font-bold text-foreground leading-none">{value}</p>
-        <p className="text-[9px] text-muted-foreground mt-0.5">{label}</p>
-      </div>
-    </Card>
-  );
-}
-
-function formatTime(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}min`;
-  return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}min`;
-}
-
-function ClickHeatmap({ clicks }: { clicks: any[] }) {
-  if (!clicks || clicks.length === 0) {
-    return (
-      <div className="aspect-[3/4] sm:aspect-[16/10] w-full rounded-lg border border-dashed border-border/50 flex items-center justify-center text-[10px] text-muted-foreground">
-        Sem cliques registrados ainda
-      </div>
-    );
-  }
-
-  // Pretend the proposal is a long vertical canvas (aspect ratio 9:16).
-  // rel_x is 0..1 horizontal; rel_y is 0..1 of total page height.
-  return (
-    <div
-      className="relative w-full overflow-hidden rounded-lg border border-border/40 bg-gradient-to-b from-muted/40 to-muted/10"
-      style={{ aspectRatio: "9 / 18" }}
-    >
-      {/* Section guide bands */}
-      {[0.15, 0.3, 0.45, 0.6, 0.75, 0.9].map((y) => (
-        <div key={y} className="absolute left-0 right-0 border-t border-border/20" style={{ top: `${y * 100}%` }} />
-      ))}
-      {clicks.map((c, idx) => {
-        const left = `${Math.max(0, Math.min(100, (c.rel_x || 0) * 100))}%`;
-        const top = `${Math.max(0, Math.min(100, (c.rel_y || 0) * 100))}%`;
-        return (
-          <span
-            key={c.id || idx}
-            title={`${c.section_name || "?"} · ${c.target_text || c.target_tag || ""}`}
-            className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full mix-blend-multiply"
-            style={{
-              left,
-              top,
-              width: 22,
-              height: 22,
-              background: "radial-gradient(circle, hsl(var(--accent) / 0.55) 0%, hsl(var(--accent) / 0.25) 45%, transparent 70%)",
-            }}
-          />
-        );
-      })}
-    </div>
-  );
-}
-
-function ClickedTargetsList({ clicks }: { clicks: any[] }) {
-  const map = clicks.reduce((acc: Record<string, number>, c: any) => {
-    const label = (c.target_text || c.target_tag || "elemento").toString().slice(0, 50);
-    acc[label] = (acc[label] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const top = Object.entries(map).sort(([, a], [, b]) => (b as number) - (a as number)).slice(0, 6);
-  if (top.length === 0) return null;
-  return (
-    <div className="space-y-1.5 pt-1">
-      <p className="text-[10px] text-muted-foreground">Elementos mais clicados</p>
-      {top.map(([label, count]) => (
-        <div key={label} className="flex items-center justify-between text-[10px]">
-          <span className="truncate text-foreground">{label}</span>
-          <Badge variant="neutral" className="text-[9px]">{String(count)}x</Badge>
-        </div>
-      ))}
     </div>
   );
 }
