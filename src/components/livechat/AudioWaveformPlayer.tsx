@@ -163,9 +163,9 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
       </button>
 
       {/* Waveform + time */}
-      <div className="flex-1 flex flex-col gap-1">
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div
-          className="flex items-center gap-[1.5px] h-[28px] cursor-pointer"
+          className="flex items-center gap-[1.5px] h-[28px] cursor-pointer w-full min-w-0 overflow-hidden"
           onClick={handleBarClick}
         >
           {bars.map((h, i) => {
@@ -174,10 +174,9 @@ export const AudioWaveformPlayer = forwardRef<HTMLDivElement, AudioWaveformPlaye
             return (
               <div
                 key={i}
-                className="flex-1 rounded-full transition-colors duration-75"
+                className="flex-1 min-w-0 rounded-full transition-colors duration-75"
                 style={{
                   height: `${Math.max(12, h * 100)}%`,
-                  minWidth: 2.5,
                   maxWidth: 4,
                   backgroundColor: isActive
                     ? isOutgoing ? "rgba(255,255,255,0.9)" : "hsl(var(--primary))"
