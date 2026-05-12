@@ -829,6 +829,13 @@ export function HotelscomDetailDrawer({
                 </Card>
               );
             })}
+
+            {/* === LEVA 2 · Bloco unificado de ofertas (Hotels.com) === */}
+            {!detailsLoading && richRooms.length > 0 && (
+              <div className="pt-4 mt-4 border-t border-border/60">
+                <AllRoomOffersBlock offers={extractHotelscomOffers(richRooms)} />
+              </div>
+            )}
           </TabsContent>
 
           {/* FOTOS */}
