@@ -60,6 +60,8 @@ import {
   buildHotelscomSearchUrl,
   openExternal,
 } from "./externalUrls";
+import AllRoomOffersBlock from "@/components/hotels/AllRoomOffersBlock";
+import { extractHotelscomOffers } from "@/lib/hotels/paymentNormalizer";
 
 interface Converted {
   priceTotal?: number;
