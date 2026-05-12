@@ -4,6 +4,7 @@ import { Sparkles, Plane, Hotel, Package, Ship, Compass, MapPin, Search, X } fro
 import { cn } from "@/lib/utils";
 import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
 import NetflixRow, { type RowItem } from "@/components/prateleira/NetflixRow";
+import { RowSkeleton } from "@/components/prateleira/RowSkeleton";
 
 type Product = any;
 
@@ -44,16 +45,21 @@ export default function PrateleiraVitrine() {
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [sort, setSort] = useState<"relevance" | "price_asc" | "soon" | "new">("relevance");
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Prateleira NatLeva · Viagens prontas para embarcar";
     (async () => {
-      const { data } = await (supabase as any)
-        .from("experience_products").select("*")
-        .eq("is_active", true)
-        .neq("status", "paused")
-        .order("display_order", { ascending: true });
+      const [{ data }, { data: cfg }] = await Promise.all([
+        (supabase as any)
+          .from("experience_products").select("*")
+          .eq("is_active", true)
+          .neq("status", "paused")
+          .order("display_order", { ascending: true }),
+        (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle(),
+      ]);
       setItems(data || []);
+      if (cfg?.whatsapp_number) setWhatsapp(cfg.whatsapp_number);
       setLoading(false);
     })();
   }, []);
@@ -206,19 +212,10 @@ export default function PrateleiraVitrine() {
       {/* Body */}
       <div className="relative">
         {loading ? (
-          <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-10 py-16">
-            <div className="space-y-8">
-              {[1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className="h-6 w-48 bg-white/5 rounded mb-4 animate-pulse" />
-                  <div className="flex gap-4 overflow-hidden">
-                    {[1, 2, 3, 4, 5].map((j) => (
-                      <div key={j} className="shrink-0 w-[300px] aspect-[16/10] rounded-xl bg-white/5 animate-pulse" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div aria-busy="true" aria-live="polite">
+            <RowSkeleton />
+            <RowSkeleton />
+            <RowSkeleton />
           </div>
         ) : filtersActive ? (
           filtered.length === 0 ? (
@@ -240,6 +237,7 @@ export default function PrateleiraVitrine() {
               title="Resultados da busca"
               subtitle={`${filtered.length} viagem(ns) prontas para embarcar`}
               items={filtered.map(toRowItem)}
+              whatsapp={whatsapp}
             />
           )
         ) : (
@@ -249,18 +247,21 @@ export default function PrateleiraVitrine() {
                 title="Promoções imperdíveis"
                 subtitle="Ofertas com desconto real, por tempo limitado"
                 items={promos}
+                whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Em alta na NatLeva"
               subtitle="As viagens mais procuradas da semana"
               items={trending}
+              whatsapp={whatsapp}
             />
             {soon.length > 0 && (
               <NetflixRow
                 title="Saídas mais próximas"
                 subtitle="Embarque já com tudo organizado"
                 items={soon}
+                whatsapp={whatsapp}
               />
             )}
             {byDestination.map(([dest, arr]) => (
@@ -269,12 +270,14 @@ export default function PrateleiraVitrine() {
                 title={dest}
                 subtitle={`${arr.length} experiência(s) selecionadas`}
                 items={arr.map(toRowItem)}
+                whatsapp={whatsapp}
               />
             ))}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
               items={fresh}
+              whatsapp={whatsapp}
             />
           </>
         )}

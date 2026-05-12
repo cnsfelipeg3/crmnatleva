@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useScroll, useTransform, useSpring } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useTransform, useSpring, useReducedMotion } from "framer-motion";
 import { Search, Sparkles, MapPin, ChevronLeft, ChevronRight, Play, Compass } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,10 +33,19 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const [idx, setIdx] = useState(0);
+  const reduced = useReducedMotion();
+  const [isMobile, setIsMobile] = useState(false);
   const valid = useMemo(() => slides.filter((s) => !!s.cover).slice(0, 6), [slides]);
   const active = valid[idx];
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = () => setIsMobile(mq.matches);
+    handler();
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
 
   // Auto rotate every 6s
   useEffect(() => {
@@ -63,10 +72,11 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
   };
   const onMouseLeave = () => setTilt({ x: 0, y: 0 });
 
-  // Particles
+  // Particles · menos no mobile e desabilitado em reduced-motion
+  const particleCount = reduced ? 0 : isMobile ? 14 : 32;
   const particles = useMemo(
     () =>
-      Array.from({ length: 32 }).map((_, i) => ({
+      Array.from({ length: particleCount }).map((_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: 30 + Math.random() * 70,
@@ -75,7 +85,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
         duration: 8 + Math.random() * 12,
         opacity: 0.2 + Math.random() * 0.5,
       })),
-    []
+    [particleCount]
   );
 
   const primaryLetters = Array.from(HEADLINE_PRIMARY);
@@ -239,43 +249,62 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             </span>
           </motion.div>
 
-          {/* Big headline */}
+          {/* Big headline · split em palavras para quebra inteligente e sem corte de descendentes */}
           <h1
-            className="font-serif text-white leading-[1.02] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
-            style={{ fontSize: "clamp(2.6rem, 6.5vw, 6.5rem)" }}
+            className="font-serif text-white leading-[1.08] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
+            style={{ fontSize: "clamp(2.1rem, 6.2vw, 6rem)" }}
+            aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
-            <span className="block overflow-hidden">
-              <span className="inline-block">
-                {primaryLetters.map((ch, i) => (
-                  <motion.span
-                    key={i}
-                    className="inline-block"
-                    initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                    animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                    transition={{ delay: 0.55 + i * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                    style={{ transformOrigin: "50% 100%", whiteSpace: ch === " " ? "pre" : "normal" }}
-                  >{ch}</motion.span>
+            <span className="block">
+              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
+                {HEADLINE_PRIMARY.split(" ").map((word, wi) => (
+                  <span key={wi} className="inline-block overflow-hidden pb-[0.18em] -mb-[0.15em]">
+                    <span className="inline-block whitespace-nowrap">
+                      {Array.from(word).map((ch, i) => {
+                        const idx = HEADLINE_PRIMARY.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
+                        return (
+                          <motion.span
+                            key={i}
+                            className="inline-block"
+                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
+                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                            style={{ transformOrigin: "50% 100%" }}
+                          >{ch}</motion.span>
+                        );
+                      })}
+                    </span>
+                  </span>
                 ))}
               </span>
             </span>
-            <span className="block overflow-hidden">
-              <span className="inline-block relative">
-                {accentLetters.map((ch, i) => (
-                  <motion.span
-                    key={i}
-                    className="inline-block italic"
-                    initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                    animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                    transition={{ delay: 0.55 + (primaryLetters.length + i) * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                    style={{
-                      transformOrigin: "50% 100%",
-                      whiteSpace: ch === " " ? "pre" : "normal",
-                      backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
-                      WebkitBackgroundClip: "text",
-                      backgroundClip: "text",
-                      color: "transparent",
-                    }}
-                  >{ch}</motion.span>
+            <span className="block">
+              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
+                {HEADLINE_ACCENT.split(" ").map((word, wi) => (
+                  <span key={wi} className="inline-block overflow-hidden pb-[0.22em] -mb-[0.18em]">
+                    <span className="inline-block whitespace-nowrap italic">
+                      {Array.from(word).map((ch, i) => {
+                        const baseIdx = primaryLetters.length;
+                        const idx = baseIdx + HEADLINE_ACCENT.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
+                        return (
+                          <motion.span
+                            key={i}
+                            className="inline-block"
+                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
+                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                            style={{
+                              transformOrigin: "50% 100%",
+                              backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
+                              WebkitBackgroundClip: "text",
+                              backgroundClip: "text",
+                              color: "transparent",
+                            }}
+                          >{ch}</motion.span>
+                        );
+                      })}
+                    </span>
+                  </span>
                 ))}
               </span>
             </span>

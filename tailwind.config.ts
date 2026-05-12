@@ -142,6 +142,9 @@ export default {
           "0%, 80%, 100%": { transform: "scale(0.6)", opacity: "0.4" },
           "40%": { transform: "scale(1)", opacity: "1" },
         },
+        shimmer: {
+          "100%": { transform: "translateX(100%)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -151,6 +154,7 @@ export default {
         takeoff: "takeoff 1.8s ease-in-out infinite",
         trail: "trail 1.8s ease-in-out infinite",
         "loader-bounce": "loader-bounce 1.2s ease-in-out infinite",
+        shimmer: "shimmer 2s infinite",
       },
     },
   },
