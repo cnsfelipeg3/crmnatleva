@@ -10,10 +10,12 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Filter, X, ChevronDown, Search } from "lucide-react";
+import { Filter, X, ChevronDown, Search, Wallet, BadgeCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useExchangeRates } from "@/hooks/useExchangeRates";
 import type { HotelFilter, HotelFiltersState } from "./types";
+import { PAYMENT_FILTER_OPTIONS, getModalityColor } from "@/lib/hotels/paymentFilter";
+import type { HotelPaymentSummary, PaymentModality } from "@/types/hotel";
 
 interface Props {
   filters: HotelFilter[] | undefined;
@@ -25,6 +27,11 @@ interface Props {
   /** Optional: text value for "search by hotel name" — purely client-side */
   nameQuery?: string;
   onNameQueryChange?: (q: string) => void;
+  /** Contagem por modalidade · derivada do hotel_payment_cache dos resultados visíveis */
+  paymentCounts?: Partial<Record<PaymentModality, number>>;
+  /** Total de hotéis visíveis com cache de pagamento · usado para mostrar "carregando" */
+  paymentSummariesCount?: number;
+  freeCancellationCount?: number;
 }
 
 interface CheckboxGroupProps {
