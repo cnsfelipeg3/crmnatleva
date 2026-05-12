@@ -72,39 +72,25 @@ export default function PrateleiraVitrine() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border" style={{ background: "linear-gradient(135deg, hsl(150 40% 6%) 0%, hsl(150 40% 12%) 100%)" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-          <div className="flex items-center gap-2 text-amber-300 text-xs font-medium tracking-widest uppercase mb-3">
-            <Sparkles className="w-3.5 h-3.5" /> Prateleira NatLeva
-          </div>
-          <h1 className="font-serif text-3xl sm:text-5xl text-white leading-tight max-w-3xl">
-            Viagens prontas para embarcar, com <span className="text-amber-300">condições especiais</span>.
-          </h1>
-          <p className="text-white/70 mt-3 max-w-xl text-sm sm:text-base">
-            Pacotes, aéreos, hospedagens e experiências curadas pela NatLeva. Datas, preços e parcelamentos transparentes.
-          </p>
-
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 max-w-2xl">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50" />
-              <Input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Buscar destino, pacote, hotel..."
-                className="pl-9 bg-white/10 border-white/20 text-white placeholder:text-white/50 h-12"
-              />
-            </div>
-            <select value={sort} onChange={(e) => setSort(e.target.value as any)}
-              className="bg-white/10 border border-white/20 text-white rounded-md px-3 h-12 text-sm">
-              <option value="relevance" className="text-foreground">Mais relevantes</option>
-              <option value="price_asc" className="text-foreground">Menor preço</option>
-              <option value="soon" className="text-foreground">Saindo em breve</option>
-              <option value="new" className="text-foreground">Novidades</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      {/* Hero cinematográfico */}
+      <CinematicVitrineHero
+        slides={items.slice(0, 6).map((p) => ({
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          cover: p.cover_image_url,
+          destination: p.destination,
+          destinationCountry: p.destination_country,
+          shortDescription: p.short_description,
+          kindLabel: p.product_kind,
+          promoBadge: p.promo_badge,
+          isPromo: p.is_promo,
+        }))}
+        q={q}
+        setQ={setQ}
+        sort={sort}
+        setSort={setSort}
+      />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
         {/* Kind chips */}
