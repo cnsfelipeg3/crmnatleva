@@ -5,6 +5,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, MapPin, Sparkles, Calendar, Me
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { RowItem } from "./NetflixRow";
+import SmartImage from "./SmartImage";
 
 function money(v?: number | null, currency = "BRL") {
   if (v == null) return null;
