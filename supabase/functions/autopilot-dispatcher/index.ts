@@ -247,7 +247,9 @@ serve(async (req) => {
       }),
     });
     const zapiBody = await zapiResp.json().catch(() => ({}));
-    const externalId = zapiBody?.zaapId || zapiBody?.messageId || zapiBody?.id || null;
+    // IMPORTANTE: usamos `messageId` (id do WhatsApp) · webhook de delivery callback
+    // insere com esse mesmo campo. Sem isso, gera linha duplicada no chat.
+    const externalId = zapiBody?.messageId || zapiBody?.id || zapiBody?.zaapId || null;
 
     if (!zapiResp.ok || zapiBody?.success === false) {
       log("zapi_send_failed", { status: zapiResp.status, body: JSON.stringify(zapiBody).slice(0, 300) });
@@ -256,11 +258,10 @@ serve(async (req) => {
       });
     }
 
-    // ─── Grava no histórico (conversation_messages) com sent_by_agent ───
+    // ─── Grava no histórico (upsert por external_message_id · evita duplicar com webhook) ───
     const nowIso = new Date().toISOString();
-    await sb.from("conversation_messages").insert({
+    const row: Record<string, unknown> = {
       conversation_id,
-      external_message_id: externalId,
       direction: "outgoing",
       sender_type: "atendente",
       content: fullText,
@@ -268,10 +269,16 @@ serve(async (req) => {
       status: "sent",
       timestamp: nowIso,
       created_at: nowIso,
-      sender_name: `Nath · ${agent.name}`,
+      sender_name: "Nath",
       sent_by_agent: agentKey,
       metadata: { source: "autopilot", agent: agentKey },
-    });
+    };
+    if (externalId) {
+      row.external_message_id = externalId;
+      await sb.from("conversation_messages").upsert(row, { onConflict: "external_message_id" });
+    } else {
+      await sb.from("conversation_messages").insert(row);
+    }
 
     log("ok", { agent: agentKey, chars: fullText.length });
     return new Response(JSON.stringify({ ok: true, agent: agentKey, reply_length: fullText.length }), {
