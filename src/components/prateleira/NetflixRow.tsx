@@ -164,7 +164,7 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
                     className="flex items-center gap-2 flex-wrap"
                   >
                     <span className="inline-flex items-center gap-1.5 bg-white text-black text-[12px] font-bold px-3.5 py-1.5 rounded-full">
-                      <Play className="w-3.5 h-3.5 fill-black" aria-hidden /> Ver detalhes
+                      <Eye className="w-3.5 h-3.5" aria-hidden /> Pré-visualizar
                     </span>
                     {promo && full && (
                       <span className="text-[10px] text-white/60 line-through">{full}</span>
@@ -183,6 +183,24 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
               style={{ transformOrigin: "left" }}
             />
           </motion.div>
+        </button>
+
+        {/* Quick "abrir página completa" — vai direto para a página do produto sem o modal */}
+        <Link
+          to={`/p/${item.slug}`}
+          aria-label={`Abrir página completa de ${item.title}`}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "absolute z-20 top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full",
+            "bg-black/65 hover:bg-white hover:text-black text-white text-[11px] font-semibold",
+            "px-2.5 py-1 border border-white/15 backdrop-blur-md shadow-lg",
+            "opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100",
+            "transition-all duration-200",
+            "max-sm:opacity-100"
+          )}
+        >
+          <ArrowUpRight className="w-3.5 h-3.5" aria-hidden />
+          <span className="hidden sm:inline">Página</span>
         </Link>
 
         {/* Quick WhatsApp CTA · always reachable, also via keyboard */}
