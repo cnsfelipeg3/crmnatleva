@@ -260,60 +260,20 @@ export default function PrateleiraVendaPublica() {
               </div>
             )}
 
-            {(installmentsLine || pixLine) && (
-              <div className="space-y-1.5 pt-3 border-t border-border/50">
-                {installmentsLine && <div className="text-sm flex items-center gap-2"><CreditCard className="w-4 h-4 text-muted-foreground" /> {installmentsLine}</div>}
-                {pixLine && <div className="text-sm flex items-center gap-2 text-emerald-700 dark:text-emerald-400"><Sparkles className="w-4 h-4" /> {pixLine}</div>}
-              </div>
-            )}
-
             {(() => {
-              const pt = p.payment_terms as any;
-              if (!pt || typeof pt !== "object") return null;
-              const items: Array<{ label: string; desc: string }> = [];
-              if (pt.boleto?.enabled) {
-                const max = pt.boleto.installments_max;
-                const noInt = pt.boleto.installments_no_interest;
-                const desc = pt.boleto.description || (max ? `Até ${max}x${noInt ? ` · ${noInt}x sem juros` : ""}` : "Disponível");
-                items.push({ label: "Boleto parcelado", desc });
-              }
-              if (pt.pix?.enabled) {
-                const disc = pt.pix.discount_percent;
-                items.push({ label: "PIX à vista", desc: pt.pix.description || (disc ? `${disc}% de desconto` : "Pagamento instantâneo") });
-              }
-              if (pt.cartao?.enabled) {
-                const max = pt.cartao.installments_max;
-                const noInt = pt.cartao.installments_no_interest;
-                items.push({ label: "Cartão de crédito", desc: pt.cartao.description || (max ? `Até ${max}x${noInt ? ` · ${noInt}x sem juros` : ""}` : "Disponível") });
-              }
-              if (pt.entrada_saldo?.enabled) {
-                items.push({ label: "Entrada + saldo", desc: pt.entrada_saldo.description || "Combinação flexível" });
-              }
-              if (pt.transferencia?.enabled) {
-                items.push({ label: "Transferência", desc: pt.transferencia.description || "Disponível" });
-              }
-              if (items.length === 0 && pt.special) {
-                return (
-                  <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-3 whitespace-pre-line">
-                    {pt.special}
-                  </div>
-                );
-              }
-              if (items.length === 0) return null;
+              const pt = (p.payment_terms ?? {}) as any;
+              const entryPercent = typeof pt.entry_percent === "number" ? pt.entry_percent : 30;
+              const daysBefore = typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20;
+              const priceForPlan = p.price_promo ?? p.price_from;
               return (
-                <div className="pt-3 border-t border-border/50 space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Formas de pagamento</div>
-                  <ul className="space-y-1.5">
-                    {items.map((it) => (
-                      <li key={it.label} className="text-sm">
-                        <span className="font-medium text-foreground">{it.label}</span>
-                        <span className="text-muted-foreground"> · {it.desc}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {pt.special && (
-                    <div className="text-xs text-muted-foreground bg-muted/40 rounded-lg p-2 mt-2 whitespace-pre-line">{pt.special}</div>
-                  )}
+                <div className="pt-3 border-t border-border/50">
+                  <PaymentPlanCard
+                    price={priceForPlan}
+                    departureDate={p.departure_date}
+                    currency={p.currency || "BRL"}
+                    entryPercent={entryPercent}
+                    daysBefore={daysBefore}
+                  />
                 </div>
               );
             })()}
