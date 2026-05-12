@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, MapPin, Sparkles, Play, Calendar, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Sparkles, Eye, Calendar, MessageCircle, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ProductPreviewModal, { type PreviewItem } from "./ProductPreviewModal";
 
 export type RowItem = {
   id: string;
@@ -11,6 +12,7 @@ export type RowItem = {
   cover?: string | null;
   destination?: string | null;
   shortDescription?: string | null;
+  description?: string | null;
   kindLabel?: string | null;
   isPromo?: boolean | null;
   promoBadge?: string | null;
@@ -20,6 +22,9 @@ export type RowItem = {
   departureDate?: string | null;
   returnDate?: string | null;
   flexibleDates?: boolean | null;
+  gallery?: string[] | null;
+  nights?: number | null;
+  hotelName?: string | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
@@ -42,7 +47,7 @@ function buildWhatsLink(phone: string, item: RowItem) {
   return `https://wa.me/${onlyDigits}?text=${encodeURIComponent(msg)}`;
 }
 
-function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; whatsapp?: string | null }) {
+function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; index: number; whatsapp?: string | null; onPreview: (item: RowItem) => void }) {
   const [hover, setHover] = useState(false);
   const reduced = useReducedMotion();
   const promo = money(item.pricePromo, item.currency ?? "BRL");
@@ -68,10 +73,12 @@ function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; 
         onMouseLeave={() => setHover(false)}
         className="group relative"
       >
-        <Link
-          to={`/p/${item.slug}`}
-          aria-label={ariaLabel}
-          className="block rounded-xl overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        <button
+          type="button"
+          onClick={() => onPreview(item)}
+          aria-label={`Pré-visualizar ${ariaLabel}`}
+          aria-haspopup="dialog"
+          className="block w-full text-left rounded-xl overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
         >
           <motion.div
             animate={reduced ? undefined : { scale: hover ? 1.035 : 1, y: hover ? -4 : 0 }}
@@ -157,7 +164,7 @@ function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; 
                     className="flex items-center gap-2 flex-wrap"
                   >
                     <span className="inline-flex items-center gap-1.5 bg-white text-black text-[12px] font-bold px-3.5 py-1.5 rounded-full">
-                      <Play className="w-3.5 h-3.5 fill-black" aria-hidden /> Ver detalhes
+                      <Eye className="w-3.5 h-3.5" aria-hidden /> Pré-visualizar
                     </span>
                     {promo && full && (
                       <span className="text-[10px] text-white/60 line-through">{full}</span>
@@ -176,6 +183,24 @@ function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; 
               style={{ transformOrigin: "left" }}
             />
           </motion.div>
+        </button>
+
+        {/* Quick "abrir página completa" — vai direto para a página do produto sem o modal */}
+        <Link
+          to={`/p/${item.slug}`}
+          aria-label={`Abrir página completa de ${item.title}`}
+          onClick={(e) => e.stopPropagation()}
+          className={cn(
+            "absolute z-20 top-2.5 right-2.5 inline-flex items-center gap-1 rounded-full",
+            "bg-black/65 hover:bg-white hover:text-black text-white text-[11px] font-semibold",
+            "px-2.5 py-1 border border-white/15 backdrop-blur-md shadow-lg",
+            "opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100",
+            "transition-all duration-200",
+            "max-sm:opacity-100"
+          )}
+        >
+          <ArrowUpRight className="w-3.5 h-3.5" aria-hidden />
+          <span className="hidden sm:inline">Página</span>
         </Link>
 
         {/* Quick WhatsApp CTA · always reachable, also via keyboard */}
@@ -264,6 +289,8 @@ export default function NetflixRow({
     }
   };
 
+  const [previewItem, setPreviewItem] = useState<RowItem | null>(null);
+
   if (!items?.length) return null;
 
   const regionLabel = `${title}${subtitle ? ` — ${subtitle}` : ""}`;
@@ -336,12 +363,19 @@ export default function NetflixRow({
         >
           {items.map((it, i) => (
             <div data-row-card key={it.id}>
-              <NetflixCard item={it} index={i} whatsapp={whatsapp} />
+              <NetflixCard item={it} index={i} whatsapp={whatsapp} onPreview={setPreviewItem} />
             </div>
           ))}
           <div className="shrink-0 w-2" aria-hidden />
         </div>
       </div>
+
+      <ProductPreviewModal
+        item={previewItem as PreviewItem | null}
+        open={!!previewItem}
+        onOpenChange={(v) => { if (!v) setPreviewItem(null); }}
+        whatsapp={whatsapp}
+      />
     </section>
   );
 }

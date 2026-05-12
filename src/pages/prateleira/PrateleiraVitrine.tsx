@@ -25,6 +25,7 @@ function toRowItem(p: Product): RowItem {
     cover: p.cover_image_url,
     destination: p.destination,
     shortDescription: p.short_description,
+    description: p.description,
     kindLabel: p.product_kind,
     isPromo: p.is_promo,
     promoBadge: p.promo_badge,
@@ -34,6 +35,9 @@ function toRowItem(p: Product): RowItem {
     departureDate: p.departure_date,
     returnDate: p.return_date,
     flexibleDates: p.flexible_dates,
+    gallery: Array.isArray(p.gallery) ? p.gallery : null,
+    nights: p.nights,
+    hotelName: p.hotel_name,
   };
 }
 
