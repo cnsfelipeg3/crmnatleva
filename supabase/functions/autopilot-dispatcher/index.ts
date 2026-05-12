@@ -153,13 +153,28 @@ serve(async (req) => {
 
     // ─── Chama agent-chat (streaming, mas vamos consumir completo) ───
     const agentKey = String(conv.ai_autopilot_agent || "").toLowerCase();
-    const agent = AGENTS[agentKey];
-    if (!agent) {
+
+    // Carrega agente REAL do banco (behavior_prompt completo · identidade Nath, tom, etc).
+    const { data: dbAgent } = await sb
+      .from("ai_team_agents")
+      .select("name, role, behavior_prompt")
+      .ilike("name", agentKey)
+      .maybeSingle();
+
+    const fb = FALLBACK_AGENTS[agentKey];
+    const agentName = dbAgent?.name ? String(dbAgent.name).charAt(0) + String(dbAgent.name).slice(1).toLowerCase() : fb?.name;
+    const agentRole = dbAgent?.role || fb?.role;
+    const agentBehavior = dbAgent?.behavior_prompt || fb?.behavior;
+
+    if (!agentName || !agentBehavior) {
       log("blocked:unknown_agent", { agentKey });
       return new Response(JSON.stringify({ ok: false, reason: "unknown_agent" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Reforço de tom · injetado por cima do prompt do agente para garantir entusiasmo natural.
+    const toneOverlay = `\n\n[TOM OBRIGATÓRIO · WhatsApp real]\n· Você se identifica como Nath (NUNCA mencione 'Maya', 'Atlas' ou qualquer nome interno).\n· Cumprimento na 1ª mensagem: saudação temporal (Bom dia/Boa tarde/Boa noite UTC-3) + acolhimento empático + um próximo passo curto. Sem firula.\n· Entusiasmo genuíno, leve, humano · "a gente" no lugar de "nós".\n· Use mid-dot (·) em vez de hífen ou travessão.\n· Uma pergunta por mensagem. Sem listas longas. Sem emojis exagerados.\n· NUNCA cite preços, hotéis específicos, voos ou condições comerciais.`;
 
     const aiResp = await fetch(`${supabaseUrl}/functions/v1/agent-chat`, {
       method: "POST",
@@ -170,9 +185,9 @@ serve(async (req) => {
       body: JSON.stringify({
         question: lastUserMsg.content,
         history,
-        agentName: agent.name,
-        agentRole: agent.role,
-        agentBehaviorPrompt: agent.behavior,
+        agentName,
+        agentRole,
+        agentBehaviorPrompt: agentBehavior + toneOverlay,
         provider: "lovable",
         model: "google/gemini-2.5-flash",
       }),
