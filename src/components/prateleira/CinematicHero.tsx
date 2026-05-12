@@ -76,20 +76,20 @@ export default function CinematicHero({
   };
   const onMouseLeave = () => setTilt({ x: 0, y: 0 });
 
-  // Floating particles (menos no mobile)
-  const particleCount = isSmall ? 14 : 28;
+  // Floating particles (bem menos no mobile · GPU-friendly)
+  const particleCount = reduceMotion ? 0 : isSmall ? 8 : 24;
   const particles = useMemo(
     () =>
       Array.from({ length: particleCount }).map((_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: 40 + Math.random() * 60,
-        size: 1 + Math.random() * 3,
+        size: 1 + Math.random() * (isSmall ? 2 : 3),
         delay: Math.random() * 6,
         duration: 8 + Math.random() * 10,
         opacity: 0.15 + Math.random() * 0.5,
       })),
-    [particleCount]
+    [particleCount, isSmall]
   );
 
   // Letterbox menor em mobile
