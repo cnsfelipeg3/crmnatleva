@@ -140,6 +140,7 @@ export default function ProposalPublicView() {
           last_active_at: new Date().toISOString(),
           total_views: ((existing as any).total_views || 1) + 1,
           name: name || undefined,
+          phone: phone || undefined,
           device_type: deviceType,
           user_agent: ua,
           ip_address: geo.ip || null,
