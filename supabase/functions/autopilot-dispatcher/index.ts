@@ -223,6 +223,7 @@ serve(async (req) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${serviceKey}`,
+        "x-internal-call": "autopilot-dispatcher",
       },
       body: JSON.stringify({
         action: "send-text",
