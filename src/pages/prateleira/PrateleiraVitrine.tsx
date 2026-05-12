@@ -139,6 +139,7 @@ export default function PrateleiraVitrine() {
     });
     const small = Array.from(grouped.entries()).filter(([, arr]) => arr.length < 3);
     return small.flatMap(([, arr]) => arr).map(toRowItem);
+  }, [items]);
 
   const clearFilters = () => { setKind("all"); setDestination("all"); setQ(""); setOnlyPromo(false); };
 
