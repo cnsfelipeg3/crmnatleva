@@ -117,7 +117,14 @@ export default function PrateleiraVendaPublica() {
         promoBadge={p.promo_badge}
         isPromo={!!p.is_promo}
         dateRange={dateRange}
-        onBack={() => navigate("/p")}
+        onBack={() => {
+          // Volta instantâneo se houver histórico interno (sem refetch · scroll preservado)
+          if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.host)) {
+            navigate(-1);
+          } else {
+            navigate("/p");
+          }
+        }}
         onShare={share}
       />
 
