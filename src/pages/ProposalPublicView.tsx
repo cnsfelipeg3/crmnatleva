@@ -88,7 +88,7 @@ export default function ProposalPublicView() {
   }, [slug]);
 
   // Handle email submission
-  const handleEmailSubmit = useCallback(async (email: string, name?: string) => {
+  const handleEmailSubmit = useCallback(async (email: string, name?: string, phone?: string) => {
     if (!proposal?.id) return;
     setGateLoading(true);
 
@@ -140,6 +140,7 @@ export default function ProposalPublicView() {
           last_active_at: new Date().toISOString(),
           total_views: ((existing as any).total_views || 1) + 1,
           name: name || undefined,
+          phone: phone || undefined,
           device_type: deviceType,
           user_agent: ua,
           ip_address: geo.ip || null,
@@ -157,6 +158,7 @@ export default function ProposalPublicView() {
             proposal_id: proposal.id,
             email,
             name: name || null,
+            phone: phone || null,
             device_type: deviceType,
             user_agent: ua,
             ip_address: geo.ip || null,
