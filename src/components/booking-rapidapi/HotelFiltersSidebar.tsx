@@ -239,7 +239,68 @@ export function HotelFiltersSidebar({
     state.categoriesSelected.size > 0 ||
     state.priceMin !== undefined ||
     state.priceMax !== undefined ||
+    state.paymentModalities.size > 0 ||
+    state.freeCancellationOnly ||
     !!nameQuery;
+
+  const paymentSection = (
+    <div className="space-y-2.5 border-b border-border pb-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-medium flex items-center gap-1.5">
+          <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+          Forma de pagamento
+        </h4>
+        {typeof paymentSummariesCount === "number" && paymentSummariesCount === 0 && (
+          <span className="text-[10px] text-muted-foreground">analisando ofertas…</span>
+        )}
+      </div>
+
+      <label className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded px-1 py-1">
+        <Checkbox
+          checked={state.freeCancellationOnly}
+          onCheckedChange={toggleFreeCancellation}
+        />
+        <span className="flex-1 leading-tight flex items-center gap-1.5">
+          <BadgeCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          Cancelamento grátis
+        </span>
+        {typeof freeCancellationCount === "number" && (
+          <span className="text-xs text-muted-foreground">
+            ({freeCancellationCount.toLocaleString("pt-BR")})
+          </span>
+        )}
+      </label>
+
+      <div className="flex flex-wrap gap-1.5 pt-1">
+        {PAYMENT_FILTER_OPTIONS.map((opt) => {
+          const active = state.paymentModalities.has(opt.id);
+          const c = getModalityColor(opt.id);
+          const count = paymentCounts?.[opt.id] ?? 0;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => togglePaymentModality(opt.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 transition-colors",
+                active
+                  ? `${c.bg} ${c.text} ${c.ring}`
+                  : "bg-muted/40 text-muted-foreground ring-border hover:bg-muted",
+              )}
+              aria-pressed={active}
+            >
+              <span className={cn("h-1.5 w-1.5 rounded-full", c.dot)} aria-hidden />
+              {opt.label}
+              {count > 0 && (
+                <span className={cn("opacity-70", active && "opacity-100")}>· {count}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
 
   // Name search box — always rendered, even when filters from API are loading/empty
   const nameSearchBox = onNameQueryChange ? (
