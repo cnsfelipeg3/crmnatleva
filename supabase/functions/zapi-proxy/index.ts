@@ -462,6 +462,17 @@ serve(async (req) => {
     }
     const jwt = authHeader.slice(7).trim();
 
+    // Bypass interno · chamadas server-to-server (ex: autopilot-dispatcher)
+    // usam service-role key + header dedicado. Sem o header, segue fluxo normal.
+    const internalCall = req.headers.get("x-internal-call");
+    if (
+      internalCall &&
+      SUPABASE_SERVICE_ROLE_KEY &&
+      jwt === SUPABASE_SERVICE_ROLE_KEY
+    ) {
+      // ok · pula validação de usuário
+    } else {
+
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
         JSON.stringify({ error: "server_misconfigured" }),
