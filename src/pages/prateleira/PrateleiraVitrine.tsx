@@ -10,6 +10,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
+import HighlightsCarousel from "@/components/prateleira/HighlightsCarousel";
 
 type Product = any;
 
