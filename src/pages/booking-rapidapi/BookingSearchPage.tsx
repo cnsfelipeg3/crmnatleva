@@ -283,7 +283,7 @@ export default function BookingSearchPage() {
     const keys: PaymentKey[] = [];
     for (const g of groupedHotels) {
       for (const o of g.offers) {
-        keys.push({ hotelId: String(o.hotelId), source: o.source });
+        keys.push({ hotelId: String(o.id), source: o.source });
       }
     }
     return keys;
@@ -318,7 +318,7 @@ export default function BookingSearchPage() {
         // Passa se ALGUMA oferta do grupo bater com os filtros
         const hits = g.offers.map((o) => {
           const summary = paymentSummaries?.get(
-            paymentCacheKey(String(o.hotelId), o.source),
+            paymentCacheKey(String(o.id), o.source),
           );
           return hotelMatchesPaymentFilters(
             summary,
@@ -354,7 +354,7 @@ export default function BookingSearchPage() {
       const groupModalities = new Set<PaymentModality>();
       let groupFree = false;
       for (const o of g.offers) {
-        const k = paymentCacheKey(String(o.hotelId), o.source);
+        const k = paymentCacheKey(String(o.id), o.source);
         const s = paymentSummaries?.get(k);
         if (!s || seen.has(g.groupKey + ":" + k)) continue;
         seen.add(g.groupKey + ":" + k);
