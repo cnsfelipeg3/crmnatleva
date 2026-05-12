@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, MapPin, Sparkles, Play, Calendar, MessageCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Sparkles, Eye, Calendar, MessageCircle, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import ProductPreviewModal, { type PreviewItem } from "./ProductPreviewModal";
 
 export type RowItem = {
   id: string;
