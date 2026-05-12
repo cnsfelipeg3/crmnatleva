@@ -53,6 +53,8 @@ import {
   type BookingMoney,
 } from "./types";
 import { buildBookingSearchUrl, openExternal } from "./externalUrls";
+import AllRoomOffersBlock from "@/components/hotels/AllRoomOffersBlock";
+import { extractBookingOffers } from "@/lib/hotels/paymentNormalizer";
 
 interface Props {
   hotel: BookingHotel | null;
@@ -624,6 +626,14 @@ export function HotelDetailDrawer({
                           bookingUrl={bookingExternalUrl}
                         />
                       ))}
+
+                      {/* === LEVA 2 · Bloco unificado de ofertas (Booking) === */}
+                      <div className="pt-4 mt-4 border-t border-border/60">
+                        <AllRoomOffersBlock
+                          offers={extractBookingOffers(h)}
+                          externalUrl={bookingExternalUrl}
+                        />
+                      </div>
                     </div>
                   )}
                 </TabsContent>
