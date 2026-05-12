@@ -505,6 +505,7 @@ serve(async (req) => {
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    } // fim do else (não-bypass)
   } catch (authError: any) {
     console.error("[Z-API] auth guard error:", authError?.message || authError);
     return new Response(
