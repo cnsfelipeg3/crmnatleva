@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } fro
 import { ChevronLeft, ChevronRight, MapPin, Sparkles, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import SmartImage from "./SmartImage";
 
 export type HighlightItem = {
   id: string;
@@ -73,14 +74,21 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
           {/* Image */}
           <div className="relative aspect-[4/5] overflow-hidden bg-muted">
             {item.cover ? (
-              <motion.img
-                src={item.cover}
-                alt={item.title}
-                loading="lazy"
-                className="absolute inset-0 w-full h-full object-cover"
-                animate={{ scale: hover ? 1.08 : 1 }}
+              <motion.div
+                className="absolute inset-0"
+                animate={reduced ? undefined : { scale: hover ? 1.08 : 1 }}
                 transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-              />
+                style={{ willChange: "transform" }}
+              >
+                <SmartImage
+                  src={item.cover}
+                  alt={item.title}
+                  sizes="(min-width: 1280px) 28vw, (min-width: 768px) 40vw, 80vw"
+                  priority
+                  pictureClassName="absolute inset-0 w-full h-full"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+              </motion.div>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/10" />
             )}

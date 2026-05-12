@@ -4,6 +4,8 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { ChevronLeft, ChevronRight, MapPin, Sparkles, Eye, Calendar, MessageCircle, ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ProductPreviewModal, { type PreviewItem } from "./ProductPreviewModal";
+import SmartImage from "./SmartImage";
+import { DEFAULT_CARD_SIZES } from "@/lib/imageOptimizer";
 
 export type RowItem = {
   id: string;
@@ -87,17 +89,22 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
             style={{ willChange: "transform" }}
           >
             {item.cover ? (
-              <motion.img
-                src={item.cover}
-                alt={item.title}
-                loading="lazy"
-                decoding="async"
-                fetchPriority={index < 3 ? "high" : "low"}
-                className="absolute inset-0 w-full h-full object-cover"
+              <motion.div
+                className="absolute inset-0"
                 animate={reduced ? undefined : { scale: hover ? 1.07 : 1 }}
                 transition={{ duration: 1.0, ease: [0.16, 1, 0.3, 1] }}
-                draggable={false}
-              />
+                style={{ willChange: "transform" }}
+              >
+                <SmartImage
+                  src={item.cover}
+                  alt={item.title}
+                  sizes={DEFAULT_CARD_SIZES}
+                  priority={index < 3}
+                  pictureClassName="absolute inset-0 w-full h-full"
+                  className="absolute inset-0 w-full h-full object-cover select-none"
+                  draggable={false}
+                />
+              </motion.div>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950" />
             )}

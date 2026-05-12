@@ -5,6 +5,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, MapPin, Sparkles, Calendar, Me
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { RowItem } from "./NetflixRow";
+import SmartImage from "./SmartImage";
 
 function money(v?: number | null, currency = "BRL") {
   if (v == null) return null;
@@ -90,17 +91,25 @@ export default function ProductPreviewModal({
           <div className="relative bg-neutral-950 aspect-[4/3] md:aspect-auto md:min-h-[420px]">
             <AnimatePresence mode="wait">
               {images[idx] ? (
-                <motion.img
+                <motion.div
                   key={images[idx] + idx}
-                  src={images[idx]}
-                  alt={`${item.title} · imagem ${idx + 1}`}
                   initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 1.04 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  draggable={false}
-                />
+                  className="absolute inset-0"
+                >
+                  <SmartImage
+                    src={images[idx]}
+                    alt={`${item.title} · imagem ${idx + 1}`}
+                    sizes="(min-width: 1024px) 60vw, 95vw"
+                    priority={idx === 0}
+                    widths={[640, 900, 1280, 1600, 2000]}
+                    pictureClassName="absolute inset-0 w-full h-full"
+                    className="absolute inset-0 w-full h-full object-cover select-none"
+                    draggable={false}
+                  />
+                </motion.div>
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950" />
               )}
