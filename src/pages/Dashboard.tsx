@@ -26,6 +26,7 @@ const SellerRankingSection = lazy(() => import("@/components/dashboard/SellerRan
 const GoalProjectionSection = lazy(() => import("@/components/dashboard/GoalProjectionSection"));
 const HeatmapSection = lazy(() => import("@/components/dashboard/HeatmapSection"));
 const OriginSection = lazy(() => import("@/components/dashboard/OriginSection"));
+import ProposalsPulseSection from "@/components/dashboard/ProposalsPulseSection";
 
 interface Sale {
   id: string; name: string; display_id: string; status: string;
@@ -591,6 +592,8 @@ export default function Dashboard() {
         ceoMode={ceoMode}
         onToggleCeoMode={() => setCeoMode(!ceoMode)}
       />
+
+      <ProposalsPulseSection />
 
       <KpiCards
         kpiData={useRpcForKpis ? kpiData : undefined}
