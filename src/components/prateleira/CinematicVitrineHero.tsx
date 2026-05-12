@@ -22,9 +22,14 @@ type Props = {
   slides: Slide[];
   q: string;
   setQ: (v: string) => void;
-  sort: string;
-  setSort: (v: "relevance" | "price_asc" | "soon" | "new") => void;
+  sort: SortOption;
+  setSort: (v: SortOption) => void;
 };
+
+type SortOption = "relevance" | "price_asc" | "soon" | "new";
+
+const isSortOption = (value: string): value is SortOption =>
+  value === "relevance" || value === "price_asc" || value === "soon" || value === "new";
 
 const HEADLINE_PRIMARY = "A próxima viagem";
 const HEADLINE_ACCENT = "começa aqui";
@@ -335,7 +340,9 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             </div>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value)}
+              onChange={(e) => {
+                if (isSortOption(e.target.value)) setSort(e.target.value);
+              }}
               className="bg-black/55 border border-white/20 text-white rounded-2xl px-4 h-14 text-sm backdrop-blur-xl"
             >
               <option value="relevance" className="text-foreground">Mais relevantes</option>
