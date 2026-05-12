@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,8 @@ function formatMoney(v?: number | null, currency = "BRL") {
 export default function PrateleiraVendaPublica() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const hasInternalHistory = location.key !== "default";
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [leadOpen, setLeadOpen] = useState(false);
@@ -117,7 +119,11 @@ export default function PrateleiraVendaPublica() {
         promoBadge={p.promo_badge}
         isPromo={!!p.is_promo}
         dateRange={dateRange}
-        onBack={() => navigate("/p")}
+        onBack={() => {
+          // Volta instantâneo via histórico do SPA (preserva cache da vitrine, scroll e estado de filtros)
+          if (hasInternalHistory) navigate(-1);
+          else navigate("/p");
+        }}
         onShare={share}
       />
 

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Sparkles, Plane, Hotel, Package, Ship, Compass, MapPin, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -42,19 +43,24 @@ function toRowItem(p: Product): RowItem {
 }
 
 export default function PrateleiraVitrine() {
-  const [items, setItems] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState("all");
   const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [sort, setSort] = useState<"relevance" | "price_asc" | "soon" | "new">("relevance");
-  const [whatsapp, setWhatsapp] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Prateleira NatLeva · Viagens prontas para embarcar";
-    (async () => {
-      const [{ data }, { data: cfg }] = await Promise.all([
+  }, []);
+
+  // Cache global · ao voltar de /p/:slug a vitrine reaparece instantaneamente sem refetch
+  const { data, isLoading } = useQuery({
+    queryKey: ["prateleira-vitrine"],
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      const [{ data: products }, { data: cfg }] = await Promise.all([
         (supabase as any)
           .from("experience_products").select("*")
           .eq("is_active", true)
@@ -62,11 +68,13 @@ export default function PrateleiraVitrine() {
           .order("display_order", { ascending: true }),
         (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle(),
       ]);
-      setItems(data || []);
-      if (cfg?.whatsapp_number) setWhatsapp(cfg.whatsapp_number);
-      setLoading(false);
-    })();
-  }, []);
+      return { products: (products || []) as Product[], whatsapp: cfg?.whatsapp_number ?? null };
+    },
+  });
+
+  const items: Product[] = data?.products ?? [];
+  const whatsapp: string | null = data?.whatsapp ?? null;
+  const loading = isLoading;
 
   const destinations = useMemo(
     () => Array.from(new Set(items.map((p) => p.destination).filter(Boolean))).sort(),
