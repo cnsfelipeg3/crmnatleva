@@ -624,6 +624,14 @@ export function HotelDetailDrawer({
                           bookingUrl={bookingExternalUrl}
                         />
                       ))}
+
+                      {/* === LEVA 2 · Bloco unificado de ofertas (Booking) === */}
+                      <div className="pt-4 mt-4 border-t border-border/60">
+                        <AllRoomOffersBlock
+                          offers={extractBookingOffers(h)}
+                          externalUrl={bookingExternalUrl}
+                        />
+                      </div>
                     </div>
                   )}
                 </TabsContent>
