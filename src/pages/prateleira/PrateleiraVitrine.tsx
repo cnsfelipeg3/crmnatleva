@@ -45,16 +45,21 @@ export default function PrateleiraVitrine() {
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
   const [sort, setSort] = useState<"relevance" | "price_asc" | "soon" | "new">("relevance");
+  const [whatsapp, setWhatsapp] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = "Prateleira NatLeva · Viagens prontas para embarcar";
     (async () => {
-      const { data } = await (supabase as any)
-        .from("experience_products").select("*")
-        .eq("is_active", true)
-        .neq("status", "paused")
-        .order("display_order", { ascending: true });
+      const [{ data }, { data: cfg }] = await Promise.all([
+        (supabase as any)
+          .from("experience_products").select("*")
+          .eq("is_active", true)
+          .neq("status", "paused")
+          .order("display_order", { ascending: true }),
+        (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle(),
+      ]);
       setItems(data || []);
+      if (cfg?.whatsapp_number) setWhatsapp(cfg.whatsapp_number);
       setLoading(false);
     })();
   }, []);
