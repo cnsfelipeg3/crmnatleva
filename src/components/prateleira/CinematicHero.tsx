@@ -76,20 +76,20 @@ export default function CinematicHero({
   };
   const onMouseLeave = () => setTilt({ x: 0, y: 0 });
 
-  // Floating particles (menos no mobile)
-  const particleCount = isSmall ? 14 : 28;
+  // Floating particles (bem menos no mobile · GPU-friendly)
+  const particleCount = reduceMotion ? 0 : isSmall ? 8 : 24;
   const particles = useMemo(
     () =>
       Array.from({ length: particleCount }).map((_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: 40 + Math.random() * 60,
-        size: 1 + Math.random() * 3,
+        size: 1 + Math.random() * (isSmall ? 2 : 3),
         delay: Math.random() * 6,
         duration: 8 + Math.random() * 10,
         opacity: 0.15 + Math.random() * 0.5,
       })),
-    [particleCount]
+    [particleCount, isSmall]
   );
 
   // Letterbox menor em mobile
@@ -103,25 +103,27 @@ export default function CinematicHero({
       className="relative w-full h-[88vh] sm:h-[92vh] min-h-[500px] max-h-[920px] overflow-hidden bg-black isolate"
       style={{ perspective: 1400, maxWidth: "100vw" }}
     >
-      {/* === BACKGROUND IMAGE LAYER === */}
+      {/* === BACKGROUND IMAGE LAYER (GPU-friendly · sem filter blur em mobile) === */}
       <motion.div
         className="absolute inset-0 will-change-transform"
-        style={{ y, scale, x: tiltEnabled ? tilt.x * -30 : 0 }}
+        style={{ y, scale, x: tiltEnabled ? tilt.x * -30 : 0, transform: "translateZ(0)" }}
       >
         <motion.div
-          initial={{ scale: 1.25, filter: "blur(12px)" }}
-          animate={{ scale: 1.05, filter: "blur(0px)" }}
-          transition={{ duration: 2.4, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ scale: isSmall ? 1.12 : 1.25, opacity: 0 }}
+          animate={{ scale: 1.05, opacity: 1 }}
+          transition={{ duration: isSmall ? 1.4 : 2.4, ease: [0.16, 1, 0.3, 1] }}
           className="absolute inset-0"
+          style={{ willChange: "transform, opacity" }}
         >
           <motion.img
             src={cover || ""}
             alt=""
             initial={{ scale: 1.0 }}
-            animate={{ scale: 1.18 }}
-            transition={{ duration: 26, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
+            animate={{ scale: isSmall ? 1.1 : 1.18 }}
+            transition={{ duration: isSmall ? 36 : 26, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
             className="absolute inset-0 w-full h-full object-cover select-none pointer-events-none"
             draggable={false}
+            style={{ willChange: "transform", backfaceVisibility: "hidden" }}
           />
         </motion.div>
       </motion.div>
@@ -268,40 +270,73 @@ export default function CinematicHero({
             )}
           </motion.div>
 
-          {/* Title · Netflix-style */}
+          {/* Title · Netflix-style · quebra inteligente por palavras */}
           {(() => {
             const parts = title.split(" · ");
             const primary = parts[0] ?? title;
             const secondary = parts.slice(1).join(" · ");
-            const letters = Array.from(primary);
+            const words = primary.split(" ");
+            // delay base para letras (stagger por letra dentro de cada palavra, sequencial entre palavras)
+            let letterIdx = 0;
+            const baseDelay = 0.55;
+            const stepLetter = isSmall ? 0.018 : 0.025;
+            const totalLetters = primary.replace(/\s/g, "").length;
+            const primaryEnd = baseDelay + totalLetters * stepLetter;
+
+            const secondaryLetters = secondary ? Array.from(secondary) : [];
+
             return (
               <div className="max-w-full">
                 <h1
-                  className="font-serif text-white leading-[1.04] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] relative break-words"
-                  style={{ fontSize: "clamp(1.85rem, 6.2vw, 6rem)", overflowWrap: "break-word", wordBreak: "break-word" }}
+                  className="font-serif text-white leading-[1.04] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] relative"
+                  style={{ fontSize: "clamp(1.85rem, 6.2vw, 6rem)" }}
                 >
-                  <span className="inline-block align-baseline relative">
-                    {letters.map((ch, i) => (
-                      <motion.span
-                        key={i}
-                        className="inline-block"
-                        initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                        animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                        transition={{ delay: 0.55 + i * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                        style={{ transformOrigin: "50% 100%", whiteSpace: ch === " " ? "pre" : "normal" }}
-                      >
-                        {ch}
-                      </motion.span>
-                    ))}
-                    {/* Shimmer sweep */}
+                  <span className="relative inline-block w-full">
+                    {/* Palavras como blocos · nunca cortam no meio */}
+                    {words.map((word, wi) => {
+                      const chars = Array.from(word);
+                      return (
+                        <span
+                          key={wi}
+                          className="inline-block align-baseline overflow-hidden"
+                          style={{ marginRight: "0.28em" }}
+                        >
+                          <span className="inline-block">
+                            {chars.map((ch, ci) => {
+                              const idx = letterIdx++;
+                              return (
+                                <motion.span
+                                  key={ci}
+                                  className="inline-block"
+                                  initial={{ y: "100%", opacity: 0, rotateX: -60 }}
+                                  animate={{ y: "0%", opacity: 1, rotateX: 0 }}
+                                  transition={{
+                                    delay: baseDelay + idx * stepLetter,
+                                    duration: 0.9,
+                                    ease: [0.16, 1, 0.3, 1],
+                                  }}
+                                  style={{ transformOrigin: "50% 100%" }}
+                                >
+                                  {ch}
+                                </motion.span>
+                              );
+                            })}
+                          </span>
+                        </span>
+                      );
+                    })}
+                    {/* Shimmer sweep · sobreposto */}
                     <motion.span
                       aria-hidden
-                      className="absolute inset-0 pointer-events-none"
-                      initial={{ backgroundPositionX: "-150%" }}
-                      animate={{ backgroundPositionX: ["-150%", "250%"] }}
-                      transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 3, delay: 2.2 }}
+                      className="absolute inset-0 pointer-events-none whitespace-pre-wrap"
+                      initial={{ backgroundPositionX: "-150%", opacity: 0 }}
+                      animate={{ backgroundPositionX: ["-150%", "250%"], opacity: [0, 1, 1, 0] }}
+                      transition={{
+                        backgroundPositionX: { duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 3, delay: primaryEnd + 0.2 },
+                        opacity: { duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 3, delay: primaryEnd + 0.2, times: [0, 0.15, 0.85, 1] },
+                      }}
                       style={{
-                        backgroundImage: "linear-gradient(105deg, transparent 38%, rgba(255,225,170,0.9) 50%, transparent 62%)",
+                        backgroundImage: "linear-gradient(105deg, transparent 38%, rgba(255,225,170,0.95) 50%, transparent 62%)",
                         backgroundSize: "60% 100%",
                         backgroundRepeat: "no-repeat",
                         WebkitBackgroundClip: "text",
@@ -313,22 +348,42 @@ export default function CinematicHero({
                     </motion.span>
                   </span>
                 </h1>
+
                 {secondary && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.6 + letters.length * 0.025, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                    className="mt-2 sm:mt-4 font-sans text-white/85 font-light tracking-wide flex items-center gap-2 sm:gap-3"
-                    style={{ fontSize: "clamp(0.85rem, 1.5vw, 1.4rem)" }}
+                  <div
+                    className="mt-2 sm:mt-4 font-sans text-white/85 font-light tracking-wide flex items-center gap-2 sm:gap-3 flex-wrap"
+                    style={{ perspective: 800, fontSize: "clamp(0.85rem, 1.5vw, 1.4rem)" }}
                   >
                     <motion.span
                       className="h-px bg-amber-300/80 shrink-0"
-                      initial={{ width: 0 }}
-                      animate={{ width: isSmall ? 24 : 48 }}
-                      transition={{ delay: 1.0, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+                      initial={{ width: 0, opacity: 0 }}
+                      animate={{ width: isSmall ? 24 : 48, opacity: 1 }}
+                      transition={{ delay: primaryEnd + 0.05, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                     />
-                    <span className="truncate">{secondary}</span>
-                  </motion.div>
+                    <span className="inline-flex flex-wrap" style={{ transformStyle: "preserve-3d" }}>
+                      {secondaryLetters.map((ch, i) => (
+                        <span
+                          key={i}
+                          className="inline-block overflow-hidden align-baseline"
+                          style={{ whiteSpace: ch === " " ? "pre" : "normal" }}
+                        >
+                          <motion.span
+                            className="inline-block"
+                            initial={{ y: "110%", opacity: 0, rotateX: -75, z: -30 }}
+                            animate={{ y: "0%", opacity: 1, rotateX: 0, z: 0 }}
+                            transition={{
+                              delay: primaryEnd + 0.18 + i * (isSmall ? 0.022 : 0.03),
+                              duration: 0.75,
+                              ease: [0.16, 1, 0.3, 1],
+                            }}
+                            style={{ transformOrigin: "50% 100%" }}
+                          >
+                            {ch}
+                          </motion.span>
+                        </span>
+                      ))}
+                    </span>
+                  </div>
                 )}
               </div>
             );
