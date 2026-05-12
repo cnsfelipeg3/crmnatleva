@@ -4,6 +4,7 @@ import { Sparkles, Plane, Hotel, Package, Ship, Compass, MapPin, Search, X } fro
 import { cn } from "@/lib/utils";
 import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
 import NetflixRow, { type RowItem } from "@/components/prateleira/NetflixRow";
+import { RowSkeleton } from "@/components/prateleira/RowSkeleton";
 
 type Product = any;
 
