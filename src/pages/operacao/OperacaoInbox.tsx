@@ -3092,6 +3092,10 @@ function OperacaoInboxInner() {
                           variant="inline"
                           conversationId={selectedDbId || undefined}
                         />
+                        <AutopilotControl
+                          conversationId={selectedDbId}
+                          conversationPhone={selected?.phone}
+                        />
                         <div className="h-4 w-px bg-border/60 mx-1" />
                         <Tooltip>
                           <TooltipTrigger asChild>
