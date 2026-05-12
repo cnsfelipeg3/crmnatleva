@@ -351,6 +351,7 @@ export function HotelFiltersSidebar({
           <h3 className="font-semibold text-sm">Filtros</h3>
         </div>
         {nameSearchBox}
+        {paymentSection}
       </div>
     ) : null;
   }
@@ -387,6 +388,8 @@ export function HotelFiltersSidebar({
           acomodações batem com seus filtros
         </p>
       )}
+
+      {paymentSection}
 
       {priceFilter && (
         <div className="space-y-3 border-b border-border pb-4">
