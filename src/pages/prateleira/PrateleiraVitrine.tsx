@@ -123,9 +123,22 @@ export default function PrateleiraVitrine() {
       if (!map.has(p.destination)) map.set(p.destination, []);
       map.get(p.destination)!.push(p);
     });
+    // Só vira fileira própria quando há >= 3 itens · evita carrossel "torto" com 1 card
     return Array.from(map.entries())
-      .filter(([, arr]) => arr.length >= 1)
+      .filter(([, arr]) => arr.length >= 3)
       .sort((a, b) => b[1].length - a[1].length);
+  }, [items]);
+
+  // Destinos com poucos itens (1 ou 2) viram uma fileira agregada "Mais destinos"
+  const moreDestinations = useMemo(() => {
+    const grouped = new Map<string, Product[]>();
+    items.forEach((p) => {
+      if (!p.destination) return;
+      if (!grouped.has(p.destination)) grouped.set(p.destination, []);
+      grouped.get(p.destination)!.push(p);
+    });
+    const small = Array.from(grouped.entries()).filter(([, arr]) => arr.length < 3);
+    return small.flatMap(([, arr]) => arr).map(toRowItem);
   }, [items]);
 
   const clearFilters = () => { setKind("all"); setDestination("all"); setQ(""); setOnlyPromo(false); };
@@ -285,6 +298,14 @@ export default function PrateleiraVitrine() {
                 whatsapp={whatsapp}
               />
             ))}
+            {moreDestinations.length > 0 && (
+              <NetflixRow
+                title="Mais destinos"
+                subtitle={`${moreDestinations.length} experiência(s) em outros destinos`}
+                items={moreDestinations}
+                whatsapp={whatsapp}
+              />
+            )}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
