@@ -58,6 +58,7 @@ import { ConversationSummaryDialog } from "@/components/livechat/ConversationSum
 import { AttachmentDropOverlay } from "@/components/livechat/AttachmentDropOverlay";
 import { AttachmentPreviewDialog } from "@/components/livechat/AttachmentPreviewDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
+import AutopilotControl from "@/components/livechat/AutopilotControl";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import { GenerateQuotationDialog } from "@/components/inbox/GenerateQuotationDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
