@@ -4,6 +4,7 @@ import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } fro
 import { ChevronLeft, ChevronRight, MapPin, Sparkles, ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import SmartImage from "./SmartImage";
 
 export type HighlightItem = {
   id: string;
