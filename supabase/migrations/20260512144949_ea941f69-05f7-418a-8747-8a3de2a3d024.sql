@@ -1,0 +1,1 @@
+DELETE FROM conversation_messages WHERE id IN ('48e43610-8a48-4d85-90f5-11e5ec4e2c08','4b160ffd-88c2-47ec-a2f8-f1383a56b9b1','cd577020-1496-4dca-92ce-7cbef782d8f2'); UPDATE conversations SET ai_autopilot_last_reply_at = NULL WHERE id = '08afc994-2743-4171-ba0f-8399715713b9';
