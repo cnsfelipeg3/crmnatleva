@@ -105,21 +105,22 @@ export default function PrateleiraVendaPublica() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero */}
-      <div className="relative">
-        {cover && (
-          <div className="aspect-[16/9] sm:aspect-[21/9] max-h-[60vh] overflow-hidden bg-muted">
+      <div className="relative w-full overflow-hidden">
+        <div className="relative w-full h-[55vh] min-h-[360px] max-h-[680px] sm:h-[65vh] bg-muted">
+          {cover && (
             <motion.img
               key={cover}
               src={cover}
               alt={p.title}
-              initial={{ opacity: 0, scale: 1.05 }}
+              initial={{ opacity: 0, scale: 1.06 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.7 }}
-              className="w-full h-full object-cover"
+              transition={{ duration: 0.9, ease: "easeOut" }}
+              className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          </div>
-        )}
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-transparent" />
+        </div>
 
         <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
           <Button variant="secondary" size="sm" onClick={() => navigate("/p")} className="bg-white/90 backdrop-blur">
