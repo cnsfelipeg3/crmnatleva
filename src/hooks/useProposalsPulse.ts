@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 export type ProposalsPulseTopEngaged = {
@@ -34,6 +35,34 @@ export type ProposalsPulseData = {
 };
 
 export function useProposalsPulse(hours: number = 24) {
+  const qc = useQueryClient();
+
+  // Realtime · invalida a query quando algo muda em propostas/viewers/shares
+  useEffect(() => {
+    const channel = supabase
+      .channel(`proposals-pulse-${hours}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "proposals" },
+        () => qc.invalidateQueries({ queryKey: ["proposals-pulse"] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "proposal_viewers" },
+        () => qc.invalidateQueries({ queryKey: ["proposals-pulse"] }),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "proposal_shares" },
+        () => qc.invalidateQueries({ queryKey: ["proposals-pulse"] }),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [hours, qc]);
+
   return useQuery({
     queryKey: ["proposals-pulse", hours],
     queryFn: async (): Promise<ProposalsPulseData> => {
@@ -43,7 +72,8 @@ export function useProposalsPulse(hours: number = 24) {
       if (error) throw error;
       return data as unknown as ProposalsPulseData;
     },
-    staleTime: 60_000,
+    staleTime: 30_000,
     refetchOnWindowFocus: true,
+    refetchInterval: 60_000, // backup polling caso o realtime caia
   });
 }
