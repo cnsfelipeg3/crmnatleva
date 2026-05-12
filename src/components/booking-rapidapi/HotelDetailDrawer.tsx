@@ -53,6 +53,8 @@ import {
   type BookingMoney,
 } from "./types";
 import { buildBookingSearchUrl, openExternal } from "./externalUrls";
+import AllRoomOffersBlock from "@/components/hotels/AllRoomOffersBlock";
+import { extractBookingOffers } from "@/lib/hotels/paymentNormalizer";
 
 interface Props {
   hotel: BookingHotel | null;
