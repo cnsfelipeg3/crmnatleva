@@ -11,6 +11,7 @@ export type RowItem = {
   cover?: string | null;
   destination?: string | null;
   shortDescription?: string | null;
+  description?: string | null;
   kindLabel?: string | null;
   isPromo?: boolean | null;
   promoBadge?: string | null;
@@ -20,6 +21,9 @@ export type RowItem = {
   departureDate?: string | null;
   returnDate?: string | null;
   flexibleDates?: boolean | null;
+  gallery?: string[] | null;
+  nights?: number | null;
+  hotelName?: string | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
