@@ -88,7 +88,7 @@ export default function ProposalPublicView() {
   }, [slug]);
 
   // Handle email submission
-  const handleEmailSubmit = useCallback(async (email: string, name?: string) => {
+  const handleEmailSubmit = useCallback(async (email: string, name?: string, phone?: string) => {
     if (!proposal?.id) return;
     setGateLoading(true);
 
