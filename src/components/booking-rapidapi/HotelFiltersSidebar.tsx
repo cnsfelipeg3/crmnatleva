@@ -180,7 +180,21 @@ export function HotelFiltersSidebar({
   className,
   nameQuery,
   onNameQueryChange,
+  paymentCounts,
+  paymentSummariesCount,
+  freeCancellationCount,
 }: Props) {
+  const togglePaymentModality = (id: PaymentModality) => {
+    const next = new Set(state.paymentModalities);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onStateChange({ ...state, paymentModalities: next });
+  };
+
+  const toggleFreeCancellation = () => {
+    onStateChange({ ...state, freeCancellationOnly: !state.freeCancellationOnly });
+  };
+
   const priceFilter = useMemo(
     () => filters?.find((f) => f.field === "price" || f.filterStyle === "SLIDER"),
     [filters],
