@@ -4,117 +4,149 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sparkles, MapPin, Plus, Clock, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
-type Product = {
-  id: string;
-  slug: string;
-  title: string;
-  destination: string;
-  destination_country: string | null;
-  short_description: string | null;
-  cover_image_url: string | null;
-  duration: string | null;
-  price_from: number | null;
-  currency: string | null;
-  is_active: boolean;
-  display_order: number;
-};
+type Product = any;
+
+const KINDS = [
+  { value: "all", label: "Todos" },
+  { value: "pacote", label: "Pacotes" },
+  { value: "aereo", label: "Aéreo" },
+  { value: "hospedagem", label: "Hospedagem" },
+  { value: "passeio", label: "Passeios" },
+  { value: "cruzeiro", label: "Cruzeiros" },
+  { value: "outros", label: "Outros" },
+];
+
+const STATUS = [
+  { value: "all", label: "Todos status" },
+  { value: "active", label: "Ativos" },
+  { value: "draft", label: "Rascunhos" },
+  { value: "paused", label: "Pausados" },
+];
+
+function fmtMoney(v?: number | null, c = "BRL") {
+  if (v == null) return "-";
+  const s = c === "USD" ? "US$" : c === "EUR" ? "€" : "R$";
+  return `${s} ${Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}`;
+}
+function fmtDate(d?: string | null) {
+  if (!d) return null;
+  try { return format(parseISO(d), "dd/MM/yy", { locale: ptBR }); } catch { return d; }
+}
 
 export default function Produtos() {
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [destination, setDestination] = useState<string>("all");
+  const [kind, setKind] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
+  const [onlyPromo, setOnlyPromo] = useState(false);
 
   useEffect(() => {
     (async () => {
       const { data } = await (supabase as any)
-        .from("experience_products")
-        .select("*")
-        .eq("is_active", true)
-        .order("destination", { ascending: true })
-        .order("display_order", { ascending: true });
+        .from("experience_products").select("*")
+        .order("created_at", { ascending: false });
       setItems(data || []);
       setLoading(false);
     })();
   }, []);
 
-  const destinations = useMemo(() => {
-    const s = new Set<string>();
-    items.forEach((p) => s.add(p.destination));
-    return Array.from(s).sort();
-  }, [items]);
+  const destinations = useMemo(() => Array.from(new Set(items.map((p) => p.destination))).sort(), [items]);
 
-  const filtered = useMemo(() => {
-    return items.filter((p) => {
-      if (destination !== "all" && p.destination !== destination) return false;
-      if (q && !`${p.title} ${p.short_description ?? ""}`.toLowerCase().includes(q.toLowerCase())) return false;
-      return true;
-    });
-  }, [items, destination, q]);
+  const filtered = useMemo(() => items.filter((p) => {
+    if (kind !== "all" && (p.product_kind || "passeio") !== kind) return false;
+    if (status !== "all" && (p.status || "active") !== status) return false;
+    if (destination !== "all" && p.destination !== destination) return false;
+    if (onlyPromo && !p.is_promo) return false;
+    if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
+    return true;
+  }), [items, kind, status, destination, q, onlyPromo]);
+
+  const totals = useMemo(() => ({
+    total: items.length,
+    active: items.filter((p) => (p.status || "active") === "active" && p.is_active).length,
+    promo: items.filter((p) => p.is_promo).length,
+    leads: items.reduce((s, p) => s + (p.lead_count || 0), 0),
+    views: items.reduce((s, p) => s + (p.view_count || 0), 0),
+  }), [items]);
 
   return (
     <div className="min-h-screen">
       {/* Hero */}
-      <div className="relative overflow-hidden border-b border-border/20"
-        style={{ background: "linear-gradient(135deg, hsl(150 40% 6%) 0%, hsl(150 40% 12%) 100%)" }}>
-        <div className="max-w-7xl mx-auto px-6 py-12 relative">
-          <div className="flex items-center gap-2 text-champagne text-xs font-medium tracking-widest uppercase mb-3">
-            <Sparkles className="w-3.5 h-3.5" />
-            Universo NatLeva
+      <div className="relative overflow-hidden border-b border-border" style={{ background: "linear-gradient(135deg, hsl(150 40% 6%) 0%, hsl(150 40% 12%) 100%)" }}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <div className="flex items-center gap-2 text-amber-300 text-xs font-medium tracking-widest uppercase mb-2">
+            <Sparkles className="w-3.5 h-3.5" /> Prateleira NatLeva
           </div>
-          <h1 className="font-serif text-4xl md:text-5xl text-white max-w-2xl leading-tight">
-            Passeios e experiências assinadas pela <span className="text-champagne">NatLeva</span>
-          </h1>
-          <p className="text-white/70 mt-4 max-w-xl text-[15px] leading-relaxed">
-            A gente seleciona, testa e indica só o que vale a pena. Escolha o destino
-            e descubra a prateleira de passeios cuidadosamente curados.
-          </p>
-
-          <div className="flex flex-wrap items-center gap-3 mt-8">
-            <div className="relative flex-1 min-w-[260px] max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/50" />
-              <Input
-                placeholder="Buscar passeio…"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                className="pl-9 bg-white/10 border-white/15 text-white placeholder:text-white/50"
-              />
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Marketplace de viagens prontas</h1>
+              <p className="text-white/70 text-sm mt-2">Cadastre pacotes, aéreos, hospedagens e experiências com preços e condições especiais.</p>
             </div>
-            <Link to="/produtos/novo">
-              <Button className="bg-champagne text-champagne-foreground hover:bg-champagne/90">
-                <Plus className="w-4 h-4 mr-1.5" /> Novo Produto
-              </Button>
-            </Link>
+            <div className="flex gap-2">
+              <a href="/p" target="_blank" rel="noreferrer">
+                <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20"><ExternalLink className="w-4 h-4 mr-1.5" /> Ver vitrine pública</Button>
+              </a>
+              <Link to="/prateleira/novo">
+                <Button className="bg-amber-500 text-black hover:bg-amber-400"><Plus className="w-4 h-4 mr-1.5" /> Novo produto</Button>
+              </Link>
+            </div>
+          </div>
+
+          {/* KPI strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+            <KPI label="Total" value={totals.total} />
+            <KPI label="Ativos" value={totals.active} />
+            <KPI label="Em promo" value={totals.promo} />
+            <KPI label="Visualizações" value={totals.views} />
+            <KPI label="Leads" value={totals.leads} />
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Destinos */}
-        <div className="flex flex-wrap gap-2 mb-8">
-          <DestinationChip active={destination === "all"} onClick={() => setDestination("all")} label="Todos" />
-          {destinations.map((d) => (
-            <DestinationChip key={d} active={destination === d} onClick={() => setDestination(d)} label={d} />
-          ))}
-        </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
+        {/* Filters */}
+        <Card className="p-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input placeholder="Buscar título, destino..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
+            </div>
+            <select value={kind} onChange={(e) => setKind(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
+              {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+            </select>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
+              {STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+            <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
+              <option value="all">Todos destinos</option>
+              {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <button onClick={() => setOnlyPromo(!onlyPromo)}
+              className={cn("px-3 py-2 rounded-md text-sm border flex items-center gap-1.5",
+                onlyPromo ? "bg-amber-500 text-black border-amber-500" : "bg-background border-border")}>
+              <Sparkles className="w-3.5 h-3.5" /> Promos
+            </button>
+          </div>
+        </Card>
 
         {loading ? (
-          <div className="text-muted-foreground text-sm">Carregando…</div>
+          <div className="text-muted-foreground text-sm">Carregando...</div>
         ) : filtered.length === 0 ? (
           <Card className="p-12 text-center">
-            <p className="text-muted-foreground text-sm">Nenhum passeio cadastrado para este destino ainda.</p>
-            <Link to="/produtos/novo" className="inline-block mt-4">
-              <Button size="sm"><Plus className="w-4 h-4 mr-1.5" /> Cadastrar primeiro produto</Button>
-            </Link>
+            <p className="text-muted-foreground text-sm mb-4">Nenhum produto cadastrado nessa visão.</p>
+            <Link to="/prateleira/novo"><Button><Plus className="w-4 h-4 mr-1.5" /> Cadastrar primeiro produto</Button></Link>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p) => (
-              <ProductCard key={p.id} p={p} />
-            ))}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map((p) => <AdminProductCard key={p.id} p={p} />)}
           </div>
         )}
       </div>
@@ -122,66 +154,60 @@ export default function Produtos() {
   );
 }
 
-function DestinationChip({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
+function KPI({ label, value }: { label: string; value: number }) {
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "px-4 py-1.5 rounded-full text-[13px] font-medium border transition-all",
-        active
-          ? "bg-foreground text-background border-foreground"
-          : "bg-card text-foreground border-border/40 hover:border-foreground/40"
-      )}
-    >
-      {label}
-    </button>
+    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-3 backdrop-blur">
+      <div className="text-[11px] text-white/60 uppercase tracking-wide">{label}</div>
+      <div className="text-2xl font-bold text-white">{value}</div>
+    </div>
   );
 }
 
-function ProductCard({ p }: { p: Product }) {
-  const price = p.price_from
-    ? `${p.currency === "USD" ? "US$" : p.currency === "BRL" ? "R$" : (p.currency ?? "")} ${Number(p.price_from).toLocaleString("pt-BR")}`
-    : null;
+function AdminProductCard({ p }: { p: Product }) {
+  const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
+  const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
+  const dateRange = p.flexible_dates ? "Flexíveis"
+    : p.departure_date && p.return_date ? `${fmtDate(p.departure_date)}-${fmtDate(p.return_date)}`
+    : p.departure_date ? `${fmtDate(p.departure_date)}` : null;
+  const statusBadge = p.status === "draft" ? "secondary" : p.status === "paused" ? "outline" : "default";
   return (
-    <Link to={`/produtos/${p.slug}`} className="group block">
-      <Card className="overflow-hidden h-full flex flex-col p-0 hover:-translate-y-1 transition-transform duration-300">
-        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-          {p.cover_image_url ? (
-            <img
-              src={p.cover_image_url}
-              alt={p.title}
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10" />
-          )}
-          <div className="absolute top-3 left-3 flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2.5 py-1 rounded-full text-[11px] text-white">
-            <MapPin className="w-3 h-3" /> {p.destination}
+    <Card className="overflow-hidden flex flex-col p-0">
+      <div className="relative aspect-[16/10] bg-muted overflow-hidden">
+        {p.cover_image_url ? <img src={p.cover_image_url} alt={p.title} className="w-full h-full object-cover" loading="lazy" />
+          : <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10" />}
+        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
+          <Badge variant="secondary" className="bg-black/60 text-white border-0 backdrop-blur"><MapPin className="w-2.5 h-2.5 mr-0.5" /> {p.destination}</Badge>
+          {p.is_promo && <Badge className="bg-amber-500 text-black hover:bg-amber-500"><Sparkles className="w-2.5 h-2.5 mr-0.5" /> Promo</Badge>}
+        </div>
+        <Badge variant={statusBadge as any} className="absolute top-2 right-2 capitalize">{p.status || "active"}</Badge>
+      </div>
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-serif text-base leading-tight line-clamp-2 flex-1">{p.title}</h3>
+        </div>
+        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-2">
+          <Badge variant="outline" className="text-[10px]">{p.product_kind || "passeio"}</Badge>
+          {dateRange && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {dateRange}</span>}
+        </div>
+        <div className="flex items-end justify-between mt-3 pt-3 border-t border-border/30">
+          <div>
+            {promo && full && <div className="text-[10px] text-muted-foreground line-through">{full}</div>}
+            <div className="text-sm font-semibold">{promo || full || "Sob consulta"}</div>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
+            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
           </div>
         </div>
-        <div className="p-4 flex-1 flex flex-col">
-          <h3 className="font-serif text-lg leading-tight text-foreground group-hover:text-champagne transition-colors">
-            {p.title}
-          </h3>
-          {p.short_description && (
-            <p className="text-[13px] text-muted-foreground mt-2 line-clamp-2 leading-relaxed">{p.short_description}</p>
-          )}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/20">
-            {p.duration ? (
-              <div className="flex items-center gap-1 text-[12px] text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" /> {p.duration}
-              </div>
-            ) : <span />}
-            {price && (
-              <div className="text-right">
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wide">A partir de</div>
-                <div className="text-sm font-semibold text-champagne">{price}</div>
-              </div>
-            )}
-          </div>
+        <div className="flex gap-2 mt-3">
+          <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
+          </Link>
+          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className="flex-1">
+            <Button variant="outline" size="sm" className="w-full"><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Página</Button>
+          </a>
         </div>
-      </Card>
-    </Link>
+      </div>
+    </Card>
   );
 }
