@@ -298,6 +298,14 @@ export default function PrateleiraVitrine() {
                 whatsapp={whatsapp}
               />
             ))}
+            {moreDestinations.length > 0 && (
+              <NetflixRow
+                title="Mais destinos"
+                subtitle={`${moreDestinations.length} experiência(s) em outros destinos`}
+                items={moreDestinations}
+                whatsapp={whatsapp}
+              />
+            )}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
