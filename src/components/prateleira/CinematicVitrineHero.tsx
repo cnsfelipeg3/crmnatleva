@@ -253,8 +253,8 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
 
           {/* Big headline · animação por palavra para preservar serifas, acentos e itálico sem corte */}
           <h1
-            className="font-serif text-white leading-[1.28] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[98%] overflow-visible py-[0.14em]"
-            style={{ fontSize: "clamp(2rem, 5.6vw, 5.45rem)" }}
+            className="font-serif text-white leading-[1.3] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] w-full max-w-[16ch] overflow-visible py-[0.18em]"
+            style={{ fontSize: "clamp(2rem, 5.2vw, 5.1rem)" }}
             aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
             <motion.span
@@ -266,7 +266,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
               {HEADLINE_PRIMARY}
             </motion.span>
             <motion.span
-              className="block w-fit overflow-visible py-[0.18em] pr-[0.24em] italic leading-[1.22]"
+              className="block overflow-visible py-[0.2em] pl-[0.04em] pr-[0.45em] italic leading-[1.24]"
               initial={{ y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.75, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
