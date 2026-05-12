@@ -354,8 +354,10 @@ export default function NetflixRow({
           aria-label={`${title} · use as setas para navegar`}
           onKeyDown={onTrackKeyDown}
           className={cn(
-            "flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth",
-            "px-4 sm:px-6 lg:px-10 py-3",
+            "flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth py-3",
+            // Alinha o início e fim da fileira com o container do título (max-w 1600 + paddings),
+            // evitando cards encostados no canto da viewport em telas grandes
+            "px-[max(1rem,calc((100vw-1600px)/2+1rem))] sm:px-[max(1.5rem,calc((100vw-1600px)/2+1.5rem))] lg:px-[max(2.5rem,calc((100vw-1600px)/2+2.5rem))]",
             "[&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/40 rounded"
           )}
