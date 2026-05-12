@@ -289,6 +289,8 @@ export default function NetflixRow({
     }
   };
 
+  const [previewItem, setPreviewItem] = useState<RowItem | null>(null);
+
   if (!items?.length) return null;
 
   const regionLabel = `${title}${subtitle ? ` — ${subtitle}` : ""}`;
@@ -361,12 +363,19 @@ export default function NetflixRow({
         >
           {items.map((it, i) => (
             <div data-row-card key={it.id}>
-              <NetflixCard item={it} index={i} whatsapp={whatsapp} />
+              <NetflixCard item={it} index={i} whatsapp={whatsapp} onPreview={setPreviewItem} />
             </div>
           ))}
           <div className="shrink-0 w-2" aria-hidden />
         </div>
       </div>
+
+      <ProductPreviewModal
+        item={previewItem as PreviewItem | null}
+        open={!!previewItem}
+        onOpenChange={(v) => { if (!v) setPreviewItem(null); }}
+        whatsapp={whatsapp}
+      />
     </section>
   );
 }
