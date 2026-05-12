@@ -265,10 +265,43 @@ export default function CinematicHero({
                         style={{ transformOrigin: "50% 100%", whiteSpace: ch === " " ? "pre" : "normal" }}
                       >
                         {ch}
-                </motion.span>
-              </span>
-            ))}
-          </h1>
+                      </motion.span>
+                    ))}
+                    {/* Shimmer sweep */}
+                    <motion.span
+                      aria-hidden
+                      className="absolute inset-0 pointer-events-none"
+                      initial={{ backgroundPositionX: "-150%" }}
+                      animate={{ backgroundPositionX: ["-150%", "250%"] }}
+                      transition={{ duration: 4, ease: "easeInOut", repeat: Infinity, repeatDelay: 3, delay: 2.2 }}
+                      style={{
+                        backgroundImage: "linear-gradient(105deg, transparent 38%, rgba(255,225,170,0.9) 50%, transparent 62%)",
+                        backgroundSize: "60% 100%",
+                        backgroundRepeat: "no-repeat",
+                        WebkitBackgroundClip: "text",
+                        backgroundClip: "text",
+                        color: "transparent",
+                      }}
+                    >
+                      {primary}
+                    </motion.span>
+                  </span>
+                </h1>
+                {secondary && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 14 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6 + letters.length * 0.025, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                    className="mt-3 sm:mt-4 font-sans text-white/80 font-light tracking-wide flex items-center gap-3"
+                    style={{ fontSize: "clamp(0.95rem, 1.5vw, 1.4rem)" }}
+                  >
+                    <span className="h-px w-8 sm:w-12 bg-amber-300/80" />
+                    <span>{secondary}</span>
+                  </motion.div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Subtitle */}
           {shortDescription && (
