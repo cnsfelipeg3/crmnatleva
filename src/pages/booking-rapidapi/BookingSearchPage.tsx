@@ -70,6 +70,16 @@ import {
   type UnifiedHotelOffer,
   type HotelSource,
 } from "@/components/booking-rapidapi/unifiedHotelTypes";
+import {
+  useHotelPaymentSummaries,
+  usePrefetchHotelPayments,
+  type PaymentKey,
+} from "@/hooks/useHotelPaymentCache";
+import {
+  hotelMatchesPaymentFilters,
+  paymentCacheKey,
+} from "@/lib/hotels/paymentFilter";
+import type { PaymentModality } from "@/types/hotel";
 
 const SORT_OPTIONS = [
   { value: "popularity", label: "Mais populares" },
@@ -268,18 +278,96 @@ export default function BookingSearchPage() {
     [combinedHotels],
   );
 
-  // Filtro client-side por nome (aplicado nos grupos)
+  // Chaves de cache de pagamento para todos os hotéis visíveis
+  const paymentKeys: PaymentKey[] = useMemo(() => {
+    const keys: PaymentKey[] = [];
+    for (const g of groupedHotels) {
+      for (const o of g.offers) {
+        keys.push({ hotelId: String(o.id), source: o.source });
+      }
+    }
+    return keys;
+  }, [groupedHotels]);
+
+  const { data: paymentSummaries } = useHotelPaymentSummaries(paymentKeys);
+
+  // Prefetch sob demanda · Booking · roda só quando o usuário ativou algum filtro
+  const paymentFilterActive =
+    filtersState.paymentModalities.size > 0 || filtersState.freeCancellationOnly;
+
+  usePrefetchHotelPayments({
+    enabled: paymentFilterActive && !!searchParams,
+    bookingHotels: bookingData?.hotels ?? [],
+    arrival: searchParams?.arrival ?? null,
+    departure: searchParams?.departure ?? null,
+    adults: searchParams?.adults ?? 1,
+    childrenAges: searchParams?.children.join(",") ?? "",
+    rooms: searchParams?.rooms ?? 1,
+    existing: paymentSummaries,
+    maxItems: 12,
+    maxConcurrent: 3,
+  });
+
+  // Filtro client-side por nome + por modalidade/cancelamento (via cache)
   const filteredGroups = useMemo(() => {
-    if (!nameQuery.trim()) return groupedHotels;
-    const q = nameQuery.toLowerCase();
-    return groupedHotels.filter((g) => g.name.toLowerCase().includes(q));
-  }, [groupedHotels, nameQuery]);
+    const q = nameQuery.trim().toLowerCase();
+    return groupedHotels.filter((g) => {
+      if (q && !g.name.toLowerCase().includes(q)) return false;
+
+      if (paymentFilterActive) {
+        // Passa se ALGUMA oferta do grupo bater com os filtros
+        const hits = g.offers.map((o) => {
+          const summary = paymentSummaries?.get(
+            paymentCacheKey(String(o.id), o.source),
+          );
+          return hotelMatchesPaymentFilters(
+            summary,
+            filtersState.paymentModalities,
+            filtersState.freeCancellationOnly,
+          );
+        });
+        // Se TODAS retornaram false, esconde · `null` (sem cache) é tratado como possível match
+        if (hits.every((h) => h === false)) return false;
+      }
+
+      return true;
+    });
+  }, [groupedHotels, nameQuery, paymentFilterActive, paymentSummaries, filtersState]);
 
   // Contadores
   const bookingPageCount = bookingUnified.length;
   const hotelscomPageCount = hotelscomUnified.length;
   const pageCount = filteredGroups.length;
   const unifiedCount = groupedHotels.filter((g) => g.offers.length > 1).length;
+
+  // Contagens por modalidade · derivadas dos summaries dos hotéis visíveis
+  const paymentCounts = useMemo(() => {
+    const out: Partial<Record<PaymentModality, number>> = {
+      pay_now: 0,
+      pay_at_property: 0,
+      pay_with_deposit: 0,
+      partial_prepay: 0,
+    };
+    let free = 0;
+    const seen = new Set<string>();
+    for (const g of groupedHotels) {
+      const groupModalities = new Set<PaymentModality>();
+      let groupFree = false;
+      for (const o of g.offers) {
+        const k = paymentCacheKey(String(o.id), o.source);
+        const s = paymentSummaries?.get(k);
+        if (!s || seen.has(g.groupKey + ":" + k)) continue;
+        seen.add(g.groupKey + ":" + k);
+        s.availableModalities.forEach((m) => groupModalities.add(m));
+        if (s.hasFreeCancellation) groupFree = true;
+      }
+      groupModalities.forEach((m) => {
+        out[m] = (out[m] ?? 0) + 1;
+      });
+      if (groupFree) free += 1;
+    }
+    return { byModality: out, free, summarized: seen.size };
+  }, [groupedHotels, paymentSummaries]);
 
   // Totais reais retornados pelas APIs (todas as páginas)
   const bookingTotal = bookingData?.totalHotels ?? bookingPageCount;
@@ -425,6 +513,9 @@ export default function BookingSearchPage() {
               onStateChange={setFiltersState}
               nameQuery={nameQuery}
               onNameQueryChange={setNameQuery}
+              paymentCounts={paymentCounts.byModality}
+              freeCancellationCount={paymentCounts.free}
+              paymentSummariesCount={paymentCounts.summarized}
             />
             {sources.hotelscom && (
               <div className="mt-4">
@@ -486,6 +577,9 @@ export default function BookingSearchPage() {
                         onStateChange={setFiltersState}
                         nameQuery={nameQuery}
                         onNameQueryChange={setNameQuery}
+                        paymentCounts={paymentCounts.byModality}
+                        freeCancellationCount={paymentCounts.free}
+                        paymentSummariesCount={paymentCounts.summarized}
                       />
                       {sources.hotelscom && (
                         <div className="mt-4">
