@@ -47,7 +47,7 @@ function buildWhatsLink(phone: string, item: RowItem) {
   return `https://wa.me/${onlyDigits}?text=${encodeURIComponent(msg)}`;
 }
 
-function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; whatsapp?: string | null }) {
+function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; index: number; whatsapp?: string | null; onPreview: (item: RowItem) => void }) {
   const [hover, setHover] = useState(false);
   const reduced = useReducedMotion();
   const promo = money(item.pricePromo, item.currency ?? "BRL");
@@ -73,10 +73,12 @@ function NetflixCard({ item, index, whatsapp }: { item: RowItem; index: number; 
         onMouseLeave={() => setHover(false)}
         className="group relative"
       >
-        <Link
-          to={`/p/${item.slug}`}
-          aria-label={ariaLabel}
-          className="block rounded-xl overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
+        <button
+          type="button"
+          onClick={() => onPreview(item)}
+          aria-label={`Pré-visualizar ${ariaLabel}`}
+          aria-haspopup="dialog"
+          className="block w-full text-left rounded-xl overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a]"
         >
           <motion.div
             animate={reduced ? undefined : { scale: hover ? 1.035 : 1, y: hover ? -4 : 0 }}
