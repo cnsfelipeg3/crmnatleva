@@ -800,3 +800,74 @@ img[loading="lazy"] {
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+/* ──────────────────────────────────────────────────────────
+   Sistema tipográfico unificado · classes opt-in t-*
+   Usa tokens fontSize do tailwind.config (font-size + leading + tracking
+   em um único shorthand). Margens/ritmo vertical via .prose-natleva.
+   ────────────────────────────────────────────────────────── */
+@layer utilities {
+  .t-display-xl { @apply font-display text-display-xl font-bold; }
+  .t-display-lg { @apply font-display text-display-lg font-bold; }
+  .t-h1         { @apply font-display text-h1-token font-bold; }
+  .t-h2         { @apply font-display text-h2-token font-semibold; }
+  .t-h3         { @apply font-sans    text-h3-token font-semibold; }
+  .t-h4         { @apply font-sans    text-h4-token font-semibold; }
+  .t-body-lg    { @apply font-sans    text-body-lg; }
+  .t-body       { @apply font-sans    text-body-md; }
+  .t-body-sm    { @apply font-sans    text-body-sm; }
+  .t-caption    { @apply font-sans    text-caption text-muted-foreground; }
+  .t-eyebrow    {
+    @apply font-sans text-eyebrow font-semibold uppercase text-muted-foreground;
+  }
+  .t-mono       { @apply font-mono text-body-sm; }
+
+  /* Numerais tabulares · útil para preços, datas, KPIs */
+  .t-numeric    { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "lnum" 1; }
+
+  /* Texto longo · max-width + balance pra leitura confortável */
+  .t-measure       { max-width: 65ch; }
+  .t-measure-tight { max-width: 52ch; }
+  .t-balance       { text-wrap: balance; }
+  .t-pretty        { text-wrap: pretty; }
+
+  /* ── Ritmo vertical (margens) · aplica em wrappers de conteúdo longo ── */
+  .prose-natleva > * + * { margin-top: 0.75rem; }
+  .prose-natleva > p     { @apply t-body t-pretty; }
+  .prose-natleva > h1,
+  .prose-natleva > h2,
+  .prose-natleva > h3,
+  .prose-natleva > h4 {
+    margin-top: 1.75rem;
+    margin-bottom: 0.5rem;
+  }
+  .prose-natleva > h1 { @apply t-h1 t-balance; }
+  .prose-natleva > h2 { @apply t-h2 t-balance; margin-top: 1.5rem; }
+  .prose-natleva > h3 { @apply t-h3 t-balance; margin-top: 1.25rem; }
+  .prose-natleva > h4 { @apply t-h4; margin-top: 1rem; }
+  .prose-natleva > ul,
+  .prose-natleva > ol { @apply t-body pl-5; }
+  .prose-natleva > ul { list-style: disc; }
+  .prose-natleva > ol { list-style: decimal; }
+  .prose-natleva > ul > li + li,
+  .prose-natleva > ol > li + li { margin-top: 0.35rem; }
+  .prose-natleva > blockquote {
+    @apply t-body-lg italic border-l-2 border-border pl-4 text-muted-foreground;
+  }
+  .prose-natleva > hr { @apply border-border my-6; }
+  .prose-natleva a {
+    @apply text-primary underline underline-offset-4 decoration-primary/40 hover:decoration-primary;
+  }
+  .prose-natleva code {
+    @apply font-mono text-[0.875em] px-1 py-0.5 rounded bg-muted/60;
+  }
+
+  /* Variante compacta · cards, drawers, popovers */
+  .prose-natleva-compact > * + * { margin-top: 0.5rem; }
+  .prose-natleva-compact > p     { @apply t-body-sm t-pretty; }
+  .prose-natleva-compact > h3,
+  .prose-natleva-compact > h4 { margin-top: 0.875rem; margin-bottom: 0.25rem; }
+  .prose-natleva-compact > h3 { @apply t-h3 t-balance; }
+  .prose-natleva-compact > h4 { @apply t-h4; }
+}
+
