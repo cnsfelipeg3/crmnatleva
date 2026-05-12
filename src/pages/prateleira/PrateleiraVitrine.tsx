@@ -9,6 +9,7 @@ import { Search, MapPin, Calendar, Sparkles, Plane, Hotel, Package, Ship, Compas
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import CinematicVitrineHero from "@/components/prateleira/CinematicVitrineHero";
 
 type Product = any;
 
