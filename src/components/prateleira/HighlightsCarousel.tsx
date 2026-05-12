@@ -124,11 +124,11 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
                   {item.kindLabel}
                 </span>
               )}
-              <h3 className="font-serif text-xl sm:text-2xl leading-tight text-white drop-shadow line-clamp-2">
+              <h3 className="font-serif t-h3 t-balance text-white drop-shadow line-clamp-2">
                 {item.title}
               </h3>
               {item.shortDescription && (
-                <p className="text-[12.5px] text-white/75 mt-1.5 line-clamp-2">{item.shortDescription}</p>
+                <p className="t-body-sm t-pretty text-white/75 mt-1.5 line-clamp-2">{item.shortDescription}</p>
               )}
 
               <div className="mt-4 flex items-end justify-between gap-3">
@@ -136,7 +136,7 @@ function TiltCard({ item, index }: { item: HighlightItem; index: number }) {
                   {promo && full && (
                     <div className="text-[10px] text-white/60 line-through leading-none">{full}</div>
                   )}
-                  <div className="text-white font-bold text-lg leading-tight">
+                  <div className="t-numeric text-white font-bold text-lg leading-tight">
                     {promo || full || "Sob consulta"}
                   </div>
                 </div>
@@ -193,8 +193,8 @@ export default function HighlightsCarousel({ items, title = "Destaques da semana
             >
               <Sparkles className="w-3.5 h-3.5" /> Curadoria
             </motion.div>
-            <h2 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-foreground leading-tight">{title}</h2>
-            <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+            <h2 className="font-serif t-h1 t-balance text-foreground">{title}</h2>
+            <p className="t-body-sm t-pretty text-muted-foreground mt-1">{subtitle}</p>
           </div>
           <div className="hidden sm:flex items-center gap-2">
             <button

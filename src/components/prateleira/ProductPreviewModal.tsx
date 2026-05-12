@@ -177,7 +177,7 @@ export default function ProductPreviewModal({
                     {item.kindLabel}
                   </span>
                 )}
-                <h2 className="font-serif text-2xl sm:text-3xl leading-tight text-white">
+                <h2 className="font-serif t-h2 t-balance text-white">
                   {item.title}
                 </h2>
                 {(item.destination || dateRange) && (
@@ -194,7 +194,7 @@ export default function ProductPreviewModal({
               </div>
 
               {(item.shortDescription || item.description) && (
-                <p className="text-[13.5px] leading-relaxed text-white/80 line-clamp-[8]">
+                <p className="t-body t-pretty t-measure text-white/80 line-clamp-[8]">
                   {item.shortDescription || item.description}
                 </p>
               )}
@@ -210,11 +210,11 @@ export default function ProductPreviewModal({
             <div className="border-t border-white/10 p-5 sm:p-6 bg-black/40 backdrop-blur space-y-3">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <div className="text-[10.5px] uppercase tracking-[0.2em] text-white/45">A partir de</div>
+                  <div className="t-eyebrow text-white/45">A partir de</div>
                   {promo && full && (
-                    <div className="text-[11px] text-white/45 line-through leading-none">{full}</div>
+                    <div className="t-numeric text-[11px] text-white/45 line-through leading-none">{full}</div>
                   )}
-                  <div className="text-white font-bold text-2xl leading-tight">
+                  <div className="t-numeric text-white font-bold text-2xl leading-tight">
                     {promo || full || "Sob consulta"}
                   </div>
                 </div>

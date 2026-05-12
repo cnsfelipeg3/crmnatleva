@@ -130,11 +130,11 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
                   {item.kindLabel}
                 </span>
               )}
-              <h3 className="font-serif text-white text-[15px] sm:text-base leading-snug line-clamp-2 drop-shadow">
+              <h3 className="font-serif t-balance text-white text-[15px] sm:text-base leading-snug line-clamp-2 drop-shadow">
                 {item.title}
               </h3>
               <div className="mt-1.5 flex items-center justify-between gap-2">
-                <div className="text-white/95 text-sm font-bold">
+                <div className="t-numeric text-white/95 text-sm font-bold">
                   {promo || full || "Sob consulta"}
                 </div>
                 {dateRange && (
@@ -312,13 +312,13 @@ export default function NetflixRow({
         <div className="flex items-end justify-between gap-4 mb-3">
           <div className="min-w-0">
             <h2 className={cn(
-              "font-serif text-xl sm:text-2xl lg:text-[28px] leading-tight",
+              "font-serif t-h2 t-balance",
               accent === "amber" ? "text-white" : "text-white"
             )}>
               {title}
             </h2>
             {subtitle && (
-              <p className="text-[12px] sm:text-sm text-white/55 mt-0.5">{subtitle}</p>
+              <p className="t-body-sm t-pretty text-white/55 mt-0.5">{subtitle}</p>
             )}
           </div>
           <div className="hidden md:flex items-center gap-1.5 opacity-60 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity">

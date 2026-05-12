@@ -248,8 +248,8 @@ export default function PrateleiraVitrine() {
               <div className="inline-flex w-16 h-16 rounded-full bg-white/5 items-center justify-center mb-4">
                 <Search className="w-7 h-7 text-white/40" />
               </div>
-              <h3 className="font-serif text-2xl text-white mb-2">Nada por aqui ainda</h3>
-              <p className="text-white/60 text-sm mb-6">A gente não encontrou nenhuma viagem com esses filtros.</p>
+              <h3 className="font-serif t-h3 t-balance text-white mb-2">Nada por aqui ainda</h3>
+              <p className="t-body-sm t-pretty text-white/60 mb-6">A gente não encontrou nenhuma viagem com esses filtros.</p>
               <button
                 onClick={clearFilters}
                 className="inline-flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-full text-sm font-semibold hover:bg-amber-400 transition-colors"
