@@ -72,10 +72,11 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
   };
   const onMouseLeave = () => setTilt({ x: 0, y: 0 });
 
-  // Particles
+  // Particles · menos no mobile e desabilitado em reduced-motion
+  const particleCount = reduced ? 0 : isMobile ? 14 : 32;
   const particles = useMemo(
     () =>
-      Array.from({ length: 32 }).map((_, i) => ({
+      Array.from({ length: particleCount }).map((_, i) => ({
         id: i,
         x: Math.random() * 100,
         y: 30 + Math.random() * 70,
@@ -84,7 +85,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
         duration: 8 + Math.random() * 12,
         opacity: 0.2 + Math.random() * 0.5,
       })),
-    []
+    [particleCount]
   );
 
   const primaryLetters = Array.from(HEADLINE_PRIMARY);
