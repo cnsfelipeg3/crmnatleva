@@ -2899,6 +2899,7 @@ export type Database = {
           sender_phone: string | null
           sender_photo: string | null
           sender_type: string
+          sent_by_agent: string | null
           status: string | null
           timestamp: string | null
         }
@@ -2941,6 +2942,7 @@ export type Database = {
           sender_phone?: string | null
           sender_photo?: string | null
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           timestamp?: string | null
         }
@@ -2983,6 +2985,7 @@ export type Database = {
           sender_phone?: string | null
           sender_photo?: string | null
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           timestamp?: string | null
         }
@@ -3149,6 +3152,10 @@ export type Database = {
       }
       conversations: {
         Row: {
+          ai_autopilot_agent: string | null
+          ai_autopilot_enabled: boolean
+          ai_autopilot_last_reply_at: string | null
+          ai_autopilot_paused_until: string | null
           archived_at: string | null
           assigned_to: string | null
           auto_tags: string[] | null
@@ -3202,6 +3209,10 @@ export type Database = {
           vehicle_interest: string | null
         }
         Insert: {
+          ai_autopilot_agent?: string | null
+          ai_autopilot_enabled?: boolean
+          ai_autopilot_last_reply_at?: string | null
+          ai_autopilot_paused_until?: string | null
           archived_at?: string | null
           assigned_to?: string | null
           auto_tags?: string[] | null
@@ -3255,6 +3266,10 @@ export type Database = {
           vehicle_interest?: string | null
         }
         Update: {
+          ai_autopilot_agent?: string | null
+          ai_autopilot_enabled?: boolean
+          ai_autopilot_last_reply_at?: string | null
+          ai_autopilot_paused_until?: string | null
           archived_at?: string | null
           assigned_to?: string | null
           auto_tags?: string[] | null
@@ -5084,6 +5099,7 @@ export type Database = {
           original_payload: Json | null
           retry_count: number
           sender_type: string
+          sent_by_agent: string | null
           status: string | null
           text: string | null
         }
@@ -5112,6 +5128,7 @@ export type Database = {
           original_payload?: Json | null
           retry_count?: number
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           text?: string | null
         }
@@ -5140,6 +5157,7 @@ export type Database = {
           original_payload?: Json | null
           retry_count?: number
           sender_type?: string
+          sent_by_agent?: string | null
           status?: string | null
           text?: string | null
         }

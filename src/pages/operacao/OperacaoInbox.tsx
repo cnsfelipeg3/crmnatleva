@@ -58,6 +58,7 @@ import { ConversationSummaryDialog } from "@/components/livechat/ConversationSum
 import { AttachmentDropOverlay } from "@/components/livechat/AttachmentDropOverlay";
 import { AttachmentPreviewDialog } from "@/components/livechat/AttachmentPreviewDialog";
 import NathOpinionButton from "@/components/ai-team/NathOpinionButton";
+import AutopilotControl from "@/components/livechat/AutopilotControl";
 import { LinkClientDialog } from "@/components/livechat/LinkClientDialog";
 import { GenerateQuotationDialog } from "@/components/inbox/GenerateQuotationDialog";
 import LazyEmojiPicker from "@/components/LazyEmojiPicker";
@@ -3090,6 +3091,10 @@ function OperacaoInboxInner() {
                           context={`Conversa real WhatsApp · Cliente: ${selected?.contact_name || "Desconhecido"} · Telefone: ${selected?.phone} · Etapa: ${selected?.stage} · Tags: ${selected?.tags?.join(", ") || "nenhuma"}`}
                           variant="inline"
                           conversationId={selectedDbId || undefined}
+                        />
+                        <AutopilotControl
+                          conversationId={selectedDbId}
+                          conversationPhone={selected?.phone}
                         />
                         <div className="h-4 w-px bg-border/60 mx-1" />
                         <Tooltip>

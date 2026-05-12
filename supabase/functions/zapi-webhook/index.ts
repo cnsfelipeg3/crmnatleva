@@ -1216,6 +1216,22 @@ Deno.serve(async (req) => {
     } else {
       console.log("[Webhook] ✓ Message saved to conversation_messages");
 
+      // Autopilot IA · fire-and-forget. O dispatcher faz TODA a verificação
+      // das 3 camadas (kill switch, allowlist, toggle por conversa). Aqui só
+      // disparamos para mensagens RECEBIDAS de TEXTO. Nunca bloqueia o webhook.
+      if (!fromMe && msgType === "text" && conversationId) {
+        try {
+          fetch(`${supabaseUrl}/functions/v1/autopilot-dispatcher`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({ conversation_id: conversationId, message_id: messageId }),
+          }).catch(e => console.warn("[Webhook] autopilot-dispatcher fire-and-forget failed:", e?.message));
+        } catch { /* non-blocking */ }
+      }
+
       // Async: trigger media download if there's a media URL (fire-and-forget robusto)
       if (mediaUrl && messageId) {
         try {
