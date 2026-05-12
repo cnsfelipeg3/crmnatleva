@@ -239,14 +239,44 @@ export default function PrateleiraVendaPublica() {
         </div>
       </div>
 
-      {/* Mobile floating CTA */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t border-border p-3 z-40" style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}>
-        <div className="flex items-center gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-lg font-bold truncate">{promoPrice || fullPrice || "Sob consulta"}</div>
-            {p.price_label && <div className="text-[10px] text-muted-foreground truncate">{p.price_label}</div>}
+      {/* Mobile floating CTA · com gatilho */}
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border z-40 shadow-[0_-12px_40px_-10px_rgba(0,0,0,0.25)]"
+        style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
+        {p.seats_left != null && p.seats_left <= 5 && p.seats_left > 0 && (
+          <div className="bg-rose-500/10 border-b border-rose-500/20 px-3 py-1 text-center">
+            <span className="text-[10px] font-semibold text-rose-700 dark:text-rose-300 uppercase tracking-wider">
+              Apenas {p.seats_left} {p.seats_left === 1 ? "vaga" : "vagas"} · garanta a sua
+            </span>
           </div>
-          <Button onClick={() => setLeadOpen(true)} size="lg">Tenho interesse</Button>
+        )}
+        <div className="flex items-center gap-3 p-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-lg font-bold truncate tabular-nums">
+              {promoPrice || fullPrice || "Sob consulta"}
+            </div>
+            <div className="text-[10px] text-muted-foreground truncate">
+              {p.price_label || "entrada + saldo sem juros"}
+            </div>
+          </div>
+          <motion.button
+            onClick={() => setLeadOpen(true)}
+            whileTap={{ scale: 0.96 }}
+            className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg"
+          >
+            <motion.span
+              aria-hidden
+              className="absolute inset-0 pointer-events-none"
+              animate={{ x: ["-120%", "120%"] }}
+              transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+              style={{
+                background:
+                  "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)",
+              }}
+            />
+            <span className="relative">Garantir vaga</span>
+          </motion.button>
         </div>
       </div>
 
