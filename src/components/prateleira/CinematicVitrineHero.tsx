@@ -22,9 +22,14 @@ type Props = {
   slides: Slide[];
   q: string;
   setQ: (v: string) => void;
-  sort: string;
-  setSort: (v: any) => void;
+  sort: SortOption;
+  setSort: (v: SortOption) => void;
 };
+
+type SortOption = "relevance" | "price_asc" | "soon" | "new";
+
+const isSortOption = (value: string): value is SortOption =>
+  value === "relevance" || value === "price_asc" || value === "soon" || value === "new";
 
 const HEADLINE_PRIMARY = "A próxima viagem";
 const HEADLINE_ACCENT = "começa aqui";
@@ -87,9 +92,6 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
       })),
     [particleCount]
   );
-
-  const primaryLetters = Array.from(HEADLINE_PRIMARY);
-  const accentLetters = Array.from(HEADLINE_ACCENT);
 
   return (
     <section
@@ -249,65 +251,34 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             </span>
           </motion.div>
 
-          {/* Big headline · split em palavras para quebra inteligente e sem corte de descendentes */}
+          {/* Big headline · animação por palavra para preservar serifas, acentos e itálico sem corte */}
           <h1
-            className="font-serif text-white leading-[1.18] tracking-[-0.02em] drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] max-w-[95%]"
-            style={{ fontSize: "clamp(2.1rem, 6.2vw, 6rem)" }}
+            className="font-serif text-white leading-[1.3] tracking-normal drop-shadow-[0_10px_40px_rgba(0,0,0,0.7)] w-full max-w-[16ch] overflow-visible py-[0.18em]"
+            style={{ fontSize: "clamp(2rem, 5.2vw, 5.1rem)" }}
             aria-label={`${HEADLINE_PRIMARY} ${HEADLINE_ACCENT}`}
           >
-            <span className="block">
-              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
-                {HEADLINE_PRIMARY.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pb-[0.25em]">
-                    <span className="inline-block whitespace-nowrap">
-                      {Array.from(word).map((ch, i) => {
-                        const idx = HEADLINE_PRIMARY.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
-                        return (
-                          <motion.span
-                            key={i}
-                            className="inline-block"
-                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                            style={{ transformOrigin: "50% 100%" }}
-                          >{ch}</motion.span>
-                        );
-                      })}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </span>
-            <span className="block">
-              <span className="inline-flex flex-wrap gap-x-[0.25em]" aria-hidden>
-                {HEADLINE_ACCENT.split(" ").map((word, wi) => (
-                  <span key={wi} className="inline-block pb-[0.35em] pr-[0.12em]">
-                    <span className="inline-block whitespace-nowrap italic">
-                      {Array.from(word).map((ch, i) => {
-                        const baseIdx = primaryLetters.length;
-                        const idx = baseIdx + HEADLINE_ACCENT.split(" ").slice(0, wi).join(" ").length + (wi > 0 ? 1 : 0) + i;
-                        return (
-                          <motion.span
-                            key={i}
-                            className="inline-block"
-                            initial={{ y: "100%", opacity: 0, rotateX: -60 }}
-                            animate={{ y: "0%", opacity: 1, rotateX: 0 }}
-                            transition={{ delay: 0.55 + idx * 0.025, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-                            style={{
-                              transformOrigin: "50% 100%",
-                              backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
-                              WebkitBackgroundClip: "text",
-                              backgroundClip: "text",
-                              color: "transparent",
-                            }}
-                          >{ch}</motion.span>
-                        );
-                      })}
-                    </span>
-                  </span>
-                ))}
-              </span>
-            </span>
+            <motion.span
+              className="block overflow-visible py-[0.08em]"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.55, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {HEADLINE_PRIMARY}
+            </motion.span>
+            <motion.span
+              className="block overflow-visible py-[0.2em] pl-[0.04em] pr-[0.45em] italic leading-[1.24]"
+              initial={{ y: 28, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              transition={{ delay: 0.75, duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                backgroundImage: "linear-gradient(120deg, #fde68a 0%, #f59e0b 60%, #fde68a 100%)",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {HEADLINE_ACCENT}
+            </motion.span>
           </h1>
 
           {/* Slide caption (live) */}
@@ -369,7 +340,9 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
             </div>
             <select
               value={sort}
-              onChange={(e) => setSort(e.target.value)}
+              onChange={(e) => {
+                if (isSortOption(e.target.value)) setSort(e.target.value);
+              }}
               className="bg-black/55 border border-white/20 text-white rounded-2xl px-4 h-14 text-sm backdrop-blur-xl"
             >
               <option value="relevance" className="text-foreground">Mais relevantes</option>
