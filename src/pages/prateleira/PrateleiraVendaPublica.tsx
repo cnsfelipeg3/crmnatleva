@@ -8,6 +8,7 @@ import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, A
 import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/prateleira/LeadCaptureModal";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
+import CinematicHero from "@/components/prateleira/CinematicHero";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
