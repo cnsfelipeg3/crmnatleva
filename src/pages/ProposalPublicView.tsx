@@ -158,6 +158,7 @@ export default function ProposalPublicView() {
             proposal_id: proposal.id,
             email,
             name: name || null,
+            phone: phone || null,
             device_type: deviceType,
             user_agent: ua,
             ip_address: geo.ip || null,
