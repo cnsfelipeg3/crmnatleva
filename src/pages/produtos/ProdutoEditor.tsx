@@ -13,6 +13,7 @@ import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
+import ProductAIChat from "@/components/produtos/ProductAIChat";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
