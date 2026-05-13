@@ -11,6 +11,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy } from "lucide-react";
 import { toast } from "sonner";
+import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
