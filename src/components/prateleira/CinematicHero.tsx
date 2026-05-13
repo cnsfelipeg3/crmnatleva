@@ -30,8 +30,10 @@ export default function CinematicHero({
   promoBadge,
   isPromo,
   dateRange,
+  galleryCount,
   onBack,
   onShare,
+  onOpenGallery,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
