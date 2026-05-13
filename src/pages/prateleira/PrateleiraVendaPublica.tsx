@@ -432,6 +432,8 @@ export default function PrateleiraVendaPublica() {
       </div>
 
 
+      <PublicFooter />
+
       <GalleryLightbox
         open={galleryOpen}
         images={allImages}
