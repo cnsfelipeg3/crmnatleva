@@ -104,6 +104,7 @@ export default function OfferStack({
 
   const pt = (paymentTerms ?? {}) as any;
   const entryPercent = typeof pt.entry_percent === "number" ? pt.entry_percent : 30;
+  const entryAmount = typeof pt.entry_amount === "number" && pt.entry_amount > 0 ? pt.entry_amount : undefined;
   const daysBefore =
     typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20;
   const priceForPlan = rawPricePromo ?? rawPriceFrom;
