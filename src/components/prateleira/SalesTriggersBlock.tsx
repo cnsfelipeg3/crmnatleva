@@ -7,6 +7,16 @@ type Props = {
   productKind?: string | null;
 };
 
+function getInitials(name: string): string {
+  return name
+    .replace(/[^A-Za-zÀ-ÿ&\s]/g, "")
+    .split(/[\s&]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 const TESTIMONIALS = [
   {
     name: "Camila R.",
