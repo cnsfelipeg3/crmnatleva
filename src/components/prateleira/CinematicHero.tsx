@@ -217,7 +217,25 @@ export default function CinematicHero({
             <ArrowLeft className="w-4 h-4 mr-1.5" /> Vitrine
           </Button>
         </motion.div>
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.4, duration: 0.6 }}>
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1.4, duration: 0.6 }}
+          className="flex items-center gap-2"
+        >
+          {onOpenGallery && (galleryCount ?? 0) > 1 && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onOpenGallery}
+              className="bg-black/40 hover:bg-black/60 text-white border border-white/15 backdrop-blur-md h-9 px-3 text-xs sm:text-sm"
+              aria-label="Abrir galeria de fotos"
+            >
+              <Images className="w-4 h-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Fotos</span>
+              <span className="ml-1 opacity-80 tabular-nums">{galleryCount}</span>
+            </Button>
+          )}
           <Button
             variant="secondary"
             size="sm"
