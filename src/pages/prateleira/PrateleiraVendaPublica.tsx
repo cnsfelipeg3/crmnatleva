@@ -11,6 +11,7 @@ import { buildWhatsAppLink } from "@/components/ui/phone-input";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
+import PublicFooter from "@/components/prateleira/PublicFooter";
 import GalleryLightbox from "@/components/prateleira/GalleryLightbox";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -431,6 +432,8 @@ export default function PrateleiraVendaPublica() {
         </div>
       </div>
 
+
+      <PublicFooter />
 
       <GalleryLightbox
         open={galleryOpen}
