@@ -268,25 +268,9 @@ export default function PrateleiraVendaPublica() {
           else navigate("/p");
         }}
         onShare={share}
+        galleryCount={allImages.length}
+        onOpenGallery={() => openGallery(0)}
       />
-
-      {/* Botão flutuante · Ver galeria · sobreposto sobre o final do hero */}
-      {allImages.length > 1 && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
-          <motion.button
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            onClick={() => openGallery(0)}
-            className="absolute right-4 sm:right-6 -top-16 sm:-top-20 z-30 inline-flex items-center gap-2 bg-black/55 hover:bg-black/75 text-white border border-white/20 backdrop-blur-md px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium shadow-lg transition-colors min-h-[44px]"
-            aria-label="Abrir galeria de fotos"
-          >
-            <Images className="w-4 h-4" />
-            <span>Ver todas as fotos</span>
-            <span className="opacity-70 tabular-nums">· {allImages.length}</span>
-          </motion.button>
-        </div>
-      )}
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Main */}
