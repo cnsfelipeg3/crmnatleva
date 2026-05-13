@@ -391,7 +391,7 @@ export default function PrateleiraVendaPublica() {
             </div>
           </div>
           <motion.button
-            onClick={() => setLeadOpen(true)}
+            onClick={handleCTA}
             whileTap={{ scale: 0.96 }}
             className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg"
           >
