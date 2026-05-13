@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search } from "lucide-react";
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import ProductAIChat from "@/components/produtos/ProductAIChat";
+import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
@@ -101,6 +102,42 @@ export default function ProdutoEditor() {
   const [recordId, setRecordId] = useState<string | null>(null);
   const [ytUrl, setYtUrl] = useState("");
   const [ytLoading, setYtLoading] = useState(false);
+  const [hotelSearchOpen, setHotelSearchOpen] = useState(false);
+
+  const applyHotelEnrichment = (data: PlacesEnrichmentData) => {
+    setForm((f) => {
+      const next = { ...f };
+      if (data.name && !next.hotel_name) next.hotel_name = data.name;
+      if (data.name && !next.title) next.title = data.name;
+      if (data.name && !next.slug) next.slug = slugify(data.name);
+      // City / country from address
+      if (data.address) {
+        const parts = data.address.split(",").map((p) => p.trim()).filter(Boolean);
+        if (parts.length >= 2 && !next.destination) next.destination = parts[parts.length - 2];
+        if (parts.length >= 1 && !next.destination_country) next.destination_country = parts[parts.length - 1];
+      }
+      if (data.editorial_summary && !next.short_description) {
+        next.short_description = data.editorial_summary.slice(0, 160);
+      }
+      // Capa: usa a foto principal escolhida (mainPhotoIndex aponta dentro de selectedPhotos)
+      const photos = data.selectedPhotos?.length ? data.selectedPhotos : data.photos || [];
+      if (photos.length) {
+        const cover = photos[Math.min(data.mainPhotoIndex || 0, photos.length - 1)] || photos[0];
+        if (!next.cover_image_url) next.cover_image_url = cover;
+        // Galeria: agrega o resto sem duplicar
+        const existing = new Set(next.gallery.split("\n").map((u) => u.trim()).filter(Boolean));
+        photos.forEach((u) => { if (u && u !== next.cover_image_url) existing.add(u); });
+        next.gallery = Array.from(existing).join("\n");
+      }
+      // Marca como hospedagem se ainda não tinha kind definido para hotel/pacote
+      if (next.product_kind === "outros") next.product_kind = "hospedagem";
+      return next;
+    });
+    setHotelSearchOpen(false);
+    toast.success("Hotel importado", {
+      description: `${data.selectedPhotos?.length || data.photos?.length || 0} fotos adicionadas à galeria`,
+    });
+  };
 
   const importFromYouTube = async () => {
     if (!ytUrl.trim()) return toast.error("Cole a URL do vídeo do YouTube");
@@ -516,6 +553,37 @@ export default function ProdutoEditor() {
 
         {/* MIDIA */}
         <TabsContent value="midia" className="space-y-4 mt-4">
+          {/* Buscar hotel real · mesma engine usada na criação de propostas */}
+          <Card className="p-5 border-primary/30 bg-primary/5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                <Hotel className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  Buscar hotel real <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Pesquisa o hotel no Google Places · puxa fotos oficiais, classifica e preenche capa, galeria, nome, cidade e país automaticamente.
+                </p>
+              </div>
+              {!hotelSearchOpen && (
+                <Button size="sm" onClick={() => setHotelSearchOpen(true)} className="gap-1.5 shrink-0">
+                  <Search className="w-4 h-4" /> Buscar hotel
+                </Button>
+              )}
+            </div>
+            {hotelSearchOpen && (
+              <PlacesSearchCard
+                initialQuery={form.hotel_name || form.title || ""}
+                destinationContext={[form.destination, form.destination_country].filter(Boolean).join(", ") || undefined}
+                entityType="hotel"
+                onEnrich={applyHotelEnrichment}
+                onCancel={() => setHotelSearchOpen(false)}
+              />
+            )}
+          </Card>
+
           <Card className="p-5 space-y-4">
             <div>
               <Label>URL da imagem de capa</Label>
