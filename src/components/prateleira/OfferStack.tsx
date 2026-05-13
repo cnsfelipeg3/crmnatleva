@@ -197,6 +197,7 @@ export default function OfferStack({
             departureDate={departureDate}
             currency={currency}
             entryPercent={entryPercent}
+            entryAmount={entryAmount}
             daysBefore={daysBefore}
           />
 
