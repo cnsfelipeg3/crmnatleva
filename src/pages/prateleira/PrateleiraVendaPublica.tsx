@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import { buildWhatsAppLink } from "@/components/ui/phone-input";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
