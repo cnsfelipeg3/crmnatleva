@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/prateleira/LeadCaptureModal";
+import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
