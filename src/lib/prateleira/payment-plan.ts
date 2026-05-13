@@ -76,8 +76,9 @@ export function computeNatlevaPlan(
     monthsAvailable = Math.min(maxInstallments, simulatedMonths);
   }
 
-  const total = Number(price);
-  const entryAmount = Math.round(total * (entryPercent / 100) * 100) / 100;
+  const entryAmount = fixedEntry != null
+    ? Math.round(fixedEntry * 100) / 100
+    : Math.round(total * (entryPercent / 100) * 100) / 100;
   const balanceAmount = Math.round((total - entryAmount) * 100) / 100;
 
   // Aplica valor mínimo da parcela (reduz nº de parcelas se necessário)
