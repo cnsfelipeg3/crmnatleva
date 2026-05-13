@@ -153,9 +153,9 @@ export default function PrateleiraVendaPublica() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 grid grid-cols-1 lg:grid-cols-5 gap-8">
         {/* Main */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           {Array.isArray(p.highlights) && p.highlights.length > 0 && (
             <Card className="p-6">
               <h2 className="font-serif text-xl mb-4">Por que vale a pena</h2>
