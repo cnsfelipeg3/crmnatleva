@@ -49,6 +49,11 @@ export default function PrateleiraVendaPublica() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
+  const [unlocked, setUnlocked] = useState(false);
+  const [gateLoading, setGateLoading] = useState(false);
+
+  // Print mode bypassa o gate (PDF/render server)
+  const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
 
   useEffect(() => {
     if (!slug) return;
@@ -57,12 +62,6 @@ export default function PrateleiraVendaPublica() {
         .from("experience_products").select("*").eq("slug", slug).maybeSingle();
       setP(data);
       setLoading(false);
-
-      // increment view_count fire and forget
-      if (data?.id) {
-        (supabase as any).from("experience_products")
-          .update({ view_count: (data.view_count ?? 0) + 1 }).eq("id", data.id);
-      }
 
       // SEO
       if (data) {
@@ -76,13 +75,98 @@ export default function PrateleiraVendaPublica() {
       // Agency WhatsApp from agency_config
       const { data: cfg } = await (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle();
       if (cfg?.whatsapp_number) setAgencyWhatsApp(cfg.whatsapp_number);
+
+      // Já desbloqueado nessa sessão?
+      try {
+        const cached = sessionStorage.getItem(`prateleira_viewer_${slug}`);
+        if (cached || isPrintMode) setUnlocked(true);
+      } catch {}
     })();
-  }, [slug]);
+  }, [slug, isPrintMode]);
+
+  const handleGateSubmit = async ({ name, email, phone, countryCode }: { name: string; email: string; phone: string; countryCode: string }) => {
+    if (!p?.id) return;
+    setGateLoading(true);
+    try {
+      const ua = navigator.userAgent || "";
+      const deviceType = /mobile|android|iphone/i.test(ua) ? "mobile" : /ipad|tablet/i.test(ua) ? "tablet" : "desktop";
+
+      // Geo lookup (best effort)
+      let geo: any = {};
+      try {
+        const r = await fetch("https://ipapi.co/json/");
+        if (r.ok) geo = await r.json();
+      } catch {}
+
+      const utm = new URLSearchParams(window.location.search);
+
+      // Upsert viewer (unique product_id + email)
+      const { data: existing } = await (supabase as any)
+        .from("prateleira_product_viewers")
+        .select("id, total_views")
+        .eq("product_id", p.id)
+        .eq("email", email)
+        .maybeSingle();
+
+      if (existing) {
+        await (supabase as any).from("prateleira_product_viewers").update({
+          name, phone, country_code: countryCode,
+          device_type: deviceType, user_agent: ua.slice(0, 500),
+          ip_address: geo.ip || null,
+          city: geo.city || null, region: geo.region || null, country: geo.country_name || null,
+          latitude: geo.latitude || null, longitude: geo.longitude || null,
+          total_views: (existing.total_views || 1) + 1,
+          last_active_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        await (supabase as any).from("prateleira_product_viewers").insert({
+          product_id: p.id,
+          product_slug: p.slug,
+          email, name, phone, country_code: countryCode,
+          device_type: deviceType, user_agent: ua.slice(0, 500),
+          ip_address: geo.ip || null,
+          city: geo.city || null, region: geo.region || null, country: geo.country_name || null,
+          latitude: geo.latitude || null, longitude: geo.longitude || null,
+          utm_source: utm.get("utm_source"),
+          utm_medium: utm.get("utm_medium"),
+          utm_campaign: utm.get("utm_campaign"),
+          utm_content: utm.get("utm_content"),
+          utm_term: utm.get("utm_term"),
+        });
+
+        // Increment view_count apenas para visitas únicas
+        (supabase as any).from("experience_products")
+          .update({ view_count: (p.view_count ?? 0) + 1 }).eq("id", p.id);
+      }
+
+      try {
+        sessionStorage.setItem(`prateleira_viewer_${slug}`, email);
+      } catch {}
+      setUnlocked(true);
+    } catch (err: any) {
+      toast.error("Não foi possível liberar o acesso", { description: err?.message });
+    } finally {
+      setGateLoading(false);
+    }
+  };
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
   if (!p) return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-muted-foreground mb-4">Produto não encontrado</p><Button onClick={() => navigate("/p")}>Ver vitrine</Button></div></div>;
   if (p.sale_page_enabled === false || p.status === "paused") {
     return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-muted-foreground mb-4">Este produto está pausado no momento</p><Button onClick={() => navigate("/p")}>Ver outros produtos</Button></div></div>;
+  }
+
+  // Gate de captura · libera após preencher nome, e-mail e WhatsApp
+  if (!unlocked) {
+    return (
+      <PrateleiraEmailGate
+        productTitle={p.title}
+        destination={[p.destination, p.destination_country].filter(Boolean).join(" · ")}
+        coverImage={p.cover_image_url || (Array.isArray(p.gallery) && p.gallery[0]?.url)}
+        loading={gateLoading}
+        onSubmit={handleGateSubmit}
+      />
+    );
   }
 
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
