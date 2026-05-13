@@ -94,7 +94,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
               Saldo {balancePercent}% · boleto sem juros
             </div>
             <div className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-[28px] sm:text-[30px] font-bold text-foreground tabular-nums leading-[1.1]">
+              <span className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1]">
                 {plan.installments}x
               </span>
               <span className="text-sm text-muted-foreground">de</span>
