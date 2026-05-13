@@ -553,6 +553,37 @@ export default function ProdutoEditor() {
 
         {/* MIDIA */}
         <TabsContent value="midia" className="space-y-4 mt-4">
+          {/* Buscar hotel real · mesma engine usada na criação de propostas */}
+          <Card className="p-5 border-primary/30 bg-primary/5 space-y-3">
+            <div className="flex items-start gap-3">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                <Hotel className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-semibold flex items-center gap-1.5">
+                  Buscar hotel real <Sparkles className="w-3.5 h-3.5 text-primary" />
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Pesquisa o hotel no Google Places · puxa fotos oficiais, classifica e preenche capa, galeria, nome, cidade e país automaticamente.
+                </p>
+              </div>
+              {!hotelSearchOpen && (
+                <Button size="sm" onClick={() => setHotelSearchOpen(true)} className="gap-1.5 shrink-0">
+                  <Search className="w-4 h-4" /> Buscar hotel
+                </Button>
+              )}
+            </div>
+            {hotelSearchOpen && (
+              <PlacesSearchCard
+                initialQuery={form.hotel_name || form.title || ""}
+                destinationContext={[form.destination, form.destination_country].filter(Boolean).join(", ") || undefined}
+                entityType="hotel"
+                onEnrich={applyHotelEnrichment}
+                onCancel={() => setHotelSearchOpen(false)}
+              />
+            )}
+          </Card>
+
           <Card className="p-5 space-y-4">
             <div>
               <Label>URL da imagem de capa</Label>
