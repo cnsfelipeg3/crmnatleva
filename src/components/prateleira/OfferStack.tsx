@@ -132,9 +132,7 @@ export default function OfferStack({
             {String(h).padStart(2, "0")}:{String(m).padStart(2, "0")}:{String(s).padStart(2, "0")}
           </div>
         </div>
-        <div className="text-[10px] text-foreground/60 text-right leading-tight max-w-[90px]">
-          Preço pode subir após o reset
-        </div>
+      
       </motion.div>
 
       {/* === OFERTA PRINCIPAL === */}
