@@ -156,20 +156,27 @@ export function usePrefetchHotelPayments(opts: {
       if (hasBlocks) {
         try {
           const offers = extractBookingOffers(hotel);
-          if (offers.length === 0) return;
+          if (offers.length === 0) {
+            console.log("[PAY_FILTER] prefetch hotel", id, "no offers from inline blocks");
+            return;
+          }
           const summary = summarizeOffers(offers);
+          console.log("[PAY_FILTER] prefetch hotel", id, "(inline)", summary.availableModalities, "free:", summary.hasFreeCancellation);
           await upsertSummary(id, "booking", summary);
           queryClient.invalidateQueries({ queryKey: [QK_BATCH] });
-        } catch {
-          // silencioso · prefetch é best-effort
+        } catch (e) {
+          console.warn("[PAY_FILTER] prefetch inline failed", id, e);
         }
         return;
       }
 
-      if (!arrival || !departure) return;
+      if (!arrival || !departure) {
+        console.log("[PAY_FILTER] prefetch hotel", id, "skipped: no arrival/departure");
+        return;
+      }
       inflight.current.add(key);
       try {
-        const { data } = await supabase.functions.invoke("booking-rapidapi", {
+        const { data, error } = await supabase.functions.invoke("booking-rapidapi", {
           body: {
             action: "hotelDetails",
             hotel_id: id,
@@ -180,15 +187,26 @@ export function usePrefetchHotelPayments(opts: {
             room_qty: rooms,
           },
         });
+        if (error) {
+          console.warn("[PAY_FILTER] prefetch fn error", id, error);
+          return;
+        }
         const h: BookingHotel | undefined = (data as any)?.data;
-        if (!h) return;
+        if (!h) {
+          console.warn("[PAY_FILTER] prefetch no data", id);
+          return;
+        }
         const offers = extractBookingOffers(h);
-        if (offers.length === 0) return;
+        if (offers.length === 0) {
+          console.warn("[PAY_FILTER] prefetch no offers extracted", id);
+          return;
+        }
         const summary = summarizeOffers(offers);
+        console.log("[PAY_FILTER] prefetch hotel", id, "(api)", summary.availableModalities, "free:", summary.hasFreeCancellation);
         await upsertSummary(id, "booking", summary);
         queryClient.invalidateQueries({ queryKey: [QK_BATCH] });
-      } catch {
-        // ignore
+      } catch (e) {
+        console.warn("[PAY_FILTER] prefetch threw", id, e);
       } finally {
         inflight.current.delete(key);
       }
