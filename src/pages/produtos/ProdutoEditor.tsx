@@ -9,11 +9,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search } from "lucide-react";
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import ProductAIChat from "@/components/produtos/ProductAIChat";
+import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
