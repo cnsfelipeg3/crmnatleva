@@ -241,6 +241,7 @@ export default function ProdutoEditor() {
       if (typeof p.is_promo === "boolean") next.is_promo = p.is_promo;
       setStr("promo_badge", p.promo_badge);
       setStr("payment_entry_percent", p.payment_entry_percent);
+      setStr("payment_entry_amount", p.payment_entry_amount);
       setStr("payment_entry_percent_min", p.payment_entry_percent_min);
       setStr("payment_entry_percent_max", p.payment_entry_percent_max);
       if (p.payment_entry_methods && typeof p.payment_entry_methods === "object") {
