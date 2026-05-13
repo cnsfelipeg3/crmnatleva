@@ -295,8 +295,10 @@ export default function BookingSearchPage() {
   const paymentFilterActive =
     filtersState.paymentModalities.size > 0 || filtersState.freeCancellationOnly;
 
+  // Prefetch eager · roda assim que tem resultados, para popular as contagens
+  // do filtro de modalidade. Limite pequeno para não sobrecarregar a API.
   usePrefetchHotelPayments({
-    enabled: paymentFilterActive && !!searchParams,
+    enabled: !!searchParams && (bookingData?.hotels?.length ?? 0) > 0,
     bookingHotels: bookingData?.hotels ?? [],
     arrival: searchParams?.arrival ?? null,
     departure: searchParams?.departure ?? null,
@@ -304,7 +306,7 @@ export default function BookingSearchPage() {
     childrenAges: searchParams?.children.join(",") ?? "",
     rooms: searchParams?.rooms ?? 1,
     existing: paymentSummaries,
-    maxItems: 12,
+    maxItems: paymentFilterActive ? 24 : 16,
     maxConcurrent: 3,
   });
 
