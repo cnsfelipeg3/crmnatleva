@@ -309,6 +309,7 @@ export default function ProdutoEditor() {
           price_from: data.price_from?.toString() ?? "", price_promo: data.price_promo?.toString() ?? "",
           price_label: data.price_label ?? "por pessoa", currency: data.currency ?? "BRL",
           payment_entry_percent: (data.payment_terms?.entry_percent ?? 30).toString(),
+          payment_entry_amount: data.payment_terms?.entry_amount != null ? String(data.payment_terms.entry_amount) : "",
           payment_days_before: (data.payment_terms?.min_days_before_checkin ?? 20).toString(),
           payment_entry_percent_min: (data.payment_terms?.entry_percent_min ?? 20).toString(),
           payment_entry_percent_max: (data.payment_terms?.entry_percent_max ?? 50).toString(),
