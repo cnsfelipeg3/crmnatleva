@@ -106,9 +106,9 @@ export default function LeadCaptureModal({ open, onOpenChange, product, agencyWh
 
       toast.success("Recebemos seu interesse! Em instantes a NatLeva entra em contato.");
 
-      // Open WhatsApp
+      // Open WhatsApp com mensagem específica do pacote
       if (agencyWhatsApp) {
-        const ctaMsg = product.whatsapp_cta_text || `Olá! Tenho interesse no produto "${product.title}" da Prateleira NatLeva.`;
+        const ctaMsg = buildCtaMessage(product);
         window.open(buildWhatsAppLink(agencyWhatsApp, ctaMsg), "_blank");
       }
 
