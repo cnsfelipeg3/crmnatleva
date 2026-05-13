@@ -74,7 +74,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
               Entrada {plan.entryPercent}%
             </div>
-            <div className="text-[28px] sm:text-[30px] font-bold text-foreground tabular-nums leading-[1.1] mt-1 whitespace-nowrap">
+            <div className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1] mt-1 whitespace-nowrap">
               {formatMoneyBR(plan.entryAmount, plan.currency)}
             </div>
             <div className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
