@@ -40,7 +40,7 @@ type ProductForm = {
   duration: string;
   // price
   price_from: string; price_promo: string; price_label: string; currency: string;
-  payment_entry_percent: string; payment_days_before: string;
+  payment_entry_percent: string; payment_entry_amount: string; payment_days_before: string;
   payment_entry_percent_min: string; payment_entry_percent_max: string;
   payment_entry_methods: { pix: boolean; cartao: boolean; link: boolean };
   payment_entry_card_installments_max: string;
