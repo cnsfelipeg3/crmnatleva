@@ -14,8 +14,10 @@ type Props = {
   promoBadge?: string | null;
   isPromo?: boolean;
   dateRange?: string | null;
+  galleryCount?: number;
   onBack: () => void;
   onShare: () => void;
+  onOpenGallery?: () => void;
 };
 
 export default function CinematicHero({
