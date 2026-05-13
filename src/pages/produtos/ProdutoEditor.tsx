@@ -676,10 +676,46 @@ export default function ProdutoEditor() {
                 <h3 className="font-semibold text-foreground">Entrada</h3>
                 <span className="text-xs text-muted-foreground">· o que o cliente paga pra reservar</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Entrada padrão (%)</Label>
-                  <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
+                  <Input
+                    type="number"
+                    value={form.payment_entry_percent}
+                    onChange={(e) => set("payment_entry_percent", e.target.value)}
+                    placeholder="30"
+                    disabled={!!form.payment_entry_amount}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {form.payment_entry_amount
+                      ? "Desativado · valor fixo definido em R$"
+                      : (() => {
+                          const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                          const pct = Number(form.payment_entry_percent) || 0;
+                          if (!price || !pct) return "Calculado sobre o preço final";
+                          const v = (price * pct) / 100;
+                          return `≈ R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+                        })()}
+                  </p>
+                </div>
+                <div>
+                  <Label>Entrada fixa (R$) · opcional</Label>
+                  <Input
+                    type="number"
+                    value={form.payment_entry_amount}
+                    onChange={(e) => set("payment_entry_amount", e.target.value)}
+                    placeholder="ex: 3000"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {(() => {
+                      const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                      const amount = Number(form.payment_entry_amount) || 0;
+                      if (!amount) return "Se preenchido, sobrepõe o % padrão";
+                      if (!price) return "Valor fixo da entrada em reais";
+                      const pct = (amount / price) * 100;
+                      return `≈ ${pct.toFixed(1)}% do pacote`;
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <Label>Entrada mínima (%)</Label>
