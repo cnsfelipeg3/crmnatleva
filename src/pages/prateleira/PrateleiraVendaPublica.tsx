@@ -38,6 +38,34 @@ function formatMoney(v?: number | null, currency = "BRL") {
   return `${symbol} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
+function buildCtaMessage(p: any): string {
+  if (p.whatsapp_cta_text && String(p.whatsapp_cta_text).trim()) return String(p.whatsapp_cta_text).trim();
+  const parts: string[] = [];
+  parts.push(`Olá! Tenho interesse no pacote "${p.title}".`);
+  const pay: string[] = [];
+  if (p.installments_max && p.installments_max > 1) {
+    pay.push(`parcelado em até ${p.installments_max}x${p.installments_no_interest ? " sem juros" : ""}`);
+  }
+  if (p.pix_discount_percent && p.pix_discount_percent > 0) {
+    pay.push(`com ${p.pix_discount_percent}% de desconto no PIX`);
+  }
+  if (p.payment_terms && String(p.payment_terms).trim() && pay.length === 0) {
+    const t = String(p.payment_terms).trim().replace(/\s+/g, " ");
+    pay.push(t.length > 80 ? t.slice(0, 77) + "..." : t);
+  }
+  if (pay.length) parts.push(`Forma de pagamento: ${pay.join(" · ")}.`);
+  if (p.departure_date) {
+    try {
+      const d = new Date(p.departure_date + "T00:00:00");
+      parts.push(`Saída prevista: ${d.toLocaleDateString("pt-BR")}.`);
+    } catch {}
+  }
+  parts.push("Pode me passar as próximas etapas?");
+  let msg = parts.join(" ");
+  if (msg.length > 380) msg = msg.slice(0, 377) + "...";
+  return msg;
+}
+
 export default function PrateleiraVendaPublica() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -45,7 +73,6 @@ export default function PrateleiraVendaPublica() {
   const hasInternalHistory = location.key !== "default";
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [leadOpen, setLeadOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
