@@ -304,6 +304,14 @@ export default function PrateleiraVendaPublica() {
         product={{ id: p.id, slug: p.slug, title: p.title, whatsapp_cta_text: p.whatsapp_cta_text }}
         agencyWhatsApp={agencyWhatsApp}
       />
+
+      <GalleryLightbox
+        open={galleryOpen}
+        images={allImages}
+        initialIndex={galleryIdx}
+        onClose={() => setGalleryOpen(false)}
+        title={p.title}
+      />
     </div>
   );
 }
