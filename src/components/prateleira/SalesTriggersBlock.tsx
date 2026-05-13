@@ -97,18 +97,22 @@ export default function SalesTriggersBlock({ destination }: Props) {
       </Card>
 
       {/* === DEPOIMENTOS · prova social · editorial mosaic === */}
-      <section className="rounded-2xl bg-gradient-to-b from-amber-50/40 via-background to-background dark:from-amber-950/10 px-2 sm:px-4 py-8 sm:py-10">
-        <div className="flex flex-col items-center mb-10 text-center px-2">
-          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 uppercase tracking-[0.22em] text-[10px] font-semibold mb-2">
+      <section className="rounded-2xl bg-gradient-to-b from-amber-50/40 via-background to-background dark:from-amber-950/10 py-7 sm:py-10 -mx-2 sm:mx-0">
+        <div className="flex flex-col items-center mb-6 sm:mb-10 text-center px-4">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 uppercase tracking-[0.18em] sm:tracking-[0.22em] text-[10px] font-semibold mb-2">
             <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
             Quem já viajou conta
           </div>
-          <h2 className="font-serif italic text-2xl sm:text-4xl text-foreground leading-tight max-w-xl">
+          <h2 className="font-serif italic text-xl sm:text-4xl text-foreground leading-tight max-w-xl px-2">
             Memórias de quem viveu a experiência
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-7">
+        {/* Mobile: carrossel horizontal com snap · Desktop: grid 3 col */}
+        <div
+          className="flex md:grid md:grid-cols-3 gap-4 sm:gap-7 overflow-x-auto md:overflow-visible snap-x snap-mandatory md:snap-none scroll-smooth px-4 sm:px-4 pb-3 md:pb-0 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          style={{ scrollPaddingInline: "1rem" }}
+        >
           {TESTIMONIALS.map((t, i) => (
             <motion.article
               key={t.name}
@@ -117,42 +121,52 @@ export default function SalesTriggersBlock({ destination }: Props) {
               viewport={{ once: true, margin: "-40px" }}
               transition={{ delay: i * 0.12, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
               whileHover={{ y: -6 }}
-              className="group relative bg-card border border-border/70 rounded-xl p-7 sm:p-8 flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-2xl hover:border-amber-500/40 transition-all duration-500"
+              className="group relative bg-card border border-border/70 rounded-xl p-5 sm:p-7 flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-2xl hover:border-amber-500/40 transition-all duration-500 snap-center md:snap-align-none shrink-0 w-[85%] sm:w-[70%] md:w-auto"
             >
               {/* Badge "Viagem Real" sobreposto */}
-              <span className="absolute -top-3 right-5 bg-foreground text-background text-[9px] uppercase tracking-[0.18em] font-semibold px-2.5 py-1 rounded-full border-2 border-background shadow-sm">
+              <span className="absolute -top-2.5 right-4 bg-foreground text-background text-[9px] uppercase tracking-[0.18em] font-semibold px-2.5 py-1 rounded-full border-2 border-background shadow-sm">
                 Viagem real
               </span>
 
               {/* Marca d'água de aspas */}
               <Quote
                 aria-hidden
-                className="absolute top-5 left-5 w-10 h-10 text-amber-500/10 group-hover:text-amber-500/20 transition-colors"
+                className="absolute top-4 left-4 w-9 h-9 text-amber-500/10 group-hover:text-amber-500/20 transition-colors"
               />
 
-              <div className="flex gap-0.5 mb-5 relative">
+              <div className="flex gap-0.5 mb-4 relative">
                 {Array.from({ length: t.rating }).map((_, j) => (
                   <Star key={j} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 ))}
               </div>
 
-              <p className="text-[15px] leading-relaxed italic text-foreground/85 font-serif flex-grow">
+              <p className="text-[14px] sm:text-[15px] leading-relaxed italic text-foreground/85 font-serif flex-grow">
                 "{t.text}"
               </p>
 
-              <div className="mt-7 pt-5 border-t border-border/60 flex items-center gap-3">
-                <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-foreground font-semibold text-sm tabular-nums shrink-0">
+              <div className="mt-5 sm:mt-7 pt-4 sm:pt-5 border-t border-border/60 flex items-center gap-3">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-foreground font-semibold text-sm tabular-nums shrink-0">
                   {getInitials(t.name)}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="font-semibold text-foreground text-sm truncate">{t.name}</p>
                   <div className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-500 font-medium mt-0.5">
-                    <Plane className="w-3 h-3 -rotate-12" />
+                    <Plane className="w-3 h-3 -rotate-12 shrink-0" />
                     <span className="truncate">{t.trip}</span>
                   </div>
                 </div>
               </div>
             </motion.article>
+          ))}
+        </div>
+
+        {/* Indicador de swipe · só mobile */}
+        <div className="md:hidden flex justify-center gap-1.5 mt-4">
+          {TESTIMONIALS.map((_, i) => (
+            <span
+              key={i}
+              className={`h-1 rounded-full transition-all ${i === 0 ? "w-6 bg-foreground/70" : "w-1.5 bg-foreground/20"}`}
+            />
           ))}
         </div>
       </section>
