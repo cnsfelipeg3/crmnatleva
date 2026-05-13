@@ -679,3 +679,79 @@ export default function ProdutoEditor() {
     </div>
   );
 }
+
+// =====================================================================
+// Preview ao vivo do plano de pagamento · espelha o que o cliente verá
+// =====================================================================
+function PaymentPreview({ form }: { form: any }) {
+  const price = Number(form.price_promo) || Number(form.price_from) || 0;
+  if (price <= 0) {
+    return (
+      <div className="mt-4 rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+        Defina o preço para ver o preview do plano de pagamento.
+      </div>
+    );
+  }
+
+  const plan = computeNatlevaPlan(price, form.departure_date || null, {
+    entryPercent: Number(form.payment_entry_percent) || 30,
+    daysBefore: Number(form.payment_days_before) || 20,
+    currency: form.currency || "BRL",
+    maxInstallments: Number(form.payment_balance_installments_max) || 12,
+    minInstallment: Number(form.payment_balance_min_installment) || 0,
+    pixDiscountPercent: Number(form.payment_pix_discount_percent) || 0,
+  });
+
+  if (!plan) return null;
+
+  const entryMethods = (["pix", "cartao", "link"] as const)
+    .filter((k) => form.payment_entry_methods?.[k])
+    .map((k) => ({ pix: "PIX", cartao: "Cartão", link: "Link" }[k]))
+    .join(" · ");
+
+  const balanceLabelMap: Record<string, string> = { boleto: "Boleto bancário", cartao: "Cartão", ambos: "Boleto ou cartão" };
+  const interest = Number(form.payment_balance_interest_percent) || 0;
+
+  return (
+    <div className="mt-6 pt-4 border-t border-border/60">
+      <div className="flex items-center gap-2 mb-3">
+        <Sparkles className="w-4 h-4 text-amber-500" />
+        <h3 className="font-semibold text-foreground">Preview · como o cliente verá</h3>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PaymentPlanCard
+          price={price}
+          departureDate={form.departure_date || null}
+          currency={form.currency || "BRL"}
+          entryPercent={Number(form.payment_entry_percent) || 30}
+          daysBefore={Number(form.payment_days_before) || 20}
+        />
+        <div className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-3 text-sm">
+          <div className="font-semibold text-foreground">Resumo da configuração</div>
+          <ul className="space-y-2 text-xs text-muted-foreground">
+            <li><span className="text-foreground font-medium">Entrada:</span> {plan.entryPercent}% · {formatMoneyBR(plan.entryAmount, plan.currency)} · faixa permitida {form.payment_entry_percent_min}%–{form.payment_entry_percent_max}%</li>
+            <li><span className="text-foreground font-medium">Métodos da entrada:</span> {entryMethods || "nenhum selecionado"}</li>
+            {form.payment_entry_methods?.cartao && (
+              <li><span className="text-foreground font-medium">Entrada parcelada:</span> em até {form.payment_entry_card_installments_max}x no cartão</li>
+            )}
+            <li><span className="text-foreground font-medium">Saldo ({balanceLabelMap[form.payment_balance_method]}):</span> {plan.installments}x de {formatMoneyBR(plan.installmentAmount, plan.currency)} {interest > 0 ? `· ${interest}% a.m.` : "· sem juros"}</li>
+            {plan.minInstallment ? (
+              <li><span className="text-foreground font-medium">Parcela mínima:</span> {formatMoneyBR(plan.minInstallment, plan.currency)}</li>
+            ) : null}
+            {plan.pixTotal ? (
+              <li className="text-emerald-700 dark:text-emerald-400"><span className="font-medium">PIX à vista:</span> {formatMoneyBR(plan.pixTotal, plan.currency)} · {plan.pixDiscountPercent}% off</li>
+            ) : null}
+            {plan.payoffDate ? (
+              <li><span className="text-foreground font-medium">Quitação até:</span> {plan.payoffDate.toLocaleDateString("pt-BR")} ({plan.daysBefore} dias antes)</li>
+            ) : (
+              <li className="italic">Sem data de embarque · simulação em 6 meses. Defina a data de saída para o plano real.</li>
+            )}
+            {form.payment_notes && (
+              <li className="pt-2 border-t border-border/40"><span className="text-foreground font-medium">Obs:</span> {form.payment_notes}</li>
+            )}
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
