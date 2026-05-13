@@ -6,12 +6,13 @@ type Props = {
   departureDate?: string | null;
   currency?: string;
   entryPercent?: number;
+  entryAmount?: number;
   daysBefore?: number;
   compact?: boolean;
 };
 
-export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, daysBefore, compact }: Props) {
-  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, daysBefore, currency });
+export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact }: Props) {
+  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency });
   if (!plan) return null;
 
   const longInstallments = plan.installments >= 8;
