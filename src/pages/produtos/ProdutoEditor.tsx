@@ -407,6 +407,10 @@ export default function ProdutoEditor() {
       <h1 className="font-serif text-2xl sm:text-3xl">{isEdit ? "Editar produto" : "Novo produto da prateleira"}</h1>
 
       {!isEdit && (
+        <ProductAIChat current={formToAIDraft(form)} onApply={applyAIProduct} />
+      )}
+
+      {!isEdit && (
         <Card className="p-5 border-amber-500/30 bg-amber-500/5">
           <div className="flex items-start gap-3 mb-3">
             <Youtube className="w-5 h-5 text-amber-600 mt-0.5" />
