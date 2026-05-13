@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3 } from "lucide-react";
+import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -164,6 +165,7 @@ function KPI({ label, value }: { label: string; value: number }) {
 }
 
 function AdminProductCard({ p }: { p: Product }) {
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
   const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
   const dateRange = p.flexible_dates ? "Flexíveis"
@@ -194,20 +196,32 @@ function AdminProductCard({ p }: { p: Product }) {
             {promo && full && <div className="text-[10px] text-muted-foreground line-through">{full}</div>}
             <div className="text-sm font-semibold">{promo || full || "Sob consulta"}</div>
           </div>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <button
+            onClick={() => setAnalyticsOpen(true)}
+            className="flex items-center gap-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            title="Ver analytics deste produto"
+          >
             <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
-          </div>
+          </button>
         </div>
         <div className="flex gap-2 mt-3">
           <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
           </Link>
-          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className="flex-1">
-            <Button variant="outline" size="sm" className="w-full"><ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Página</Button>
+          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
+            <BarChart3 className="w-3.5 h-3.5" />
+          </Button>
+          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
+            <Button variant="outline" size="sm" title="Abrir página"><ExternalLink className="w-3.5 h-3.5" /></Button>
           </a>
         </div>
       </div>
+      <PrateleiraAnalyticsDialog
+        open={analyticsOpen}
+        onOpenChange={setAnalyticsOpen}
+        product={{ id: p.id, slug: p.slug, title: p.title }}
+      />
     </Card>
   );
 }

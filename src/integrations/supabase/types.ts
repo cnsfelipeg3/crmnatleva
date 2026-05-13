@@ -6877,6 +6877,107 @@ export type Database = {
           },
         ]
       }
+      prateleira_product_viewers: {
+        Row: {
+          active_seconds: number
+          city: string | null
+          country: string | null
+          country_code: string | null
+          created_at: string
+          cta_clicked: boolean
+          device_type: string | null
+          email: string
+          first_viewed_at: string
+          id: string
+          ip_address: string | null
+          last_active_at: string
+          latitude: number | null
+          longitude: number | null
+          name: string | null
+          phone: string | null
+          product_id: string
+          product_slug: string | null
+          region: string | null
+          total_views: number
+          updated_at: string
+          user_agent: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+          whatsapp_clicked: boolean
+        }
+        Insert: {
+          active_seconds?: number
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          cta_clicked?: boolean
+          device_type?: string | null
+          email: string
+          first_viewed_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          phone?: string | null
+          product_id: string
+          product_slug?: string | null
+          region?: string | null
+          total_views?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          whatsapp_clicked?: boolean
+        }
+        Update: {
+          active_seconds?: number
+          city?: string | null
+          country?: string | null
+          country_code?: string | null
+          created_at?: string
+          cta_clicked?: boolean
+          device_type?: string | null
+          email?: string
+          first_viewed_at?: string
+          id?: string
+          ip_address?: string | null
+          last_active_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string | null
+          phone?: string | null
+          product_id?: string
+          product_slug?: string | null
+          region?: string | null
+          total_views?: number
+          updated_at?: string
+          user_agent?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+          whatsapp_clicked?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prateleira_product_viewers_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "experience_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_types: {
         Row: {
           category: string | null
