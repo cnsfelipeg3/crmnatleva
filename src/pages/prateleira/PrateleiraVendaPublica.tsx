@@ -4,12 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2 } from "lucide-react";
+import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
 import LeadCaptureModal from "@/components/prateleira/LeadCaptureModal";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
+import GalleryLightbox from "@/components/prateleira/GalleryLightbox";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -44,7 +45,8 @@ export default function PrateleiraVendaPublica() {
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [leadOpen, setLeadOpen] = useState(false);
-  const [activeImg, setActiveImg] = useState(0);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryIdx, setGalleryIdx] = useState(0);
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
 
   useEffect(() => {
@@ -83,8 +85,14 @@ export default function PrateleiraVendaPublica() {
   }
 
   const gallery = Array.isArray(p.gallery) ? p.gallery : [];
-  const allImages = [p.cover_image_url, ...gallery.map((g: any) => g.url)].filter(Boolean) as string[];
-  const cover = allImages[activeImg] || allImages[0];
+  const allImages = Array.from(
+    new Set([p.cover_image_url, ...gallery.map((g: any) => g.url)].filter(Boolean) as string[])
+  );
+  const cover = allImages[0];
+  const openGallery = (i: number = 0) => {
+    setGalleryIdx(i);
+    setGalleryOpen(true);
+  };
 
   const dateRange = p.flexible_dates
     ? "Datas flexíveis · sob consulta"
@@ -127,17 +135,21 @@ export default function PrateleiraVendaPublica() {
         onShare={share}
       />
 
-      {/* Thumb strip */}
+      {/* Botão flutuante · Ver galeria · sobreposto sobre o final do hero */}
       {allImages.length > 1 && (
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-2 pt-4">
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {allImages.map((url, i) => (
-              <button key={i} onClick={() => setActiveImg(i)}
-                className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition-all ${i === activeImg ? "border-foreground" : "border-transparent opacity-70 hover:opacity-100"}`}>
-                <img src={url} alt="" className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 relative">
+          <motion.button
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            onClick={() => openGallery(0)}
+            className="absolute right-4 sm:right-6 -top-16 sm:-top-20 z-30 inline-flex items-center gap-2 bg-black/55 hover:bg-black/75 text-white border border-white/20 backdrop-blur-md px-4 py-2.5 rounded-full text-xs sm:text-sm font-medium shadow-lg transition-colors min-h-[44px]"
+            aria-label="Abrir galeria de fotos"
+          >
+            <Images className="w-4 h-4" />
+            <span>Ver todas as fotos</span>
+            <span className="opacity-70 tabular-nums">· {allImages.length}</span>
+          </motion.button>
         </div>
       )}
 
