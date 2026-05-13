@@ -1,4 +1,4 @@
-import { Instagram, Mail, Phone, MapPin, ShieldCheck } from "lucide-react";
+import { Instagram, Mail, Phone, Building2, ShieldCheck } from "lucide-react";
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();
@@ -39,12 +39,12 @@ export default function PublicFooter() {
             </ul>
           </div>
 
-          {/* Endereço */}
+          {/* Empresa */}
           <div className="space-y-3">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">Onde estamos</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">Empresa</h4>
             <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <MapPin className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-              <span>Salvador · Bahia · Brasil<br />Atendimento 100% digital</span>
+              <Building2 className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+              <span>NatLeva Viagens Ltda<br />CNPJ: 52.910.644/0001-10</span>
             </div>
           </div>
 
