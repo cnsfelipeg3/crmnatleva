@@ -170,26 +170,36 @@ export default function OfferStack({
         <div className="px-5 py-5 relative space-y-4">
           {/* Preço total · discreto · foco vai para entrada + parcelas no PaymentPlanCard */}
           {(promoPrice || fullPrice) && (
-            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
-              <span>Valor total do pacote</span>
-              <span className="tabular-nums font-medium text-foreground/70">
-                {promoPrice || fullPrice}
-              </span>
-              {promoPrice && fullPrice && (
-                <span className="line-through opacity-70">{fullPrice}</span>
-              )}
-              {savings && (
-                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                  <TrendingDown className="w-3 h-3" />
-                  Economia {symbol}{" "}
-                  {Number(savings).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+                <span>Valor total do pacote</span>
+                <span className="tabular-nums font-medium text-foreground/70">
+                  {promoPrice || fullPrice}
                 </span>
+                {promoPrice && fullPrice && (
+                  <span className="line-through opacity-70">{fullPrice}</span>
+                )}
+                {savings && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                    <TrendingDown className="w-3 h-3" />
+                    Economia {symbol}{" "}
+                    {Number(savings).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                  </span>
+                )}
+                {pixDiscountPercent ? (
+                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                    {pixDiscountPercent}% off no PIX
+                  </span>
+                ) : null}
+              </div>
+              {(paxMin || paxMax) && (
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                  <Users className="w-3 h-3" />
+                  {paxMin && paxMax && paxMin !== paxMax
+                    ? `Preço total para ${paxMin} a ${paxMax} pessoas`
+                    : `Preço total para ${paxMax || paxMin} ${(paxMax || paxMin) === 1 ? "pessoa" : "pessoas"}`}
+                </div>
               )}
-              {pixDiscountPercent ? (
-                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                  {pixDiscountPercent}% off no PIX
-                </span>
-              ) : null}
             </div>
           )}
 

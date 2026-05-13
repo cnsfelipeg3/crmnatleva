@@ -387,6 +387,8 @@ export default function PrateleiraVendaPublica() {
             currency={p.currency || "BRL"}
             departureDate={p.departure_date}
             paymentTerms={p.payment_terms}
+            paxMin={p.pax_min}
+            paxMax={p.pax_max}
             productId={p.id}
             onCTA={handleCTA}
           />
