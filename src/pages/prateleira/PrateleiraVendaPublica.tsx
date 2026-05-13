@@ -364,7 +364,7 @@ export default function PrateleiraVendaPublica() {
             departureDate={p.departure_date}
             paymentTerms={p.payment_terms}
             productId={p.id}
-            onCTA={() => setLeadOpen(true)}
+            onCTA={handleCTA}
           />
         </div>
       </div>
