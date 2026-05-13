@@ -150,12 +150,51 @@ serve(async (req) => {
 
     const aiData = await aiRes.json();
     const msg = aiData?.choices?.[0]?.message;
-    const toolCall = msg?.tool_calls?.[0];
+    let toolCall = msg?.tool_calls?.[0];
     let product: any = {};
     if (toolCall?.function?.arguments) {
       try { product = JSON.parse(toolCall.function.arguments); } catch (_) { product = {}; }
     }
-    const assistantText: string = msg?.content || "Atualizei o rascunho. Quer me contar mais algum detalhe?";
+    console.log(`[product-from-chat] toolCall=${!!toolCall} keys=${Object.keys(product).length} contentLen=${(msg?.content||"").length}`);
+
+    // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta openai/gpt-5-mini
+    if (!toolCall || Object.keys(product).length === 0) {
+      console.log("[product-from-chat] retry with openai/gpt-5-mini");
+      const retry = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "openai/gpt-5-mini",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT + draftSummary },
+            ...messages,
+          ],
+          tools: [SET_PRODUCT_TOOL],
+          tool_choice: { type: "function", function: { name: "set_product" } },
+        }),
+      });
+      if (retry.ok) {
+        const rData = await retry.json();
+        const rMsg = rData?.choices?.[0]?.message;
+        const rTool = rMsg?.tool_calls?.[0];
+        if (rTool?.function?.arguments) {
+          try {
+            product = JSON.parse(rTool.function.arguments);
+            toolCall = rTool;
+            if (rMsg?.content && !msg?.content) (msg as any).content = rMsg.content;
+            console.log(`[product-from-chat] retry succeeded, keys=${Object.keys(product).length}`);
+          } catch (_) {}
+        } else {
+          console.error("[product-from-chat] retry sem tool_call", JSON.stringify(rMsg).slice(0, 300));
+        }
+      } else {
+        console.error("[product-from-chat] retry failed", retry.status, (await retry.text()).slice(0, 200));
+      }
+    }
+
+    const assistantText: string = msg?.content || (Object.keys(product).length
+      ? "Atualizei o rascunho com o que entendi. Quer adicionar mais algo?"
+      : "Não consegui extrair os dados desta vez. Pode reescrever com mais detalhes?");
 
     // Buscar capa real quando temos image_query e ainda não havia capa
     let cover_suggestions: string[] = [];
