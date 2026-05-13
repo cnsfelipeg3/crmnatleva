@@ -1975,14 +1975,17 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {showHotels && hotels.length > 0 && (
         <section data-track-section="hotels" className="py-10 sm:py-14 px-5 sm:px-6">
           <SectionTitle subtitle="Clique para explorar fotos, quartos e avaliações">Hospedagens</SectionTitle>
-          <div
-            className={
-              hotels.length === 1
-                ? "max-w-3xl mx-auto"
-                : "max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6"
-            }
-          >
-            {hotels.map((h, idx) => <HotelCard key={h.id || idx} hotel={h} idx={idx} />)}
+          <div className="max-w-3xl mx-auto space-y-8">
+            {[...hotels]
+              .sort((a: any, b: any) => {
+                const da = a?.details?.check_in || a?.details?.checkin || a?.details?.checkIn || a?.details?.start_date || a?.check_in || "";
+                const db = b?.details?.check_in || b?.details?.checkin || b?.details?.checkIn || b?.details?.start_date || b?.check_in || "";
+                if (!da && !db) return 0;
+                if (!da) return 1;
+                if (!db) return -1;
+                return String(da).localeCompare(String(db));
+              })
+              .map((h, idx) => <HotelCard key={h.id || idx} hotel={h} idx={idx} />)}
           </div>
         </section>
       )}
