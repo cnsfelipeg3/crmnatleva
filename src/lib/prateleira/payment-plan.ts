@@ -31,6 +31,7 @@ export function computeNatlevaPlan(
   departureDate: string | Date | null | undefined,
   opts?: {
     entryPercent?: number;
+    entryAmount?: number; // valor fixo em moeda · sobrepõe entryPercent quando definido
     daysBefore?: number;
     currency?: string;
     maxInstallments?: number;
@@ -40,12 +41,17 @@ export function computeNatlevaPlan(
   }
 ): NatlevaPlan | null {
   if (!price || price <= 0) return null;
-  const entryPercent = opts?.entryPercent ?? 30;
   const daysBefore = opts?.daysBefore ?? 20;
   const maxInstallments = opts?.maxInstallments ?? 12;
   const currency = opts?.currency ?? "BRL";
   const minInstallment = opts?.minInstallment ?? 0;
   const pixDiscountPercent = opts?.pixDiscountPercent ?? 0;
+  const total = Number(price);
+  // Se entryAmount foi definido e é válido, deriva o entryPercent dele
+  const fixedEntry = opts?.entryAmount && opts.entryAmount > 0 && opts.entryAmount < total ? opts.entryAmount : null;
+  const entryPercent = fixedEntry != null
+    ? Math.round((fixedEntry / total) * 100 * 10) / 10
+    : (opts?.entryPercent ?? 30);
 
   let dep: Date | null = null;
   if (departureDate) {
@@ -70,8 +76,9 @@ export function computeNatlevaPlan(
     monthsAvailable = Math.min(maxInstallments, simulatedMonths);
   }
 
-  const total = Number(price);
-  const entryAmount = Math.round(total * (entryPercent / 100) * 100) / 100;
+  const entryAmount = fixedEntry != null
+    ? Math.round(fixedEntry * 100) / 100
+    : Math.round(total * (entryPercent / 100) * 100) / 100;
   const balanceAmount = Math.round((total - entryAmount) * 100) / 100;
 
   // Aplica valor mínimo da parcela (reduz nº de parcelas se necessário)

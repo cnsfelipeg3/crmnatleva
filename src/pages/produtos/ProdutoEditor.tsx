@@ -40,7 +40,7 @@ type ProductForm = {
   duration: string;
   // price
   price_from: string; price_promo: string; price_label: string; currency: string;
-  payment_entry_percent: string; payment_days_before: string;
+  payment_entry_percent: string; payment_entry_amount: string; payment_days_before: string;
   payment_entry_percent_min: string; payment_entry_percent_max: string;
   payment_entry_methods: { pix: boolean; cartao: boolean; link: boolean };
   payment_entry_card_installments_max: string;
@@ -70,7 +70,7 @@ const empty: ProductForm = {
   how_it_works: "", pickup_info: "", recommendations: "",
   duration: "",
   price_from: "", price_promo: "", price_label: "por pessoa", currency: "BRL",
-  payment_entry_percent: "30", payment_days_before: "20",
+  payment_entry_percent: "30", payment_entry_amount: "", payment_days_before: "20",
   payment_entry_percent_min: "20", payment_entry_percent_max: "50",
   payment_entry_methods: { pix: true, cartao: true, link: true },
   payment_entry_card_installments_max: "3",
@@ -241,6 +241,7 @@ export default function ProdutoEditor() {
       if (typeof p.is_promo === "boolean") next.is_promo = p.is_promo;
       setStr("promo_badge", p.promo_badge);
       setStr("payment_entry_percent", p.payment_entry_percent);
+      setStr("payment_entry_amount", p.payment_entry_amount);
       setStr("payment_entry_percent_min", p.payment_entry_percent_min);
       setStr("payment_entry_percent_max", p.payment_entry_percent_max);
       if (p.payment_entry_methods && typeof p.payment_entry_methods === "object") {
@@ -309,6 +310,7 @@ export default function ProdutoEditor() {
           price_from: data.price_from?.toString() ?? "", price_promo: data.price_promo?.toString() ?? "",
           price_label: data.price_label ?? "por pessoa", currency: data.currency ?? "BRL",
           payment_entry_percent: (data.payment_terms?.entry_percent ?? 30).toString(),
+          payment_entry_amount: data.payment_terms?.entry_amount != null ? String(data.payment_terms.entry_amount) : "",
           payment_days_before: (data.payment_terms?.min_days_before_checkin ?? 20).toString(),
           payment_entry_percent_min: (data.payment_terms?.entry_percent_min ?? 20).toString(),
           payment_entry_percent_max: (data.payment_terms?.entry_percent_max ?? 50).toString(),
@@ -374,6 +376,7 @@ export default function ProdutoEditor() {
       payment_terms: {
         plan: "natleva_default",
         entry_percent: numOrNull(form.payment_entry_percent) ?? 30,
+        entry_amount: numOrNull(form.payment_entry_amount),
         entry_percent_min: numOrNull(form.payment_entry_percent_min) ?? 20,
         entry_percent_max: numOrNull(form.payment_entry_percent_max) ?? 50,
         entry_methods: (["pix", "cartao", "link"] as const).filter((m) => form.payment_entry_methods[m]),
@@ -673,10 +676,46 @@ export default function ProdutoEditor() {
                 <h3 className="font-semibold text-foreground">Entrada</h3>
                 <span className="text-xs text-muted-foreground">· o que o cliente paga pra reservar</span>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>Entrada padrão (%)</Label>
-                  <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
+                  <Input
+                    type="number"
+                    value={form.payment_entry_percent}
+                    onChange={(e) => set("payment_entry_percent", e.target.value)}
+                    placeholder="30"
+                    disabled={!!form.payment_entry_amount}
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {form.payment_entry_amount
+                      ? "Desativado · valor fixo definido em R$"
+                      : (() => {
+                          const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                          const pct = Number(form.payment_entry_percent) || 0;
+                          if (!price || !pct) return "Calculado sobre o preço final";
+                          const v = (price * pct) / 100;
+                          return `≈ R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+                        })()}
+                  </p>
+                </div>
+                <div>
+                  <Label>Entrada fixa (R$) · opcional</Label>
+                  <Input
+                    type="number"
+                    value={form.payment_entry_amount}
+                    onChange={(e) => set("payment_entry_amount", e.target.value)}
+                    placeholder="ex: 3000"
+                  />
+                  <p className="text-[11px] text-muted-foreground mt-1">
+                    {(() => {
+                      const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                      const amount = Number(form.payment_entry_amount) || 0;
+                      if (!amount) return "Se preenchido, sobrepõe o % padrão";
+                      if (!price) return "Valor fixo da entrada em reais";
+                      const pct = (amount / price) * 100;
+                      return `≈ ${pct.toFixed(1)}% do pacote`;
+                    })()}
+                  </p>
                 </div>
                 <div>
                   <Label>Entrada mínima (%)</Label>
