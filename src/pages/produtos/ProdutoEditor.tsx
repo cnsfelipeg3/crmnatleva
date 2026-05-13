@@ -671,52 +671,83 @@ export default function ProdutoEditor() {
 
             {/* ============ ENTRADA ============ */}
             <div className="pt-2 border-t border-border/60">
-              <div className="flex items-center gap-2 mb-3">
+              <div className="flex flex-wrap items-center gap-2 mb-3">
                 <div className="w-1 h-5 rounded bg-emerald-500" />
                 <h3 className="font-semibold text-foreground">Entrada</h3>
                 <span className="text-xs text-muted-foreground">· o que o cliente paga pra reservar</span>
+                <div className="ml-auto inline-flex rounded-md border border-border bg-muted/30 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => set("payment_entry_amount", "")}
+                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                      !form.payment_entry_amount
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Em %
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!form.payment_entry_amount) {
+                        const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                        const pct = Number(form.payment_entry_percent) || 0;
+                        const v = price && pct ? Math.round((price * pct) / 100) : 0;
+                        set("payment_entry_amount", v ? String(v) : "0");
+                      }
+                    }}
+                    className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                      form.payment_entry_amount
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Em R$
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div>
-                  <Label>Entrada padrão (%)</Label>
-                  <Input
-                    type="number"
-                    value={form.payment_entry_percent}
-                    onChange={(e) => set("payment_entry_percent", e.target.value)}
-                    placeholder="30"
-                    disabled={!!form.payment_entry_amount}
-                  />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {form.payment_entry_amount
-                      ? "Desativado · valor fixo definido em R$"
-                      : (() => {
-                          const price = Number(form.price_promo) || Number(form.price_from) || 0;
-                          const pct = Number(form.payment_entry_percent) || 0;
-                          if (!price || !pct) return "Calculado sobre o preço final";
-                          const v = (price * pct) / 100;
-                          return `≈ R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
-                        })()}
-                  </p>
-                </div>
-                <div>
-                  <Label>Entrada fixa (R$) · opcional</Label>
-                  <Input
-                    type="number"
-                    value={form.payment_entry_amount}
-                    onChange={(e) => set("payment_entry_amount", e.target.value)}
-                    placeholder="ex: 3000"
-                  />
-                  <p className="text-[11px] text-muted-foreground mt-1">
-                    {(() => {
-                      const price = Number(form.price_promo) || Number(form.price_from) || 0;
-                      const amount = Number(form.payment_entry_amount) || 0;
-                      if (!amount) return "Se preenchido, sobrepõe o % padrão";
-                      if (!price) return "Valor fixo da entrada em reais";
-                      const pct = (amount / price) * 100;
-                      return `≈ ${pct.toFixed(1)}% do pacote`;
-                    })()}
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {form.payment_entry_amount ? (
+                  <div>
+                    <Label>Entrada fixa (R$)</Label>
+                    <Input
+                      type="number"
+                      value={form.payment_entry_amount}
+                      onChange={(e) => set("payment_entry_amount", e.target.value)}
+                      placeholder="ex: 3000"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {(() => {
+                        const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                        const amount = Number(form.payment_entry_amount) || 0;
+                        if (!amount) return "Valor fixo da entrada em reais";
+                        if (!price) return "Valor fixo da entrada em reais";
+                        const pct = (amount / price) * 100;
+                        return `≈ ${pct.toFixed(1)}% do pacote`;
+                      })()}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <Label>Entrada padrão (%)</Label>
+                    <Input
+                      type="number"
+                      value={form.payment_entry_percent}
+                      onChange={(e) => set("payment_entry_percent", e.target.value)}
+                      placeholder="30"
+                    />
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      {(() => {
+                        const price = Number(form.price_promo) || Number(form.price_from) || 0;
+                        const pct = Number(form.payment_entry_percent) || 0;
+                        if (!price || !pct) return "Calculado sobre o preço final";
+                        const v = (price * pct) / 100;
+                        return `≈ R$ ${v.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+                      })()}
+                    </p>
+                  </div>
+                )}
                 <div>
                   <Label>Entrada mínima (%)</Label>
                   <Input type="number" value={form.payment_entry_percent_min} onChange={(e) => set("payment_entry_percent_min", e.target.value)} placeholder="20" />
