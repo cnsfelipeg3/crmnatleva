@@ -13,6 +13,7 @@ import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
+import ProductAIChat from "@/components/produtos/ProductAIChat";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
@@ -131,6 +132,119 @@ export default function ProdutoEditor() {
     } catch (e: any) {
       toast.error("Não foi possível extrair", { id: tId, description: e?.message });
     } finally { setYtLoading(false); }
+  };
+
+  /** Snapshot do form em formato semelhante ao que a IA devolve, para alimentar o draft. */
+  const formToAIDraft = (f: ProductForm): Record<string, any> => ({
+    title: f.title || undefined,
+    product_kind: f.product_kind || undefined,
+    destination: f.destination || undefined,
+    destination_country: f.destination_country || undefined,
+    category: f.category || undefined,
+    departure_date: f.departure_date || undefined,
+    return_date: f.return_date || undefined,
+    flexible_dates: f.flexible_dates || undefined,
+    nights: f.nights ? Number(f.nights) : undefined,
+    duration: f.duration || undefined,
+    short_description: f.short_description || undefined,
+    description: f.description || undefined,
+    highlights: f.highlights ? f.highlights.split("\n").filter(Boolean) : undefined,
+    includes: f.includes ? f.includes.split("\n").filter(Boolean) : undefined,
+    excludes: f.excludes ? f.excludes.split("\n").filter(Boolean) : undefined,
+    how_it_works: f.how_it_works || undefined,
+    recommendations: f.recommendations || undefined,
+    price_from: f.price_from ? Number(f.price_from) : undefined,
+    price_promo: f.price_promo ? Number(f.price_promo) : undefined,
+    currency: f.currency,
+    cover_image_url: f.cover_image_url || undefined,
+    origin_city: f.origin_city || undefined,
+    origin_iata: f.origin_iata || undefined,
+    destination_iata: f.destination_iata || undefined,
+    airline: f.airline || undefined,
+    hotel_name: f.hotel_name || undefined,
+    hotel_stars: f.hotel_stars ? Number(f.hotel_stars) : undefined,
+  });
+
+  const applyAIProduct = (p: Record<string, any>, covers: string[]) => {
+    setForm((f) => {
+      const next: ProductForm = { ...f };
+      const setIf = <K extends keyof ProductForm>(k: K, v: any) => {
+        if (v === undefined || v === null || v === "") return;
+        (next[k] as any) = typeof next[k] === "string" ? String(v) : v;
+      };
+      const setStr = (k: keyof ProductForm, v: any) => {
+        if (v === undefined || v === null || v === "") return;
+        (next as any)[k] = String(v);
+      };
+      const setArr = (k: keyof ProductForm, v: any) => {
+        if (Array.isArray(v) && v.length) (next as any)[k] = v.join("\n");
+      };
+      setStr("title", p.title);
+      if (p.title && !next.slug) next.slug = slugify(p.title);
+      setStr("product_kind", p.product_kind);
+      setStr("destination", p.destination);
+      setStr("destination_country", p.destination_country);
+      setStr("category", p.category);
+      setStr("departure_date", p.departure_date);
+      setStr("return_date", p.return_date);
+      if (typeof p.flexible_dates === "boolean") next.flexible_dates = p.flexible_dates;
+      setStr("nights", p.nights);
+      setStr("duration", p.duration);
+      setStr("short_description", p.short_description);
+      setStr("description", p.description);
+      setArr("highlights", p.highlights);
+      setArr("includes", p.includes);
+      setArr("excludes", p.excludes);
+      setStr("how_it_works", p.how_it_works);
+      setStr("recommendations", p.recommendations);
+      setStr("price_from", p.price_from);
+      setStr("price_promo", p.price_promo);
+      setStr("price_label", p.price_label);
+      setStr("currency", p.currency);
+      if (typeof p.is_promo === "boolean") next.is_promo = p.is_promo;
+      setStr("promo_badge", p.promo_badge);
+      setStr("payment_entry_percent", p.payment_entry_percent);
+      setStr("payment_entry_percent_min", p.payment_entry_percent_min);
+      setStr("payment_entry_percent_max", p.payment_entry_percent_max);
+      if (p.payment_entry_methods && typeof p.payment_entry_methods === "object") {
+        next.payment_entry_methods = {
+          pix: p.payment_entry_methods.pix ?? next.payment_entry_methods.pix,
+          cartao: p.payment_entry_methods.cartao ?? next.payment_entry_methods.cartao,
+          link: p.payment_entry_methods.link ?? next.payment_entry_methods.link,
+        };
+      }
+      setStr("payment_entry_card_installments_max", p.payment_entry_card_installments_max);
+      if (p.payment_balance_method) next.payment_balance_method = p.payment_balance_method;
+      setStr("payment_balance_installments_max", p.payment_balance_installments_max);
+      setStr("payment_balance_min_installment", p.payment_balance_min_installment);
+      setStr("payment_balance_interest_percent", p.payment_balance_interest_percent);
+      setStr("payment_pix_discount_percent", p.payment_pix_discount_percent);
+      setStr("payment_days_before", p.payment_days_before);
+      setStr("payment_notes", p.payment_notes);
+      setStr("origin_city", p.origin_city);
+      setStr("origin_iata", p.origin_iata);
+      setStr("destination_iata", p.destination_iata);
+      setStr("airline", p.airline);
+      setStr("hotel_name", p.hotel_name);
+      setStr("hotel_stars", p.hotel_stars);
+      setStr("pax_min", p.pax_min);
+      setStr("pax_max", p.pax_max);
+      setStr("seats_total", p.seats_total);
+      setStr("seats_left", p.seats_left);
+      if (p.status) next.status = p.status;
+      // Capa: usa primeira sugestão real se ainda não há capa
+      if (!next.cover_image_url && covers && covers[0]) {
+        next.cover_image_url = covers[0];
+      }
+      // Galeria: agrega demais sugestões sem duplicar
+      if (covers && covers.length > 1) {
+        const existing = new Set(next.gallery.split("\n").map((u) => u.trim()).filter(Boolean));
+        covers.slice(1).forEach((u) => existing.add(u));
+        next.gallery = Array.from(existing).join("\n");
+      }
+      return next;
+    });
+    toast.success("Rascunho atualizado pela IA");
   };
 
   useEffect(() => {
@@ -291,6 +405,10 @@ export default function ProdutoEditor() {
       </div>
 
       <h1 className="font-serif text-2xl sm:text-3xl">{isEdit ? "Editar produto" : "Novo produto da prateleira"}</h1>
+
+      {!isEdit && (
+        <ProductAIChat current={formToAIDraft(form)} onApply={applyAIProduct} />
+      )}
 
       {!isEdit && (
         <Card className="p-5 border-amber-500/30 bg-amber-500/5">
