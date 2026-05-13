@@ -6,8 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
-import LeadCaptureModal from "@/components/prateleira/LeadCaptureModal";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
+import { buildWhatsAppLink } from "@/components/ui/phone-input";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
@@ -38,6 +38,34 @@ function formatMoney(v?: number | null, currency = "BRL") {
   return `${symbol} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 }
 
+function buildCtaMessage(p: any): string {
+  if (p.whatsapp_cta_text && String(p.whatsapp_cta_text).trim()) return String(p.whatsapp_cta_text).trim();
+  const parts: string[] = [];
+  parts.push(`Olá! Tenho interesse no pacote "${p.title}".`);
+  const pay: string[] = [];
+  if (p.installments_max && p.installments_max > 1) {
+    pay.push(`parcelado em até ${p.installments_max}x${p.installments_no_interest ? " sem juros" : ""}`);
+  }
+  if (p.pix_discount_percent && p.pix_discount_percent > 0) {
+    pay.push(`com ${p.pix_discount_percent}% de desconto no PIX`);
+  }
+  if (p.payment_terms && String(p.payment_terms).trim() && pay.length === 0) {
+    const t = String(p.payment_terms).trim().replace(/\s+/g, " ");
+    pay.push(t.length > 80 ? t.slice(0, 77) + "..." : t);
+  }
+  if (pay.length) parts.push(`Forma de pagamento: ${pay.join(" · ")}.`);
+  if (p.departure_date) {
+    try {
+      const d = new Date(p.departure_date + "T00:00:00");
+      parts.push(`Saída prevista: ${d.toLocaleDateString("pt-BR")}.`);
+    } catch {}
+  }
+  parts.push("Pode me passar as próximas etapas?");
+  let msg = parts.join(" ");
+  if (msg.length > 380) msg = msg.slice(0, 377) + "...";
+  return msg;
+}
+
 export default function PrateleiraVendaPublica() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -45,7 +73,6 @@ export default function PrateleiraVendaPublica() {
   const hasInternalHistory = location.key !== "default";
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [leadOpen, setLeadOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
@@ -199,6 +226,27 @@ export default function PrateleiraVendaPublica() {
     toast.success("Link copiado");
   };
 
+  const handleCTA = async () => {
+    // Lead já foi capturado no gate · vai direto pro WhatsApp com mensagem do pacote
+    if (!agencyWhatsApp) {
+      toast.error("WhatsApp da agência não configurado");
+      return;
+    }
+    const msg = buildCtaMessage(p);
+    try {
+      // Atualiza viewer + incrementa lead_count (best effort)
+      const email = sessionStorage.getItem(`prateleira_viewer_${slug}`);
+      if (email) {
+        (supabase as any).from("prateleira_product_viewers")
+          .update({ clicked_cta: true, cta_clicked_at: new Date().toISOString(), last_active_at: new Date().toISOString() })
+          .eq("product_id", p.id).eq("email", email);
+      }
+      (supabase as any).from("experience_products")
+        .update({ lead_count: (p.lead_count ?? 0) + 1 }).eq("id", p.id);
+    } catch {}
+    window.open(buildWhatsAppLink(agencyWhatsApp, msg), "_blank");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero cinematográfico */}
@@ -337,7 +385,7 @@ export default function PrateleiraVendaPublica() {
             departureDate={p.departure_date}
             paymentTerms={p.payment_terms}
             productId={p.id}
-            onCTA={() => setLeadOpen(true)}
+            onCTA={handleCTA}
           />
         </div>
       </div>
@@ -364,7 +412,7 @@ export default function PrateleiraVendaPublica() {
             </div>
           </div>
           <motion.button
-            onClick={() => setLeadOpen(true)}
+            onClick={handleCTA}
             whileTap={{ scale: 0.96 }}
             className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg"
           >
@@ -383,22 +431,6 @@ export default function PrateleiraVendaPublica() {
         </div>
       </div>
 
-      <LeadCaptureModal
-        open={leadOpen}
-        onOpenChange={setLeadOpen}
-        product={{
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          whatsapp_cta_text: p.whatsapp_cta_text,
-          payment_terms: p.payment_terms,
-          installments_max: p.installments_max,
-          installments_no_interest: p.installments_no_interest,
-          pix_discount_percent: p.pix_discount_percent,
-          departure_date: p.departure_date,
-        }}
-        agencyWhatsApp={agencyWhatsApp}
-      />
 
       <GalleryLightbox
         open={galleryOpen}
