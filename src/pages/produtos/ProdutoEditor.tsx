@@ -102,6 +102,42 @@ export default function ProdutoEditor() {
   const [recordId, setRecordId] = useState<string | null>(null);
   const [ytUrl, setYtUrl] = useState("");
   const [ytLoading, setYtLoading] = useState(false);
+  const [hotelSearchOpen, setHotelSearchOpen] = useState(false);
+
+  const applyHotelEnrichment = (data: PlacesEnrichmentData) => {
+    setForm((f) => {
+      const next = { ...f };
+      if (data.name && !next.hotel_name) next.hotel_name = data.name;
+      if (data.name && !next.title) next.title = data.name;
+      if (data.name && !next.slug) next.slug = slugify(data.name);
+      // City / country from address
+      if (data.address) {
+        const parts = data.address.split(",").map((p) => p.trim()).filter(Boolean);
+        if (parts.length >= 2 && !next.destination) next.destination = parts[parts.length - 2];
+        if (parts.length >= 1 && !next.destination_country) next.destination_country = parts[parts.length - 1];
+      }
+      if (data.editorial_summary && !next.short_description) {
+        next.short_description = data.editorial_summary.slice(0, 160);
+      }
+      // Capa: usa a foto principal escolhida (mainPhotoIndex aponta dentro de selectedPhotos)
+      const photos = data.selectedPhotos?.length ? data.selectedPhotos : data.photos || [];
+      if (photos.length) {
+        const cover = photos[Math.min(data.mainPhotoIndex || 0, photos.length - 1)] || photos[0];
+        if (!next.cover_image_url) next.cover_image_url = cover;
+        // Galeria: agrega o resto sem duplicar
+        const existing = new Set(next.gallery.split("\n").map((u) => u.trim()).filter(Boolean));
+        photos.forEach((u) => { if (u && u !== next.cover_image_url) existing.add(u); });
+        next.gallery = Array.from(existing).join("\n");
+      }
+      // Marca como hospedagem se ainda não tinha kind definido para hotel/pacote
+      if (next.product_kind === "outros") next.product_kind = "hospedagem";
+      return next;
+    });
+    setHotelSearchOpen(false);
+    toast.success("Hotel importado", {
+      description: `${data.selectedPhotos?.length || data.photos?.length || 0} fotos adicionadas à galeria`,
+    });
+  };
 
   const importFromYouTube = async () => {
     if (!ytUrl.trim()) return toast.error("Cole a URL do vídeo do YouTube");
