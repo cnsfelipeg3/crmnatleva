@@ -32,8 +32,8 @@ export default function PublicFooter() {
               </li>
               <li className="flex items-center gap-2">
                 <Instagram className="w-3.5 h-3.5 text-amber-600" />
-                <a href="https://instagram.com/natleva" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-                  @natleva
+                <a href="https://instagram.com/natlevaviagens" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                  @natlevaviagens
                 </a>
               </li>
             </ul>
