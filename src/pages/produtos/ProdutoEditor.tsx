@@ -476,21 +476,112 @@ export default function ProdutoEditor() {
                 <Label>Rótulo do preço</Label>
                 <Input value={form.price_label} onChange={(e) => set("price_label", e.target.value)} placeholder="por pessoa, casal, total..." />
               </div>
-              <div>
-                <Label>Entrada à vista (%)</Label>
-                <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
+            </div>
+
+            {/* ============ ENTRADA ============ */}
+            <div className="pt-2 border-t border-border/60">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-5 rounded bg-emerald-500" />
+                <h3 className="font-semibold text-foreground">Entrada</h3>
+                <span className="text-xs text-muted-foreground">· o que o cliente paga pra reservar</span>
               </div>
-              <div>
-                <Label>Quitação até (dias antes)</Label>
-                <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Entrada padrão (%)</Label>
+                  <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
+                </div>
+                <div>
+                  <Label>Entrada mínima (%)</Label>
+                  <Input type="number" value={form.payment_entry_percent_min} onChange={(e) => set("payment_entry_percent_min", e.target.value)} placeholder="20" />
+                </div>
+                <div>
+                  <Label>Entrada máxima (%)</Label>
+                  <Input type="number" value={form.payment_entry_percent_max} onChange={(e) => set("payment_entry_percent_max", e.target.value)} placeholder="50" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label className="mb-2 block">Métodos aceitos para a entrada</Label>
+                <div className="flex flex-wrap gap-3">
+                  {([
+                    { k: "pix", label: "PIX" },
+                    { k: "cartao", label: "Cartão de crédito" },
+                    { k: "link", label: "Link de pagamento" },
+                  ] as const).map((m) => (
+                    <label key={m.k} className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card cursor-pointer hover:bg-accent/50 transition">
+                      <Switch
+                        checked={form.payment_entry_methods[m.k]}
+                        onCheckedChange={(v) => set("payment_entry_methods", { ...form.payment_entry_methods, [m.k]: v })}
+                      />
+                      <span className="text-sm">{m.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {form.payment_entry_methods.cartao && (
+                <div className="mt-4 max-w-xs">
+                  <Label>Parcelar entrada no cartão · até</Label>
+                  <Input type="number" min={1} max={12} value={form.payment_entry_card_installments_max} onChange={(e) => set("payment_entry_card_installments_max", e.target.value)} placeholder="3" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Nº máximo de parcelas no cartão para o valor da entrada</p>
+                </div>
+              )}
+            </div>
+
+            {/* ============ SALDO ============ */}
+            <div className="pt-4 border-t border-border/60">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-1 h-5 rounded bg-amber-500" />
+                <h3 className="font-semibold text-foreground">Saldo restante</h3>
+                <span className="text-xs text-muted-foreground">· como o cliente quita os 70% (ou mais)</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <Label>Forma de pagamento do saldo</Label>
+                  <Select value={form.payment_balance_method} onValueChange={(v) => set("payment_balance_method", v as any)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="boleto">Boleto bancário</SelectItem>
+                      <SelectItem value="cartao">Cartão de crédito</SelectItem>
+                      <SelectItem value="ambos">Boleto ou cartão</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Máximo de parcelas</Label>
+                  <Input type="number" min={1} max={24} value={form.payment_balance_installments_max} onChange={(e) => set("payment_balance_installments_max", e.target.value)} placeholder="12" />
+                </div>
+                <div>
+                  <Label>Valor mínimo da parcela ({form.currency})</Label>
+                  <Input type="number" value={form.payment_balance_min_installment} onChange={(e) => set("payment_balance_min_installment", e.target.value)} placeholder="200" />
+                </div>
+                <div>
+                  <Label>Juros ao mês (%)</Label>
+                  <Input type="number" step="0.1" value={form.payment_balance_interest_percent} onChange={(e) => set("payment_balance_interest_percent", e.target.value)} placeholder="0" />
+                  <p className="text-[11px] text-muted-foreground mt-1">0 = sem juros</p>
+                </div>
+                <div>
+                  <Label>Quitação até (dias antes do embarque)</Label>
+                  <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
+                </div>
+                <div>
+                  <Label>Desconto à vista no PIX (%)</Label>
+                  <Input type="number" step="0.1" value={form.payment_pix_discount_percent} onChange={(e) => set("payment_pix_discount_percent", e.target.value)} placeholder="0" />
+                  <p className="text-[11px] text-muted-foreground mt-1">Aplicado quando o cliente paga 100% à vista no PIX</p>
+                </div>
+              </div>
+              <div className="mt-4">
+                <Label>Observações de pagamento (opcional)</Label>
+                <Textarea
+                  value={form.payment_notes}
+                  onChange={(e) => set("payment_notes", e.target.value)}
+                  placeholder="Ex: parcelas no boleto vencem todo dia 10 · cartões aceitos: Visa, Master, Elo..."
+                  rows={2}
+                />
               </div>
             </div>
-            <div className="rounded-lg border border-dashed border-amber-500/40 bg-amber-50/30 dark:bg-amber-500/5 p-4 text-sm space-y-2">
-              <div className="font-semibold text-foreground">Plano padrão Natleva</div>
-              <p className="text-muted-foreground text-xs leading-relaxed">
-                Todos os produtos da Prateleira usam o mesmo modelo: entrada à vista (PIX, cartão ou link de pagamento) e saldo no boleto sem juros, com quitação até X dias antes do embarque. O número de parcelas é calculado automaticamente conforme a data de saída do produto.
-              </p>
-            </div>
+
+            {/* ============ PREVIEW AO VIVO ============ */}
+            <PaymentPreview form={form} />
+
             <div className="flex flex-wrap items-end gap-4 pt-2">
               <div className="flex items-center gap-2">
                 <Switch checked={form.is_promo} onCheckedChange={(v) => set("is_promo", v)} />
