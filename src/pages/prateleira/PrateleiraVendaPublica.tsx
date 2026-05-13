@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import { buildWhatsAppLink } from "@/components/ui/phone-input";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
@@ -407,33 +408,61 @@ export default function PrateleiraVendaPublica() {
             </span>
           </div>
         )}
-        <div className="flex items-center gap-3 p-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-lg font-bold truncate tabular-nums">
-              {promoPrice || fullPrice || "Sob consulta"}
+        {(() => {
+          const pt = (p.payment_terms ?? {}) as any;
+          const mobilePlan = computeNatlevaPlan(p.price_promo ?? p.price_from, p.departure_date, {
+            entryPercent: typeof pt.entry_percent === "number" ? pt.entry_percent : 30,
+            entryAmount: typeof pt.entry_amount === "number" && pt.entry_amount > 0 ? pt.entry_amount : undefined,
+            daysBefore: typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20,
+            currency: p.currency || "BRL",
+          });
+          return (
+            <div className="flex items-center gap-3 p-3">
+              <div className="flex-1 min-w-0">
+                {mobilePlan ? (
+                  <>
+                    <div className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold leading-none">
+                      Boleto sem juros
+                    </div>
+                    <div className="text-base sm:text-lg font-bold tabular-nums leading-tight mt-0.5 truncate">
+                      {mobilePlan.installments}x de {formatMoneyBR(mobilePlan.installmentAmount, mobilePlan.currency)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground/90 leading-tight truncate">
+                      Entrada {formatMoneyBR(mobilePlan.entryAmount, mobilePlan.currency)}
+                      <span className="text-muted-foreground/60"> · total {formatMoneyBR(mobilePlan.total, mobilePlan.currency)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-lg font-bold truncate tabular-nums">
+                      {promoPrice || fullPrice || "Sob consulta"}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground truncate">
+                      {p.price_label || "entrada + saldo sem juros"}
+                    </div>
+                  </>
+                )}
+              </div>
+              <motion.button
+                onClick={handleCTA}
+                whileTap={{ scale: 0.96 }}
+                className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg shrink-0"
+              >
+                <motion.span
+                  aria-hidden
+                  className="absolute inset-0 pointer-events-none"
+                  animate={{ x: ["-120%", "120%"] }}
+                  transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+                  style={{
+                    background:
+                      "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)",
+                  }}
+                />
+                <span className="relative">Garantir vaga</span>
+              </motion.button>
             </div>
-            <div className="text-[10px] text-muted-foreground truncate">
-              {p.price_label || "entrada + saldo sem juros"}
-            </div>
-          </div>
-          <motion.button
-            onClick={handleCTA}
-            whileTap={{ scale: 0.96 }}
-            className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg"
-          >
-            <motion.span
-              aria-hidden
-              className="absolute inset-0 pointer-events-none"
-              animate={{ x: ["-120%", "120%"] }}
-              transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
-              style={{
-                background:
-                  "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)",
-              }}
-            />
-            <span className="relative">Garantir vaga</span>
-          </motion.button>
-        </div>
+          );
+        })()}
       </div>
 
 
