@@ -165,48 +165,28 @@ export default function OfferStack({
         )}
 
         <div className="px-5 py-5 relative space-y-4">
-          {/* Preço */}
+          {/* Preço total · discreto · foco vai para entrada + parcelas no PaymentPlanCard */}
           {(promoPrice || fullPrice) && (
-            <div>
+            <div className="flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
+              <span>Valor total do pacote</span>
+              <span className="tabular-nums font-medium text-foreground/70">
+                {promoPrice || fullPrice}
+              </span>
               {promoPrice && fullPrice && (
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs text-muted-foreground line-through">{fullPrice}</span>
-                  {savings && (
-                    <motion.span
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full"
-                    >
-                      <TrendingDown className="w-3 h-3" />
-                      Economia {symbol}{" "}
-                      {Number(savings).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
-                    </motion.span>
-                  )}
-                </div>
+                <span className="line-through opacity-70">{fullPrice}</span>
               )}
-              <div className="flex items-baseline gap-2 flex-wrap">
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-3xl sm:text-4xl font-bold text-foreground tabular-nums leading-none"
-                >
-                  {promoPrice || fullPrice}
-                </motion.div>
-                {pixDiscountPercent ? (
-                  <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
-                    {pixDiscountPercent}% off no PIX
-                  </span>
-                ) : null}
-              </div>
-              {priceLabel && (
-                <div className="text-[11px] text-muted-foreground mt-1">{priceLabel}</div>
+              {savings && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                  <TrendingDown className="w-3 h-3" />
+                  Economia {symbol}{" "}
+                  {Number(savings).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}
+                </span>
               )}
-              {installmentsMax && (
-                <div className="text-[11px] text-foreground/70 mt-1">
-                  Em até <strong>{installmentsMax}x</strong>
-                  {installmentsNoInterest ? ` · ${installmentsNoInterest}x sem juros` : ""}
-                </div>
-              )}
+              {pixDiscountPercent ? (
+                <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
+                  {pixDiscountPercent}% off no PIX
+                </span>
+              ) : null}
             </div>
           )}
 
