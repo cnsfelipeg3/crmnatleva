@@ -17,8 +17,46 @@ interface Props {
     slug: string;
     title: string;
     whatsapp_cta_text?: string | null;
+    payment_terms?: string | null;
+    installments_max?: number | null;
+    installments_no_interest?: boolean | null;
+    pix_discount_percent?: number | null;
+    departure_date?: string | null;
   };
   agencyWhatsApp?: string;
+}
+
+function buildCtaMessage(p: Props["product"]): string {
+  if (p.whatsapp_cta_text && p.whatsapp_cta_text.trim()) return p.whatsapp_cta_text.trim();
+
+  const parts: string[] = [];
+  parts.push(`Olá! Tenho interesse no pacote "${p.title}".`);
+
+  const pay: string[] = [];
+  if (p.installments_max && p.installments_max > 1) {
+    pay.push(`parcelado em até ${p.installments_max}x${p.installments_no_interest ? " sem juros" : ""}`);
+  }
+  if (p.pix_discount_percent && p.pix_discount_percent > 0) {
+    pay.push(`com ${p.pix_discount_percent}% de desconto no PIX`);
+  }
+  if (p.payment_terms && p.payment_terms.trim() && pay.length === 0) {
+    const t = p.payment_terms.trim().replace(/\s+/g, " ");
+    pay.push(t.length > 80 ? t.slice(0, 77) + "..." : t);
+  }
+  if (pay.length) parts.push(`Forma de pagamento: ${pay.join(" · ")}.`);
+
+  if (p.departure_date) {
+    try {
+      const d = new Date(p.departure_date + "T00:00:00");
+      parts.push(`Saída prevista: ${d.toLocaleDateString("pt-BR")}.`);
+    } catch {}
+  }
+
+  parts.push("Pode me passar as próximas etapas?");
+  // Mantém mensagem curta para evitar bug em link de WhatsApp
+  let msg = parts.join(" ");
+  if (msg.length > 380) msg = msg.slice(0, 377) + "...";
+  return msg;
 }
 
 export default function LeadCaptureModal({ open, onOpenChange, product, agencyWhatsApp }: Props) {
