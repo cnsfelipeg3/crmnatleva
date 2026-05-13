@@ -114,6 +114,7 @@ serve(async (req) => {
       ? `\n\nRASCUNHO ATUAL DO PRODUTO (já preenchido):\n${JSON.stringify(current, null, 2)}\n\nMantenha esses valores e some o que for novo.`
       : "";
 
+    console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length}`);
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
