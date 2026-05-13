@@ -9,14 +9,24 @@ type Props = {
   entryAmount?: number;
   daysBefore?: number;
   compact?: boolean;
+  paxMin?: number | null;
+  paxMax?: number | null;
 };
 
-export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact }: Props) {
+export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax }: Props) {
   const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency });
   if (!plan) return null;
 
   const longInstallments = plan.installments >= 8;
   const balancePercent = 100 - plan.entryPercent;
+
+  const paxLabel = (() => {
+    if (!paxMin && !paxMax) return null;
+    const a = paxMin || paxMax!;
+    const b = paxMax || paxMin!;
+    if (a !== b) return `Valor para ${a} a ${b} pessoas`;
+    return `Valor para ${a} ${a === 1 ? "pessoa" : "pessoas"}`;
+  })();
 
   const sellingCopy = longInstallments
     ? "Quanto antes você fecha, mais a gente dilui o saldo no boleto · parcela menor, viagem mais leve no seu mês."
@@ -29,6 +39,24 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
         <div className="flex items-center gap-2">
           <Wallet className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
           <h3 className="font-serif text-base sm:text-lg leading-tight text-foreground">Como você paga</h3>
+        </div>
+      </div>
+
+      {/* Resumo direto · pra quem é + entrada + parcelas */}
+      <div className="px-5 pt-4 pb-1">
+        {paxLabel && (
+          <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground font-semibold">
+            {paxLabel}
+          </div>
+        )}
+        <div className="mt-1 text-[13px] sm:text-sm text-foreground/90 leading-snug">
+          <span className="font-bold tabular-nums">{formatMoneyBR(plan.entryAmount, plan.currency)}</span>
+          <span className="text-muted-foreground"> de entrada</span>
+          <span className="text-muted-foreground"> + </span>
+          <span className="font-bold tabular-nums">{plan.installments}x</span>
+          <span className="text-muted-foreground"> de </span>
+          <span className="font-bold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
+          <span className="text-muted-foreground"> sem juros</span>
         </div>
       </div>
 

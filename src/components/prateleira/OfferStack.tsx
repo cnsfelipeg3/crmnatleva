@@ -186,6 +186,8 @@ export default function OfferStack({
             entryPercent={entryPercent}
             entryAmount={entryAmount}
             daysBefore={daysBefore}
+            paxMin={paxMin}
+            paxMax={paxMax}
           />
 
           {/* Valor total do pacote · discreto · embaixo do plano de pagamento */}
