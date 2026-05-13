@@ -386,7 +386,17 @@ export default function PrateleiraVendaPublica() {
       <LeadCaptureModal
         open={leadOpen}
         onOpenChange={setLeadOpen}
-        product={{ id: p.id, slug: p.slug, title: p.title, whatsapp_cta_text: p.whatsapp_cta_text }}
+        product={{
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          whatsapp_cta_text: p.whatsapp_cta_text,
+          payment_terms: p.payment_terms,
+          installments_max: p.installments_max,
+          installments_no_interest: p.installments_no_interest,
+          pix_discount_percent: p.pix_discount_percent,
+          departure_date: p.departure_date,
+        }}
         agencyWhatsApp={agencyWhatsApp}
       />
 
