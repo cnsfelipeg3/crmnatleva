@@ -70,7 +70,7 @@ const empty: ProductForm = {
   how_it_works: "", pickup_info: "", recommendations: "",
   duration: "",
   price_from: "", price_promo: "", price_label: "por pessoa", currency: "BRL",
-  payment_entry_percent: "30", payment_days_before: "20",
+  payment_entry_percent: "30", payment_entry_amount: "", payment_days_before: "20",
   payment_entry_percent_min: "20", payment_entry_percent_max: "50",
   payment_entry_methods: { pix: true, cartao: true, link: true },
   payment_entry_card_installments_max: "3",
