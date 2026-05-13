@@ -319,9 +319,9 @@ export default function PrateleiraVendaPublica() {
                 {p.origin_city && <div className="flex items-center gap-2"><Plane className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Saída:</span> {p.origin_city}{p.origin_iata ? ` (${p.origin_iata})` : ""}</span></div>}
                 {p.airline && <div className="flex items-center gap-2"><Plane className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Cia aérea:</span> {p.airline}</span></div>}
                 {p.hotel_name && <div className="flex items-center gap-2"><Hotel className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Hotel:</span> {p.hotel_name} {p.hotel_stars ? Array.from({ length: p.hotel_stars }).map((_, i) => <Star key={i} className="inline w-3 h-3 text-amber-500 fill-amber-500" />) : null}</span></div>}
-                {p.nights && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Duração:</span> {p.nights} noite(s)</span></div>}
                 {p.departure_date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Data de ida:</span> {formatDate(p.departure_date)}</span></div>}
                 {p.return_date && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Data de volta:</span> {formatDate(p.return_date)}</span></div>}
+                {p.nights && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Duração:</span> {p.nights} noite(s)</span></div>}
                 {p.duration && <div className="flex items-center gap-2"><Calendar className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Tempo:</span> {p.duration}</span></div>}
               </div>
             </Card>
