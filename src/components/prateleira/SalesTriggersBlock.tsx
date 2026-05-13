@@ -7,6 +7,16 @@ type Props = {
   productKind?: string | null;
 };
 
+function getInitials(name: string): string {
+  return name
+    .replace(/[^A-Za-zÀ-ÿ&\s]/g, "")
+    .split(/[\s&]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 const TESTIMONIALS = [
   {
     name: "Camila R.",
@@ -86,46 +96,66 @@ export default function SalesTriggersBlock({ destination }: Props) {
         </div>
       </Card>
 
-      {/* === DEPOIMENTOS · prova social === */}
-      <Card className="p-6 sm:p-8">
-        <div className="flex items-center gap-2 mb-5">
-          <Heart className="w-4 h-4 text-rose-500" />
-          <span className="text-[10px] uppercase tracking-[0.22em] font-semibold text-foreground/70">
+      {/* === DEPOIMENTOS · prova social · editorial mosaic === */}
+      <section className="rounded-2xl bg-gradient-to-b from-amber-50/40 via-background to-background dark:from-amber-950/10 px-2 sm:px-4 py-8 sm:py-10">
+        <div className="flex flex-col items-center mb-10 text-center px-2">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 uppercase tracking-[0.22em] text-[10px] font-semibold mb-2">
+            <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
             Quem já viajou conta
-          </span>
+          </div>
+          <h2 className="font-serif italic text-2xl sm:text-4xl text-foreground leading-tight max-w-xl">
+            Memórias de quem viveu a experiência
+          </h2>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 sm:gap-7">
           {TESTIMONIALS.map((t, i) => (
-            <motion.div
+            <motion.article
               key={t.name}
-              initial={{ opacity: 0, y: 14 }}
+              initial={{ opacity: 0, y: 18 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.12 }}
-              className="rounded-xl border border-border/60 bg-card p-4 relative"
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ delay: i * 0.12, duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              whileHover={{ y: -6 }}
+              className="group relative bg-card border border-border/70 rounded-xl p-7 sm:p-8 flex flex-col shadow-[0_1px_2px_rgba(0,0,0,0.04)] hover:shadow-2xl hover:border-amber-500/40 transition-all duration-500"
             >
-              <Quote className="absolute -top-2 -left-1 w-6 h-6 text-amber-400/40" />
-              <div className="flex items-center gap-0.5 mb-2">
+              {/* Badge "Viagem Real" sobreposto */}
+              <span className="absolute -top-3 right-5 bg-foreground text-background text-[9px] uppercase tracking-[0.18em] font-semibold px-2.5 py-1 rounded-full border-2 border-background shadow-sm">
+                Viagem real
+              </span>
+
+              {/* Marca d'água de aspas */}
+              <Quote
+                aria-hidden
+                className="absolute top-5 left-5 w-10 h-10 text-amber-500/10 group-hover:text-amber-500/20 transition-colors"
+              />
+
+              <div className="flex gap-0.5 mb-5 relative">
                 {Array.from({ length: t.rating }).map((_, j) => (
-                  <Star
-                    key={j}
-                    className="w-3 h-3 fill-amber-400 text-amber-400"
-                  />
+                  <Star key={j} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 ))}
               </div>
-              <p className="text-[13px] text-foreground/85 leading-relaxed">
+
+              <p className="text-[15px] leading-relaxed italic text-foreground/85 font-serif flex-grow">
                 "{t.text}"
               </p>
-              <div className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1.5 text-[11px]">
-                <span className="font-semibold text-foreground">{t.name}</span>
-                <span className="text-muted-foreground">·</span>
-                <Plane className="w-3 h-3 text-muted-foreground" />
-                <span className="text-muted-foreground">{t.trip}</span>
+
+              <div className="mt-7 pt-5 border-t border-border/60 flex items-center gap-3">
+                <div className="w-11 h-11 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-foreground font-semibold text-sm tabular-nums shrink-0">
+                  {getInitials(t.name)}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-semibold text-foreground text-sm truncate">{t.name}</p>
+                  <div className="flex items-center gap-1 text-[11px] text-amber-700 dark:text-amber-500 font-medium mt-0.5">
+                    <Plane className="w-3 h-3 -rotate-12" />
+                    <span className="truncate">{t.trip}</span>
+                  </div>
+                </div>
               </div>
-            </motion.div>
+            </motion.article>
           ))}
         </div>
-      </Card>
+      </section>
 
       {/* === GARANTIA / RISK REVERSAL === */}
       <Card className="p-6 sm:p-8 border-emerald-500/30 bg-gradient-to-br from-emerald-500/5 via-transparent to-transparent">
