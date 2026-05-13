@@ -376,6 +376,7 @@ export default function ProdutoEditor() {
       payment_terms: {
         plan: "natleva_default",
         entry_percent: numOrNull(form.payment_entry_percent) ?? 30,
+        entry_amount: numOrNull(form.payment_entry_amount),
         entry_percent_min: numOrNull(form.payment_entry_percent_min) ?? 20,
         entry_percent_max: numOrNull(form.payment_entry_percent_max) ?? 50,
         entry_methods: (["pix", "cartao", "link"] as const).filter((m) => form.payment_entry_methods[m]),
