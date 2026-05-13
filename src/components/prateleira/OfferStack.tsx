@@ -214,6 +214,23 @@ export default function OfferStack({
             </motion.div>
           )}
 
+          {/* Escassez · quartos/inventário hoteleiro · gatilho extra estável por produto */}
+          {(() => {
+            const roomsLeft = seededFrom(productId, 41, 2, 4);
+            return (
+              <motion.div
+                animate={{ opacity: [0.9, 1, 0.9] }}
+                transition={{ duration: 2.6, repeat: Infinity }}
+                className="rounded-lg bg-amber-500/10 border border-amber-500/30 px-3 py-2 flex items-center gap-2"
+              >
+                <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <div className="text-[12px] text-amber-800 dark:text-amber-200 font-medium leading-tight">
+                  Últimos <strong>{roomsLeft}</strong> {roomsLeft === 1 ? "quarto disponível" : "quartos disponíveis"} no hotel · reserve antes que esgote
+                </div>
+              </motion.div>
+            );
+          })()}
+
           {/* CTA premium */}
           <motion.button
             whileHover={{ scale: 1.015 }}
