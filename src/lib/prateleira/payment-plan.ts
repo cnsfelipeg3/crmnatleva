@@ -14,6 +14,9 @@ export type NatlevaPlan = {
   daysBefore: number;
   isSimulated: boolean; // true quando não há departure_date e usamos hipótese
   currency: string;
+  pixDiscountPercent?: number;
+  pixTotal?: number;
+  minInstallment?: number;
 };
 
 const SYMBOL: Record<string, string> = { BRL: "R$", USD: "US$", EUR: "€" };
