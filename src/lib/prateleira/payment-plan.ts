@@ -29,13 +29,23 @@ export function formatMoneyBR(v: number, currency = "BRL") {
 export function computeNatlevaPlan(
   price: number | null | undefined,
   departureDate: string | Date | null | undefined,
-  opts?: { entryPercent?: number; daysBefore?: number; currency?: string; maxInstallments?: number; simulatedMonths?: number }
+  opts?: {
+    entryPercent?: number;
+    daysBefore?: number;
+    currency?: string;
+    maxInstallments?: number;
+    simulatedMonths?: number;
+    minInstallment?: number;
+    pixDiscountPercent?: number;
+  }
 ): NatlevaPlan | null {
   if (!price || price <= 0) return null;
   const entryPercent = opts?.entryPercent ?? 30;
   const daysBefore = opts?.daysBefore ?? 20;
   const maxInstallments = opts?.maxInstallments ?? 12;
   const currency = opts?.currency ?? "BRL";
+  const minInstallment = opts?.minInstallment ?? 0;
+  const pixDiscountPercent = opts?.pixDiscountPercent ?? 0;
 
   let dep: Date | null = null;
   if (departureDate) {
@@ -63,8 +73,18 @@ export function computeNatlevaPlan(
   const total = Number(price);
   const entryAmount = Math.round(total * (entryPercent / 100) * 100) / 100;
   const balanceAmount = Math.round((total - entryAmount) * 100) / 100;
-  const installments = monthsAvailable;
+
+  // Aplica valor mínimo da parcela (reduz nº de parcelas se necessário)
+  let installments = monthsAvailable;
+  if (minInstallment > 0 && balanceAmount > 0) {
+    const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
+    installments = Math.min(installments, maxByMin);
+  }
   const installmentAmount = Math.round((balanceAmount / installments) * 100) / 100;
+
+  const pixTotal = pixDiscountPercent > 0
+    ? Math.round(total * (1 - pixDiscountPercent / 100) * 100) / 100
+    : undefined;
 
   return {
     total,
@@ -78,6 +98,9 @@ export function computeNatlevaPlan(
     daysBefore,
     isSimulated,
     currency,
+    pixDiscountPercent: pixDiscountPercent > 0 ? pixDiscountPercent : undefined,
+    pixTotal,
+    minInstallment: minInstallment > 0 ? minInstallment : undefined,
   };
 }
 
