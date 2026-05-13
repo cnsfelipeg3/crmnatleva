@@ -94,7 +94,7 @@ async function upsertSummary(
   source: HotelSource,
   summary: ReturnType<typeof summarizeOffers>,
 ) {
-  await (supabase as any).from("hotel_payment_cache").upsert(
+  const { error } = await (supabase as any).from("hotel_payment_cache").upsert(
     {
       hotel_id: hotelId,
       source,
@@ -105,6 +105,12 @@ async function upsertSummary(
     },
     { onConflict: "hotel_id,source" },
   );
+
+  if (error) {
+    console.error("[PAY_FILTER] upsert FAILED", source, hotelId, error.message, error);
+  } else {
+    console.log("[PAY_FILTER] upsert OK", source, hotelId, summary.availableModalities);
+  }
 }
 
 /**
