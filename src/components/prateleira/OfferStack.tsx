@@ -31,6 +31,8 @@ type Props = {
   currency?: string;
   departureDate?: string | null;
   paymentTerms?: any;
+  paxMin?: number | null;
+  paxMax?: number | null;
   productId: string;
   onCTA: () => void;
 };
@@ -77,6 +79,8 @@ export default function OfferStack({
   currency = "BRL",
   departureDate,
   paymentTerms,
+  paxMin,
+  paxMax,
   productId,
   onCTA,
 }: Props) {
