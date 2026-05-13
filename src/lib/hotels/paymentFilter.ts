@@ -32,14 +32,20 @@ export function hotelMatchesPaymentFilters(
   summary: HotelPaymentSummary | undefined,
   modalities: Set<string>,
   freeCancellationOnly: boolean,
+  hotelId?: string,
 ): boolean | null {
   const hasModalityFilter = modalities.size > 0;
   if (!hasModalityFilter && !freeCancellationOnly) return true;
-  if (!summary) return null; // unknown · sem cache ainda
-  if (freeCancellationOnly && !summary.hasFreeCancellation) return false;
-  if (hasModalityFilter) {
-    const hit = summary.availableModalities.some((m) => modalities.has(m));
-    if (!hit) return false;
+  if (!summary) {
+    // DEBUG: console.log("[PAY_FILTER] match", { hotelId, modalitiesRequested: Array.from(modalities), freeCancellationOnly, summary: null, result: null });
+    return null;
   }
-  return true;
+  let result: boolean = true;
+  if (freeCancellationOnly && !summary.hasFreeCancellation) result = false;
+  if (result && hasModalityFilter) {
+    const hit = summary.availableModalities.some((m) => modalities.has(m));
+    if (!hit) result = false;
+  }
+  // DEBUG: console.log("[PAY_FILTER] match", { hotelId, modalitiesRequested: Array.from(modalities), freeCancellationOnly, available: summary.availableModalities, hasFree: summary.hasFreeCancellation, result });
+  return result;
 }

@@ -306,18 +306,21 @@ export default function BookingSearchPage() {
     childrenAges: searchParams?.children.join(",") ?? "",
     rooms: searchParams?.rooms ?? 1,
     existing: paymentSummaries,
-    maxItems: paymentFilterActive ? 24 : 16,
-    maxConcurrent: 3,
+    // Quando filtro está ativo, força prefetch de TODOS os hotéis visíveis
+    maxItems: paymentFilterActive ? (bookingData?.hotels?.length ?? 24) : 16,
+    maxConcurrent: paymentFilterActive ? 6 : 3,
   });
 
   // Filtro client-side por nome + por modalidade/cancelamento (via cache)
   const filteredGroups = useMemo(() => {
     const q = nameQuery.trim().toLowerCase();
-    return groupedHotels.filter((g) => {
+    const filtered = groupedHotels.filter((g) => {
       if (q && !g.name.toLowerCase().includes(q)) return false;
 
       if (paymentFilterActive) {
-        // Passa se ALGUMA oferta do grupo bater com os filtros
+        // Passa se ALGUMA oferta do grupo bater com os filtros (true).
+        // null (sem cache) NÃO conta como match — quando filtro ativo, só exibe
+        // hotéis confirmados. Cards aparecem assim que prefetch popular o cache.
         const hits = g.offers.map((o) => {
           const summary = paymentSummaries?.get(
             paymentCacheKey(String(o.id), o.source),
@@ -326,14 +329,25 @@ export default function BookingSearchPage() {
             summary,
             filtersState.paymentModalities,
             filtersState.freeCancellationOnly,
+            String(o.id),
           );
         });
-        // Se TODAS retornaram false, esconde · `null` (sem cache) é tratado como possível match
-        if (hits.every((h) => h === false)) return false;
+        // Esconde se nenhuma oferta deu true (false ou null não passam quando filtro ativo)
+        if (!hits.some((h) => h === true)) return false;
       }
 
       return true;
     });
+    // DEBUG
+    console.log(
+      "[PAY_FILTER] filtered",
+      "total:", groupedHotels.length,
+      "after:", filtered.length,
+      "modalities:", Array.from(filtersState.paymentModalities),
+      "freeOnly:", filtersState.freeCancellationOnly,
+      "summariesLoaded:", paymentSummaries?.size ?? 0,
+    );
+    return filtered;
   }, [groupedHotels, nameQuery, paymentFilterActive, paymentSummaries, filtersState]);
 
   // Contadores
