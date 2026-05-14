@@ -87,7 +87,14 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const targetLogoW = Math.round(base.width * 0.21);
   const scale = targetLogoW / logo.width;
   const targetLogoH = Math.round(logo.height * scale);
-  const resizedLogo = logo.resize(targetLogoW, targetLogoH);
+  // Qualidade máxima do logo · resize bicúbico (RESIZE_AUTO) preservando alpha
+  // e evitando o nearest-neighbor padrão (que serrilha as bordas finas do wordmark).
+  // Se o destino for maior que o original, mantém o original sem upscale para
+  // não amolecer · o PNG fonte já é hi-res.
+  const resizedLogo =
+    targetLogoW >= logo.width
+      ? logo.clone()
+      : logo.resize(targetLogoW, targetLogoH, Image.RESIZE_AUTO);
   const marginX = Math.round(base.width * 0.065);
   const marginY = Math.round(base.height * 0.045);
 
