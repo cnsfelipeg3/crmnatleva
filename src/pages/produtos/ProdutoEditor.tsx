@@ -946,6 +946,21 @@ export default function ProdutoEditor() {
             coverUrl={form.cover_image_url}
             galleryUrls={form.gallery.split("\n").map((s) => s.trim()).filter(Boolean)}
             departureDate={form.departure_date}
+            returnDate={form.return_date}
+            includes={form.includes.split("\n").map((s) => s.trim()).filter(Boolean)}
+            hotelName={form.hotel_name}
+            hotelStars={form.hotel_stars}
+            nights={form.nights}
+            seatsLeft={form.seats_left}
+            isPromo={form.is_promo}
+            paymentTerms={{
+              entryPercent: Number(form.payment_entry_percent) || 30,
+              entryAmount: Number(form.payment_entry_amount) || undefined,
+              daysBefore: Number(form.payment_days_before) || 20,
+              maxInstallments: Number(form.payment_balance_installments_max) || 12,
+              minInstallment: Number(form.payment_balance_min_installment) || 200,
+              pixDiscountPercent: Number(form.payment_pix_discount_percent) || 0,
+            }}
           />
         </TabsContent>
       </Tabs>

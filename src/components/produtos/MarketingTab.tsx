@@ -7,16 +7,24 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2 } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap,
+} from "lucide-react";
 import { toast } from "sonner";
 import { FORMATS, type FormatId, findFormat } from "@/lib/marketing/formats";
 import {
   buildArtUserPrompt,
   buildBrandSystemPrompt,
+  buildSalesHeadline,
+  buildSalesSubheadline,
+  buildScarcityBadge,
   TONE_LABEL,
   type ArtBriefing,
   type ArtTone,
+  type PaymentSnapshot,
 } from "@/lib/marketing/natlevaBrand";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 
 interface Props {
   productId: string | null;
@@ -28,6 +36,21 @@ interface Props {
   coverUrl: string;
   galleryUrls: string[];
   departureDate: string;
+  returnDate?: string;
+  includes?: string[];
+  hotelName?: string;
+  hotelStars?: string;
+  nights?: string;
+  seatsLeft?: string;
+  isPromo?: boolean;
+  paymentTerms?: {
+    entryPercent?: number;
+    entryAmount?: number;
+    daysBefore?: number;
+    maxInstallments?: number;
+    minInstallment?: number;
+    pixDiscountPercent?: number;
+  };
 }
 
 interface Asset {
@@ -40,15 +63,47 @@ interface Asset {
   prompt: any;
 }
 
-function brl(v: string | number) {
-  const n = typeof v === "string" ? parseFloat(v.replace(",", ".")) : v;
-  if (!Number.isFinite(n) || n <= 0) return "";
-  return n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+function formatBRDate(iso?: string) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
-export default function MarketingTab({
-  productId, title, destination, shortDescription, priceFrom, pricePromo, coverUrl, galleryUrls, departureDate,
-}: Props) {
+function formatRelative(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function groupByDay(list: Asset[]): { day: string; label: string; items: Asset[] }[] {
+  const map = new Map<string, Asset[]>();
+  for (const a of list) {
+    const d = new Date(a.created_at);
+    const key = d.toISOString().slice(0, 10);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(a);
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  const yest = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  return [...map.entries()]
+    .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+    .map(([day, items]) => ({
+      day,
+      label:
+        day === today ? "Hoje"
+          : day === yest ? "Ontem"
+          : new Date(day + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" }),
+      items,
+    }));
+}
+
+export default function MarketingTab(props: Props) {
+  const {
+    productId, title, destination, shortDescription, priceFrom, pricePromo,
+    coverUrl, galleryUrls, departureDate, returnDate, includes,
+    hotelName, hotelStars, nights, seatsLeft, isPromo, paymentTerms,
+  } = props;
+
   const [headline, setHeadline] = useState("");
   const [subheadline, setSubheadline] = useState("");
   const [cta, setCta] = useState("Garanta sua vaga");
@@ -62,73 +117,104 @@ export default function MarketingTab({
   const [assets, setAssets] = useState<Asset[]>([]);
   const [refining, setRefining] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState("");
+  const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
 
   const allImages = useMemo(() => {
     const arr = [coverUrl, ...galleryUrls].filter(Boolean);
     return Array.from(new Set(arr));
   }, [coverUrl, galleryUrls]);
 
-  // Pre-fill briefing from product
+  // Plano de pagamento atrativo (entrada + parcelas) · não exibe valor total cheio
+  const payment: PaymentSnapshot | undefined = useMemo(() => {
+    const price = Number(pricePromo) || Number(priceFrom) || 0;
+    if (!price) return undefined;
+    const plan = computeNatlevaPlan(price, departureDate || null, {
+      entryPercent: paymentTerms?.entryPercent ?? 30,
+      entryAmount: paymentTerms?.entryAmount,
+      daysBefore: paymentTerms?.daysBefore ?? 20,
+      maxInstallments: paymentTerms?.maxInstallments ?? 12,
+      minInstallment: paymentTerms?.minInstallment ?? 200,
+      pixDiscountPercent: paymentTerms?.pixDiscountPercent ?? 0,
+    });
+    if (!plan) return undefined;
+    return {
+      entryLabel: `Entrada ${formatMoneyBR(plan.entryAmount)}`,
+      installmentsLabel: `+ ${plan.installments}x ${formatMoneyBR(plan.installmentAmount)} sem juros no boleto`,
+      pixLabel: plan.pixTotal
+        ? `Ou ${formatMoneyBR(plan.pixTotal)} à vista no PIX (-${plan.pixDiscountPercent}%)`
+        : undefined,
+      fromLabel: `A partir de ${formatMoneyBR(plan.total)} por pessoa`,
+    };
+  }, [priceFrom, pricePromo, departureDate, paymentTerms]);
+
+  const scarcity = useMemo(() => buildScarcityBadge(seatsLeft), [seatsLeft]);
+
+  // Pré-preenche briefing usando gatilhos de venda
   useEffect(() => {
-    if (!headline && (title || destination)) {
-      const base = destination ? `${destination}` : title;
-      setHeadline(base.toUpperCase().slice(0, 40));
-    }
-    if (!subheadline) {
-      const parts: string[] = [];
-      if (shortDescription) parts.push(shortDescription);
-      else if (title && destination && !title.toLowerCase().includes(destination.toLowerCase())) parts.push(title);
-      setSubheadline(parts.join(" · ").slice(0, 90));
-    }
+    if (headline) return;
+    setHeadline(buildSalesHeadline({
+      destination: destination || title,
+      nights,
+      isPromo,
+      scarcity: !!scarcity,
+    }));
+  }, [destination, title, nights, isPromo, scarcity]); // eslint-disable-line
+
+  useEffect(() => {
+    if (subheadline) return;
+    setSubheadline(buildSalesSubheadline({
+      hotelName,
+      hotelStars,
+      departureDate: formatBRDate(departureDate),
+      returnDate: formatBRDate(returnDate),
+      shortDescription,
+    }));
+  }, [hotelName, hotelStars, departureDate, returnDate, shortDescription]); // eslint-disable-line
+
+  useEffect(() => {
     if (!refImage && coverUrl) setRefImage(coverUrl);
-  }, [title, destination, shortDescription, coverUrl]); // eslint-disable-line
+  }, [coverUrl]); // eslint-disable-line
 
-  const priceLabel = useMemo(() => {
-    const promo = brl(pricePromo);
-    const from = brl(priceFrom);
-    if (promo) return `A partir de ${promo}`;
-    if (from) return `A partir de ${from}`;
-    return "";
-  }, [priceFrom, pricePromo]);
+  const buildBriefing = (): ArtBriefing => ({
+    headline: headline.trim(),
+    subheadline: subheadline.trim(),
+    cta: cta.trim() || "Garanta sua vaga",
+    tone,
+    destination: destination || undefined,
+    hotelName: hotelName || undefined,
+    hotelStars: hotelStars || undefined,
+    nights: nights || undefined,
+    departureDate: formatBRDate(departureDate) || undefined,
+    returnDate: formatBRDate(returnDate) || undefined,
+    includes: (includes || []).filter(Boolean).slice(0, 4),
+    payment,
+    scarcity,
+  });
 
-  // Load history
-  useEffect(() => {
+  // Histórico
+  const refreshAssets = async () => {
     if (!productId) return;
-    (async () => {
-      const { data } = await (supabase as any)
-        .from("product_marketing_assets")
-        .select("*")
-        .eq("product_id", productId)
-        .order("created_at", { ascending: false });
-      setAssets((data as Asset[]) || []);
-    })();
-  }, [productId]);
+    const { data } = await (supabase as any)
+      .from("product_marketing_assets")
+      .select("*").eq("product_id", productId)
+      .order("created_at", { ascending: false });
+    setAssets((data as Asset[]) || []);
+  };
+
+  useEffect(() => { refreshAssets(); }, [productId]); // eslint-disable-line
 
   const formatsToGenerate = (Object.entries(selected) as [FormatId, boolean][])
     .filter(([, v]) => v).map(([k]) => k);
 
   async function generate() {
-    if (!productId) {
-      toast.error("Salve o produto antes de gerar artes");
-      return;
-    }
+    if (!productId) { toast.error("Salve o produto antes de gerar artes"); return; }
     if (!headline.trim() || !subheadline.trim()) {
-      toast.error("Preencha headline e subheadline");
-      return;
+      toast.error("Preencha headline e subheadline"); return;
     }
-    if (formatsToGenerate.length === 0) {
-      toast.error("Selecione ao menos um formato");
-      return;
-    }
+    if (formatsToGenerate.length === 0) { toast.error("Selecione ao menos um formato"); return; }
+
     setGenerating(true);
-    const briefing: ArtBriefing = {
-      headline: headline.trim(),
-      subheadline: subheadline.trim(),
-      cta: cta.trim() || "Garanta sua vaga",
-      tone,
-      destination: destination || undefined,
-      priceLabel: priceLabel || undefined,
-    };
+    const briefing = buildBriefing();
     const system = buildBrandSystemPrompt();
 
     try {
@@ -153,7 +239,6 @@ export default function MarketingTab({
           return data as { asset: Asset };
         }),
       );
-
       const ok = results.filter((r) => r.status === "fulfilled").length;
       const fail = results.length - ok;
       if (ok > 0) toast.success(`${ok} arte(s) gerada(s)`);
@@ -161,12 +246,7 @@ export default function MarketingTab({
         const firstErr = results.find((r) => r.status === "rejected") as PromiseRejectedResult | undefined;
         toast.error(`${fail} falha(s)`, { description: firstErr?.reason?.message || "" });
       }
-      // refresh
-      const { data } = await (supabase as any)
-        .from("product_marketing_assets")
-        .select("*").eq("product_id", productId)
-        .order("created_at", { ascending: false });
-      setAssets((data as Asset[]) || []);
+      await refreshAssets();
     } finally {
       setGenerating(false);
     }
@@ -177,11 +257,7 @@ export default function MarketingTab({
     setRefining(asset.id);
     try {
       const f = findFormat(asset.format as FormatId);
-      const briefing: ArtBriefing = {
-        headline, subheadline, cta, tone,
-        destination: destination || undefined,
-        priceLabel: priceLabel || undefined,
-      };
+      const briefing = buildBriefing();
       const userPrompt = buildArtUserPrompt(briefing, f.label, f.aspect);
       const { data, error } = await supabase.functions.invoke("marketing-image-gen", {
         body: {
@@ -199,11 +275,7 @@ export default function MarketingTab({
       if (error || (data as any)?.error) throw new Error(error?.message || (data as any).error);
       toast.success("Variação gerada");
       setRefinePrompt("");
-      const { data: list } = await (supabase as any)
-        .from("product_marketing_assets")
-        .select("*").eq("product_id", productId)
-        .order("created_at", { ascending: false });
-      setAssets((list as Asset[]) || []);
+      await refreshAssets();
     } catch (e: any) {
       toast.error("Falha ao refinar", { description: e?.message });
     } finally {
@@ -212,14 +284,27 @@ export default function MarketingTab({
   }
 
   async function removeAsset(asset: Asset) {
-    if (!confirm("Remover esta arte?")) return;
+    if (!confirm("Remover esta arte do histórico?")) return;
     await (supabase as any).from("product_marketing_assets").delete().eq("id", asset.id);
     setAssets((prev) => prev.filter((a) => a.id !== asset.id));
+    toast.success("Arte removida");
   }
+
+  function downloadAsset(a: Asset) {
+    const link = document.createElement("a");
+    link.href = a.url;
+    link.target = "_blank";
+    link.download = `natleva-${a.format}-${a.id.slice(0, 6)}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  const groups = useMemo(() => groupByDay(assets), [assets]);
 
   return (
     <div className="space-y-4">
-      <Card className="p-5 space-y-4 border-primary/30 bg-primary/5">
+      <Card className="p-5 space-y-3 border-primary/30 bg-primary/5">
         <div className="flex items-start gap-3">
           <div className="shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
             <Wand2 className="w-5 h-5 text-primary" />
@@ -229,7 +314,7 @@ export default function MarketingTab({
               Gerar artes para redes sociais <Sparkles className="w-3.5 h-3.5 text-primary" />
             </h2>
             <p className="text-xs text-muted-foreground">
-              Baseado nas informações do produto, gera artes prontas no padrão visual NatLeva · feed, stories, reels e banner.
+              Padrão visual NatLeva · logotipo oficial, datas, hospedagem, entrada + parcelas e gatilhos de venda já injetados.
             </p>
           </div>
         </div>
@@ -241,11 +326,37 @@ export default function MarketingTab({
         </Card>
       )}
 
+      {/* Resumo do que será injetado */}
+      {productId && (
+        <Card className="p-4 bg-muted/30 border-dashed">
+          <div className="flex flex-wrap gap-2 text-[11px]">
+            {destination && <Badge variant="secondary">{destination}</Badge>}
+            {nights && <Badge variant="secondary">{nights} noites</Badge>}
+            {departureDate && (
+              <Badge variant="secondary" className="gap-1"><Calendar className="w-3 h-3" />
+                {formatBRDate(departureDate)}{returnDate ? ` → ${formatBRDate(returnDate)}` : ""}
+              </Badge>
+            )}
+            {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
+            {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
+            {scarcity && <Badge variant="destructive" className="gap-1"><Zap className="w-3 h-3" />{scarcity}</Badge>}
+            {(includes || []).slice(0, 3).map((i, idx) => (
+              <Badge key={idx} variant="outline" className="font-normal">{i}</Badge>
+            ))}
+          </div>
+          {!payment && (
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Defina o preço na aba Preço para injetar entrada + parcelas na arte.
+            </p>
+          )}
+        </Card>
+      )}
+
       <Card className="p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <Label>Headline</Label>
-            <Input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="CANCUN · 7 NOITES" />
+            <Label>Headline (gatilho de venda)</Label>
+            <Input value={headline} onChange={(e) => setHeadline(e.target.value)} placeholder="DESTINO · ÚLTIMAS VAGAS" />
           </div>
           <div>
             <Label>CTA do botão</Label>
@@ -254,7 +365,7 @@ export default function MarketingTab({
           <div className="md:col-span-2">
             <Label>Subheadline</Label>
             <Textarea rows={2} value={subheadline} onChange={(e) => setSubheadline(e.target.value)}
-              placeholder={`Saída ${departureDate || "12/out"} · all-inclusive frente mar`} />
+              placeholder="Hotel · datas · all-inclusive frente mar" />
           </div>
           <div>
             <Label>Tom</Label>
@@ -268,8 +379,12 @@ export default function MarketingTab({
             </Select>
           </div>
           <div>
-            <Label>Bloco de preço (auto)</Label>
-            <Input value={priceLabel} readOnly placeholder="defina o preço na aba Preço" />
+            <Label>Bloco de preço (auto · entrada + parcelas)</Label>
+            <Input
+              value={payment ? `${payment.entryLabel} · ${payment.installmentsLabel.replace("+ ", "")}` : ""}
+              readOnly
+              placeholder="defina o preço na aba Preço"
+            />
           </div>
         </div>
 
@@ -324,57 +439,116 @@ export default function MarketingTab({
         </div>
       </Card>
 
-      {assets.length > 0 && (
-        <Card className="p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-sm flex items-center gap-1.5">
-              <ImagePlus className="w-4 h-4 text-primary" /> Artes geradas
-            </h3>
-            <Badge variant="secondary">{assets.length}</Badge>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {assets.map((a) => {
-              const f = FORMATS.find((x) => x.id === a.format);
-              return (
-                <div key={a.id} className="rounded-xl border bg-card overflow-hidden flex flex-col">
-                  <div className="bg-muted/30 flex items-center justify-center" style={{ aspectRatio: f ? `${f.width}/${f.height}` : "1/1" }}>
-                    <img src={a.url} alt={f?.label} className="w-full h-full object-contain" loading="lazy" />
-                  </div>
-                  <div className="p-3 space-y-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <div className="text-xs font-semibold">{f?.label || a.format}</div>
-                        <div className="text-[10px] text-muted-foreground">{a.model || "ia"}</div>
+      {/* HISTÓRICO */}
+      <Card className="p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm flex items-center gap-1.5">
+            <ImagePlus className="w-4 h-4 text-primary" /> Histórico de artes
+          </h3>
+          <Badge variant="secondary">{assets.length}</Badge>
+        </div>
+
+        {assets.length === 0 && (
+          <p className="text-sm text-muted-foreground py-6 text-center">
+            Nenhuma arte gerada ainda. Configure o briefing acima e clique em Gerar artes.
+          </p>
+        )}
+
+        {groups.map((group) => (
+          <div key={group.day} className="space-y-3">
+            <div className="flex items-center gap-2 sticky top-0 bg-card py-1 z-10">
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.label}
+              </div>
+              <div className="flex-1 h-px bg-border" />
+              <div className="text-[11px] text-muted-foreground">{group.items.length} arte(s)</div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {group.items.map((a) => {
+                const f = FORMATS.find((x) => x.id === a.format);
+                return (
+                  <div key={a.id} className="rounded-xl border bg-card overflow-hidden flex flex-col group">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewAsset(a)}
+                      className="bg-muted/30 flex items-center justify-center relative overflow-hidden"
+                      style={{ aspectRatio: f ? `${f.width}/${f.height}` : "1/1" }}
+                    >
+                      <img src={a.url} alt={f?.label} className="w-full h-full object-contain transition-transform group-hover:scale-[1.02]" loading="lazy" />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <Eye className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </button>
+                    <div className="p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold truncate">{f?.label || a.format}</div>
+                          <div className="text-[10px] text-muted-foreground truncate">
+                            {formatRelative(a.created_at)}
+                          </div>
+                        </div>
+                        <div className="flex gap-0.5 shrink-0">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewAsset(a)} title="Visualizar">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => downloadAsset(a)} title="Baixar">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeAsset(a)} title="Remover">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" asChild title="Baixar">
-                          <a href={a.url} download target="_blank" rel="noreferrer">
-                            <Download className="w-4 h-4" />
-                          </a>
-                        </Button>
-                        <Button size="icon" variant="ghost" onClick={() => removeAsset(a)} title="Remover">
-                          <Trash2 className="w-4 h-4" />
+                        <Input
+                          value={refining === a.id ? refinePrompt : ""}
+                          onChange={(e) => { setRefining(a.id); setRefinePrompt(e.target.value); }}
+                          placeholder="ex: headline maior, fundo mais escuro"
+                          className="h-8 text-xs"
+                        />
+                        <Button size="sm" variant="outline" onClick={() => refine(a)} disabled={refining !== null && refining !== a.id}>
+                          {refining === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         </Button>
                       </div>
                     </div>
-                    <div className="flex gap-1">
-                      <Input
-                        value={refining === a.id ? refinePrompt : ""}
-                        onChange={(e) => { setRefining(a.id); setRefinePrompt(e.target.value); }}
-                        placeholder="ex: headline maior, fundo mais escuro"
-                        className="h-8 text-xs"
-                      />
-                      <Button size="sm" variant="outline" onClick={() => refine(a)} disabled={refining !== null && refining !== a.id}>
-                        {refining === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                      </Button>
-                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </Card>
+
+      {/* Preview modal */}
+      <Dialog open={!!previewAsset} onOpenChange={(o) => !o && setPreviewAsset(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden">
+          {previewAsset && (
+            <div className="flex flex-col">
+              <div className="bg-black/90 flex items-center justify-center max-h-[80vh]">
+                <img src={previewAsset.url} alt="" className="max-h-[80vh] w-auto object-contain" />
+              </div>
+              <div className="p-4 flex items-center justify-between gap-3 bg-card">
+                <div>
+                  <div className="text-sm font-semibold">
+                    {FORMATS.find((x) => x.id === previewAsset.format)?.label || previewAsset.format}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {formatRelative(previewAsset.created_at)} · {previewAsset.model || "ia"}
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </Card>
-      )}
+                <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => downloadAsset(previewAsset)}>
+                    <Download className="w-4 h-4 mr-1.5" /> Baixar
+                  </Button>
+                  <Button variant="destructive" onClick={() => { removeAsset(previewAsset); setPreviewAsset(null); }}>
+                    <Trash2 className="w-4 h-4 mr-1.5" /> Remover
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
