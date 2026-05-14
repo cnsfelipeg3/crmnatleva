@@ -242,6 +242,34 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
           </button>
         </div>
+        <div
+          className={cn(
+            "flex items-center justify-between gap-3 mt-3 px-3 py-2 rounded-md border",
+            isActive ? "border-emerald-500/30 bg-emerald-500/5" : "border-border bg-muted/40"
+          )}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            {isActive ? (
+              <Power className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            ) : (
+              <PowerOff className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            )}
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold leading-none">
+                {isActive ? "Ativo na vitrine" : "Desativado"}
+              </div>
+              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">
+                {isActive ? "Página pública no ar" : "Oculto e página indisponível"}
+              </div>
+            </div>
+          </div>
+          <Switch
+            checked={isActive}
+            disabled={savingActive}
+            onCheckedChange={handleToggleActive}
+            aria-label="Ativar ou desativar produto"
+          />
+        </div>
         <div className="flex gap-2 mt-3">
           <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
             <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
