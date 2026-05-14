@@ -1,7 +1,10 @@
-import { Instagram, Mail, Phone, Building2, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { Instagram, Mail, Phone, Building2, ShieldCheck, BadgeCheck, X } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 export default function PublicFooter() {
   const year = new Date().getFullYear();
+  const [cadasturOpen, setCadasturOpen] = useState(false);
   return (
     <footer className="mt-16 border-t border-border bg-muted/30">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
@@ -55,8 +58,48 @@ export default function PublicFooter() {
               <ShieldCheck className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
               <span>Pagamentos protegidos · proposta detalhada · sem letra miúda do orçamento ao voucher.</span>
             </div>
+            <button
+              type="button"
+              onClick={() => setCadasturOpen(true)}
+              className="flex items-start gap-2 text-left text-sm text-muted-foreground hover:text-foreground transition-colors group"
+            >
+              <BadgeCheck className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+              <span className="underline decoration-dotted decoration-amber-600/50 underline-offset-4 group-hover:decoration-amber-600">
+                CADASTUR · Cadastro de Prestadores de Serviços Turísticos aprovado no Ministério do Turismo
+              </span>
+            </button>
           </div>
         </div>
+
+        <Dialog open={cadasturOpen} onOpenChange={setCadasturOpen}>
+          <DialogContent className="max-w-4xl p-0 overflow-hidden bg-background">
+            <DialogTitle className="sr-only">Certificado CADASTUR · NatLeva Viagens</DialogTitle>
+            <DialogDescription className="sr-only">
+              Certificado de Cadastro de Prestadores de Serviços Turísticos emitido pelo Ministério do Turismo.
+            </DialogDescription>
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="w-4 h-4 text-amber-600" />
+                <span className="text-sm font-medium text-foreground">Certificado CADASTUR</span>
+              </div>
+              <a
+                href="/cadastur/certificado-cadastur.pdf"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4"
+              >
+                Abrir PDF original
+              </a>
+            </div>
+            <div className="max-h-[80vh] overflow-auto bg-muted/40 p-4">
+              <img
+                src="/cadastur/certificado-cadastur.jpg"
+                alt="Certificado CADASTUR · NatLeva Viagens Ltda · Ministério do Turismo"
+                className="w-full h-auto rounded-md shadow-sm bg-white"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="mt-10 pt-6 border-t border-border/60 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
           <div>© {year} NatLeva Viagens · Todos os direitos reservados.</div>
