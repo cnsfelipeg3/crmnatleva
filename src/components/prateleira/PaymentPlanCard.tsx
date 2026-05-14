@@ -84,8 +84,17 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           </div>
         </div>
 
+        {/* Conector "+" entre entrada e saldo */}
+        <div className="flex items-center gap-3.5 relative mt-2 mb-1" aria-hidden>
+          <div className="shrink-0 w-7 flex justify-center">
+            <div className="w-6 h-6 rounded-full bg-card border border-border/70 text-foreground/70 flex items-center justify-center text-sm font-bold relative z-10">
+              +
+            </div>
+          </div>
+        </div>
+
         {/* Etapa 2 · Saldo */}
-        <div className="flex gap-3.5 relative mt-5">
+        <div className="flex gap-3.5 relative mt-2">
           <div className="shrink-0 w-7 h-7 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 flex items-center justify-center text-xs font-bold ring-4 ring-card relative z-10 mt-0.5">
             2
           </div>
