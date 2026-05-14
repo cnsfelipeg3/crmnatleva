@@ -20,8 +20,8 @@ export default function PublicFooter() {
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
                 <Phone className="w-3.5 h-3.5 text-amber-600" />
-                <a href="https://wa.me/5571992997905" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
-                  +55 71 9299-7905
+                <a href="https://wa.me/5511966396692" target="_blank" rel="noopener noreferrer" className="hover:text-foreground transition-colors">
+                  +55 (11) 96639-6692
                 </a>
               </li>
               <li className="flex items-center gap-2">
