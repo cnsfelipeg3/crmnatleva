@@ -71,10 +71,53 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginX = Math.round(base.width * 0.065);
   const marginY = Math.round(base.height * 0.045);
 
-  // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) diretamente
-  // sobre a arte. A IA não recebe mais o arquivo do logo como referência, para
-  // impedir que tente redesenhar o wordmark e gere sobreposição. O único logo
-  // existente no resultado final é este PNG oficial composto aqui.
+  // ─────────────────────────────────────────────────────────────
+  // Fade radial verde NatLeva por trás do logo · padrão de marca.
+  // Cria um halo elíptico suave em verde escuro (#1F3A2E) que
+  // escurece o fundo e destaca o wordmark champagne, sem cortar
+  // em retângulo. A opacidade cai para 0 nas bordas do halo,
+  // dando o efeito de "fade" pedido pelo usuário.
+  // ─────────────────────────────────────────────────────────────
+  const haloCx = marginX + targetLogoW / 2;
+  const haloCy = marginY + targetLogoH / 2;
+  const haloRx = targetLogoW * 0.95;        // raio horizontal · cobre o wordmark com folga
+  const haloRy = targetLogoH * 1.85;        // raio vertical · estende um pouco acima/abaixo
+  const maxAlpha = 165;                     // 0-255 · intensidade central do verde
+  const greenR = 31, greenG = 58, greenB = 46; // #1F3A2E
+
+  const xMin = Math.max(0, Math.floor(haloCx - haloRx));
+  const xMax = Math.min(base.width - 1, Math.ceil(haloCx + haloRx));
+  const yMin = Math.max(0, Math.floor(haloCy - haloRy));
+  const yMax = Math.min(base.height - 1, Math.ceil(haloCy + haloRy));
+
+  for (let y = yMin; y <= yMax; y++) {
+    for (let x = xMin; x <= xMax; x++) {
+      const dx = (x - haloCx) / haloRx;
+      const dy = (y - haloCy) / haloRy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      if (d >= 1) continue;
+      // smoothstep para fade mais natural nas bordas
+      const t = 1 - d;
+      const fade = t * t * (3 - 2 * t);
+      const a = Math.round(maxAlpha * fade);
+      if (a <= 0) continue;
+
+      const px = base.getPixelAt(x + 1, y + 1); // ImageScript é 1-indexed
+      const br = (px >> 24) & 0xff;
+      const bg = (px >> 16) & 0xff;
+      const bb = (px >> 8) & 0xff;
+      const ba = px & 0xff;
+      const af = a / 255;
+      const nr = Math.round(greenR * af + br * (1 - af));
+      const ng = Math.round(greenG * af + bg * (1 - af));
+      const nb = Math.round(greenB * af + bb * (1 - af));
+      const newPx = ((nr & 0xff) << 24) | ((ng & 0xff) << 16) | ((nb & 0xff) << 8) | (ba & 0xff);
+      base.setPixelAt(x + 1, y + 1, newPx);
+    }
+  }
+
+  // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) por cima
+  // do halo verde. Único logo presente na arte final.
   base.composite(resizedLogo, marginX, marginY);
   return await base.encode();
 }
