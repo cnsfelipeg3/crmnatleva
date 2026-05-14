@@ -184,7 +184,7 @@ serve(async (req) => {
       userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.reference_image_url) } });
     }
     if (body.refine_from_url) {
-      userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.refine_from_url) } });
+      userContent.push({ type: "image_url", image_url: { url: await fetchRefineImageWithoutLogoAsDataUrl(body.refine_from_url) } });
     }
     // Try preferred model -> flash -> fallback
     const order = body.use_pro
