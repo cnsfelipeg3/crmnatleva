@@ -92,21 +92,18 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginY = Math.round(base.height * 0.045);
 
   // ─────────────────────────────────────────────────────────────
-  // Fade verde NatLeva por trás do logo · padrão de marca.
-  // Cobre toda a área reservada do top-left (≈28% × 15%) com um
-  // gradiente Rolex Green opaco no centro que esmaece suave nas
-  // bordas, escondendo qualquer "plaqueta" ou wordmark que a IA
-  // tenha desenhado por engano e dando ao logo champagne um fundo
-  // verde elegante e consistente em todas as artes.
+  // Fade verde NatLeva por trás do logo · sem fundo sólido.
+  // Agora a IA é proibida de gerar qualquer logo, então o halo serve
+  // apenas para destacar o PNG transparente oficial com suavidade.
   // ─────────────────────────────────────────────────────────────
-  const reservedW = base.width * 0.32;
-  const reservedH = base.height * 0.18;
+  const reservedW = base.width * 0.28;
+  const reservedH = base.height * 0.16;
   const haloCx = marginX + targetLogoW / 2;
   const haloCy = marginY + targetLogoH / 2;
   const haloRx = reservedW / 2;
   const haloRy = reservedH / 2;
-  const corePeak = 0.85;          // até onde a opacidade fica no máximo (em fração de raio)
-  const maxAlpha = 240;           // núcleo praticamente opaco · cobre artefatos da IA
+  const corePeak = 0.32;          // núcleo pequeno · evita aparência de placa/fundo
+  const maxAlpha = 190;           // destaque forte, mas ainda com aparência de fade
   const greenR = 20, greenG = 69, greenB = 47; // #14452F · Rolex Green NatLeva
 
   const xMin = Math.max(0, Math.floor(haloCx - haloRx));
@@ -120,7 +117,7 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
       const dy = (y - haloCy) / haloRy;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d >= 1) continue;
-      // Núcleo opaco até corePeak, depois smoothstep até 0 na borda
+      // Núcleo suave até corePeak, depois smoothstep até 0 na borda
       let fade: number;
       if (d <= corePeak) {
         fade = 1;
