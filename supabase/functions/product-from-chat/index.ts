@@ -98,6 +98,45 @@ const SET_PRODUCT_TOOL = {
   },
 };
 
+async function callProductAI(model: string, apiKey: string, messages: unknown[], draftSummary: string) {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT + draftSummary },
+          ...messages,
+        ],
+        tools: [SET_PRODUCT_TOOL],
+        tool_choice: { type: "function", function: { name: "set_product" } },
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error(`[product-from-chat] AI gateway error model=${model} status=${response.status}`, detail.slice(0, 500));
+      return { ok: false as const, status: response.status, detail };
+    }
+
+    return { ok: true as const, data: await response.json() };
+  } catch (error) {
+    console.error(`[product-from-chat] AI gateway fetch failed model=${model}`, error);
+    return { ok: false as const, status: 0, detail: error instanceof Error ? error.message : "fetch_failed" };
+  }
+}
+
+function serviceFallback(message = "A IA ficou indisponível por alguns instantes. Tenta enviar de novo em seguida.") {
+  return new Response(JSON.stringify({
+    assistant: message,
+    product: {},
+    cover_suggestions: [],
+    fallback: true,
+    error: "AI_SERVICE_UNAVAILABLE",
+  }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -115,40 +154,19 @@ serve(async (req) => {
       : "";
 
     console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length}`);
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT + draftSummary },
-          ...messages,
-        ],
-        tools: [SET_PRODUCT_TOOL],
-        tool_choice: { type: "function", function: { name: "set_product" } },
-      }),
-    });
-
-    if (!aiRes.ok) {
-      const status = aiRes.status;
-      const txt = await aiRes.text();
-      console.error("AI gateway error:", status, txt);
-      if (status === 429) {
-        return new Response(JSON.stringify({ error: "Limite de uso atingido. Aguarde alguns instantes." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    const primary = await callProductAI("openai/gpt-5-mini", LOVABLE_API_KEY, messages, draftSummary);
+    if (!primary.ok) {
+      const retry = await callProductAI("google/gemini-2.5-pro", LOVABLE_API_KEY, messages, draftSummary);
+      if (!retry.ok) {
+        if (primary.status === 429 || retry.status === 429) return serviceFallback("A IA atingiu um limite momentâneo. Aguarde alguns instantes e tente de novo.");
+        if (primary.status === 402 || retry.status === 402) return serviceFallback("Os créditos de IA estão indisponíveis no momento.");
+        return serviceFallback();
       }
-      if (status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      return new Response(JSON.stringify({ error: "Erro no gateway de IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      console.log("[product-from-chat] primary failed, gateway retry succeeded");
+      var aiData = retry.data;
+    } else {
+      var aiData = primary.data;
     }
-
-    const aiData = await aiRes.json();
     const msg = aiData?.choices?.[0]?.message;
     let toolCall = msg?.tool_calls?.[0];
     let product: any = {};
@@ -220,8 +238,6 @@ serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("product-from-chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return serviceFallback("Não consegui processar agora. Tenta enviar de novo em seguida.");
   }
 });

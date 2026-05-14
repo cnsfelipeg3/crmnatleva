@@ -42,6 +42,12 @@ export default function ProductAIChat({ current, onApply }: Props) {
         body: { messages: next, current },
       });
       if (error) throw error;
+      if (data?.fallback) {
+        const assistant: string = data?.assistant ?? "A IA ficou indisponível por alguns instantes. Tente novamente em seguida.";
+        setMessages((m) => [...m, { role: "assistant", content: assistant }]);
+        toast.warning("IA temporariamente indisponível");
+        return;
+      }
       if (data?.error) throw new Error(data.error);
       const assistant: string = data?.assistant ?? "Atualizei o rascunho.";
       setMessages((m) => [...m, { role: "assistant", content: assistant }]);
