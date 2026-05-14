@@ -295,7 +295,7 @@ export default function PrateleiraVendaPublica() {
       (supabase as any).from("experience_products")
         .update({ lead_count: (p.lead_count ?? 0) + 1 }).eq("id", p.id);
     } catch {}
-    window.open(buildWhatsAppLink(agencyWhatsApp, msg), "_blank");
+    window.open(buildWhatsAppLink(targetWhatsApp, msg), "_blank");
   };
 
   return (
