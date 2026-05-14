@@ -14,12 +14,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Type, Square, Trash2, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
   Loader2, Save, Download, Plus, X, Copy as CopyIcon, ArrowUp, ArrowDown,
+  ScanText, ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
 import { NATLEVA_BRAND } from "@/lib/marketing/natlevaBrand";
 import { findFormat, type FormatId } from "@/lib/marketing/formats";
+import {
+  detectTextRegions,
+  findForbiddenInBlob,
+  type DetectedWord,
+} from "@/lib/marketing/ocrCheck";
 
 type LayerType = "text" | "rect";
 
