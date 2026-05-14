@@ -143,9 +143,13 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [imageReady, setImageReady] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [detectedWords, setDetectedWords] = useState<DetectedWord[]>([]);
   const [detecting, setDetecting] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [history, setHistory] = useState<Layer[][]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
     id: string; mode: "move" | "resize"; startX: number; startY: number;
@@ -158,13 +162,60 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     [asset],
   );
 
-  // Quando trocar a arte, reset
+  // Reset on asset change
   useEffect(() => {
     setLayers([]);
     setSelectedId(null);
     setImageReady(false);
+    setImageError(null);
+    setLocalImageUrl(null);
     setDetectedWords([]);
+    setHistory([]);
+    setZoom(1);
   }, [asset?.id]);
+
+  // Carrega a imagem via fetch -> blob -> objectURL.
+  // Isso evita o bug "preso em carregando" quando o navegador tem a imagem em
+  // cache sem cabeçalho CORS e o <img crossOrigin="anonymous"> nunca dispara onLoad.
+  // Também garante que html2canvas exporta sem taint do canvas.
+  useEffect(() => {
+    if (!asset?.url) return;
+    let aborted = false;
+    let revoke: string | null = null;
+    (async () => {
+      try {
+        // cache-buster opcional só na 1ª tentativa para forçar resposta com CORS
+        const res = await fetch(asset.url, { mode: "cors" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (aborted) return;
+        const objUrl = URL.createObjectURL(blob);
+        revoke = objUrl;
+        setLocalImageUrl(objUrl);
+        setImageError(null);
+      } catch (err: any) {
+        console.error("[MarketingAssetEditor] failed to load asset:", err);
+        if (!aborted) {
+          setImageError(err?.message || "Falha ao carregar a arte");
+          // fallback · tenta usar URL direto (sem CORS) só pra pré-visualizar
+          setLocalImageUrl(asset.url);
+        }
+      }
+    })();
+    return () => {
+      aborted = true;
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [asset?.url]);
+
+  // Push para histórico de undo a cada mudança de camadas
+  useEffect(() => {
+    setHistory((h) => {
+      const next = [...h, layers];
+      return next.slice(-30);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers]);
 
   if (!asset || !fmt) return null;
 
@@ -251,6 +302,41 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
       return copy;
     });
   };
+
+  // Undo · volta ao estado anterior do stack de histórico
+  const undo = () => {
+    setHistory((h) => {
+      if (h.length < 2) return h;
+      const prev = h[h.length - 2];
+      setLayers(prev);
+      return h.slice(0, -1);
+    });
+  };
+
+  // Atalhos de teclado · Delete remove, Ctrl/Cmd+Z desfaz, Ctrl/Cmd+D duplica, Esc desseleciona
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tgt = e.target as HTMLElement;
+      const isTyping =
+        tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || (tgt as any).isContentEditable);
+      if (isTyping) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        e.preventDefault();
+        removeLayer(selectedId);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d" && selectedId) {
+        e.preventDefault();
+        duplicateLayer(selectedId);
+      } else if (e.key === "Escape") {
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, layers]);
 
   // OCR · detecta palavras na arte para permitir clique-para-editar
   async function runDetect() {
@@ -380,16 +466,25 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-sm">Editor de arte · {fmt.label}</DialogTitle>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex items-center gap-1 border rounded-md px-1 h-8">
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)))} title="Diminuir zoom">−</Button>
+                <span className="text-[11px] tabular-nums w-10 text-center">{Math.round(zoom * 100)}%</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))} title="Aumentar zoom">+</Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom(1)} title="Reset zoom">⌂</Button>
+              </div>
+              <Button variant="outline" size="sm" onClick={undo} disabled={history.length < 2} title="Desfazer (Ctrl+Z)">
+                Desfazer
+              </Button>
               <Button variant="outline" size="sm" onClick={runDetect} disabled={detecting || !imageReady}>
                 {detecting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ScanText className="w-4 h-4 mr-1.5" />}
                 {detectedWords.length > 0 ? `${detectedWords.length} textos detectados` : "Detectar textos clicáveis"}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving}>
+              <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving || !imageReady}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
                 Baixar PNG
               </Button>
-              <Button size="sm" onClick={() => exportAndSave("save")} disabled={saving}>
+              <Button size="sm" onClick={() => exportAndSave("save")} disabled={saving || !imageReady}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
                 Salvar como nova arte
               </Button>
@@ -408,20 +503,35 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
             <div
               ref={stageRef}
               className="relative shadow-xl rounded-md overflow-hidden bg-black select-none"
-              style={{ aspectRatio: aspect, width: "min(100%, 720px)" }}
+              style={{
+                aspectRatio: aspect,
+                width: `min(100%, ${Math.round(720 * zoom)}px)`,
+                transition: "width 120ms ease",
+              }}
               onPointerDown={() => setSelectedId(null)}
             >
-              <img
-                src={asset.url}
-                alt=""
-                crossOrigin="anonymous"
-                onLoad={() => setImageReady(true)}
-                draggable={false}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-              />
-              {!imageReady && (
-                <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs">
+              {localImageUrl && (
+                <img
+                  src={localImageUrl}
+                  alt=""
+                  onLoad={() => setImageReady(true)}
+                  onError={() => setImageError("Imagem falhou ao renderizar")}
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                />
+              )}
+              {!imageReady && !imageError && (
+                <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs bg-black/40">
                   <Loader2 className="w-4 h-4 animate-spin mr-2" /> carregando arte...
+                </div>
+              )}
+              {imageError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-xs bg-black/70 gap-2 px-4 text-center">
+                  <span>Não foi possível carregar a arte</span>
+                  <span className="text-white/60">{imageError}</span>
+                  <a href={asset.url} target="_blank" rel="noreferrer" className="underline text-primary-foreground">
+                    Abrir original em nova aba
+                  </a>
                 </div>
               )}
 
