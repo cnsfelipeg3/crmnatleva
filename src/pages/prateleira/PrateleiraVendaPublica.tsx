@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import { buildWhatsAppLink } from "@/components/ui/phone-input";
+import { resolveAgencyWhatsApp, DEFAULT_AGENCY_WHATSAPP } from "@/lib/natleva/whatsapp";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
