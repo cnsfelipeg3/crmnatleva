@@ -940,6 +940,7 @@ export default function ProdutoEditor() {
             productId={recordId}
             title={form.title}
             destination={form.destination}
+            originCity={form.origin_city}
             shortDescription={form.short_description}
             priceFrom={form.price_from}
             pricePromo={form.price_promo}

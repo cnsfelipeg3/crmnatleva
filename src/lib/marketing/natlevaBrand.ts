@@ -62,6 +62,7 @@ export interface ArtBriefing {
   cta: string;
   tone: ArtTone;
   destination?: string;
+  originCity?: string;        // ex: "São Paulo" · OBRIGATÓRIO em artes promocionais
   hotelName?: string;
   hotelStars?: string;
   nights?: string;
@@ -109,8 +110,9 @@ export function buildBrandSystemPrompt(): string {
     "  · IMAGE 1 = the destination background photo selected by the user · USE THIS as the actual background. This is mandatory. Preserve the same place, horizon, architecture, beach, pool, vegetation, lighting, color mood and camera angle. Do NOT generate a different destination scene.",
     "  · If this is a refinement, IMAGE 2 may be the previous artwork · use it only to preserve the layout while still keeping IMAGE 1 as the destination source.",
     "  · Final image reference = the OFFICIAL NatLeva logotype (FOR REFERENCE ONLY).",
-    "CRITICAL · DO NOT draw, render, paint, type, sketch or recreate the natleva wordmark anywhere on the artwork. The official logo will be STAMPED on top of the image in post-processing at the TOP-LEFT corner.",
-    "MANDATORY · LEAVE THE TOP-LEFT ~22% width × ~14% height of the artwork COMPLETELY EMPTY · no text, no logo, no shape, no person, no decorative element. Use only the background photo (with subtle dark gradient) in that reserved area so the stamped logo will read clearly.",
+    "CRITICAL · DO NOT draw, render, paint, type, sketch or recreate the natleva wordmark anywhere on the artwork. ZERO occurrences of the word 'natleva' anywhere as a graphic. The official logo will be STAMPED on top of the image in post-processing at the TOP-LEFT corner. If you draw a wordmark, the post-processing will paint over it AND stamp the real one, creating a visible double-logo bug · this is a hard failure.",
+    "MANDATORY · LEAVE THE TOP-LEFT ~30% width × ~18% height of the artwork COMPLETELY EMPTY · no text, no logo, no shape, no person, no decorative element, no color block. Use only the background photo (with subtle dark gradient) in that reserved area so the stamped logo will read clearly.",
+    "ORIGEM · sempre que a origem da viagem for fornecida no briefing, é OBRIGATÓRIO renderizar uma badge 'SAINDO DE [CIDADE]' visível e legível na arte (Champagne pill com texto Rolex Green Instrument Sans Bold uppercase, posicionada no topo do card de informações). Esta informação é vital para conversão e NUNCA pode ser omitida.",
     "Do NOT mention or hint at the logo in any visible text.",
     "Maintain a clear-space margin around the reserved logo area.",
     "",
@@ -206,6 +208,9 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     `· Headline: "${briefing.headline}"`,
     `· Subheadline: "${briefing.subheadline}"`,
     briefing.destination ? `· Destination tag: ${briefing.destination}` : "",
+    briefing.originCity
+      ? `· ORIGEM (MANDATORY · render como badge bem visível em Champagne pill no topo do card de informações, com texto Rolex Green em Instrument Sans Bold uppercase): "SAINDO DE ${briefing.originCity.toUpperCase()}". Esta informação é OBRIGATÓRIA em toda arte promocional · NUNCA omita.`
+      : "· ATENÇÃO: origem não informada · adicione 'Cidade de origem' no cadastro do produto antes de gerar a arte.",
     briefing.hotelName
       ? `· Hotel: ${briefing.hotelName}${briefing.hotelStars ? ` · ${briefing.hotelStars}★` : ""}`
       : "",

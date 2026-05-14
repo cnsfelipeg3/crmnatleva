@@ -31,6 +31,7 @@ interface Props {
   productId: string | null;
   title: string;
   destination: string;
+  originCity?: string;
   shortDescription: string;
   priceFrom: string;
   pricePromo: string;
@@ -100,7 +101,7 @@ function groupByDay(list: Asset[]): { day: string; label: string; items: Asset[]
 
 export default function MarketingTab(props: Props) {
   const {
-    productId, title, destination, shortDescription, priceFrom, pricePromo,
+    productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
     hotelName, hotelStars, nights, seatsLeft, isPromo, paymentTerms,
   } = props;
@@ -183,6 +184,7 @@ export default function MarketingTab(props: Props) {
     cta: cta.trim() || "Garanta sua vaga",
     tone,
     destination: destination || undefined,
+    originCity: originCity || undefined,
     hotelName: hotelName || undefined,
     hotelStars: hotelStars || undefined,
     nights: nights || undefined,
@@ -215,6 +217,12 @@ export default function MarketingTab(props: Props) {
     }
     if (formatsToGenerate.length === 0) { toast.error("Selecione ao menos um formato"); return; }
     if (!refImage) { toast.error("Selecione a imagem de referência"); return; }
+    if (!originCity?.trim()) {
+      toast.error("Cidade de origem obrigatória", {
+        description: "Toda arte promocional precisa da origem (ex: São Paulo). Cadastre em 'Cidade de origem' na aba do produto.",
+      });
+      return;
+    }
 
     setGenerating(true);
     const briefing = buildBriefing();
@@ -340,6 +348,13 @@ export default function MarketingTab(props: Props) {
               <Badge variant="secondary" className="gap-1"><Calendar className="w-3 h-3" />
                 {formatBRDate(departureDate)}{returnDate ? ` → ${formatBRDate(returnDate)}` : ""}
               </Badge>
+            )}
+            {originCity ? (
+              <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/40 hover:bg-amber-500/15">
+                Saindo de {originCity}
+              </Badge>
+            ) : (
+              <Badge variant="destructive">Defina a cidade de origem</Badge>
             )}
             {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
             {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
