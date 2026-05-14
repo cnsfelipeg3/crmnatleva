@@ -10,7 +10,7 @@ const LOGO_GOLD_URL =
 
 export const NATLEVA_BRAND = {
   name: "natleva",
-  fullName: "NatLeva Viagens",
+  fullName: "natleva",
   handle: "@natlevaviagens",
   whatsapp: "+55 (11) 96639-6692",
   tagline: "Viagens são a vida em movimento",
