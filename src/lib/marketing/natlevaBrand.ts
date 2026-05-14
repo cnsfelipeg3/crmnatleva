@@ -10,7 +10,7 @@ const LOGO_GOLD_URL =
 
 export const NATLEVA_BRAND = {
   name: "natleva",
-  fullName: "NatLeva Viagens",
+  fullName: "natleva",
   handle: "@natlevaviagens",
   whatsapp: "+55 (11) 96639-6692",
   tagline: "Viagens são a vida em movimento",
@@ -133,7 +133,7 @@ export function buildBrandSystemPrompt(): string {
     "      · NEVER show only the total price · always lead with entry + installments.",
     "8. CTA: solid Champagne pill, Rolex Green text, Instrument Sans Bold uppercase tracked.",
     "9. Footer strip on Rolex Green:",
-    "      · Left: small wordmark or 'NatLeva Viagens' in Sand.",
+    "      · Center or left: ONLY the official 'natleva' wordmark (the lowercase serif logotype with the airplane in the 'n'). DO NOT add the word 'Viagens'. DO NOT write 'NatLeva Viagens'. The wordmark stands alone.",
     "      · Right: handle and WhatsApp in Sand, separated by a thin Champagne 4px rule.",
     "",
     "================================",
@@ -146,15 +146,57 @@ export function buildBrandSystemPrompt(): string {
     "· NEVER recreate the NatLeva wordmark · always render the attached logotype pixel-perfect.",
     "· NEVER use colors outside the official palette above.",
     "· NEVER use Comic Sans, Arial, Times New Roman or any generic font that breaks the editorial feel.",
-    "· NEVER show the total package price as a single big number · always lead with entry + installments.",
+"· NEVER print the total package price ANYWHERE on the artwork (no 'Total R$ X', no 'A partir de R$ X' showing the full sum). Show ONLY the entry value and installments. The total scares the customer.",
+    "· NEVER add the word 'Viagens' next to the natleva wordmark in the footer · the logotype stands alone.",
+    "· The 'Está incluso:' section is MANDATORY and must list at minimum: Aéreo de ida e volta · Hospedagem All Inclusive · Assessoria completa.",
+    "· Period of travel: when departure and return are in the SAME month/year, render compactly as 'De DD a DD/MM/AA' (example: 'De 09 a 14/03/27'). NEVER repeat month or year on both sides when they match.",
     "· All text MUST be perfectly legible, correctly spelled in Brazilian Portuguese, aligned to a clean baseline grid.",
     "",
     "OUTPUT: a single finished, polished, premium social ad that looks like it came straight out of the NatLeva brandbook · ready to publish today.",
   ].join("\n");
 }
 
+// Compacta período: "09/03/2027" + "14/03/2027" -> "De 09 a 14/03/27"
+// Mantém formato cheio quando mês ou ano divergem · "De 28/02 a 03/03/27" / "De 28/12/26 a 03/01/27"
+export function formatCompactPeriod(dep?: string, ret?: string): string | undefined {
+  if (!dep) return undefined;
+  const parse = (s: string) => {
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
+    if (!m) return null;
+    return { d: m[1], mo: m[2], y: m[3].length === 4 ? m[3].slice(2) : m[3] };
+  };
+  const a = parse(dep);
+  if (!a) return `Saída ${dep}`;
+  if (!ret) return `Saída ${a.d}/${a.mo}/${a.y}`;
+  const b = parse(ret);
+  if (!b) return `${dep} a ${ret}`;
+  if (a.mo === b.mo && a.y === b.y) return `De ${a.d} a ${b.d}/${b.mo}/${b.y}`;
+  if (a.y === b.y) return `De ${a.d}/${a.mo} a ${b.d}/${b.mo}/${b.y}`;
+  return `De ${a.d}/${a.mo}/${a.y} a ${b.d}/${b.mo}/${b.y}`;
+}
+
+// Itens padrão obrigatórios em todas as artes
+export const DEFAULT_INCLUDES = [
+  "Aéreo de ida e volta",
+  "Hospedagem All Inclusive",
+  "Assessoria completa",
+] as const;
+
+export function mergeIncludes(custom?: string[]): string[] {
+  const base = (custom || []).map((s) => s.trim()).filter(Boolean);
+  // Garante os 3 itens essenciais sempre presentes (sem duplicar)
+  const merged = [...base];
+  for (const item of DEFAULT_INCLUDES) {
+    if (!merged.some((m) => m.toLowerCase().includes(item.toLowerCase().split(" ")[0]))) {
+      merged.push(item);
+    }
+  }
+  return merged.slice(0, 4);
+}
+
 export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, aspect: string): string {
-  const includes = (briefing.includes || []).slice(0, 4);
+  const includes = mergeIncludes(briefing.includes);
+  const period = formatCompactPeriod(briefing.departureDate, briefing.returnDate);
   const lines = [
     `Generate a finished social media ad in ${formatLabel} format (aspect ratio ${aspect}).`,
     "",
@@ -166,27 +208,24 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
       ? `· Hotel: ${briefing.hotelName}${briefing.hotelStars ? ` · ${briefing.hotelStars}★` : ""}`
       : "",
     briefing.nights ? `· Duration: ${briefing.nights} noites` : "",
-    briefing.departureDate && briefing.returnDate
-      ? `· Period: ${briefing.departureDate} a ${briefing.returnDate}`
-      : briefing.departureDate ? `· Saída: ${briefing.departureDate}` : "",
-    includes.length
-      ? `· What is included (render as a small bullet list with mid-dot bullets in Hunter green): ${includes.join(" · ")}`
-      : "",
+    period ? `· Period (render EXACTLY like this, do NOT reformat): ${period}` : "",
+    `· "Está incluso:" section (render as a small bullet list with mid-dot bullets in Hunter green, EXACTLY these items in this order): ${includes.join(" · ")}`,
     briefing.payment
       ? [
-          "· PRICE BLOCK (render exactly like this · entry + installments lead, NEVER total alone):",
+          "· PRICE BLOCK (render EXACTLY like this · entry + installments ONLY · NEVER show or mention the total package price):",
           `   · Big Champagne figure: "${briefing.payment.entryLabel}"`,
           `   · Hunter sub line: "${briefing.payment.installmentsLabel}"`,
           briefing.payment.pixLabel ? `   · Eucalyptus tiny line: "${briefing.payment.pixLabel}"` : "",
-          briefing.payment.fromLabel ? `   · Caption above the card in Sand: "${briefing.payment.fromLabel}"` : "",
+          "   · DO NOT print the total amount anywhere on the artwork. The 'A partir de' caption is also forbidden if it shows the full sum.",
         ].filter(Boolean).join("\n")
       : "",
     briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
     `· CTA button text: "${briefing.cta}"`,
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
+    "· Footer wordmark: render ONLY the official 'natleva' logotype (no extra word 'Viagens', no tagline next to it).",
     "",
     "IMAGE 1 (attached) = destination background.",
-    "IMAGE 2 (attached) = OFFICIAL NatLeva logotype · render it pixel-perfect, do NOT recreate it.",
+    "IMAGE 2 (attached) = OFFICIAL NatLeva logotype · render it pixel-perfect, do NOT recreate it, do NOT add any extra text beside it.",
     "Apply the NatLeva brand identity defined in the system instructions (Rolex Green, Hunter, Champagne, Sand, Linen palette · Playfair Display + Instrument Sans typography).",
   ];
   return lines.filter(Boolean).join("\n");
@@ -220,15 +259,12 @@ export function buildSalesSubheadline(opts: {
   if (opts.hotelName) {
     parts.push(`${opts.hotelName}${opts.hotelStars ? ` ${opts.hotelStars}★` : ""}`);
   }
-  if (opts.departureDate && opts.returnDate) {
-    parts.push(`${opts.departureDate} a ${opts.returnDate}`);
-  } else if (opts.departureDate) {
-    parts.push(`Saída ${opts.departureDate}`);
-  }
+  const period = formatCompactPeriod(opts.departureDate, opts.returnDate);
+  if (period) parts.push(period);
   if (parts.length === 0 && opts.shortDescription) {
     return opts.shortDescription.slice(0, 110);
   }
-  return parts.join(" · ").slice(0, 110);
+  return parts.join(" · ").slice(0, 120);
 }
 
 export function buildScarcityBadge(seatsLeft?: string | number): string | undefined {
