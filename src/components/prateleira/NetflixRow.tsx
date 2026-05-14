@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import ProductPreviewModal, { type PreviewItem } from "./ProductPreviewModal";
 import SmartImage from "./SmartImage";
 import { DEFAULT_CARD_SIZES } from "@/lib/imageOptimizer";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 
 export type RowItem = {
   id: string;
