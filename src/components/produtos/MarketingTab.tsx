@@ -63,6 +63,7 @@ interface Asset {
   model: string | null;
   created_at: string;
   prompt: any;
+  caption?: string | null;
 }
 
 function formatBRDate(iso?: string) {
