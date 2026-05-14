@@ -278,10 +278,7 @@ export default function PrateleiraVendaPublica() {
 
   const handleCTA = async () => {
     // Lead já foi capturado no gate · vai direto pro WhatsApp com mensagem do pacote
-    if (!agencyWhatsApp) {
-      toast.error("WhatsApp da agência não configurado");
-      return;
-    }
+    const targetWhatsApp = resolveAgencyWhatsApp(agencyWhatsApp);
     const msg = buildCtaMessage(p);
     try {
       const email = sessionStorage.getItem(`prateleira_viewer_${slug}`);
