@@ -15,6 +15,7 @@ import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
+import MarketingTab from "@/components/produtos/MarketingTab";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
@@ -476,6 +477,7 @@ export default function ProdutoEditor() {
           <TabsTrigger value="preco">Preço & Pagamento</TabsTrigger>
           <TabsTrigger value="logistica">Logística</TabsTrigger>
           <TabsTrigger value="venda">Página de venda</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
         </TabsList>
 
         {/* BÁSICO */}
@@ -930,6 +932,21 @@ export default function ProdutoEditor() {
               </div>
             )}
           </Card>
+        </TabsContent>
+
+        {/* MARKETING */}
+        <TabsContent value="marketing" className="space-y-4 mt-4">
+          <MarketingTab
+            productId={recordId}
+            title={form.title}
+            destination={form.destination}
+            shortDescription={form.short_description}
+            priceFrom={form.price_from}
+            pricePromo={form.price_promo}
+            coverUrl={form.cover_image_url}
+            galleryUrls={form.gallery.split("\n").map((s) => s.trim()).filter(Boolean)}
+            departureDate={form.departure_date}
+          />
         </TabsContent>
       </Tabs>
     </div>
