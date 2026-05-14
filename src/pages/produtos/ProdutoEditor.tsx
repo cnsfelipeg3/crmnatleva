@@ -391,6 +391,7 @@ export default function ProdutoEditor() {
         balance_installments_max: numOrNull(form.payment_balance_installments_max) ?? 12,
         balance_min_installment: numOrNull(form.payment_balance_min_installment) ?? 0,
         balance_interest_percent: numOrNull(form.payment_balance_interest_percent) ?? 0,
+        balance_custom_installments: form.payment_balance_custom_installments.filter((v) => Number.isFinite(v) && v > 0),
         pix_discount_percent: numOrNull(form.payment_pix_discount_percent) ?? 0,
         min_days_before_checkin: numOrNull(form.payment_days_before) ?? 20,
         notes: form.payment_notes || null,
