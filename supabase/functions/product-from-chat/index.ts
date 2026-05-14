@@ -99,27 +99,32 @@ const SET_PRODUCT_TOOL = {
 };
 
 async function callProductAI(model: string, apiKey: string, messages: unknown[], draftSummary: string) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT + draftSummary },
-        ...messages,
-      ],
-      tools: [SET_PRODUCT_TOOL],
-      tool_choice: { type: "function", function: { name: "set_product" } },
-    }),
-  });
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT + draftSummary },
+          ...messages,
+        ],
+        tools: [SET_PRODUCT_TOOL],
+        tool_choice: { type: "function", function: { name: "set_product" } },
+      }),
+    });
 
-  if (!response.ok) {
-    const detail = await response.text();
-    console.error(`[product-from-chat] AI gateway error model=${model} status=${response.status}`, detail.slice(0, 500));
-    return { ok: false as const, status: response.status, detail };
+    if (!response.ok) {
+      const detail = await response.text();
+      console.error(`[product-from-chat] AI gateway error model=${model} status=${response.status}`, detail.slice(0, 500));
+      return { ok: false as const, status: response.status, detail };
+    }
+
+    return { ok: true as const, data: await response.json() };
+  } catch (error) {
+    console.error(`[product-from-chat] AI gateway fetch failed model=${model}`, error);
+    return { ok: false as const, status: 0, detail: error instanceof Error ? error.message : "fetch_failed" };
   }
-
-  return { ok: true as const, data: await response.json() };
 }
 
 function serviceFallback(message = "A IA ficou indisponível por alguns instantes. Tenta enviar de novo em seguida.") {
@@ -233,8 +238,6 @@ serve(async (req) => {
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("product-from-chat error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return serviceFallback("Não consegui processar agora. Tenta enviar de novo em seguida.");
   }
 });
