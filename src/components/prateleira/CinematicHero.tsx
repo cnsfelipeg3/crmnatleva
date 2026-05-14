@@ -265,7 +265,7 @@ export default function CinematicHero({
               <DropdownMenuItem onClick={() => onShare("facebook")}>
                 <Facebook className="w-4 h-4 mr-2" /> Facebook
               </DropdownMenuItem>
-              {typeof navigator !== "undefined" && (navigator as any).share && (
+              {typeof navigator !== "undefined" && typeof navigator.share === "function" && (
                 <DropdownMenuItem onClick={() => onShare("native")}>
                   <Share2 className="w-4 h-4 mr-2" /> Mais opções
                 </DropdownMenuItem>
