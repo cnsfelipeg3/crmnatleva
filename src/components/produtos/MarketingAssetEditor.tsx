@@ -466,16 +466,25 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-sm">Editor de arte · {fmt.label}</DialogTitle>
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex items-center gap-1 border rounded-md px-1 h-8">
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)))} title="Diminuir zoom">−</Button>
+                <span className="text-[11px] tabular-nums w-10 text-center">{Math.round(zoom * 100)}%</span>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom((z) => Math.min(3, +(z + 0.1).toFixed(2)))} title="Aumentar zoom">+</Button>
+                <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setZoom(1)} title="Reset zoom">⌂</Button>
+              </div>
+              <Button variant="outline" size="sm" onClick={undo} disabled={history.length < 2} title="Desfazer (Ctrl+Z)">
+                Desfazer
+              </Button>
               <Button variant="outline" size="sm" onClick={runDetect} disabled={detecting || !imageReady}>
                 {detecting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ScanText className="w-4 h-4 mr-1.5" />}
                 {detectedWords.length > 0 ? `${detectedWords.length} textos detectados` : "Detectar textos clicáveis"}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving}>
+              <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving || !imageReady}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
                 Baixar PNG
               </Button>
-              <Button size="sm" onClick={() => exportAndSave("save")} disabled={saving}>
+              <Button size="sm" onClick={() => exportAndSave("save")} disabled={saving || !imageReady}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
                 Salvar como nova arte
               </Button>
@@ -494,7 +503,11 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
             <div
               ref={stageRef}
               className="relative shadow-xl rounded-md overflow-hidden bg-black select-none"
-              style={{ aspectRatio: aspect, width: "min(100%, 720px)" }}
+              style={{
+                aspectRatio: aspect,
+                width: `min(100%, ${Math.round(720 * zoom)}px)`,
+                transition: "width 120ms ease",
+              }}
               onPointerDown={() => setSelectedId(null)}
             >
               {localImageUrl && (
