@@ -26,8 +26,8 @@ export default function TabBar() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const location = useLocation();
 
-  if (tabs.length === 0) return null;
-
+  // Nunca esconder a barra · garante acesso à função "Nova aba" para todos os usuários,
+  // mesmo quando ainda não há abas (estado inicial / pós-fechamento de todas).
   const handleNew = (path: string) => {
     if (tabs.length >= MAX_TABS) {
       toast.warning(`Limite de ${MAX_TABS} abas atingido. Feche alguma para abrir uma nova.`);
@@ -38,9 +38,10 @@ export default function TabBar() {
 
   return (
     <div
-      className="hidden md:flex items-stretch gap-0.5 px-2 h-9 border-b border-border/30 bg-muted/30 shrink-0 z-30 select-none overflow-x-auto"
+      className="flex items-stretch gap-0.5 px-2 h-9 border-b border-border/30 bg-muted/30 shrink-0 z-30 select-none overflow-x-auto"
       role="tablist"
       aria-label="Abas do sistema"
+      style={{ touchAction: "pan-x" }}
     >
       {tabs.map((tab, idx) => {
         const isActive = tab.id === activeId;
