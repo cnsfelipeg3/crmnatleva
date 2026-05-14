@@ -225,3 +225,113 @@ function Kpi({ icon, label, value }: { icon: React.ReactNode; label: string; val
     </div>
   );
 }
+
+function ViewerRow({ v, productId }: { v: Viewer; productId: string }) {
+  const [open, setOpen] = useState(false);
+  const [events, setEvents] = useState<ViewerEvent[] | null>(null);
+  const [loadingEv, setLoadingEv] = useState(false);
+
+  const toggle = async () => {
+    const next = !open;
+    setOpen(next);
+    if (next && events === null && v.email) {
+      setLoadingEv(true);
+      try {
+        const { data } = await (supabase as any)
+          .from("prateleira_viewer_events")
+          .select("*")
+          .eq("product_id", productId)
+          .eq("email", v.email)
+          .order("created_at", { ascending: true })
+          .limit(500);
+        setEvents(data || []);
+      } finally { setLoadingEv(false); }
+    }
+  };
+
+  // Resumo de seções vistas
+  const sectionsSeen = useMemo(() => {
+    if (!events) return [];
+    const map = new Map<string, number>();
+    for (const e of events) {
+      if (e.event_type === "section_view" && e.section) {
+        map.set(e.section, (map.get(e.section) || 0) + 1);
+      }
+    }
+    return Array.from(map.entries());
+  }, [events]);
+
+  const clicks = useMemo(() => (events || []).filter((e) => e.event_type === "click"), [events]);
+
+  return (
+    <div className="rounded-lg border border-border/60 bg-card overflow-hidden">
+      <button
+        onClick={toggle}
+        className="w-full px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-left hover:bg-muted/40 transition-colors"
+      >
+        <div className="min-w-0 flex-1">
+          <div className="font-medium truncate flex items-center gap-2">
+            {v.name || "Sem nome"}
+            {v.cta_clicked && <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10px]">CTA</Badge>}
+            {v.whatsapp_clicked && !v.cta_clicked && <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 text-[10px]">WhatsApp</Badge>}
+          </div>
+          <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+            {v.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {v.email}</span>}
+            {v.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {v.phone}</span>}
+          </div>
+        </div>
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <MapPin className="w-3 h-3" />
+          {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"}
+        </div>
+        <Badge variant="outline" className="text-[10px]">{v.device_type || "desktop"}</Badge>
+        <div className="text-xs text-muted-foreground tabular-nums flex items-center gap-1">
+          <Clock className="w-3 h-3" /> {fmtDuration(v.active_seconds)}
+        </div>
+        <div className="text-xs text-muted-foreground tabular-nums">
+          {v.total_views || 1} visita{(v.total_views || 1) > 1 ? "s" : ""} · {fmtDate(v.last_active_at)}
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+
+      {open && (
+        <div className="border-t border-border/60 bg-muted/20 px-4 py-3 space-y-3">
+          {loadingEv ? (
+            <div className="text-xs text-muted-foreground flex items-center gap-2"><Loader2 className="w-3 h-3 animate-spin" /> Carregando comportamento...</div>
+          ) : !events || events.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Sem eventos detalhados ainda. Eventos novos aparecem aqui assim que essa pessoa voltar a acessar.</p>
+          ) : (
+            <>
+              {sectionsSeen.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5">Seções acessadas</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {sectionsSeen.map(([sec, count]) => (
+                      <Badge key={sec} variant="secondary" className="text-[10px]">
+                        {SECTION_LABEL[sec] || sec}{count > 1 ? ` ·${count}` : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {clicks.length > 0 && (
+                <div>
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1"><MousePointerClick className="w-3 h-3" /> Cliques</div>
+                  <div className="space-y-1">
+                    {clicks.map((c) => (
+                      <div key={c.id} className="text-xs flex items-center gap-2">
+                        <span className="text-muted-foreground tabular-nums">{fmtDate(c.created_at)}</span>
+                        <span className="font-medium">{TARGET_LABEL[c.target] || c.target || "Clique"}</span>
+                        {c.section && <span className="text-muted-foreground">· {SECTION_LABEL[c.section] || c.section}</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
