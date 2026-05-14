@@ -13,7 +13,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type ItemType = "flight" | "hotel" | "experience" | "cruise" | "insurance";
+type ItemType =
+  | "flight"
+  | "hotel"
+  | "experience"
+  | "cruise"
+  | "insurance"
+  | "transfer"
+  | "train"
+  | "car"
+  | "tour"
+  | "ticket"
+  | "itinerary"
+  | "other";
 
 const FLIGHT_SCHEMA = {
   name: "extract_flight",
