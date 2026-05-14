@@ -115,6 +115,16 @@ export default function PrateleiraVendaPublica() {
     })();
   }, [slug, isPrintMode]);
 
+  // Inicia tracking de tempo + cliques + seções vistas após o gate
+  useEffect(() => {
+    if (!unlocked || !p?.id || isPrintMode) return;
+    let email = "";
+    try { email = sessionStorage.getItem(`prateleira_viewer_${slug}`) || ""; } catch {}
+    if (!email) return;
+    trackerRef.current = initViewerTracking({ productId: p.id, email });
+    return () => { trackerRef.current?.dispose(); trackerRef.current = null; };
+  }, [unlocked, p?.id, slug, isPrintMode]);
+
   const handleGateSubmit = async ({ name, email, phone, countryCode }: { name: string; email: string; phone: string; countryCode: string }) => {
     if (!p?.id) return;
     setGateLoading(true);
