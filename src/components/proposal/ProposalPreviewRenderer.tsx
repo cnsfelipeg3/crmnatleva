@@ -8,7 +8,8 @@ import {
   BedDouble, Bath, Mountain, X, Briefcase,
   Ship, Anchor, Sun, Moon, Navigation,
   ShieldCheck, Gift, Heart, Stethoscope, Plus as PlusIcon,
-  Share2,
+  Share2, Train, Bus, Ticket, Map as MapIcon, Package,
+  Tag, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
