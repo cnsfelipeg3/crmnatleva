@@ -98,49 +98,58 @@ export default function PrateleiraVitrine() {
 
   const filtersActive = kind !== "all" || destination !== "all" || onlyPromo || q.trim() !== "";
 
-  // Rows
-  const promos = useMemo(() => items.filter((p) => p.is_promo).map(toRowItem), [items]);
-  const trending = useMemo(
-    () => items.slice().sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)).slice(0, 12).map(toRowItem),
-    [items]
-  );
-  const soon = useMemo(
-    () => items
-      .filter((p) => p.departure_date)
-      .slice()
-      .sort((a, b) => (a.departure_date || "").localeCompare(b.departure_date || ""))
-      .slice(0, 12)
-      .map(toRowItem),
-    [items]
-  );
-  const fresh = useMemo(
-    () => items.slice().sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 12).map(toRowItem),
-    [items]
-  );
-  const byDestination = useMemo(() => {
-    const map = new Map<string, Product[]>();
-    items.forEach((p) => {
-      if (!p.destination) return;
-      if (!map.has(p.destination)) map.set(p.destination, []);
-      map.get(p.destination)!.push(p);
-    });
-    // Só vira fileira própria quando há >= 3 itens · evita carrossel "torto" com 1 card
-    return Array.from(map.entries())
-      .filter(([, arr]) => arr.length >= 3)
-      .sort((a, b) => b[1].length - a[1].length);
-  }, [items]);
+  // Rows · cada produto aparece em apenas UMA seção (prioridade: promo > em alta > saídas > destino > mais destinos > novos)
+  const rows = useMemo(() => {
+    const used = new Set<string>();
+    const take = (arr: Product[]) => {
+      const out: Product[] = [];
+      for (const p of arr) {
+        if (used.has(p.id)) continue;
+        used.add(p.id);
+        out.push(p);
+      }
+      return out;
+    };
 
-  // Destinos com poucos itens (1 ou 2) viram uma fileira agregada "Mais destinos"
-  const moreDestinations = useMemo(() => {
+    const promos = take(items.filter((p) => p.is_promo));
+    const trending = take(
+      items.slice().sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999)).slice(0, 12)
+    );
+    const soon = take(
+      items
+        .filter((p) => p.departure_date)
+        .slice()
+        .sort((a, b) => (a.departure_date || "").localeCompare(b.departure_date || ""))
+        .slice(0, 12)
+    );
+
     const grouped = new Map<string, Product[]>();
     items.forEach((p) => {
-      if (!p.destination) return;
+      if (!p.destination || used.has(p.id)) return;
       if (!grouped.has(p.destination)) grouped.set(p.destination, []);
       grouped.get(p.destination)!.push(p);
     });
-    const small = Array.from(grouped.entries()).filter(([, arr]) => arr.length < 3);
-    return small.flatMap(([, arr]) => arr).map(toRowItem);
+    const byDestination: Array<[string, Product[]]> = [];
+    const smallDest: Product[] = [];
+    Array.from(grouped.entries())
+      .sort((a, b) => b[1].length - a[1].length)
+      .forEach(([dest, arr]) => {
+        if (arr.length >= 3) {
+          const taken = take(arr);
+          if (taken.length) byDestination.push([dest, taken]);
+        } else {
+          smallDest.push(...arr);
+        }
+      });
+    const moreDestinations = take(smallDest);
+    const fresh = take(
+      items.slice().sort((a, b) => (b.created_at || "").localeCompare(a.created_at || "")).slice(0, 12)
+    );
+
+    return { promos, trending, soon, byDestination, moreDestinations, fresh };
   }, [items]);
+
+  const { promos, trending, soon, byDestination, moreDestinations, fresh } = rows;
 
   const clearFilters = () => { setKind("all"); setDestination("all"); setQ(""); setOnlyPromo(false); };
 
@@ -272,21 +281,21 @@ export default function PrateleiraVitrine() {
               <NetflixRow
                 title="Promoções imperdíveis"
                 subtitle="Ofertas com desconto real, por tempo limitado"
-                items={promos}
+                items={promos.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Em alta na NatLeva"
               subtitle="As viagens mais procuradas da semana"
-              items={trending}
+              items={trending.map(toRowItem)}
               whatsapp={whatsapp}
             />
             {soon.length > 0 && (
               <NetflixRow
                 title="Saídas mais próximas"
                 subtitle="Embarque já com tudo organizado"
-                items={soon}
+                items={soon.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
@@ -303,14 +312,14 @@ export default function PrateleiraVitrine() {
               <NetflixRow
                 title="Mais destinos"
                 subtitle={`${moreDestinations.length} experiência(s) em outros destinos`}
-                items={moreDestinations}
+                items={moreDestinations.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
-              items={fresh}
+              items={fresh.map(toRowItem)}
               whatsapp={whatsapp}
             />
           </>
