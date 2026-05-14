@@ -211,7 +211,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
       : "",
     briefing.nights ? `· Duration: ${briefing.nights} noites` : "",
     period ? `· Period (render EXACTLY like this, do NOT reformat): ${period}` : "",
-    `· "Está incluso:" section (render as a small bullet list with mid-dot bullets in Hunter green, EXACTLY these items in this order): ${includes.join(" · ")}`,
+    `· "Está incluso:" section (MANDATORY · render with the bold Hunter-green title "Está incluso:" centered, then EACH item below as ITS OWN bullet line, one per row, NEVER on the same line, NEVER joined by mid-dots · use a small Champagne mid-dot as bullet marker · items in this exact order):\n${includes.map((i) => `      · ${i}`).join("\n")}`,
     briefing.payment
       ? [
           "· PRICE BLOCK (render EXACTLY like this · entry + installments ONLY · NEVER show or mention the total package price):",
