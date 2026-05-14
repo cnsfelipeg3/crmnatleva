@@ -307,7 +307,7 @@ export default function PrateleiraVendaPublica() {
           )}
 
           {p.description && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="description">
               <h2 className="font-serif text-xl mb-3">Sobre essa viagem</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.description}</div>
             </Card>
