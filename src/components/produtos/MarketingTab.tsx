@@ -132,6 +132,16 @@ export default function MarketingTab(props: Props) {
     return Array.from(new Set(arr));
   }, [coverUrl, galleryUrls]);
 
+  // Caption de pax · reflete EXATAMENTE o pacote do produto (adultos + crianças = total)
+  const paxLabel = useMemo(() => {
+    const min = Number(paxMin) || 0;
+    const max = Number(paxMax) || 0;
+    if (min && max && min !== max) return `Valor total para ${min} a ${max} pessoas`;
+    const total = max || min;
+    if (!total) return "Valor total do pacote";
+    return `Valor total para ${total} ${total === 1 ? "pessoa" : "pessoas"}`;
+  }, [paxMin, paxMax]);
+
   // Plano de pagamento atrativo (entrada + parcelas) · não exibe valor total cheio
   const payment: PaymentSnapshot | undefined = useMemo(() => {
     const price = Number(pricePromo) || Number(priceFrom) || 0;
@@ -152,8 +162,9 @@ export default function MarketingTab(props: Props) {
         ? `Ou ${formatMoneyBR(plan.pixTotal)} à vista no PIX (-${plan.pixDiscountPercent}%)`
         : undefined,
       fromLabel: `A partir de ${formatMoneyBR(plan.total)} por pessoa`,
+      paxLabel,
     };
-  }, [priceFrom, pricePromo, departureDate, paymentTerms]);
+  }, [priceFrom, pricePromo, departureDate, paymentTerms, paxLabel]);
 
   const scarcity = useMemo(() => buildScarcityBadge(seatsLeft), [seatsLeft]);
 
