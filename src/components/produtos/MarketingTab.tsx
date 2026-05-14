@@ -106,7 +106,7 @@ export default function MarketingTab(props: Props) {
   const {
     productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
-    hotelName, hotelStars, nights, seatsLeft, isPromo, paymentTerms,
+    hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, isPromo, paymentTerms,
   } = props;
 
   const [headline, setHeadline] = useState("");
