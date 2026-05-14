@@ -211,9 +211,10 @@ serve(async (req) => {
     if (body.reference_image_url) {
       userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.reference_image_url) } });
     }
-    if (body.refine_from_url) {
-      userContent.push({ type: "image_url", image_url: { url: await fetchRefineImageWithoutLogoAsDataUrl(body.refine_from_url) } });
-    }
+    // Não enviamos a arte anterior no refino porque ela já contém o logo oficial
+    // stampado. Se o modelo vê esse logo, ele tenta preservá-lo e cria duplicação.
+    // O refino usa a foto original + briefing + instrução textual, e o único logo
+    // entra depois, via post-processing transparente.
     // Try preferred model -> flash -> fallback
     const order = body.use_pro
       ? [MODEL_PRO, MODEL_FLASH, MODEL_FALLBACK]
