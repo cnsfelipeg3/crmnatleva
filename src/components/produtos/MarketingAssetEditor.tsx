@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Type, Square, Trash2, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
   Loader2, Save, Download, Plus, X, Copy as CopyIcon, ArrowUp, ArrowDown,
-  ScanText, ShieldAlert,
+  ScanText,
 } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
