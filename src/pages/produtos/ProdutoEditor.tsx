@@ -1095,6 +1095,8 @@ function PaymentPreview({ form }: { form: any }) {
     );
   }
 
+  const customInst = (form.payment_balance_custom_installments || []).filter((v: number) => Number.isFinite(v) && v > 0);
+
   const plan = computeNatlevaPlan(price, form.departure_date || null, {
     entryPercent: Number(form.payment_entry_percent) || 30,
     daysBefore: Number(form.payment_days_before) || 20,
@@ -1102,6 +1104,7 @@ function PaymentPreview({ form }: { form: any }) {
     maxInstallments: Number(form.payment_balance_installments_max) || 12,
     minInstallment: Number(form.payment_balance_min_installment) || 0,
     pixDiscountPercent: Number(form.payment_pix_discount_percent) || 0,
+    customInstallments: customInst.length > 0 ? customInst : undefined,
   });
 
   if (!plan) return null;
@@ -1127,6 +1130,7 @@ function PaymentPreview({ form }: { form: any }) {
           currency={form.currency || "BRL"}
           entryPercent={Number(form.payment_entry_percent) || 30}
           daysBefore={Number(form.payment_days_before) || 20}
+          customInstallments={customInst.length > 0 ? customInst : undefined}
         />
         <div className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-3 text-sm">
           <div className="font-semibold text-foreground">Resumo da configuração</div>
