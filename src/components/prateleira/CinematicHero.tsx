@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useScroll, useTransform, useSpring, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Share2, MapPin, Calendar, Sparkles, Play, Images } from "lucide-react";
+import { ArrowLeft, Share2, MapPin, Calendar, Sparkles, Play, Images, MessageCircle, Link2, Twitter, Facebook, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Props = {
   cover?: string | null;
