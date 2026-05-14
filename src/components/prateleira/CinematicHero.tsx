@@ -4,6 +4,7 @@ import { ArrowLeft, Share2, MapPin, Calendar, Sparkles, Play, Images, MessageCir
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import natlevaChampagneLogo from "@/assets/logo-natleva-champagne.png";
 
 type Props = {
   cover?: string | null;
@@ -285,16 +286,22 @@ export default function CinematicHero({
             transformStyle: "preserve-3d",
           }}
         >
-          {/* Logo NatLeva oficial · alinhado à esquerda, acima das badges */}
-          <motion.img
-            src="https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png"
-            alt="NatLeva"
+          {/* Logo NatLeva oficial · sem fundo, com fade verde sutil */}
+          <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.85, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="block mb-4 sm:mb-5 h-10 sm:h-14 w-auto select-none pointer-events-none drop-shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
-            draggable={false}
-          />
+            className="relative mb-4 sm:mb-5 flex h-16 w-fit min-w-44 items-center justify-start overflow-visible sm:h-20 sm:min-w-64"
+          >
+            <div className="absolute -inset-x-5 -inset-y-3 rounded-full bg-primary/80 blur-2xl opacity-70" aria-hidden="true" />
+            <div className="absolute -inset-x-3 -inset-y-2 rounded-full bg-primary/35 blur-md opacity-80" aria-hidden="true" />
+            <img
+              src={natlevaChampagneLogo}
+              alt="NatLeva"
+              className="relative z-10 block h-10 w-auto select-none object-contain drop-shadow-[0_8px_24px_hsl(var(--background)/0.55)] sm:h-14"
+              draggable={false}
+            />
+          </motion.div>
 
           {/* Top eyebrow */}
           <motion.div
