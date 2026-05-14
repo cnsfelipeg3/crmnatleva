@@ -92,39 +92,29 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginY = Math.round(base.height * 0.045);
 
   // ─────────────────────────────────────────────────────────────
-  // Fade verde NatLeva por trás do logo · sem fundo sólido.
-  // Agora a IA é proibida de gerar qualquer logo, então o halo serve
-  // apenas para destacar o PNG transparente oficial com suavidade.
+  // Vinheta verde de canto (top-left) · forte na borda, fade pra dentro.
+  // Sem núcleo radial centrado no logo · evita aparência de "foco"/blob.
+  // O verde nasce no canto (0,0) e enfraquece conforme avança para
+  // o interior da imagem, igual à referência aprovada.
   // ─────────────────────────────────────────────────────────────
-  const reservedW = base.width * 0.28;
-  const reservedH = base.height * 0.16;
-  const haloCx = marginX + targetLogoW / 2;
-  const haloCy = marginY + targetLogoH / 2;
-  const haloRx = reservedW / 2;
-  const haloRy = reservedH / 2;
-  const corePeak = 0.32;          // núcleo pequeno · evita aparência de placa/fundo
-  const maxAlpha = 190;           // destaque forte, mas ainda com aparência de fade
+  const reachX = base.width * 0.55;   // alcance horizontal do fade
+  const reachY = base.height * 0.45;  // alcance vertical do fade
+  const maxAlpha = 165;               // intensidade máxima no canto
   const greenR = 20, greenG = 69, greenB = 47; // #14452F · Rolex Green NatLeva
 
-  const xMin = Math.max(0, Math.floor(haloCx - haloRx));
-  const xMax = Math.min(base.width - 1, Math.ceil(haloCx + haloRx));
-  const yMin = Math.max(0, Math.floor(haloCy - haloRy));
-  const yMax = Math.min(base.height - 1, Math.ceil(haloCy + haloRy));
+  const xMax = Math.min(base.width - 1, Math.ceil(reachX));
+  const yMax = Math.min(base.height - 1, Math.ceil(reachY));
 
-  for (let y = yMin; y <= yMax; y++) {
-    for (let x = xMin; x <= xMax; x++) {
-      const dx = (x - haloCx) / haloRx;
-      const dy = (y - haloCy) / haloRy;
-      const d = Math.sqrt(dx * dx + dy * dy);
+  for (let y = 0; y <= yMax; y++) {
+    for (let x = 0; x <= xMax; x++) {
+      // Distância normalizada a partir do canto (0,0)
+      const nx = x / reachX;
+      const ny = y / reachY;
+      const d = Math.sqrt(nx * nx + ny * ny);
       if (d >= 1) continue;
-      // Núcleo suave até corePeak, depois smoothstep até 0 na borda
-      let fade: number;
-      if (d <= corePeak) {
-        fade = 1;
-      } else {
-        const t = 1 - (d - corePeak) / (1 - corePeak);
-        fade = t * t * (3 - 2 * t);
-      }
+      // Easing suave (smoothstep invertido) · forte na borda, suave no fim
+      const t = 1 - d;
+      const fade = t * t * t * (t * (t * 6 - 15) + 10); // smootherstep
       const a = Math.round(maxAlpha * fade);
       if (a <= 0) continue;
 
