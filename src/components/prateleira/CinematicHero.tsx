@@ -223,7 +223,7 @@ export default function CinematicHero({
           transition={{ delay: 1.4, duration: 0.6 }}
           className="flex items-center gap-2"
         >
-          {onOpenGallery && (galleryCount ?? 0) > 1 && (
+          {onOpenGallery && (galleryCount ?? 0) >= 1 && (
             <Button
               variant="secondary"
               size="sm"
