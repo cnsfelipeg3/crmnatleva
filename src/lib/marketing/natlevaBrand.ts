@@ -54,6 +54,7 @@ export interface PaymentSnapshot {
   installmentsLabel: string;   // ex: "+ 11x R$ 439 sem juros no boleto"
   pixLabel?: string;           // ex: "Ou R$ 6.555 à vista no PIX (-5%)"
   fromLabel?: string;          // ex: "A partir de R$ 6.890 por pessoa"
+  paxLabel?: string;           // ex: "Valor total para 3 pessoas" · derivado do pax do produto
 }
 
 export interface ArtBriefing {
