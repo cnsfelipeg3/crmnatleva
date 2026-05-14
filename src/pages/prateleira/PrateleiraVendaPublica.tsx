@@ -401,7 +401,7 @@ export default function PrateleiraVendaPublica() {
           )}
 
           {p.how_it_works && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="how_it_works">
               <h2 className="font-serif text-xl mb-3">Como funciona</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.how_it_works}</div>
             </Card>
