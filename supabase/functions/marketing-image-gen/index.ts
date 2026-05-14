@@ -145,7 +145,7 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) por cima
   // do halo verde. Único logo presente na arte final.
   base.composite(resizedLogo, marginX, marginY);
-  return await base.encode();
+  return new Uint8Array(await base.encode());
 }
 
 serve(async (req) => {
