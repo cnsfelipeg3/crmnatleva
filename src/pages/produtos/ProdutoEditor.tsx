@@ -834,8 +834,112 @@ export default function ProdutoEditor() {
                   <p className="text-[11px] text-muted-foreground mt-1">Aplicado quando o cliente paga 100% à vista no PIX</p>
                 </div>
               </div>
-              <div className="mt-4">
-                <Label>Observações de pagamento (opcional)</Label>
+
+              {/* ====== Personalizar parcelas individualmente ====== */}
+              <div className="mt-5 rounded-lg border border-border/60 bg-muted/20 p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <Label className="text-sm font-semibold text-foreground">Personalizar valor de cada parcela</Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      Defina manualmente quantos boletos e o valor de cada um · ignora "máximo de parcelas" e "valor mínimo"
+                    </p>
+                  </div>
+                  <Switch
+                    checked={form.payment_balance_custom_installments.length > 0}
+                    onCheckedChange={(on) => {
+                      if (on) {
+                        // Inicializa com nº = max parcelas, valor sugerido = saldo / n
+                        const total = Number(form.price_promo) || Number(form.price_from) || 0;
+                        const entry = Number(form.payment_entry_amount) > 0
+                          ? Number(form.payment_entry_amount)
+                          : Math.round(total * (Number(form.payment_entry_percent) || 30) / 100);
+                        const balance = Math.max(0, total - entry);
+                        const n = Math.max(1, Math.min(12, Number(form.payment_balance_installments_max) || 6));
+                        const v = balance > 0 ? Math.round((balance / n) * 100) / 100 : 0;
+                        set("payment_balance_custom_installments", Array.from({ length: n }, () => v));
+                      } else {
+                        set("payment_balance_custom_installments", []);
+                      }
+                    }}
+                  />
+                </div>
+
+                {form.payment_balance_custom_installments.length > 0 && (() => {
+                  const list = form.payment_balance_custom_installments;
+                  const total = Number(form.price_promo) || Number(form.price_from) || 0;
+                  const entry = Number(form.payment_entry_amount) > 0
+                    ? Number(form.payment_entry_amount)
+                    : Math.round(total * (Number(form.payment_entry_percent) || 30) / 100);
+                  const balance = Math.max(0, total - entry);
+                  const sum = list.reduce((a, b) => a + (Number(b) || 0), 0);
+                  const diff = Math.round((sum - balance) * 100) / 100;
+                  const updateAt = (i: number, v: number) => {
+                    const next = [...list];
+                    next[i] = v;
+                    set("payment_balance_custom_installments", next);
+                  };
+                  return (
+                    <div className="space-y-2">
+                      {list.map((v, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <span className="text-xs text-muted-foreground w-20 shrink-0">Parcela {i + 1}</span>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={v}
+                            onChange={(e) => updateAt(i, Number(e.target.value) || 0)}
+                            className="flex-1"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => set("payment_balance_custom_installments", list.filter((_, j) => j !== i))}
+                            aria-label="Remover parcela"
+                          >
+                            <Trash2 className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex flex-wrap items-center gap-2 pt-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => set("payment_balance_custom_installments", [...list, list[list.length - 1] ?? 0])}
+                        >
+                          Adicionar parcela
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            if (list.length === 0) return;
+                            const v = Math.round((balance / list.length) * 100) / 100;
+                            set("payment_balance_custom_installments", list.map(() => v));
+                          }}
+                        >
+                          Distribuir saldo igualmente
+                        </Button>
+                        <div className="ml-auto text-[11px] text-right">
+                          <div className="text-muted-foreground">
+                            Soma: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(sum, form.currency)}</span>
+                            {" · "}Saldo esperado: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(balance, form.currency)}</span>
+                          </div>
+                          {Math.abs(diff) > 1 && (
+                            <div className={diff > 0 ? "text-rose-600 dark:text-rose-400 font-semibold mt-0.5" : "text-amber-600 dark:text-amber-400 font-semibold mt-0.5"}>
+                              {diff > 0 ? "Excesso" : "Falta"} de {formatMoneyBR(Math.abs(diff), form.currency)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="mt-4 hidden">{/* spacer */}</div>
                 <Textarea
                   value={form.payment_notes}
                   onChange={(e) => set("payment_notes", e.target.value)}
