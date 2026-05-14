@@ -7031,6 +7031,7 @@ export type Database = {
       }
       product_marketing_assets: {
         Row: {
+          caption: string | null
           created_at: string
           format: string
           id: string
@@ -7040,6 +7041,7 @@ export type Database = {
           url: string
         }
         Insert: {
+          caption?: string | null
           created_at?: string
           format: string
           id?: string
@@ -7049,6 +7051,7 @@ export type Database = {
           url: string
         }
         Update: {
+          caption?: string | null
           created_at?: string
           format?: string
           id?: string
