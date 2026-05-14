@@ -14,12 +14,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Type, Square, Trash2, Bold, Italic, AlignLeft, AlignCenter, AlignRight,
   Loader2, Save, Download, Plus, X, Copy as CopyIcon, ArrowUp, ArrowDown,
+  ScanText,
 } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { supabase } from "@/integrations/supabase/client";
 import { NATLEVA_BRAND } from "@/lib/marketing/natlevaBrand";
 import { findFormat, type FormatId } from "@/lib/marketing/formats";
+import {
+  detectTextRegions,
+  findForbiddenInBlob,
+  type DetectedWord,
+} from "@/lib/marketing/ocrCheck";
 
 type LayerType = "text" | "rect";
 
@@ -138,6 +144,8 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [imageReady, setImageReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [detectedWords, setDetectedWords] = useState<DetectedWord[]>([]);
+  const [detecting, setDetecting] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
     id: string; mode: "move" | "resize"; startX: number; startY: number;
@@ -155,6 +163,7 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     setLayers([]);
     setSelectedId(null);
     setImageReady(false);
+    setDetectedWords([]);
   }, [asset?.id]);
 
   if (!asset || !fmt) return null;
@@ -243,6 +252,57 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     });
   };
 
+  // OCR · detecta palavras na arte para permitir clique-para-editar
+  async function runDetect() {
+    if (!asset) return;
+    setDetecting(true);
+    try {
+      const words = await detectTextRegions(asset.url);
+      setDetectedWords(words);
+      if (words.length === 0) toast.info("Nenhum texto detectado na arte");
+      else toast.success(`${words.length} palavras detectadas · clique sobre uma para editar`);
+    } catch (e: any) {
+      toast.error("Falha no OCR", { description: e?.message });
+    } finally {
+      setDetecting(false);
+    }
+  }
+
+  // Clique em uma palavra detectada · cria patch (cobre original) + camada de texto editável
+  function editDetectedWord(w: DetectedWord) {
+    const padX = 0.4, padY = 0.3;
+    const patch = newRectLayer({
+      xPct: Math.max(0, w.xPct - padX),
+      yPct: Math.max(0, w.yPct - padY),
+      wPct: w.wPct + padX * 2,
+      hPct: w.hPct + padY * 2,
+      bgColor: w.bg,
+      radius: 2,
+      opacity: 1,
+      z: 0,
+    });
+    const fontSizePct = Math.max(1.5, Math.min(12, w.hPct * 0.95));
+    const text = newTextLayer({
+      xPct: w.xPct,
+      yPct: w.yPct - 0.2,
+      wPct: w.wPct + 6,
+      hPct: w.hPct,
+      text: w.text,
+      color: NATLEVA_BRAND.colors.linen,
+      bgColor: "",
+      fontFamily: "'Instrument Sans', sans-serif",
+      fontSizePct,
+      weight: 700,
+      paddingX: 0,
+      paddingY: 0,
+      align: "left",
+      z: 1,
+    });
+    setLayers((prev) => [...prev, patch, text]);
+    setSelectedId(text.id);
+    setDetectedWords((prev) => prev.filter((x) => x !== w));
+  }
+
   // Export · cria render em alta resolução baseado nas dimensões reais do formato
   async function exportAndSave(action: "save" | "download") {
     if (!stageRef.current) return;
@@ -261,6 +321,18 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
       const blob: Blob = await new Promise((res, rej) =>
         canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png", 0.95),
       );
+
+      // Verificação OCR · bloqueia se restou alguma palavra proibida na imagem final
+      toast.info("Validando arte (OCR)...");
+      const hits = await findForbiddenInBlob(blob).catch(() => []);
+      if (hits.length > 0) {
+        const list = hits.map((h) => `· ${h.token}`).join("\n");
+        toast.error("Arte bloqueada · termos proibidos detectados na imagem final", {
+          description: `Cubra ou remova antes de salvar:\n${list}`,
+          duration: 8000,
+        });
+        return;
+      }
 
       if (action === "download") {
         const url = URL.createObjectURL(blob);
@@ -308,7 +380,11 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-sm">Editor de arte · {fmt.label}</DialogTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={runDetect} disabled={detecting || !imageReady}>
+                {detecting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ScanText className="w-4 h-4 mr-1.5" />}
+                {detectedWords.length > 0 ? `${detectedWords.length} textos detectados` : "Detectar textos clicáveis"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
                 Baixar PNG
@@ -348,6 +424,29 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
                   <Loader2 className="w-4 h-4 animate-spin mr-2" /> carregando arte...
                 </div>
               )}
+
+              {/* Hotspots OCR · clique sobre uma palavra detectada para editá-la */}
+              {detectedWords.map((w, i) => (
+                <button
+                  key={`hot-${i}`}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); editDetectedWord(w); }}
+                  title={`Editar: "${w.text}"`}
+                  className="absolute group"
+                  style={{
+                    left: `${w.xPct}%`, top: `${w.yPct}%`,
+                    width: `${w.wPct}%`, height: `${w.hPct}%`,
+                    background: "hsl(var(--primary) / 0.18)",
+                    border: "1px dashed hsl(var(--primary))",
+                    borderRadius: 2,
+                    cursor: "text",
+                  }}
+                >
+                  <span className="absolute -top-5 left-0 text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                    {w.text}
+                  </span>
+                </button>
+              ))}
 
               {layers.map((l) => {
                 const isSelected = l.id === selectedId;
