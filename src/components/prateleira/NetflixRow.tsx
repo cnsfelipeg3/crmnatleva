@@ -55,6 +55,8 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
   const reduced = useReducedMotion();
   const promo = money(item.pricePromo, item.currency ?? "BRL");
   const full = money(item.priceFrom, item.currency ?? "BRL");
+  const basePrice = item.pricePromo ?? item.priceFrom ?? null;
+  const plan = computeNatlevaPlan(basePrice, item.departureDate, { currency: item.currency ?? "BRL" });
   const dateRange = item.flexibleDates
     ? "Datas flexíveis"
     : item.departureDate && item.returnDate
