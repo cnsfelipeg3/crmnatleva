@@ -43,6 +43,34 @@ async function callGateway(model: string, system: string, userContent: any, apiK
   return res;
 }
 
+async function fetchImageAsDataUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Falha ao carregar imagem de referência (${res.status})`);
+  const contentType = res.headers.get("content-type") || "image/png";
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return `data:${contentType};base64,${btoa(binary)}`;
+}
+
+async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string): Promise<Uint8Array> {
+  const logoRes = await fetch(logoUrl);
+  if (!logoRes.ok) throw new Error(`Falha ao carregar logotipo oficial (${logoRes.status})`);
+
+  const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+  const base = await Image.decode(baseBytes);
+  const logo = await Image.decode(logoBytes);
+  const targetLogoW = Math.round(base.width * 0.23);
+  const scale = targetLogoW / logo.width;
+  const targetLogoH = Math.round(logo.height * scale);
+  const resizedLogo = logo.resize(targetLogoW, targetLogoH);
+  const marginX = Math.round(base.width * 0.065);
+  const marginY = Math.round(base.height * 0.04);
+
+  base.composite(resizedLogo, marginX, marginY);
+  return await base.encode();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -60,7 +88,6 @@ serve(async (req) => {
     }
 
     // Build user content (refine = image + new prompt; new = optional reference image + prompt)
-    const refImg = body.refine_from_url || body.reference_image_url;
     const promptText = body.refine_prompt
       ? `${body.user_prompt}\n\nREFINE INSTRUCTION (apply on top of the previous artwork while preserving the NatLeva brand identity): ${body.refine_prompt}`
       : body.user_prompt;
@@ -69,8 +96,11 @@ serve(async (req) => {
       "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png";
 
     const userContent: any[] = [{ type: "text", text: promptText }];
-    if (refImg) {
-      userContent.push({ type: "image_url", image_url: { url: refImg } });
+    if (body.reference_image_url) {
+      userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.reference_image_url) } });
+    }
+    if (body.refine_from_url) {
+      userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.refine_from_url) } });
     }
     // Sempre anexa o logotipo oficial NatLeva como segunda imagem de referência
     userContent.push({ type: "image_url", image_url: { url: LOGO_URL } });
@@ -128,32 +158,12 @@ serve(async (req) => {
     let finalExt = mime.split("/")[1] || "png";
 
     // ============================================================
-    // Post-processing · STAMP da logo oficial NatLeva (top-left)
-    // Garante 100% que a logo correta apareça mesmo se o modelo
-    // tentar redesenhar / ignorar / distorcer.
+    // Post-processing obrigatório · STAMP da logo oficial NatLeva
+    // Se a logo não puder ser aplicada, a arte não é salva.
     // ============================================================
-    try {
-      const logoRes = await fetch(LOGO_URL);
-      if (logoRes.ok) {
-        const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
-        const base = await Image.decode(bytes);
-        const logo = await Image.decode(logoBytes);
-        const targetLogoW = Math.round(base.width * 0.18);
-        const scale = targetLogoW / logo.width;
-        const targetLogoH = Math.round(logo.height * scale);
-        const resizedLogo = logo.resize(targetLogoW, targetLogoH);
-        const margin = Math.round(base.width * 0.045);
-        base.composite(resizedLogo, margin, margin);
-        bytes = await base.encode(); // PNG
-        finalMime = "image/png";
-        finalExt = "png";
-      } else {
-        console.warn("logo fetch failed", logoRes.status);
-      }
-    } catch (e) {
-      console.error("logo composite failed", e);
-      // segue com a imagem original mesmo se o composite falhar
-    }
+    bytes = await stampOfficialLogoOrThrow(bytes, LOGO_URL);
+    finalMime = "image/png";
+    finalExt = "png";
 
     // upload
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
