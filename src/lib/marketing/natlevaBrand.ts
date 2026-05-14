@@ -133,7 +133,7 @@ export function buildBrandSystemPrompt(): string {
     "      · NEVER show only the total price · always lead with entry + installments.",
     "8. CTA: solid Champagne pill, Rolex Green text, Instrument Sans Bold uppercase tracked.",
     "9. Footer strip on Rolex Green:",
-    "      · Left: small wordmark or 'NatLeva Viagens' in Sand.",
+    "      · Center or left: ONLY the official 'natleva' wordmark (the lowercase serif logotype with the airplane in the 'n'). DO NOT add the word 'Viagens'. DO NOT write 'NatLeva Viagens'. The wordmark stands alone.",
     "      · Right: handle and WhatsApp in Sand, separated by a thin Champagne 4px rule.",
     "",
     "================================",
