@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap, Pencil,
+  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap, Pencil, Copy, MessageSquareText,
 } from "lucide-react";
 import { toast } from "sonner";
 import MarketingAssetEditor from "./MarketingAssetEditor";
@@ -63,6 +63,7 @@ interface Asset {
   model: string | null;
   created_at: string;
   prompt: any;
+  caption?: string | null;
 }
 
 function formatBRDate(iso?: string) {
@@ -121,6 +122,8 @@ export default function MarketingTab(props: Props) {
   const [refinePrompt, setRefinePrompt] = useState("");
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [captioning, setCaptioning] = useState<Record<string, boolean>>({});
+  const [bulkCaptioning, setBulkCaptioning] = useState(false);
 
   const allImages = useMemo(() => {
     const arr = [coverUrl, ...galleryUrls].filter(Boolean);
@@ -302,6 +305,57 @@ export default function MarketingTab(props: Props) {
     toast.success("Arte removida");
   }
 
+  async function generateCaption(asset: Asset, regenerate = false) {
+    setCaptioning((s) => ({ ...s, [asset.id]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke("marketing-caption-gen", {
+        body: {
+          asset_id: asset.id,
+          product_id: productId,
+          format: asset.format,
+          briefing: buildBriefing(),
+          regenerate,
+        },
+      });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any).error);
+      const caption = (data as any).caption as string;
+      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, caption } : a)));
+      toast.success(regenerate ? "Legenda regerada" : "Legenda gerada");
+    } catch (e: any) {
+      toast.error("Falha ao gerar legenda", { description: e?.message });
+    } finally {
+      setCaptioning((s) => ({ ...s, [asset.id]: false }));
+    }
+  }
+
+  async function generateMissingCaptions() {
+    const pending = assets.filter((a) => !a.caption);
+    if (pending.length === 0) { toast.info("Todas as artes já têm legenda"); return; }
+    setBulkCaptioning(true);
+    try {
+      let ok = 0;
+      for (const a of pending) {
+        try {
+          await generateCaption(a, false);
+          ok++;
+        } catch { /* segue */ }
+      }
+      toast.success(`${ok} legenda(s) gerada(s)`);
+    } finally {
+      setBulkCaptioning(false);
+    }
+  }
+
+  async function copyCaption(asset: Asset) {
+    if (!asset.caption) return;
+    try {
+      await navigator.clipboard.writeText(asset.caption);
+      toast.success("Legenda copiada");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  }
+
   function downloadAsset(a: Asset) {
     const link = document.createElement("a");
     link.href = a.url;
@@ -460,11 +514,27 @@ export default function MarketingTab(props: Props) {
 
       {/* HISTÓRICO */}
       <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h3 className="font-semibold text-sm flex items-center gap-1.5">
             <ImagePlus className="w-4 h-4 text-primary" /> Histórico de artes
           </h3>
-          <Badge variant="secondary">{assets.length}</Badge>
+          <div className="flex items-center gap-2">
+            {assets.some((a) => !a.caption) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={generateMissingCaptions}
+                disabled={bulkCaptioning}
+              >
+                {bulkCaptioning ? (
+                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Gerando legendas...</>
+                ) : (
+                  <><MessageSquareText className="w-3.5 h-3.5 mr-1.5" />Gerar legendas pendentes</>
+                )}
+              </Button>
+            )}
+            <Badge variant="secondary">{assets.length}</Badge>
+          </div>
         </div>
 
         {assets.length === 0 && (
@@ -531,6 +601,61 @@ export default function MarketingTab(props: Props) {
                         <Button size="sm" variant="outline" onClick={() => refine(a)} disabled={refining !== null && refining !== a.id}>
                           {refining === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         </Button>
+                      </div>
+
+                      {/* LEGENDA SUGERIDA */}
+                      <div className="rounded-lg border bg-muted/30 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                            <MessageSquareText className="w-3 h-3" /> Legenda sugerida
+                          </div>
+                          <div className="flex gap-0.5">
+                            {a.caption && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyCaption(a)} title="Copiar legenda">
+                                <Copy className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => generateCaption(a, !!a.caption)}
+                              disabled={!!captioning[a.id]}
+                              title={a.caption ? "Regerar legenda" : "Gerar legenda"}
+                            >
+                              {captioning[a.id]
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : a.caption
+                                  ? <RefreshCw className="w-3.5 h-3.5" />
+                                  : <Sparkles className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                        {a.caption ? (
+                          <Textarea
+                            value={a.caption}
+                            onChange={(e) => setAssets((prev) => prev.map((x) => x.id === a.id ? { ...x, caption: e.target.value } : x))}
+                            onBlur={async (e) => {
+                              await (supabase as any)
+                                .from("product_marketing_assets")
+                                .update({ caption: e.target.value })
+                                .eq("id", a.id);
+                            }}
+                            rows={6}
+                            className="text-xs leading-relaxed resize-y"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => generateCaption(a, false)}
+                            disabled={!!captioning[a.id]}
+                            className="w-full text-left text-xs text-muted-foreground hover:text-foreground py-2 px-1 rounded transition-colors flex items-center gap-1.5"
+                          >
+                            {captioning[a.id]
+                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Gerando legenda estratégica...</>
+                              : <><Sparkles className="w-3.5 h-3.5" /> Gerar legenda estratégica para essa arte</>}
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

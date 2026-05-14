@@ -1,0 +1,1 @@
+ALTER TABLE public.product_marketing_assets ADD COLUMN IF NOT EXISTS caption text;
