@@ -119,6 +119,7 @@ export default function MarketingTab(props: Props) {
   const [refining, setRefining] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState("");
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
 
   const allImages = useMemo(() => {
     const arr = [coverUrl, ...galleryUrls].filter(Boolean);
