@@ -3813,6 +3813,8 @@ export type Database = {
           og_image: string | null
           origin_city: string | null
           origin_iata: string | null
+          pax_adults: number | null
+          pax_children: number | null
           pax_max: number | null
           pax_min: number | null
           payment_terms: Json
@@ -3871,6 +3873,8 @@ export type Database = {
           og_image?: string | null
           origin_city?: string | null
           origin_iata?: string | null
+          pax_adults?: number | null
+          pax_children?: number | null
           pax_max?: number | null
           pax_min?: number | null
           payment_terms?: Json
@@ -3929,6 +3933,8 @@ export type Database = {
           og_image?: string | null
           origin_city?: string | null
           origin_iata?: string | null
+          pax_adults?: number | null
+          pax_children?: number | null
           pax_max?: number | null
           pax_min?: number | null
           payment_terms?: Json
