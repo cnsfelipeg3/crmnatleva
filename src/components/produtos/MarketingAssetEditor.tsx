@@ -143,9 +143,13 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [imageReady, setImageReady] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [detectedWords, setDetectedWords] = useState<DetectedWord[]>([]);
   const [detecting, setDetecting] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [history, setHistory] = useState<Layer[][]>([]);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
     id: string; mode: "move" | "resize"; startX: number; startY: number;
@@ -158,13 +162,60 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     [asset],
   );
 
-  // Quando trocar a arte, reset
+  // Reset on asset change
   useEffect(() => {
     setLayers([]);
     setSelectedId(null);
     setImageReady(false);
+    setImageError(null);
+    setLocalImageUrl(null);
     setDetectedWords([]);
+    setHistory([]);
+    setZoom(1);
   }, [asset?.id]);
+
+  // Carrega a imagem via fetch -> blob -> objectURL.
+  // Isso evita o bug "preso em carregando" quando o navegador tem a imagem em
+  // cache sem cabeçalho CORS e o <img crossOrigin="anonymous"> nunca dispara onLoad.
+  // Também garante que html2canvas exporta sem taint do canvas.
+  useEffect(() => {
+    if (!asset?.url) return;
+    let aborted = false;
+    let revoke: string | null = null;
+    (async () => {
+      try {
+        // cache-buster opcional só na 1ª tentativa para forçar resposta com CORS
+        const res = await fetch(asset.url, { mode: "cors", cache: "reload" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        if (aborted) return;
+        const objUrl = URL.createObjectURL(blob);
+        revoke = objUrl;
+        setLocalImageUrl(objUrl);
+        setImageError(null);
+      } catch (err: any) {
+        console.error("[MarketingAssetEditor] failed to load asset:", err);
+        if (!aborted) {
+          setImageError(err?.message || "Falha ao carregar a arte");
+          // fallback · tenta usar URL direto (sem CORS) só pra pré-visualizar
+          setLocalImageUrl(asset.url);
+        }
+      }
+    })();
+    return () => {
+      aborted = true;
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [asset?.url]);
+
+  // Push para histórico de undo a cada mudança de camadas
+  useEffect(() => {
+    setHistory((h) => {
+      const next = [...h, layers];
+      return next.slice(-30);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layers]);
 
   if (!asset || !fmt) return null;
 
