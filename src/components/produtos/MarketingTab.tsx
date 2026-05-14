@@ -542,6 +542,9 @@ export default function MarketingTab(props: Props) {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setEditingAsset(previewAsset); setPreviewAsset(null); }}>
+                    <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                  </Button>
                   <Button variant="outline" onClick={() => downloadAsset(previewAsset)}>
                     <Download className="w-4 h-4 mr-1.5" /> Baixar
                   </Button>
@@ -554,6 +557,12 @@ export default function MarketingTab(props: Props) {
           )}
         </DialogContent>
       </Dialog>
+
+      <MarketingAssetEditor
+        asset={editingAsset}
+        onClose={() => setEditingAsset(null)}
+        onSaved={refreshAssets}
+      />
     </div>
   );
 }
