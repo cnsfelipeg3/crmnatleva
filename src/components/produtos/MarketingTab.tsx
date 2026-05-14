@@ -184,6 +184,7 @@ export default function MarketingTab(props: Props) {
     cta: cta.trim() || "Garanta sua vaga",
     tone,
     destination: destination || undefined,
+    originCity: originCity || undefined,
     hotelName: hotelName || undefined,
     hotelStars: hotelStars || undefined,
     nights: nights || undefined,
