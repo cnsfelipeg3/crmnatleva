@@ -237,15 +237,40 @@ export default function CinematicHero({
               <span className="ml-1 opacity-80 tabular-nums">{galleryCount}</span>
             </Button>
           )}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={onShare}
-            className="bg-black/40 hover:bg-black/60 text-white border border-white/15 backdrop-blur-md h-9 px-3 text-xs sm:text-sm"
-          >
-            <Share2 className="w-4 h-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Compartilhar</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="bg-black/40 hover:bg-black/60 text-white border border-white/15 backdrop-blur-md h-9 px-3 text-xs sm:text-sm"
+              >
+                <Share2 className="w-4 h-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Compartilhar</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => onShare("whatsapp")}>
+                <MessageCircle className="w-4 h-4 mr-2" /> WhatsApp
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShare("copy")}>
+                <Link2 className="w-4 h-4 mr-2" /> Copiar link
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShare("telegram")}>
+                <Send className="w-4 h-4 mr-2" /> Telegram
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShare("twitter")}>
+                <Twitter className="w-4 h-4 mr-2" /> X / Twitter
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShare("facebook")}>
+                <Facebook className="w-4 h-4 mr-2" /> Facebook
+              </DropdownMenuItem>
+              {typeof navigator !== "undefined" && (navigator as any).share && (
+                <DropdownMenuItem onClick={() => onShare("native")}>
+                  <Share2 className="w-4 h-4 mr-2" /> Mais opções
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </motion.div>
       </div>
 
