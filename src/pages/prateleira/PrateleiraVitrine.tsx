@@ -281,21 +281,21 @@ export default function PrateleiraVitrine() {
               <NetflixRow
                 title="Promoções imperdíveis"
                 subtitle="Ofertas com desconto real, por tempo limitado"
-                items={promos}
+                items={promos.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Em alta na NatLeva"
               subtitle="As viagens mais procuradas da semana"
-              items={trending}
+              items={trending.map(toRowItem)}
               whatsapp={whatsapp}
             />
             {soon.length > 0 && (
               <NetflixRow
                 title="Saídas mais próximas"
                 subtitle="Embarque já com tudo organizado"
-                items={soon}
+                items={soon.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
@@ -312,14 +312,14 @@ export default function PrateleiraVitrine() {
               <NetflixRow
                 title="Mais destinos"
                 subtitle={`${moreDestinations.length} experiência(s) em outros destinos`}
-                items={moreDestinations}
+                items={moreDestinations.map(toRowItem)}
                 whatsapp={whatsapp}
               />
             )}
             <NetflixRow
               title="Acabou de chegar"
               subtitle="Novidades fresquinhas no nosso catálogo"
-              items={fresh}
+              items={fresh.map(toRowItem)}
               whatsapp={whatsapp}
             />
           </>
