@@ -144,6 +144,8 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [imageReady, setImageReady] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [detectedWords, setDetectedWords] = useState<DetectedWord[]>([]);
+  const [detecting, setDetecting] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const dragState = useRef<{
     id: string; mode: "move" | "resize"; startX: number; startY: number;
@@ -161,6 +163,7 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     setLayers([]);
     setSelectedId(null);
     setImageReady(false);
+    setDetectedWords([]);
   }, [asset?.id]);
 
   if (!asset || !fmt) return null;
