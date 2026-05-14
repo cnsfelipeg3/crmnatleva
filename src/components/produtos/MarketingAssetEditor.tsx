@@ -425,6 +425,29 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
                 </div>
               )}
 
+              {/* Hotspots OCR · clique sobre uma palavra detectada para editá-la */}
+              {detectedWords.map((w, i) => (
+                <button
+                  key={`hot-${i}`}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); editDetectedWord(w); }}
+                  title={`Editar: "${w.text}"`}
+                  className="absolute group"
+                  style={{
+                    left: `${w.xPct}%`, top: `${w.yPct}%`,
+                    width: `${w.wPct}%`, height: `${w.hPct}%`,
+                    background: "hsl(var(--primary) / 0.18)",
+                    border: "1px dashed hsl(var(--primary))",
+                    borderRadius: 2,
+                    cursor: "text",
+                  }}
+                >
+                  <span className="absolute -top-5 left-0 text-[10px] px-1.5 py-0.5 rounded bg-primary text-primary-foreground opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none">
+                    {w.text}
+                  </span>
+                </button>
+              ))}
+
               {layers.map((l) => {
                 const isSelected = l.id === selectedId;
                 const baseStyle: React.CSSProperties = {
