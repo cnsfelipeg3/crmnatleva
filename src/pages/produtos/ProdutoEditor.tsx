@@ -327,6 +327,9 @@ export default function ProdutoEditor() {
           payment_balance_installments_max: (data.payment_terms?.balance_installments_max ?? 12).toString(),
           payment_balance_min_installment: (data.payment_terms?.balance_min_installment ?? 200).toString(),
           payment_balance_interest_percent: (data.payment_terms?.balance_interest_percent ?? 0).toString(),
+          payment_balance_custom_installments: Array.isArray(data.payment_terms?.balance_custom_installments)
+            ? data.payment_terms.balance_custom_installments.filter((v: any) => Number.isFinite(Number(v))).map((v: any) => Number(v))
+            : [],
           payment_pix_discount_percent: (data.payment_terms?.pix_discount_percent ?? 0).toString(),
           payment_notes: data.payment_terms?.notes ?? "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
