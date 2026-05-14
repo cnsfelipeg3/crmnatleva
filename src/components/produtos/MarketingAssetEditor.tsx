@@ -185,7 +185,7 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     (async () => {
       try {
         // cache-buster opcional só na 1ª tentativa para forçar resposta com CORS
-        const res = await fetch(asset.url, { mode: "cors", cache: "reload" });
+        const res = await fetch(asset.url, { mode: "cors" });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const blob = await res.blob();
         if (aborted) return;
