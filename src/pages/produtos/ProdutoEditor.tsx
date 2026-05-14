@@ -80,6 +80,7 @@ const empty: ProductForm = {
   payment_balance_installments_max: "12",
   payment_balance_min_installment: "200",
   payment_balance_interest_percent: "0",
+  payment_balance_custom_installments: [],
   payment_pix_discount_percent: "0",
   payment_notes: "",
   is_promo: false, promo_badge: "",
