@@ -64,10 +64,15 @@ serve(async (req) => {
       ? `${body.user_prompt}\n\nREFINE INSTRUCTION (apply on top of the previous artwork while preserving the NatLeva brand identity): ${body.refine_prompt}`
       : body.user_prompt;
 
+    const LOGO_URL =
+      "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva.png";
+
     const userContent: any[] = [{ type: "text", text: promptText }];
     if (refImg) {
       userContent.push({ type: "image_url", image_url: { url: refImg } });
     }
+    // Sempre anexa o logotipo oficial NatLeva como segunda imagem de referência
+    userContent.push({ type: "image_url", image_url: { url: LOGO_URL } });
 
     // Try preferred model -> flash -> fallback
     const order = body.use_pro
