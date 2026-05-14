@@ -322,6 +322,18 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
         canvas.toBlob((b) => (b ? res(b) : rej(new Error("toBlob failed"))), "image/png", 0.95),
       );
 
+      // Verificação OCR · bloqueia se restou alguma palavra proibida na imagem final
+      toast.info("Validando arte (OCR)...");
+      const hits = await findForbiddenInBlob(blob).catch(() => []);
+      if (hits.length > 0) {
+        const list = hits.map((h) => `· ${h.token}`).join("\n");
+        toast.error("Arte bloqueada · termos proibidos detectados na imagem final", {
+          description: `Cubra ou remova antes de salvar:\n${list}`,
+          duration: 8000,
+        });
+        return;
+      }
+
       if (action === "download") {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
