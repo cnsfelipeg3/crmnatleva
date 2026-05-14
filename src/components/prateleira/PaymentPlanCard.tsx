@@ -103,7 +103,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
               Saldo {balancePercent}% · boleto sem juros
             </div>
-            <div className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap">
+            <div className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap flex-wrap">
               <span className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1]">
                 {plan.installments}x
               </span>
@@ -111,11 +111,24 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
               <span className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1]">
                 {formatMoneyBR(plan.installmentAmount, plan.currency)}
               </span>
+              {plan.customInstallments && (
+                <span className="text-[10px] text-muted-foreground font-medium">· valor médio · veja cronograma</span>
+              )}
             </div>
             <div className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1.5">
               <FileText className="w-3 h-3 shrink-0" />
               <span>Total parcelado · {formatMoneyBR(plan.balanceAmount, plan.currency)}</span>
             </div>
+            {plan.customInstallments && (
+              <ul className="mt-3 space-y-1 rounded-lg border border-border/60 bg-muted/30 p-2.5">
+                {plan.customInstallments.map((v, i) => (
+                  <li key={i} className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Parcela {i + 1}</span>
+                    <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(v, plan.currency)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
