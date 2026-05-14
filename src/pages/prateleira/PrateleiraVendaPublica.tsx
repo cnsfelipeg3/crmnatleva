@@ -233,6 +233,7 @@ export default function PrateleiraVendaPublica() {
 
   const share = async () => {
     const url = window.location.href;
+    trackerRef.current?.trackClick("share_button", "hero");
     if (navigator.share) {
       try { await navigator.share({ title: p.title, url }); return; } catch {}
     }
