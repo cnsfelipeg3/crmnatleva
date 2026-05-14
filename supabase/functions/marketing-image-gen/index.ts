@@ -48,9 +48,89 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   if (!res.ok) throw new Error(`Falha ao carregar imagem de referência (${res.status})`);
   const contentType = res.headers.get("content-type") || "image/png";
   const bytes = new Uint8Array(await res.arrayBuffer());
+  return bytesToDataUrl(contentType, bytes);
+}
+
+function bytesToDataUrl(contentType: string, bytes: Uint8Array): string {
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
   return `data:${contentType};base64,${btoa(binary)}`;
+}
+
+function unpackPixel(pixel: number) {
+  return {
+    r: (pixel >> 24) & 0xff,
+    g: (pixel >> 16) & 0xff,
+    b: (pixel >> 8) & 0xff,
+    a: pixel & 0xff,
+  };
+}
+
+function packPixel(r: number, g: number, b: number, a: number) {
+  return ((r << 24) | (g << 16) | (b << 8) | a) >>> 0;
+}
+
+function isLogoLikePixel(pixel: number): boolean {
+  const { r, g, b, a } = unpackPixel(pixel);
+  if (a < 80) return false;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+  const champagneGold = r > 130 && g > 105 && b < 190 && r > b * 1.15 && g > b * 0.85;
+  const paleWordmark = lum > 155 && chroma < 95;
+  return champagneGold || paleWordmark;
+}
+
+function localBackgroundPixel(image: any, x: number, y: number, radius: number, fallback: number): number {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let a = 0;
+  let count = 0;
+
+  for (let py = Math.max(0, y - radius); py <= Math.min(image.height - 1, y + radius); py += 3) {
+    for (let px = Math.max(0, x - radius); px <= Math.min(image.width - 1, x + radius); px += 3) {
+      const sample = image.getPixelAt(px + 1, py + 1);
+      if (isLogoLikePixel(sample)) continue;
+      const rgba = unpackPixel(sample);
+      if (rgba.a < 80) continue;
+      r += rgba.r;
+      g += rgba.g;
+      b += rgba.b;
+      a += rgba.a;
+      count++;
+    }
+  }
+
+  if (count < 4) return fallback;
+  return packPixel(Math.round(r / count), Math.round(g / count), Math.round(b / count), Math.round(a / count));
+}
+
+function clearLogoArtifacts(image: any, areaW: number, areaH: number) {
+  const replacements: Array<{ x: number; y: number; pixel: number }> = [];
+  const maxX = Math.min(image.width, areaW);
+  const maxY = Math.min(image.height, areaH);
+
+  for (let y = 0; y < maxY; y++) {
+    for (let x = 0; x < maxX; x++) {
+      const current = image.getPixelAt(x + 1, y + 1);
+      if (!isLogoLikePixel(current)) continue;
+      const healed = localBackgroundPixel(image, x, y, 18, current);
+      replacements.push({ x, y, pixel: healed });
+    }
+  }
+
+  for (const replacement of replacements) {
+    image.setPixelAt(replacement.x + 1, replacement.y + 1, replacement.pixel);
+  }
+}
+
+async function fetchRefineImageWithoutLogoAsDataUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Falha ao carregar arte anterior (${res.status})`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const image = await Image.decode(bytes);
+  clearLogoArtifacts(image, Math.round(image.width * 0.34), Math.round(image.height * 0.16));
+  return bytesToDataUrl("image/png", await image.encode());
 }
 
 async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string): Promise<Uint8Array> {
