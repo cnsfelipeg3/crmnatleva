@@ -136,12 +136,28 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
               <h3 className="font-serif t-balance text-white text-[15px] sm:text-base leading-snug line-clamp-2 drop-shadow">
                 {item.title}
               </h3>
-              <div className="mt-1.5 flex items-center justify-between gap-2">
-                <div className="t-numeric text-white/95 text-sm font-bold">
-                  {promo || full || "Sob consulta"}
+              <div className="mt-1.5 flex items-end justify-between gap-2">
+                <div className="min-w-0">
+                  {plan ? (
+                    <>
+                      <div className="text-[9.5px] uppercase tracking-[0.14em] text-amber-300/90 font-semibold leading-none">
+                        Entrada
+                      </div>
+                      <div className="t-numeric text-white text-[15px] sm:text-base font-bold leading-tight mt-0.5">
+                        {formatMoneyBR(plan.entryAmount, plan.currency)}
+                      </div>
+                      <div className="text-[10.5px] text-white/80 leading-tight mt-0.5">
+                        + <span className="font-semibold tabular-nums">{plan.installments}x</span> de{" "}
+                        <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
+                        <span className="text-white/55"> no boleto</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="t-numeric text-white/95 text-sm font-bold">Sob consulta</div>
+                  )}
                 </div>
                 {dateRange && (
-                  <span className="text-[10px] text-white/70 inline-flex items-center gap-1">
+                  <span className="text-[10px] text-white/70 inline-flex items-center gap-1 shrink-0">
                     <Calendar className="w-3 h-3" aria-hidden /> {dateRange}
                   </span>
                 )}
