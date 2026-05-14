@@ -16,6 +16,7 @@ import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan
 import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
+import GalleryManager from "@/components/produtos/GalleryManager";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
@@ -595,19 +596,36 @@ export default function ProdutoEditor() {
             )}
           </Card>
 
-          <Card className="p-5 space-y-4">
+          <Card className="p-5 space-y-5">
             <div>
-              <Label>URL da imagem de capa</Label>
-              <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." />
-              {form.cover_image_url && <img src={form.cover_image_url} alt="" className="mt-3 max-h-48 rounded-lg object-cover" />}
+              <Label>Imagem de capa</Label>
+              <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." className="mt-1" />
+              {form.cover_image_url && (
+                <div className="mt-3 relative inline-block group">
+                  <img src={form.cover_image_url} alt="capa" className="max-h-48 rounded-lg object-cover border-2 border-amber-500" />
+                  <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-amber-500 text-black px-2 py-0.5 rounded">Capa atual</span>
+                </div>
+              )}
             </div>
-            <div>
-              <Label>Galeria (uma URL por linha)</Label>
-              <Textarea rows={5} value={form.gallery} onChange={(e) => set("gallery", e.target.value)} placeholder="https://..." />
-            </div>
+
+            {/* Galeria visual */}
+            <GalleryManager
+              gallery={form.gallery}
+              coverUrl={form.cover_image_url}
+              onChange={(g) => set("gallery", g)}
+              onSetCover={(url) => {
+                // Promove URL a capa, devolve antiga capa pra galeria (no topo, sem duplicar)
+                const oldCover = form.cover_image_url;
+                const lines = form.gallery.split("\n").map((s) => s.trim()).filter(Boolean).filter((u) => u !== url);
+                const next = oldCover && oldCover !== url ? [oldCover, ...lines.filter((u) => u !== oldCover)] : lines;
+                set("cover_image_url", url);
+                set("gallery", next.join("\n"));
+              }}
+            />
+
             <div>
               <Label>Imagem OG (compartilhamento WhatsApp/Facebook)</Label>
-              <Input value={form.og_image} onChange={(e) => set("og_image", e.target.value)} placeholder="opcional · usa a capa se vazio" />
+              <Input value={form.og_image} onChange={(e) => set("og_image", e.target.value)} placeholder="opcional · usa a capa se vazio" className="mt-1" />
             </div>
           </Card>
         </TabsContent>
