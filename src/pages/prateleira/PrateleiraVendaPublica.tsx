@@ -79,7 +79,7 @@ export default function PrateleiraVendaPublica() {
   const [loading, setLoading] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
-  const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
+  const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>(DEFAULT_AGENCY_WHATSAPP);
   const [unlocked, setUnlocked] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
   const trackerRef = useRef<ReturnType<typeof initViewerTracking> | null>(null);
