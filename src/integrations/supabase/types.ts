@@ -6978,6 +6978,36 @@ export type Database = {
           },
         ]
       }
+      product_marketing_assets: {
+        Row: {
+          created_at: string
+          format: string
+          id: string
+          model: string | null
+          product_id: string
+          prompt: Json | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          format: string
+          id?: string
+          model?: string | null
+          product_id: string
+          prompt?: Json | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          id?: string
+          model?: string | null
+          product_id?: string
+          prompt?: Json | null
+          url?: string
+        }
+        Relationships: []
+      }
       product_types: {
         Row: {
           category: string | null
