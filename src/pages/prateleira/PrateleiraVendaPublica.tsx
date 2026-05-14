@@ -360,30 +360,54 @@ export default function PrateleiraVendaPublica() {
                   </Button>
                 )}
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                {allImages.slice(0, 6).map((url, i) => {
-                  const isLast = i === 5 && allImages.length > 6;
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => { trackerRef.current?.trackClick(`gallery_thumb_${i}`, "gallery"); openGallery(i); }}
-                      className="relative aspect-[4/3] overflow-hidden rounded-lg group bg-muted"
-                      aria-label={`Abrir foto ${i + 1}`}
-                    >
-                      <img
-                        src={url}
-                        alt={`${p.title} · foto ${i + 1}`}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      {isLast && (
-                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white font-semibold text-sm">
-                          +{allImages.length - 6} fotos
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+              {/* Capa em evidência + miniaturas embaixo */}
+              <div className="space-y-2">
+                <button
+                  onClick={() => { trackerRef.current?.trackClick("gallery_thumb_0", "gallery"); openGallery(0); }}
+                  className="relative w-full aspect-[16/9] sm:aspect-[21/9] overflow-hidden rounded-xl group bg-muted"
+                  aria-label="Abrir foto de capa"
+                >
+                  <img
+                    src={allImages[0]}
+                    alt={`${p.title} · capa`}
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+                  />
+                  {allImages.length > 1 && (
+                    <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/55 backdrop-blur-sm text-white text-[11px] font-medium tabular-nums">
+                      1 / {allImages.length}
+                    </div>
+                  )}
+                </button>
+
+                {allImages.length > 1 && (
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+                    {allImages.slice(1, 7).map((url, i) => {
+                      const realIdx = i + 1;
+                      const isLast = i === 5 && allImages.length > 7;
+                      return (
+                        <button
+                          key={realIdx}
+                          onClick={() => { trackerRef.current?.trackClick(`gallery_thumb_${realIdx}`, "gallery"); openGallery(realIdx); }}
+                          className="relative aspect-square overflow-hidden rounded-md group bg-muted"
+                          aria-label={`Abrir foto ${realIdx + 1}`}
+                        >
+                          <img
+                            src={url}
+                            alt={`${p.title} · foto ${realIdx + 1}`}
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                          {isLast && (
+                            <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-white font-semibold text-xs sm:text-sm">
+                              +{allImages.length - 7}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             </Card>
           )}
