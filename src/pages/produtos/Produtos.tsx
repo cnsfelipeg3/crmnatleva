@@ -174,24 +174,51 @@ function KPI({ label, value }: { label: string; value: number }) {
   );
 }
 
-function AdminProductCard({ p }: { p: Product }) {
+function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (next: boolean) => void }) {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [savingActive, setSavingActive] = useState(false);
+  const isActive = p.is_active !== false;
   const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
   const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
   const dateRange = p.flexible_dates ? "Flexíveis"
     : p.departure_date && p.return_date ? `${fmtDate(p.departure_date)}-${fmtDate(p.return_date)}`
     : p.departure_date ? `${fmtDate(p.departure_date)}` : null;
   const statusBadge = p.status === "draft" ? "secondary" : p.status === "paused" ? "outline" : "default";
+
+  async function handleToggleActive(next: boolean) {
+    setSavingActive(true);
+    onToggleActive(next); // optimistic
+    const { error } = await (supabase as any)
+      .from("experience_products")
+      .update({ is_active: next })
+      .eq("id", p.id);
+    setSavingActive(false);
+    if (error) {
+      onToggleActive(!next); // rollback
+      toast({ title: "Não rolou atualizar", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({
+      title: next ? "Produto ativado" : "Produto desativado",
+      description: next
+        ? "Voltou pra vitrine pública e a página de venda tá no ar."
+        : "Sumiu da vitrine pública e a página de venda fica indisponível.",
+    });
+  }
+
   return (
-    <Card className="overflow-hidden flex flex-col p-0">
+    <Card className={cn("overflow-hidden flex flex-col p-0 transition-opacity", !isActive && "opacity-70")}>
       <div className="relative aspect-[16/10] bg-muted overflow-hidden">
-        {p.cover_image_url ? <img src={p.cover_image_url} alt={p.title} className="w-full h-full object-cover" loading="lazy" />
+        {p.cover_image_url ? <img src={p.cover_image_url} alt={p.title} className={cn("w-full h-full object-cover", !isActive && "grayscale")} loading="lazy" />
           : <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10" />}
         <div className="absolute top-2 left-2 flex flex-wrap gap-1">
           <Badge variant="secondary" className="bg-black/60 text-white border-0 backdrop-blur"><MapPin className="w-2.5 h-2.5 mr-0.5" /> {p.destination}</Badge>
           {p.is_promo && <Badge className="bg-amber-500 text-black hover:bg-amber-500"><Sparkles className="w-2.5 h-2.5 mr-0.5" /> Promo</Badge>}
         </div>
-        <Badge variant={statusBadge as any} className="absolute top-2 right-2 capitalize">{p.status || "active"}</Badge>
+        <div className="absolute top-2 right-2 flex items-center gap-1.5">
+          {!isActive && <Badge variant="outline" className="bg-black/60 text-white border-white/30 backdrop-blur">Inativo</Badge>}
+          <Badge variant={statusBadge as any} className="capitalize">{p.status || "active"}</Badge>
+        </div>
       </div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
