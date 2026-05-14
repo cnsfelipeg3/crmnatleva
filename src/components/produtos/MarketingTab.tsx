@@ -493,6 +493,9 @@ export default function MarketingTab(props: Props) {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewAsset(a)} title="Visualizar">
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingAsset(a)} title="Editar (estilo Canva)">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => downloadAsset(a)} title="Baixar">
                             <Download className="w-4 h-4" />
                           </Button>
