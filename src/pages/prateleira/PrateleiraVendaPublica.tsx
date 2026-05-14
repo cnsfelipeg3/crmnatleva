@@ -315,7 +315,7 @@ export default function PrateleiraVendaPublica() {
 
           {/* Galeria de fotos · visível e clicável */}
           {allImages.length > 0 && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="gallery">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-serif text-xl flex items-center gap-2">
                   <Images className="w-5 h-5 text-muted-foreground" />
