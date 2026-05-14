@@ -214,6 +214,7 @@ export default function MarketingTab(props: Props) {
       toast.error("Preencha headline e subheadline"); return;
     }
     if (formatsToGenerate.length === 0) { toast.error("Selecione ao menos um formato"); return; }
+    if (!refImage) { toast.error("Selecione a imagem de referência"); return; }
 
     setGenerating(true);
     const briefing = buildBriefing();
@@ -231,7 +232,7 @@ export default function MarketingTab(props: Props) {
               aspect: f.aspect,
               system_prompt: system,
               user_prompt: userPrompt,
-              reference_image_url: refImage || undefined,
+              reference_image_url: refImage,
               briefing,
               use_pro: usePro,
             },
@@ -269,6 +270,7 @@ export default function MarketingTab(props: Props) {
           system_prompt: buildBrandSystemPrompt(),
           user_prompt: userPrompt,
           refine_from_url: asset.url,
+          reference_image_url: refImage || undefined,
           refine_prompt: refinePrompt.trim(),
           briefing,
           use_pro: usePro,
