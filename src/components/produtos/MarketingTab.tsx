@@ -108,7 +108,7 @@ export default function MarketingTab(props: Props) {
   const {
     productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
-    hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, isPromo, paymentTerms,
+    hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, paxAdults, paxChildren, isPromo, paymentTerms,
   } = props;
 
   const [headline, setHeadline] = useState("");
@@ -134,15 +134,23 @@ export default function MarketingTab(props: Props) {
     return Array.from(new Set(arr));
   }, [coverUrl, galleryUrls]);
 
-  // Caption de pax · reflete EXATAMENTE o pacote do produto (adultos + crianças = total)
+  // Caption de pax · prioriza composição adultos + crianças (Ex: "Valor para 2 adultos + 1 criança")
   const paxLabel = useMemo(() => {
+    const adults = Number(paxAdults) || 0;
+    const children = Number(paxChildren) || 0;
+    if (adults > 0 || children > 0) {
+      const parts: string[] = [];
+      if (adults > 0) parts.push(`${adults} ${adults === 1 ? "adulto" : "adultos"}`);
+      if (children > 0) parts.push(`${children} ${children === 1 ? "criança" : "crianças"}`);
+      return `Valor total para ${parts.join(" + ")}`;
+    }
     const min = Number(paxMin) || 0;
     const max = Number(paxMax) || 0;
     if (min && max && min !== max) return `Valor total para ${min} a ${max} pessoas`;
     const total = max || min;
     if (!total) return "Valor total do pacote";
     return `Valor total para ${total} ${total === 1 ? "pessoa" : "pessoas"}`;
-  }, [paxMin, paxMax]);
+  }, [paxMin, paxMax, paxAdults, paxChildren]);
 
   // Plano de pagamento atrativo (entrada + parcelas) · não exibe valor total cheio
   const payment: PaymentSnapshot | undefined = useMemo(() => {
