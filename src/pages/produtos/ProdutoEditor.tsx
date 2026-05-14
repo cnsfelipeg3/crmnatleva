@@ -476,6 +476,7 @@ export default function ProdutoEditor() {
           <TabsTrigger value="preco">Preço & Pagamento</TabsTrigger>
           <TabsTrigger value="logistica">Logística</TabsTrigger>
           <TabsTrigger value="venda">Página de venda</TabsTrigger>
+          <TabsTrigger value="marketing">Marketing</TabsTrigger>
         </TabsList>
 
         {/* BÁSICO */}
