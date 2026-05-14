@@ -1910,7 +1910,17 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         ? fmtDate(proposal.travel_start_date)
         : "";
 
-  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || insurances.length > 0 || proposal.destinations?.length > 0;
+  const miscGroups: { kind: string; items: any[] }[] = [
+    { kind: "transfer",  items: transfers },
+    { kind: "train",     items: trains },
+    { kind: "car",       items: cars },
+    { kind: "tour",      items: tours },
+    { kind: "ticket",    items: tickets },
+    { kind: "itinerary", items: itineraries },
+    { kind: "other",     items: others },
+  ].filter((g) => g.items.length > 0);
+
+  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || insurances.length > 0 || miscGroups.length > 0 || proposal.destinations?.length > 0;
 
   if (!hasContent && !proposal.title) {
     return (
