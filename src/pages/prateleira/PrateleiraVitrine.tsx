@@ -60,15 +60,15 @@ export default function PrateleiraVitrine() {
     gcTime: 30 * 60_000,
     refetchOnWindowFocus: false,
     queryFn: async () => {
-      const [{ data: products }, { data: cfg }] = await Promise.all([
+      const [{ data: products }, cfgRes] = await Promise.all([
         (supabase as any)
           .from("experience_products").select("*")
           .eq("is_active", true)
           .neq("status", "paused")
           .order("display_order", { ascending: true }),
-        (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle(),
+        (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle().then((r: any) => r).catch(() => ({ data: null })),
       ]);
-      return { products: (products || []) as Product[], whatsapp: cfg?.whatsapp_number ?? null };
+      return { products: (products || []) as Product[], whatsapp: resolveAgencyWhatsApp(cfgRes?.data?.whatsapp_number) };
     },
   });
 
