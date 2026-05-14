@@ -158,32 +158,12 @@ serve(async (req) => {
     let finalExt = mime.split("/")[1] || "png";
 
     // ============================================================
-    // Post-processing · STAMP da logo oficial NatLeva (top-left)
-    // Garante 100% que a logo correta apareça mesmo se o modelo
-    // tentar redesenhar / ignorar / distorcer.
+    // Post-processing obrigatório · STAMP da logo oficial NatLeva
+    // Se a logo não puder ser aplicada, a arte não é salva.
     // ============================================================
-    try {
-      const logoRes = await fetch(LOGO_URL);
-      if (logoRes.ok) {
-        const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
-        const base = await Image.decode(bytes);
-        const logo = await Image.decode(logoBytes);
-        const targetLogoW = Math.round(base.width * 0.18);
-        const scale = targetLogoW / logo.width;
-        const targetLogoH = Math.round(logo.height * scale);
-        const resizedLogo = logo.resize(targetLogoW, targetLogoH);
-        const margin = Math.round(base.width * 0.045);
-        base.composite(resizedLogo, margin, margin);
-        bytes = await base.encode(); // PNG
-        finalMime = "image/png";
-        finalExt = "png";
-      } else {
-        console.warn("logo fetch failed", logoRes.status);
-      }
-    } catch (e) {
-      console.error("logo composite failed", e);
-      // segue com a imagem original mesmo se o composite falhar
-    }
+    bytes = await stampOfficialLogoOrThrow(bytes, LOGO_URL);
+    finalMime = "image/png";
+    finalExt = "png";
 
     // upload
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
