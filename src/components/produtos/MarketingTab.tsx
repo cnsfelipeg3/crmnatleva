@@ -514,11 +514,27 @@ export default function MarketingTab(props: Props) {
 
       {/* HISTÓRICO */}
       <Card className="p-5 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h3 className="font-semibold text-sm flex items-center gap-1.5">
             <ImagePlus className="w-4 h-4 text-primary" /> Histórico de artes
           </h3>
-          <Badge variant="secondary">{assets.length}</Badge>
+          <div className="flex items-center gap-2">
+            {assets.some((a) => !a.caption) && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={generateMissingCaptions}
+                disabled={bulkCaptioning}
+              >
+                {bulkCaptioning ? (
+                  <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Gerando legendas...</>
+                ) : (
+                  <><MessageSquareText className="w-3.5 h-3.5 mr-1.5" />Gerar legendas pendentes</>
+                )}
+              </Button>
+            )}
+            <Badge variant="secondary">{assets.length}</Badge>
+          </div>
         </div>
 
         {assets.length === 0 && (
