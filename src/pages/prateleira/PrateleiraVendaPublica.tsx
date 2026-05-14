@@ -81,6 +81,7 @@ export default function PrateleiraVendaPublica() {
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
   const [unlocked, setUnlocked] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
+  const trackerRef = useRef<ReturnType<typeof initViewerTracking> | null>(null);
 
   // Print mode bypassa o gate (PDF/render server)
   const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
