@@ -17,6 +17,10 @@ export type NatlevaPlan = {
   pixDiscountPercent?: number;
   pixTotal?: number;
   minInstallment?: number;
+  /** Quando o produto tem parcelas personalizadas (valor por boleto), exposto pra UI montar o cronograma. */
+  customInstallments?: number[];
+  /** true quando a soma da entrada + parcelas personalizadas diverge do total (>1 R$ de diferença). */
+  customMismatch?: boolean;
 };
 
 const SYMBOL: Record<string, string> = { BRL: "R$", USD: "US$", EUR: "€" };
