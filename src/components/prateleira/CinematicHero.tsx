@@ -17,7 +17,7 @@ type Props = {
   dateRange?: string | null;
   galleryCount?: number;
   onBack: () => void;
-  onShare: () => void;
+  onShare: (channel?: "whatsapp" | "copy" | "twitter" | "facebook" | "telegram" | "native") => void;
   onOpenGallery?: () => void;
 };
 
