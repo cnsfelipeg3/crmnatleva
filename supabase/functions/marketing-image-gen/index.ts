@@ -106,9 +106,6 @@ serve(async (req) => {
     if (body.refine_from_url) {
       userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.refine_from_url) } });
     }
-    // Sempre anexa o logotipo oficial NatLeva como segunda imagem de referência
-    userContent.push({ type: "image_url", image_url: { url: LOGO_URL } });
-
     // Try preferred model -> flash -> fallback
     const order = body.use_pro
       ? [MODEL_PRO, MODEL_FLASH, MODEL_FALLBACK]
