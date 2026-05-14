@@ -452,7 +452,7 @@ export default function PrateleiraVendaPublica() {
 
       <PublicFooter />
 
-      <GalleryLightbox
+      <GalleryModal
         open={galleryOpen}
         images={allImages}
         initialIndex={galleryIdx}
