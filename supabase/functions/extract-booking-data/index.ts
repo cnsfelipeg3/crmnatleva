@@ -13,7 +13,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type ItemType = "flight" | "hotel" | "experience" | "cruise" | "insurance";
+type ItemType =
+  | "flight"
+  | "hotel"
+  | "experience"
+  | "cruise"
+  | "insurance"
+  | "transfer"
+  | "train"
+  | "car"
+  | "tour"
+  | "ticket"
+  | "itinerary"
+  | "other";
 
 const FLIGHT_SCHEMA = {
   name: "extract_flight",
@@ -427,13 +439,107 @@ const INSURANCE_SCHEMA = {
   },
 };
 
+// Generic schema reused for transfer / train / car / tour / ticket / itinerary / other.
+// Captures the most useful structured fields for any travel item without forcing
+// a domain-specific shape.
+const GENERIC_SCHEMA = {
+  name: "extract_generic_item",
+  description:
+    "Extrai dados estruturados de um item genérico de viagem (transfer, trem, aluguel de carro, passeio, ingresso, roteiro personalizado ou outro). Use os campos disponíveis e omita o que não estiver claramente visível.",
+  parameters: {
+    type: "object",
+    properties: {
+      title: {
+        type: "string",
+        description:
+          "Título humano e curto. Padrão sugerido: '<Tipo> · <Origem → Destino ou Local>'. Ex.: 'Transfer privativo · GRU → Hotel Fasano', 'Trem Roma → Florença · Frecciarossa', 'Aluguel Carro · Localiza Compacto · Salvador', 'Passeio · City Tour Lisboa', 'Ingresso · Disney Magic Kingdom 1 dia'. Sem marketing, sem códigos isolados. Máx ~70 chars.",
+      },
+      description: {
+        type: "string",
+        description:
+          "Frase curta com os destaques principais (data, duração, fornecedor, o que está incluso). Ex.: '14/06 · 09h · 2 adultos · Inclui guia em português'.",
+      },
+      data: {
+        type: "object",
+        properties: {
+          location: { type: "string", description: "Cidade/local principal do item" },
+          country: { type: "string" },
+          start_date: { type: "string", description: "Data inicial YYYY-MM-DD" },
+          end_date: { type: "string", description: "Data final YYYY-MM-DD se houver" },
+          start_time: { type: "string", description: "HH:MM (24h)" },
+          end_time: { type: "string", description: "HH:MM (24h)" },
+          duration: { type: "string", description: "Duração legível (ex.: '3h', '8 horas', '5 dias')" },
+
+          // Transfer / car / train specifics
+          pickup_location: { type: "string", description: "Local de retirada/embarque (aeroporto, hotel, estação)" },
+          dropoff_location: { type: "string", description: "Local de entrega/desembarque" },
+          origin: { type: "string", description: "Origem (cidade ou estação)" },
+          destination: { type: "string", description: "Destino (cidade ou estação)" },
+          vehicle_type: { type: "string", description: "Tipo de veículo / categoria (Sedan, SUV, Van, Compacto, etc.)" },
+          vehicle_class: { type: "string", description: "Classe (Standard, Executivo, Luxo, Primeira Classe, etc.)" },
+          seats: { type: "number", description: "Número de assentos / passageiros" },
+          luggage_capacity: { type: "string", description: "Capacidade de bagagem (ex.: '3 malas grandes')" },
+          transmission: { type: "string", description: "Câmbio (Automático, Manual)" },
+          train_number: { type: "string", description: "Número do trem se houver" },
+          train_operator: { type: "string", description: "Operadora ferroviária (Trenitalia, SNCF, Renfe, Eurostar)" },
+          car_rental_company: { type: "string", description: "Locadora (Localiza, Hertz, Avis, Sixt, etc.)" },
+
+          // Tour / ticket / itinerary specifics
+          provider: { type: "string", description: "Fornecedor / operador (GetYourGuide, Civitatis, Disney, etc.)" },
+          guide_language: { type: "string", description: "Idioma do guia (Português, Inglês, Espanhol)" },
+          meeting_point: { type: "string", description: "Ponto de encontro" },
+          attraction: { type: "string", description: "Atração / parque / venue (ex.: 'Magic Kingdom', 'Coliseu')" },
+          ticket_type: { type: "string", description: "Tipo de ingresso (1 dia, Park Hopper, VIP, Skip the line)" },
+
+          // Generic
+          guests: { type: "number", description: "Número total de participantes" },
+          adults: { type: "number" },
+          children: { type: "number" },
+          includes: {
+            type: "array",
+            items: { type: "string" },
+            description: "Itens inclusos (guia, ingresso, transporte, refeição, seguro, taxas, etc.)",
+          },
+          excludes: {
+            type: "array",
+            items: { type: "string" },
+            description: "Itens não inclusos",
+          },
+          amenities: {
+            type: "array",
+            items: { type: "string" },
+            description: "Comodidades / diferenciais (Wi-Fi, ar-condicionado, água a bordo, etc.)",
+          },
+          price_total: { type: "number" },
+          price_per_person: { type: "number" },
+          currency: { type: "string", description: "BRL, USD, EUR, etc." },
+          locator: { type: "string", description: "Código de reserva / voucher" },
+          cancellation_policy: { type: "string" },
+          notes: { type: "string", description: "Observações livres relevantes" },
+        },
+      },
+    },
+    required: ["title", "data"],
+  },
+};
+
 const SCHEMAS: Record<ItemType, any> = {
   flight: FLIGHT_SCHEMA,
   hotel: HOTEL_SCHEMA,
   experience: EXPERIENCE_SCHEMA,
   cruise: CRUISE_SCHEMA,
   insurance: INSURANCE_SCHEMA,
+  transfer: GENERIC_SCHEMA,
+  train: GENERIC_SCHEMA,
+  car: GENERIC_SCHEMA,
+  tour: GENERIC_SCHEMA,
+  ticket: GENERIC_SCHEMA,
+  itinerary: GENERIC_SCHEMA,
+  other: GENERIC_SCHEMA,
 };
+
+const GENERIC_PROMPT_BASE =
+  "Você extrai dados estruturados de imagens/PDFs de itens de viagem para um sistema de propostas. Regras: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Capture origem, destino, datas, horários, fornecedor, valores e tudo que estiver visível. (3) Liste 'includes' e 'excludes' como arrays separados. (4) Construa um título curto, humano, sem marketing nem códigos. (5) Omita campos sem evidência clara em vez de inventar.";
 
 const SYSTEM_PROMPTS: Record<ItemType, string> = {
   flight:
@@ -446,6 +552,20 @@ const SYSTEM_PROMPTS: Record<ItemType, string> = {
     "Você é um extrator preciso de reservas, cotações e itinerários de CRUZEIRO marítimo/fluvial (MSC, Costa, Norwegian, Royal Caribbean, Disney, Viking, CVC, agências). MISSÃO: extrair TUDO o que estiver visível e MONTAR o itinerário dia-a-dia COMPLETO. Regras CRÍTICAS: (1) Datas SEMPRE em YYYY-MM-DD; horários em HH:MM 24h. (2) Calcule nights a partir de embark_date/disembark_date se não vier explícito. (3) ITINERÁRIO: liste UM item por DIA da viagem, em ordem cronológica do dia 1 ao último. Para cada porto, capture nome da cidade/porto, país, hora de chegada e saída. Para dias inteiros de navegação use port='Dia no Mar' e is_sea_day=true (omita arrival/departure). (4) NORMALIZE cabin_category para um destes: 'Interna', 'Externa', 'Balcony', 'Varanda', 'Suíte', 'Suíte Premium', 'Yacht Club' (MSC), 'The Haven' (NCL), 'Concierge', 'Outra'. (5) Capture o NOME COMERCIAL da cabine em cabin_type (ex.: 'Balcony Aurea', 'Suite Yacht Club Deluxe'). (6) NORMALIZE meal_plan ('Pensão completa', 'All inclusive', 'Bebidas inclusas', 'Premium All Inclusive'). (7) Liste includes/excludes como arrays separados — refeições, bebidas, gorjetas, taxas, excursões, transfer. (8) Detecte gratuities_included, wifi_included como boolean. (9) TÍTULO: padrão '<Navio> · <N> noites pelo <Região>'. Ex.: 'MSC Seaside · 7 noites pelo Caribe'. PROIBIDO marketing, preços ou códigos no título. Máx ~70 chars. (10) Se a imagem mostrar apenas mapa/roteiro sem cabine, foque no itinerário e cruise_line/ship_name. (11) Omita campos sem evidência clara em vez de inventar.",
   insurance:
     "Você é um extrator preciso de apólices e cotações de SEGURO VIAGEM. MISSÃO: capturar TODAS as coberturas visíveis com seus valores exatos, normalizar provedor/plano/região, datas em YYYY-MM-DD. Regras CRÍTICAS: (1) Para cada cobertura crie UM item em coverages com name (texto amigável em pt-BR), value (preserve moeda e formato originais, ex.: 'USD 250.000', 'R$ 5.000', 'até USD 1.500') e category normalizada. (2) Liste TODAS as coberturas — não resuma. Inclua DMH, DMHO, traslado médico, traslado de corpo, regresso sanitário, bagagem extraviada/atraso, cancelamento, interrupção de viagem, invalidez/morte por acidente, gestante, esportes, COVID, telemedicina, assistência jurídica, fiança, regresso antecipado, etc. (3) NORMALIZE coverage_region para uma das opções do enum. (4) Se for cortesia/brinde da agência marque is_courtesy=true. (5) Se houver período visível, calcule days a partir de start_date/end_date. (6) TÍTULO padrão: '<Operadora> · <Plano> · <Região>'. PROIBIDO marketing ou códigos isolados no título. Máx ~70 chars. (7) Detecte highlights/diferenciais (cobertura COVID, esportes radicais, telemedicina). (8) Omita campos sem evidência em vez de inventar.",
+  transfer:
+    `${GENERIC_PROMPT_BASE} Foco: TRANSFER (aeroporto, hotel, privativo, compartilhado, executivo). Capture pickup_location, dropoff_location, vehicle_type, vehicle_class, seats, luggage_capacity, fornecedor, data, horário, idioma do motorista, total e moeda. Título sugerido: 'Transfer <privativo/compartilhado> · <origem> → <destino>'.`,
+  train:
+    `${GENERIC_PROMPT_BASE} Foco: TREM (Trenitalia, SNCF, Renfe, Eurostar, Eurail, JR Pass, AVE, ICE, Frecciarossa). Capture origin, destination, train_operator, train_number, vehicle_class (1ª/2ª classe, Business, Executive), data, horário de partida e chegada, duração, locator, preço total. Título sugerido: 'Trem <origem> → <destino> · <operadora>'.`,
+  car:
+    `${GENERIC_PROMPT_BASE} Foco: ALUGUEL DE CARRO (Localiza, Movida, Hertz, Avis, Sixt, Europcar, RentCars). Capture car_rental_company, vehicle_type/class, transmission, seats, pickup_location/dropoff_location, datas e horários, includes (proteções, seguro, GPS, motorista adicional), preço total e moeda. Título sugerido: 'Aluguel Carro · <locadora> · <categoria> · <cidade>'.`,
+  tour:
+    `${GENERIC_PROMPT_BASE} Foco: PASSEIO / EXCURSÃO / CITY TOUR (GetYourGuide, Civitatis, Viator, operadores locais). Capture provider, location, attraction, duration, guide_language, meeting_point, includes (guia, transporte, ingresso, refeição), data, horário, participantes (adults/children), preço. Título sugerido: 'Passeio · <atração/cidade>'.`,
+  ticket:
+    `${GENERIC_PROMPT_BASE} Foco: INGRESSO (parques temáticos, atrações, museus, shows, eventos esportivos). Capture attraction, ticket_type (1 dia, Park Hopper, VIP, Skip-the-Line, etc.), data válida, número de adultos e crianças, fornecedor, preço total e moeda, locator. Título sugerido: 'Ingresso · <atração> · <tipo>'.`,
+  itinerary:
+    `${GENERIC_PROMPT_BASE} Foco: ROTEIRO PERSONALIZADO dia a dia. Resuma o roteiro em description e capture start_date, end_date, duração total e principais inclusões em includes[]. Título sugerido: 'Roteiro · <região/cidade> · <N dias>'.`,
+  other:
+    `${GENERIC_PROMPT_BASE} Foco: ITEM GENÉRICO de viagem que não se encaixa em outra categoria. Preencha apenas os campos visíveis.`,
 };
 
 Deno.serve(async (req) => {

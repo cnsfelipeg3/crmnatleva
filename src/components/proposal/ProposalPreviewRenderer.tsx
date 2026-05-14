@@ -8,7 +8,8 @@ import {
   BedDouble, Bath, Mountain, X, Briefcase,
   Ship, Anchor, Sun, Moon, Navigation,
   ShieldCheck, Gift, Heart, Stethoscope, Plus as PlusIcon,
-  Share2,
+  Share2, Train, Bus, Ticket, Map as MapIcon, Package,
+  Tag, Building2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -1627,7 +1628,145 @@ function ExperienceCard({ exp, idx }: { exp: any; idx: number }) {
   );
 }
 
-/* ═══ Main Renderer ═══ */
+/* ═══ Generic Misc Item Card (transfer, train, car, tour, ticket, itinerary, other) ═══ */
+const MISC_META: Record<string, { label: string; sectionTitle: string; sectionSubtitle: string; Icon: any }> = {
+  transfer:  { label: "Transfer",            sectionTitle: "Transfers",             sectionSubtitle: "Seus traslados confirmados",                Icon: Bus },
+  train:     { label: "Trem",                sectionTitle: "Trens",                 sectionSubtitle: "Suas viagens de trem",                      Icon: Train },
+  car:       { label: "Aluguel de Carro",    sectionTitle: "Aluguel de Carro",      sectionSubtitle: "Mobilidade no destino",                     Icon: Car },
+  tour:      { label: "Passeio",             sectionTitle: "Passeios",              sectionSubtitle: "Tours e excursões selecionados",            Icon: Sparkles },
+  ticket:    { label: "Ingresso",            sectionTitle: "Ingressos",             sectionSubtitle: "Entradas garantidas para suas atrações",    Icon: Ticket },
+  itinerary: { label: "Roteiro",             sectionTitle: "Roteiro Personalizado", sectionSubtitle: "Seu roteiro dia a dia",                     Icon: MapIcon },
+  other:     { label: "Outro",               sectionTitle: "Outros Serviços",       sectionSubtitle: "Demais itens da sua viagem",                Icon: Package },
+};
+
+function fmtMiscDate(raw: any): string {
+  const s = formatHotelDateBR(raw);
+  return s || (raw ? String(raw) : "");
+}
+
+function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: string }) {
+  const d = item.data || {};
+  const meta = MISC_META[kind] || MISC_META.other;
+  const Icon = meta.Icon;
+
+  const route =
+    (d.origin || d.pickup_location) && (d.destination || d.dropoff_location)
+      ? `${d.origin || d.pickup_location} → ${d.destination || d.dropoff_location}`
+      : d.location || d.attraction || "";
+
+  const dateStr = (() => {
+    const s = fmtMiscDate(d.start_date || d.date);
+    const e = fmtMiscDate(d.end_date);
+    if (s && e && s !== e) return `${s} — ${e}`;
+    return s;
+  })();
+
+  const timeStr = [d.start_time, d.end_time].filter(Boolean).join(" — ");
+  const guests = d.guests || ((d.adults || 0) + (d.children || 0)) || null;
+  const includes: string[] = Array.isArray(d.includes) ? d.includes : d.includes ? [String(d.includes)] : [];
+  const excludes: string[] = Array.isArray(d.excludes) ? d.excludes : [];
+  const amenities: string[] = Array.isArray(d.amenities) ? d.amenities : [];
+
+  const pills: { icon: React.ReactNode; label: string; value: string }[] = [];
+  if (dateStr) pills.push({ icon: <Calendar className="w-3.5 h-3.5" />, label: "Data", value: dateStr });
+  if (timeStr) pills.push({ icon: <Clock className="w-3.5 h-3.5" />, label: "Horário", value: timeStr });
+  if (d.duration) pills.push({ icon: <Clock className="w-3.5 h-3.5" />, label: "Duração", value: String(d.duration) });
+  if (d.vehicle_type || d.vehicle_class) {
+    pills.push({ icon: <Car className="w-3.5 h-3.5" />, label: "Veículo", value: [d.vehicle_type, d.vehicle_class].filter(Boolean).join(" · ") });
+  }
+  if (d.train_operator || d.train_number) {
+    pills.push({ icon: <Train className="w-3.5 h-3.5" />, label: "Trem", value: [d.train_operator, d.train_number].filter(Boolean).join(" · ") });
+  }
+  if (d.car_rental_company) pills.push({ icon: <Building2 className="w-3.5 h-3.5" />, label: "Locadora", value: String(d.car_rental_company) });
+  if (d.transmission) pills.push({ icon: <Tag className="w-3.5 h-3.5" />, label: "Câmbio", value: String(d.transmission) });
+  if (d.seats) pills.push({ icon: <Users className="w-3.5 h-3.5" />, label: "Lugares", value: String(d.seats) });
+  if (guests) pills.push({ icon: <Users className="w-3.5 h-3.5" />, label: "Pessoas", value: String(guests) });
+  if (d.guide_language) pills.push({ icon: <Globe className="w-3.5 h-3.5" />, label: "Idioma", value: String(d.guide_language) });
+  if (d.meeting_point) pills.push({ icon: <MapPin className="w-3.5 h-3.5" />, label: "Encontro", value: String(d.meeting_point) });
+  if (d.attraction && kind === "ticket") pills.push({ icon: <Ticket className="w-3.5 h-3.5" />, label: "Atração", value: String(d.attraction) });
+  if (d.ticket_type) pills.push({ icon: <Tag className="w-3.5 h-3.5" />, label: "Tipo", value: String(d.ticket_type) });
+  if (d.luggage_capacity) pills.push({ icon: <Luggage className="w-3.5 h-3.5" />, label: "Bagagem", value: String(d.luggage_capacity) });
+  if (d.provider) pills.push({ icon: <Briefcase className="w-3.5 h-3.5" />, label: "Fornecedor", value: String(d.provider) });
+  if (d.locator) pills.push({ icon: <Tag className="w-3.5 h-3.5" />, label: "Localizador", value: String(d.locator) });
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }}>
+      <ExpandableCard
+        expandedContent={
+          <div className="px-5 pb-4 space-y-3">
+            <div className="h-px bg-gradient-to-r from-transparent via-accent/20 to-transparent" />
+            {pills.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {pills.map((p, i) => (
+                  <DetailPill key={i} icon={p.icon} label={p.label} value={p.value} />
+                ))}
+              </div>
+            )}
+            {includes.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Inclui</p>
+                <ul className="space-y-1">
+                  {includes.map((it, i) => (
+                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <CheckCircle className="w-3 h-3 text-accent shrink-0 mt-0.5" /> {it}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {excludes.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">Não inclui</p>
+                <ul className="space-y-1">
+                  {excludes.map((it, i) => (
+                    <li key={i} className="text-xs text-muted-foreground flex items-start gap-1.5">
+                      <X className="w-3 h-3 text-muted-foreground/60 shrink-0 mt-0.5" /> {it}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {amenities.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {amenities.map((a, i) => (
+                  <span key={i} className="text-[11px] px-2 py-0.5 rounded-full bg-accent/10 text-accent border border-accent/20">{a}</span>
+                ))}
+              </div>
+            )}
+            {d.cancellation_policy && (
+              <p className="text-[11px] text-muted-foreground/70 border-l-2 border-accent/30 pl-3">
+                <span className="font-medium">Cancelamento:</span> {d.cancellation_policy}
+              </p>
+            )}
+            {d.notes && <p className="text-xs text-muted-foreground/70 italic border-l-2 border-accent/30 pl-3">{d.notes}</p>}
+          </div>
+        }
+      >
+        {item.image_url && (
+          <div className="h-40 overflow-hidden">
+            <img src={item.image_url} alt={item.title || meta.label} className="w-full h-full object-cover" loading="lazy" />
+          </div>
+        )}
+        <div className="p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Icon className="w-4 h-4 text-accent" />
+            <span className="text-[10px] uppercase tracking-[0.25em] text-accent font-semibold">{meta.label}</span>
+          </div>
+          <h3 className="font-semibold text-foreground leading-snug">{item.title || `${meta.label} sem título`}</h3>
+          {route && <p className="text-sm text-muted-foreground mt-1 truncate">{route}</p>}
+          {item.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.description}</p>}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-muted-foreground">
+            {dateStr && <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" /> {dateStr}</span>}
+            {timeStr && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {timeStr}</span>}
+            {guests && <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {guests}</span>}
+          </div>
+          <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes <ChevronRight className="w-3 h-3" /></p>
+        </div>
+      </ExpandableCard>
+    </motion.div>
+  );
+}
+
 interface ProposalTrackingAPI {
   track: (eventType: string, sectionName?: string, eventData?: Record<string, any>) => void;
   trackCTA: (ctaType: string, details?: Record<string, any>) => void;
@@ -1675,6 +1814,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   const experiences = items.filter((i) => i.item_type === "experience");
   const cruises = items.filter((i) => i.item_type === "cruise");
   const insurances = items.filter((i) => i.item_type === "insurance");
+  const transfers = items.filter((i) => i.item_type === "transfer");
+  const trains = items.filter((i) => i.item_type === "train");
+  const cars = items.filter((i) => i.item_type === "car");
+  const tours = items.filter((i) => i.item_type === "tour");
+  const tickets = items.filter((i) => i.item_type === "ticket");
+  const itineraries = items.filter((i) => i.item_type === "itinerary");
+  const others = items.filter((i) => i.item_type === "other");
   const paymentConditions = (proposal.payment_conditions as any[]) || [];
 
   // Apply visual overrides (signature → style) on top of the rendered DOM. Re-runs after every render.
@@ -1764,7 +1910,17 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         ? fmtDate(proposal.travel_start_date)
         : "";
 
-  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || insurances.length > 0 || proposal.destinations?.length > 0;
+  const miscGroups: { kind: string; items: any[] }[] = [
+    { kind: "transfer",  items: transfers },
+    { kind: "train",     items: trains },
+    { kind: "car",       items: cars },
+    { kind: "tour",      items: tours },
+    { kind: "ticket",    items: tickets },
+    { kind: "itinerary", items: itineraries },
+    { kind: "other",     items: others },
+  ].filter((g) => g.items.length > 0);
+
+  const hasContent = destinations.length > 0 || flights.length > 0 || hotels.length > 0 || experiences.length > 0 || cruises.length > 0 || insurances.length > 0 || miscGroups.length > 0 || proposal.destinations?.length > 0;
 
   if (!hasContent && !proposal.title) {
     return (
@@ -2019,6 +2175,32 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           </div>
         </section>
       )}
+
+      {/* ──── MISC ITEMS (transfer, train, car, tour, ticket, itinerary, other) ──── */}
+      {miscGroups.map((group, gIdx) => {
+        const meta = MISC_META[group.kind] || MISC_META.other;
+        const isAlt = gIdx % 2 === 0;
+        return (
+          <section
+            key={group.kind}
+            data-track-section={group.kind}
+            className={`py-10 sm:py-14 px-5 sm:px-6 ${isAlt ? "" : "bg-accent/[0.03]"}`}
+          >
+            <SectionTitle subtitle={meta.sectionSubtitle}>{meta.sectionTitle}</SectionTitle>
+            <div
+              className={
+                group.items.length === 1
+                  ? "max-w-3xl mx-auto"
+                  : "max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              }
+            >
+              {group.items.map((it, idx) => (
+                <MiscItemCard key={it.id || `${group.kind}-${idx}`} item={it} idx={idx} kind={group.kind} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
 
       {/* ──── FINANCIAL ──── */}
       {showPricing && (proposal.total_value || proposal.value_per_person) && (

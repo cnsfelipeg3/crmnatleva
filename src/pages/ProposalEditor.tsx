@@ -1430,8 +1430,8 @@ export default function ProposalEditor() {
                           </div>
                         )}
 
-                        {/* AI extractor — voo, hotel, experiência, cruzeiro e seguro */}
-                        {(item.item_type === "flight" || item.item_type === "hotel" || item.item_type === "experience" || item.item_type === "cruise" || item.item_type === "insurance") && (
+                        {/* AI extractor — disponível para todos os itens (exceto destino, que é só capa) */}
+                        {item.item_type !== "destination" && (
                           <AIBookingExtractor
                             itemType={item.item_type as ExtractItemType}
                             onExtracted={(data) => applyExtractedItem(idx, data)}

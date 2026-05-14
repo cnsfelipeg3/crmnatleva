@@ -5,7 +5,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export type ExtractItemType = "flight" | "hotel" | "experience" | "cruise" | "insurance";
+export type ExtractItemType =
+  | "flight"
+  | "hotel"
+  | "experience"
+  | "cruise"
+  | "insurance"
+  | "transfer"
+  | "train"
+  | "car"
+  | "tour"
+  | "ticket"
+  | "itinerary"
+  | "other";
 
 interface Props {
   itemType: ExtractItemType;
@@ -32,6 +44,34 @@ const LABELS: Record<ExtractItemType, { title: string; helper: string }> = {
   insurance: {
     title: "Extrair seguro viagem de imagem/PDF",
     helper: "Cole prints da apólice ou cotação (Assist Card, Coris, GTA, Universal, Allianz, Travel Ace) · até 20 arquivos.",
+  },
+  transfer: {
+    title: "Extrair transfer de imagem/PDF",
+    helper: "Cole prints do voucher de transfer (aeroporto, hotel, privativo, compartilhado) ou PDFs · até 20 arquivos.",
+  },
+  train: {
+    title: "Extrair trem de imagem/PDF",
+    helper: "Cole prints da reserva (Trenitalia, SNCF, Renfe, Eurostar, Eurail, JR Pass) ou PDFs · até 20 arquivos.",
+  },
+  car: {
+    title: "Extrair aluguel de carro de imagem/PDF",
+    helper: "Cole prints da reserva (Localiza, Movida, Hertz, Avis, Sixt, RentCars) ou PDFs · até 20 arquivos.",
+  },
+  tour: {
+    title: "Extrair passeio de imagem/PDF",
+    helper: "Cole prints de city tour, excursão, passeio (GetYourGuide, Civitatis, Viator) ou PDFs · até 20 arquivos.",
+  },
+  ticket: {
+    title: "Extrair ingresso de imagem/PDF",
+    helper: "Cole prints de ingressos (parques, shows, atrações, museus) ou PDFs · até 20 arquivos.",
+  },
+  itinerary: {
+    title: "Extrair roteiro de imagem/PDF",
+    helper: "Cole prints/PDFs do roteiro personalizado dia a dia · até 20 arquivos.",
+  },
+  other: {
+    title: "Extrair item de imagem/PDF",
+    helper: "Cole prints ou PDFs do voucher/comprovante e a IA preenche o que conseguir · até 20 arquivos.",
   },
 };
 
