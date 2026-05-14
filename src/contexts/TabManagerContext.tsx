@@ -100,7 +100,8 @@ export function TabManagerProvider({ children }: { children: React.ReactNode }) 
       }
       hydratedRef.current = true;
     } catch (err) {
-      console.warn("[TabManager] hydrate failed", err);
+      console.warn("[TabManager] hydrate failed · limpando estado corrompido", err);
+      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* ignore */ }
       hydratedRef.current = true;
     }
   }, [enabled, isAuthenticated, userId, location.pathname, location.search]);
