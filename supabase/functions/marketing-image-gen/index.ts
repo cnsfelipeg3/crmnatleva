@@ -43,6 +43,26 @@ async function callGateway(model: string, system: string, userContent: any, apiK
   return res;
 }
 
+function forceNoLogoGeneration(systemPrompt: string, promptText: string): { system: string; prompt: string } {
+  const noLogoSystem = [
+    systemPrompt,
+    "",
+    "SERVER-SIDE OVERRIDE · FINAL LOGO POLICY",
+    "The image model must generate the ad WITHOUT any logo or NatLeva wordmark. Ignore any instruction that asks for a logo.",
+    "Do not render the words NatLeva, natleva or Viagens anywhere in the generated image.",
+    "Reserve the top-left area as clean destination photo only. No text, shape, plaque, card, rectangle, badge, watermark or logo-like lettering there.",
+    "The official transparent logo will be added after generation by deterministic image compositing with a soft green fade behind it.",
+  ].join("\n");
+
+  const noLogoPrompt = [
+    promptText,
+    "",
+    "FINAL IMPORTANT INSTRUCTION: generate the artwork without any logo. The top-left logo area must remain clean photographic background only because the real transparent logo will be applied by code after generation.",
+  ].join("\n");
+
+  return { system: noLogoSystem, prompt: noLogoPrompt };
+}
+
 async function fetchImageAsDataUrl(url: string): Promise<string> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Falha ao carregar imagem de referência (${res.status})`);
@@ -72,21 +92,18 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginY = Math.round(base.height * 0.045);
 
   // ─────────────────────────────────────────────────────────────
-  // Fade verde NatLeva por trás do logo · padrão de marca.
-  // Cobre toda a área reservada do top-left (≈28% × 15%) com um
-  // gradiente Rolex Green opaco no centro que esmaece suave nas
-  // bordas, escondendo qualquer "plaqueta" ou wordmark que a IA
-  // tenha desenhado por engano e dando ao logo champagne um fundo
-  // verde elegante e consistente em todas as artes.
+  // Fade verde NatLeva por trás do logo · sem fundo sólido.
+  // Agora a IA é proibida de gerar qualquer logo, então o halo serve
+  // apenas para destacar o PNG transparente oficial com suavidade.
   // ─────────────────────────────────────────────────────────────
-  const reservedW = base.width * 0.32;
-  const reservedH = base.height * 0.18;
+  const reservedW = base.width * 0.28;
+  const reservedH = base.height * 0.16;
   const haloCx = marginX + targetLogoW / 2;
   const haloCy = marginY + targetLogoH / 2;
   const haloRx = reservedW / 2;
   const haloRy = reservedH / 2;
-  const corePeak = 0.85;          // até onde a opacidade fica no máximo (em fração de raio)
-  const maxAlpha = 240;           // núcleo praticamente opaco · cobre artefatos da IA
+  const corePeak = 0.32;          // núcleo pequeno · evita aparência de placa/fundo
+  const maxAlpha = 190;           // destaque forte, mas ainda com aparência de fade
   const greenR = 20, greenG = 69, greenB = 47; // #14452F · Rolex Green NatLeva
 
   const xMin = Math.max(0, Math.floor(haloCx - haloRx));
@@ -100,7 +117,7 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
       const dy = (y - haloCy) / haloRy;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d >= 1) continue;
-      // Núcleo opaco até corePeak, depois smoothstep até 0 na borda
+      // Núcleo suave até corePeak, depois smoothstep até 0 na borda
       let fade: number;
       if (d <= corePeak) {
         fade = 1;
@@ -128,7 +145,7 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) por cima
   // do halo verde. Único logo presente na arte final.
   base.composite(resizedLogo, marginX, marginY);
-  return await base.encode();
+  return new Uint8Array(await base.encode());
 }
 
 serve(async (req) => {
@@ -148,14 +165,15 @@ serve(async (req) => {
     }
 
     // Build user content (refine = image + new prompt; new = optional reference image + prompt)
-    const promptText = body.refine_prompt
+    const rawPromptText = body.refine_prompt
       ? `${body.user_prompt}\n\nREFINE INSTRUCTION (apply on top of the previous artwork while preserving the NatLeva brand identity): ${body.refine_prompt}`
       : body.user_prompt;
+    const { system, prompt } = forceNoLogoGeneration(body.system_prompt || "", rawPromptText);
 
     const LOGO_URL =
       "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png";
 
-    const userContent: any[] = [{ type: "text", text: promptText }];
+    const userContent: any[] = [{ type: "text", text: prompt }];
     if (body.reference_image_url) {
       userContent.push({ type: "image_url", image_url: { url: await fetchImageAsDataUrl(body.reference_image_url) } });
     }
@@ -174,7 +192,7 @@ serve(async (req) => {
     let assistantText = "";
 
     for (const model of order) {
-      const res = await callGateway(model, body.system_prompt, userContent, LOVABLE_API_KEY);
+      const res = await callGateway(model, system, userContent, LOVABLE_API_KEY);
       if (res.status === 429) {
         return new Response(JSON.stringify({ error: "Limite de requisições atingido. Tente novamente em alguns segundos." }), {
           status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -211,7 +229,7 @@ serve(async (req) => {
     const m = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!m) throw new Error("Formato de imagem inesperado");
     const mime = m[1];
-    let bytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
+    const generatedBytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
     let finalMime = mime;
     let finalExt = mime.split("/")[1] || "png";
 
@@ -219,7 +237,7 @@ serve(async (req) => {
     // Post-processing obrigatório · STAMP da logo oficial NatLeva
     // Se a logo não puder ser aplicada, a arte não é salva.
     // ============================================================
-    bytes = await stampOfficialLogoOrThrow(bytes, LOGO_URL);
+    const bytes = await stampOfficialLogoOrThrow(generatedBytes, LOGO_URL);
     finalMime = "image/png";
     finalExt = "png";
 
