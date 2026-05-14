@@ -1,22 +1,44 @@
-// Identidade visual NatLeva · usada em todos os prompts de geração de arte
+// =====================================================================
+// Identidade visual oficial NatLeva · extraída do Brandbook
+// Toda arte gerada DEVE seguir esta paleta, tipografia e logotipo
+// =====================================================================
+
+const LOGO_GREEN_URL =
+  "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva.png";
+const LOGO_GOLD_URL =
+  "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png";
+
 export const NATLEVA_BRAND = {
-  name: "NatLeva Viagens",
+  name: "natleva",
+  fullName: "NatLeva Viagens",
   handle: "@natlevaviagens",
   whatsapp: "+55 (11) 96639-6692",
-  logoUrl:
-    "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva.png",
+  tagline: "Viagens são a vida em movimento",
+  // Logotipos oficiais (serifado com avião integrado à letra "n")
+  logos: {
+    green: LOGO_GREEN_URL,   // padrão · usado em fundos claros (Linen, Sand, Champagne)
+    gold: LOGO_GOLD_URL,     // alternativo · usado em fundos escuros (Rolex Green, foto escura)
+  },
+  // Paleta oficial · Brandbook
   colors: {
-    cardBg: "#FFFFFF",
-    text: "#111827",
-    gold: "#C9A84C",
-    goldSoft: "#E6CE85",
-    overlay: "rgba(17, 24, 39, 0.55)",
+    rolexGreen: "#14452F",   // primária · fundos premium, textos principais
+    hunter:     "#1E6B4A",   // ação · botões, links, CTAs
+    eucalyptus: "#5E8C7B",   // suporte · acentos suaves
+    champagne:  "#C9A55A",   // destaque premium · acentos de luxo, linha divisora
+    sand:       "#D8CBAF",   // equilíbrio · textos em fundos escuros
+    linen:      "#F0EBE0",   // fundo principal claro · off-white quente
+    ink:        "#0F2A1E",   // texto sobre Linen
   },
   typography: {
-    display: "Modern editorial sans serif (similar to Sora, Manrope or Inter Display)",
-    body: "Clean geometric sans serif (similar to Inter or Manrope)",
+    display: "Playfair Display (serif elegante · headlines, weights 400/700)",
+    body: "Instrument Sans (sans serif limpo · corpo, CTAs, weights 400/700)",
   },
 } as const;
+
+// Helper · escolhe o logotipo certo conforme o fundo
+export function pickLogoUrl(background: "dark" | "light"): string {
+  return background === "dark" ? NATLEVA_BRAND.logos.gold : NATLEVA_BRAND.logos.green;
+}
 
 export type ArtTone = "promocional" | "sofisticado" | "urgencia" | "familia";
 
@@ -53,42 +75,81 @@ export interface ArtBriefing {
 export function buildBrandSystemPrompt(): string {
   const c = NATLEVA_BRAND.colors;
   return [
-    "You are a senior art director generating a finished, ready-to-publish social media advertisement for the Brazilian travel agency NatLeva Viagens.",
-    "The output MUST look like a polished commercial creative made by a top-tier agency · NOT a photo with random text on top.",
+    "You are the senior art director of NatLeva Viagens, a premium Brazilian travel agency.",
+    "Generate a finished, ready-to-publish social media advertisement that is INDISTINGUISHABLE from a professional brand piece designed in the official NatLeva brandbook.",
     "",
-    "BRAND IDENTITY (mandatory · non-negotiable):",
-    `- Brand name: ${NATLEVA_BRAND.name}`,
-    `- Instagram handle: ${NATLEVA_BRAND.handle}`,
-    `- WhatsApp: ${NATLEVA_BRAND.whatsapp}`,
-    `- Primary text on white: ${c.text} (deep slate, almost black)`,
-    `- Card / panel background: ${c.cardBg} (pure white, soft shadow)`,
-    `- Accent color: ${c.gold} (warm muted gold) · use for thin 4px horizontal divider lines, price underline, CTA button fill`,
-    `- Headline typography: ${NATLEVA_BRAND.typography.display}, tight tracking, weight 700-800`,
-    `- Body typography: ${NATLEVA_BRAND.typography.body}, weight 400-500`,
+    "================================",
+    "OFFICIAL BRAND IDENTITY (MANDATORY · extracted from the brandbook · DO NOT improvise)",
+    "================================",
+    `Brand wordmark: lowercase "${NATLEVA_BRAND.name}" in elegant serif with a small airplane integrated into the letter "n" · NEVER recreate the wordmark from scratch · ALWAYS render the official attached logotype.`,
+    `Tagline (optional, small caps in body font): "${NATLEVA_BRAND.tagline}"`,
+    `Instagram handle (footer): ${NATLEVA_BRAND.handle}`,
+    `WhatsApp (footer): ${NATLEVA_BRAND.whatsapp}`,
     "",
-    "LOGO INTEGRATION (mandatory):",
-    "- The SECOND image attached is the official NatLeva logotype · place it visibly in the top-left corner OR as part of the footer card",
-    "- Render the logo crisp and recognizable · do NOT distort, recolor, blur, or invent a new logo",
-    "- Logo height ~6% to 8% of the artwork height",
+    "OFFICIAL COLOR PALETTE (use ONLY these hex values · no random colors):",
+    `  · Rolex Green ${c.rolexGreen} · primary background, primary text on light backgrounds`,
+    `  · Hunter ${c.hunter} · CTAs, action buttons, secondary green`,
+    `  · Eucalyptus ${c.eucalyptus} · soft tertiary accents`,
+    `  · Champagne ${c.champagne} · premium gold for thin divider lines, price highlights, badges, decorative accents`,
+    `  · Sand ${c.sand} · text on dark green backgrounds, secondary elements`,
+    `  · Linen ${c.linen} · warm off-white background that REPLACES pure white`,
+    `  · Ink ${c.ink} · dark text on Linen`,
+    "  NEVER use pure white (#FFFFFF) · always use Linen.",
+    "  NEVER use pure black (#000000) · always use Rolex Green or Ink.",
     "",
-    "VISUAL STRUCTURE (mandatory):",
-    "- Background: cinematic destination photo (the FIRST attached image), with a soft dark gradient overlay for legibility",
-    "- Top zone: NatLeva logo + small destination tag",
-    "- Center zone: large bold headline (white) + subheadline (white 80% opacity)",
-    "- Information card (white rounded card, ~75% width, slight shadow): contains dates, nights, hotel and includes",
-    "- Price card (separate or fused): shows ENTRY value in big gold figures + installments line below in slate · DO NOT show only the total value, show entry + installments to feel attractive",
-    "- CTA: solid gold pill with deep slate text",
-    "- Footer strip: white logotype text on the left, handle and WhatsApp on the right, separated by a thin gold 4px rule",
+    "OFFICIAL TYPOGRAPHY:",
+    `  · Headlines & display: ${NATLEVA_BRAND.typography.display}`,
+    `  · Body, captions, CTAs: ${NATLEVA_BRAND.typography.body}`,
+    "  Headlines feel editorial, sophisticated, slightly italic when small. CTAs are uppercase, tracked.",
     "",
-    "ABSOLUTE PROHIBITIONS:",
-    "- NEVER use emojis anywhere on the artwork",
-    "- NEVER use hyphens (-) or em-dashes (—) as separators · use mid-dot (·) instead",
-    "- NEVER invent prices, dates, hotel names or destinations not present in the briefing",
-    "- NEVER add fake hotel logos, airline logos, third-party brands, watermarks or stock-photo signatures",
-    "- NEVER write the total package price as a single big number · always lead with entry + installments",
-    "- All text MUST be perfectly legible, correctly spelled in Brazilian Portuguese, aligned to a clean grid",
+    "================================",
+    "LOGO RULES (NON-NEGOTIABLE)",
+    "================================",
+    "Two image references are attached:",
+    "  · IMAGE 1 = the destination background photo",
+    "  · IMAGE 2 = the OFFICIAL NatLeva logotype",
+    "Render IMAGE 2 EXACTLY as provided (same shape, same airplane, same serif, same proportions). NEVER trace it, restyle it, recolor it, italicize it, distort it, or recreate it from memory.",
+    "Logo placement: top-left at ~7% of artwork height OR centered above the wordmark in the footer card.",
+    "If the logo sits over a dark area: the gold/cream variant has been provided · keep its color.",
+    "If the logo sits over a Linen/light card: use the Rolex Green variant · keep its color.",
+    "Maintain a clear-space margin around the logo of at least the height of the airplane icon.",
     "",
-    "OUTPUT: a single finished, polished, premium social ad image · ready to publish today.",
+    "================================",
+    "VISUAL STRUCTURE (mandatory)",
+    "================================",
+    "1. Background: cinematic destination photo (IMAGE 1) with a subtle Rolex Green gradient overlay (rgba(20,69,47,0.55) at the bottom · transparent at the top) for legibility.",
+    "2. Top-left: NatLeva logotype (IMAGE 2) in its original color.",
+    "3. Top-right (only if scarcity provided): small Champagne pill with Rolex Green text.",
+    "4. Headline (Sand or Linen color, Playfair Display, weight 700, tight tracking): large editorial title.",
+    "5. Subheadline (Sand 80% opacity, Instrument Sans regular): one short line directly below.",
+    "6. Information card · Linen rounded card (~75% width, 16-24px radius, soft shadow):",
+    "      · Top: Champagne 4px horizontal divider line (signature element).",
+    "      · Period (saída · volta), nights, hotel + estrelas.",
+    "      · Bullet list of 'Inclusos' with mid-dot bullets in Hunter color.",
+    "7. Price block (separate Linen card OR fused with info card):",
+    "      · Big Champagne figure with the ENTRY value (Playfair Display, very bold).",
+    "      · Smaller Hunter line with the installments label.",
+    "      · Tiny Eucalyptus line with the PIX option, when present.",
+    "      · NEVER show only the total price · always lead with entry + installments.",
+    "8. CTA: solid Champagne pill, Rolex Green text, Instrument Sans Bold uppercase tracked.",
+    "9. Footer strip on Rolex Green:",
+    "      · Left: small wordmark or 'NatLeva Viagens' in Sand.",
+    "      · Right: handle and WhatsApp in Sand, separated by a thin Champagne 4px rule.",
+    "",
+    "================================",
+    "ABSOLUTE PROHIBITIONS",
+    "================================",
+    "· NEVER use emojis anywhere on the artwork.",
+    "· NEVER use hyphens (-) or em-dashes (—) as separators · use mid-dot (·) instead.",
+    "· NEVER invent prices, dates, hotel names, destinations or values not present in the briefing.",
+    "· NEVER add fake third-party logos, airline logos, hotel logos or stock-photo watermarks.",
+    "· NEVER recreate the NatLeva wordmark · always render the attached logotype pixel-perfect.",
+    "· NEVER use colors outside the official palette above.",
+    "· NEVER use Comic Sans, Arial, Times New Roman or any generic font that breaks the editorial feel.",
+    "· NEVER show the total package price as a single big number · always lead with entry + installments.",
+    "· All text MUST be perfectly legible, correctly spelled in Brazilian Portuguese, aligned to a clean baseline grid.",
+    "",
+    "OUTPUT: a single finished, polished, premium social ad that looks like it came straight out of the NatLeva brandbook · ready to publish today.",
   ].join("\n");
 }
 
@@ -98,33 +159,35 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     `Generate a finished social media ad in ${formatLabel} format (aspect ratio ${aspect}).`,
     "",
     "BRIEFING (use EXACTLY this content, in Brazilian Portuguese, NEVER paraphrase numbers or dates):",
-    `- Headline: "${briefing.headline}"`,
-    `- Subheadline: "${briefing.subheadline}"`,
-    briefing.destination ? `- Destination tag: ${briefing.destination}` : "",
+    `· Headline: "${briefing.headline}"`,
+    `· Subheadline: "${briefing.subheadline}"`,
+    briefing.destination ? `· Destination tag: ${briefing.destination}` : "",
     briefing.hotelName
-      ? `- Hotel: ${briefing.hotelName}${briefing.hotelStars ? ` · ${briefing.hotelStars}★` : ""}`
+      ? `· Hotel: ${briefing.hotelName}${briefing.hotelStars ? ` · ${briefing.hotelStars}★` : ""}`
       : "",
-    briefing.nights ? `- Duration: ${briefing.nights} noites` : "",
+    briefing.nights ? `· Duration: ${briefing.nights} noites` : "",
     briefing.departureDate && briefing.returnDate
-      ? `- Period: ${briefing.departureDate} a ${briefing.returnDate}`
-      : briefing.departureDate ? `- Saída: ${briefing.departureDate}` : "",
-    includes.length ? `- What's included (render as a small bullet list with mid-dot bullets): ${includes.join(" · ")}` : "",
+      ? `· Period: ${briefing.departureDate} a ${briefing.returnDate}`
+      : briefing.departureDate ? `· Saída: ${briefing.departureDate}` : "",
+    includes.length
+      ? `· What is included (render as a small bullet list with mid-dot bullets in Hunter green): ${includes.join(" · ")}`
+      : "",
     briefing.payment
       ? [
-          "- PRICE BLOCK (render exactly like this, prioritizing entry + installments over total):",
-          `   · Big gold line: "${briefing.payment.entryLabel}"`,
-          `   · Slate sub line: "${briefing.payment.installmentsLabel}"`,
-          briefing.payment.pixLabel ? `   · Tiny line: "${briefing.payment.pixLabel}"` : "",
-          briefing.payment.fromLabel ? `   · Caption above the card: "${briefing.payment.fromLabel}"` : "",
+          "· PRICE BLOCK (render exactly like this · entry + installments lead, NEVER total alone):",
+          `   · Big Champagne figure: "${briefing.payment.entryLabel}"`,
+          `   · Hunter sub line: "${briefing.payment.installmentsLabel}"`,
+          briefing.payment.pixLabel ? `   · Eucalyptus tiny line: "${briefing.payment.pixLabel}"` : "",
+          briefing.payment.fromLabel ? `   · Caption above the card in Sand: "${briefing.payment.fromLabel}"` : "",
         ].filter(Boolean).join("\n")
       : "",
-    briefing.scarcity ? `- Scarcity badge (small gold pill at top-right): "${briefing.scarcity}"` : "",
-    `- CTA button text: "${briefing.cta}"`,
-    `- Visual tone: ${TONE_LABEL[briefing.tone]}`,
+    briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
+    `· CTA button text: "${briefing.cta}"`,
+    `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
     "",
-    "Use the FIRST attached image as the destination background.",
-    "Use the SECOND attached image as the official NatLeva logotype · render it crisp at the top-left or footer.",
-    "Apply the NatLeva brand identity defined in the system instructions. Render every text element pixel-perfect and correctly spelled.",
+    "IMAGE 1 (attached) = destination background.",
+    "IMAGE 2 (attached) = OFFICIAL NatLeva logotype · render it pixel-perfect, do NOT recreate it.",
+    "Apply the NatLeva brand identity defined in the system instructions (Rolex Green, Hunter, Champagne, Sand, Linen palette · Playfair Display + Instrument Sans typography).",
   ];
   return lines.filter(Boolean).join("\n");
 }
@@ -132,8 +195,6 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
 // ====================================================================
 // Sales triggers · gera headline e subheadline magnéticas
 // ====================================================================
-
-const POWER_VERBS = ["Embarque", "Realize", "Viva", "Conquiste", "Garanta"];
 
 export function buildSalesHeadline(opts: {
   destination?: string;

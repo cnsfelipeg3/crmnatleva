@@ -65,7 +65,7 @@ serve(async (req) => {
       : body.user_prompt;
 
     const LOGO_URL =
-      "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva.png";
+      "https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png";
 
     const userContent: any[] = [{ type: "text", text: promptText }];
     if (refImg) {
