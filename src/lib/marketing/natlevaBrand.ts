@@ -125,7 +125,8 @@ export function buildBrandSystemPrompt(): string {
     "6. Information card · Linen rounded card (~75% width, 16-24px radius, soft shadow):",
     "      · Top: Champagne 4px horizontal divider line (signature element).",
     "      · Period (saída · volta), nights, hotel + estrelas.",
-    "      · Bullet list of 'Inclusos' with mid-dot bullets in Hunter color.",
+    "      · MANDATORY label 'Está incluso:' (Instrument Sans, Hunter color, weight 700, slightly larger than the items below) rendered as a centered title above the list. This label is REQUIRED on every art and must NEVER be omitted.",
+    "      · Below the label, render each included item as ITS OWN bullet line (one per row, NEVER concatenated on the same line, NEVER separated by mid-dots). Use a small Champagne mid-dot (·) as the bullet marker, item text in Ink/Hunter, Instrument Sans regular. Vertical spacing between bullets ~6-10px.",
 "7. Price block (separate Linen card OR fused with info card):",
       "      · Big Champagne figure with the ENTRY value (Playfair Display, very bold).",
       "      · Smaller Hunter line with the installments label.",
@@ -210,7 +211,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
       : "",
     briefing.nights ? `· Duration: ${briefing.nights} noites` : "",
     period ? `· Period (render EXACTLY like this, do NOT reformat): ${period}` : "",
-    `· "Está incluso:" section (render as a small bullet list with mid-dot bullets in Hunter green, EXACTLY these items in this order): ${includes.join(" · ")}`,
+    `· "Está incluso:" section (MANDATORY · render with the bold Hunter-green title "Está incluso:" centered, then EACH item below as ITS OWN bullet line, one per row, NEVER on the same line, NEVER joined by mid-dots · use a small Champagne mid-dot as bullet marker · items in this exact order):\n${includes.map((i) => `      · ${i}`).join("\n")}`,
     briefing.payment
       ? [
           "· PRICE BLOCK (render EXACTLY like this · entry + installments ONLY · NEVER show or mention the total package price):",
