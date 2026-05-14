@@ -2176,6 +2176,32 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
         </section>
       )}
 
+      {/* ──── MISC ITEMS (transfer, train, car, tour, ticket, itinerary, other) ──── */}
+      {miscGroups.map((group, gIdx) => {
+        const meta = MISC_META[group.kind] || MISC_META.other;
+        const isAlt = gIdx % 2 === 0;
+        return (
+          <section
+            key={group.kind}
+            data-track-section={group.kind}
+            className={`py-10 sm:py-14 px-5 sm:px-6 ${isAlt ? "" : "bg-accent/[0.03]"}`}
+          >
+            <SectionTitle subtitle={meta.sectionSubtitle}>{meta.sectionTitle}</SectionTitle>
+            <div
+              className={
+                group.items.length === 1
+                  ? "max-w-3xl mx-auto"
+                  : "max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              }
+            >
+              {group.items.map((it, idx) => (
+                <MiscItemCard key={it.id || `${group.kind}-${idx}`} item={it} idx={idx} kind={group.kind} />
+              ))}
+            </div>
+          </section>
+        );
+      })}
+
       {/* ──── FINANCIAL ──── */}
       {showPricing && (proposal.total_value || proposal.value_per_person) && (
         <section data-track-section="pricing" className="py-10 sm:py-14 px-5 sm:px-6">
