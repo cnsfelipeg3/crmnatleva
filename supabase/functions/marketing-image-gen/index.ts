@@ -53,33 +53,6 @@ async function fetchImageAsDataUrl(url: string): Promise<string> {
   return `data:${contentType};base64,${btoa(binary)}`;
 }
 
-// Pinta um retângulo verde-Rolex semi-transparente cobrindo a área onde a IA
-// pode ter desenhado um wordmark "natleva". Isso garante que o logo oficial
-// stampado em seguida não fique sobreposto a um logo gerado pela IA.
-function paintReservedArea(base: any, x: number, y: number, w: number, h: number) {
-  // RGBA empacotado em 0xRRGGBBAA · Rolex Green (#14452F) com 86% de opacidade
-  const overlay = 0x14452FDC;
-  for (let py = y; py < y + h && py < base.height; py++) {
-    for (let px = x; px < x + w && px < base.width; px++) {
-      const cur = base.getPixelAt(px + 1, py + 1);
-      // alpha blend manual sobre o pixel atual
-      const oa = (overlay & 0xff) / 255;
-      const or = (overlay >> 24) & 0xff;
-      const og = (overlay >> 16) & 0xff;
-      const ob = (overlay >> 8) & 0xff;
-      const cr = (cur >> 24) & 0xff;
-      const cg = (cur >> 16) & 0xff;
-      const cb = (cur >> 8) & 0xff;
-      const ca = cur & 0xff;
-      const r = Math.round(or * oa + cr * (1 - oa));
-      const g = Math.round(og * oa + cg * (1 - oa));
-      const b = Math.round(ob * oa + cb * (1 - oa));
-      const a = Math.max(ca, Math.round(255 * oa));
-      base.setPixelAt(px + 1, py + 1, ((r << 24) | (g << 16) | (b << 8) | a) >>> 0);
-    }
-  }
-}
-
 async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string): Promise<Uint8Array> {
   const logoRes = await fetch(logoUrl);
   if (!logoRes.ok) throw new Error(`Falha ao carregar logotipo oficial (${logoRes.status})`);
@@ -87,17 +60,17 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
   const base = await Image.decode(baseBytes);
   const logo = await Image.decode(logoBytes);
-  const targetLogoW = Math.round(base.width * 0.23);
+  const targetLogoW = Math.round(base.width * 0.21);
   const scale = targetLogoW / logo.width;
   const targetLogoH = Math.round(logo.height * scale);
   const resizedLogo = logo.resize(targetLogoW, targetLogoH);
   const marginX = Math.round(base.width * 0.065);
-  const marginY = Math.round(base.height * 0.04);
+  const marginY = Math.round(base.height * 0.045);
 
   // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) diretamente
-  // sobre a arte. O prompt instrui a IA a manter a área superior-esquerda livre
-  // de wordmarks e elementos pesados, então o logo apoia direto no fundo natural
-  // da imagem · sem caixa verde, sem retângulo, integrado à arte.
+  // sobre a arte. A IA não recebe mais o arquivo do logo como referência, para
+  // impedir que tente redesenhar o wordmark e gere sobreposição. O único logo
+  // existente no resultado final é este PNG oficial composto aqui.
   base.composite(resizedLogo, marginX, marginY);
   return await base.encode();
 }
