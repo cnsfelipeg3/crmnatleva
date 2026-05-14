@@ -602,6 +602,61 @@ export default function MarketingTab(props: Props) {
                           {refining === a.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
                         </Button>
                       </div>
+
+                      {/* LEGENDA SUGERIDA */}
+                      <div className="rounded-lg border bg-muted/30 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                            <MessageSquareText className="w-3 h-3" /> Legenda sugerida
+                          </div>
+                          <div className="flex gap-0.5">
+                            {a.caption && (
+                              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyCaption(a)} title="Copiar legenda">
+                                <Copy className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => generateCaption(a, !!a.caption)}
+                              disabled={!!captioning[a.id]}
+                              title={a.caption ? "Regerar legenda" : "Gerar legenda"}
+                            >
+                              {captioning[a.id]
+                                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                : a.caption
+                                  ? <RefreshCw className="w-3.5 h-3.5" />
+                                  : <Sparkles className="w-3.5 h-3.5" />}
+                            </Button>
+                          </div>
+                        </div>
+                        {a.caption ? (
+                          <Textarea
+                            value={a.caption}
+                            onChange={(e) => setAssets((prev) => prev.map((x) => x.id === a.id ? { ...x, caption: e.target.value } : x))}
+                            onBlur={async (e) => {
+                              await (supabase as any)
+                                .from("product_marketing_assets")
+                                .update({ caption: e.target.value })
+                                .eq("id", a.id);
+                            }}
+                            rows={6}
+                            className="text-xs leading-relaxed resize-y"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => generateCaption(a, false)}
+                            disabled={!!captioning[a.id]}
+                            className="w-full text-left text-xs text-muted-foreground hover:text-foreground py-2 px-1 rounded transition-colors flex items-center gap-1.5"
+                          >
+                            {captioning[a.id]
+                              ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Gerando legenda estratégica...</>
+                              : <><Sparkles className="w-3.5 h-3.5" /> Gerar legenda estratégica para essa arte</>}
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
