@@ -17,6 +17,10 @@ export type NatlevaPlan = {
   pixDiscountPercent?: number;
   pixTotal?: number;
   minInstallment?: number;
+  /** Quando o produto tem parcelas personalizadas (valor por boleto), exposto pra UI montar o cronograma. */
+  customInstallments?: number[];
+  /** true quando a soma da entrada + parcelas personalizadas diverge do total (>1 R$ de diferença). */
+  customMismatch?: boolean;
 };
 
 const SYMBOL: Record<string, string> = { BRL: "R$", USD: "US$", EUR: "€" };
@@ -38,6 +42,8 @@ export function computeNatlevaPlan(
     simulatedMonths?: number;
     minInstallment?: number;
     pixDiscountPercent?: number;
+    /** Valores explícitos de cada parcela do saldo (em moeda). Quando definido, ignora maxInstallments/minInstallment. */
+    customInstallments?: number[];
   }
 ): NatlevaPlan | null {
   if (!price || price <= 0) return null;
@@ -81,13 +87,27 @@ export function computeNatlevaPlan(
     : Math.round(total * (entryPercent / 100) * 100) / 100;
   const balanceAmount = Math.round((total - entryAmount) * 100) / 100;
 
-  // Aplica valor mínimo da parcela (reduz nº de parcelas se necessário)
-  let installments = monthsAvailable;
-  if (minInstallment > 0 && balanceAmount > 0) {
-    const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
-    installments = Math.min(installments, maxByMin);
+  // Modo personalizado · usa exatamente as parcelas informadas
+  const customRaw = opts?.customInstallments?.filter((v) => Number.isFinite(v) && v > 0) ?? [];
+  const useCustom = customRaw.length > 0;
+
+  let installments: number;
+  let installmentAmount: number;
+  let customMismatch: boolean | undefined;
+
+  if (useCustom) {
+    installments = customRaw.length;
+    const sum = Math.round(customRaw.reduce((a, b) => a + b, 0) * 100) / 100;
+    installmentAmount = Math.round((sum / installments) * 100) / 100;
+    customMismatch = Math.abs(sum - balanceAmount) > 1;
+  } else {
+    installments = monthsAvailable;
+    if (minInstallment > 0 && balanceAmount > 0) {
+      const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
+      installments = Math.min(installments, maxByMin);
+    }
+    installmentAmount = Math.round((balanceAmount / installments) * 100) / 100;
   }
-  const installmentAmount = Math.round((balanceAmount / installments) * 100) / 100;
 
   const pixTotal = pixDiscountPercent > 0
     ? Math.round(total * (1 - pixDiscountPercent / 100) * 100) / 100
@@ -108,6 +128,8 @@ export function computeNatlevaPlan(
     pixDiscountPercent: pixDiscountPercent > 0 ? pixDiscountPercent : undefined,
     pixTotal,
     minInstallment: minInstallment > 0 ? minInstallment : undefined,
+    customInstallments: useCustom ? customRaw.map((v) => Math.round(v * 100) / 100) : undefined,
+    customMismatch,
   };
 }
 

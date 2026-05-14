@@ -188,6 +188,7 @@ export default function OfferStack({
             daysBefore={daysBefore}
             paxMin={paxMin}
             paxMax={paxMax}
+            customInstallments={Array.isArray(pt.balance_custom_installments) ? pt.balance_custom_installments : undefined}
           />
 
           {/* Valor total do pacote · discreto · embaixo do plano de pagamento */}
