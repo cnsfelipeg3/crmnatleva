@@ -325,7 +325,7 @@ export default function PrateleiraVendaPublica() {
                   </span>
                 </h2>
                 {allImages.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={() => openGallery(0)} className="text-xs">
+                  <Button variant="ghost" size="sm" onClick={() => { trackerRef.current?.trackClick("gallery_open_all", "gallery"); openGallery(0); }} className="text-xs">
                     Ver todas
                   </Button>
                 )}
