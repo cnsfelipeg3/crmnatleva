@@ -296,6 +296,51 @@ export default function PrateleiraVendaPublica() {
             </Card>
           )}
 
+          {/* Galeria de fotos · visível e clicável */}
+          {allImages.length > 0 && (
+            <Card className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-serif text-xl flex items-center gap-2">
+                  <Images className="w-5 h-5 text-muted-foreground" />
+                  Galeria
+                  <span className="text-xs font-sans text-muted-foreground tabular-nums font-normal">
+                    {allImages.length} {allImages.length === 1 ? "foto" : "fotos"}
+                  </span>
+                </h2>
+                {allImages.length > 1 && (
+                  <Button variant="ghost" size="sm" onClick={() => openGallery(0)} className="text-xs">
+                    Ver todas
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {allImages.slice(0, 6).map((url, i) => {
+                  const isLast = i === 5 && allImages.length > 6;
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => openGallery(i)}
+                      className="relative aspect-[4/3] overflow-hidden rounded-lg group bg-muted"
+                      aria-label={`Abrir foto ${i + 1}`}
+                    >
+                      <img
+                        src={url}
+                        alt={`${p.title} · foto ${i + 1}`}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                      {isLast && (
+                        <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white font-semibold text-sm">
+                          +{allImages.length - 6} fotos
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
+
           {/* Logística */}
           {(p.airline || p.hotel_name || p.origin_city || p.nights || p.departure_date || p.return_date) && (
             <Card className="p-6">
