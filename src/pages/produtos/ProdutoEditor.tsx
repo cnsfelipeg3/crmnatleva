@@ -939,7 +939,8 @@ export default function ProdutoEditor() {
                 })()}
               </div>
 
-              <div className="mt-4 hidden">{/* spacer */}</div>
+              <div className="mt-4">
+                <Label>Observações de pagamento (opcional)</Label>
                 <Textarea
                   value={form.payment_notes}
                   onChange={(e) => set("payment_notes", e.target.value)}
