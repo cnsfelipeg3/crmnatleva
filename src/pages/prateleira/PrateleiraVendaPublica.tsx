@@ -408,13 +408,14 @@ export default function PrateleiraVendaPublica() {
           )}
 
           {p.recommendations && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="recommendations">
               <h2 className="font-serif text-xl mb-3">Recomendações</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.recommendations}</div>
             </Card>
           )}
-          {/* Gatilhos estratégicos · prova social, manifesto, garantias */}
-          <SalesTriggersBlock destination={p.destination} productKind={p.product_kind} />
+          <div data-section="sales_triggers">
+            <SalesTriggersBlock destination={p.destination} productKind={p.product_kind} />
+          </div>
         </div>
 
         {/* Sticky offer stack */}
