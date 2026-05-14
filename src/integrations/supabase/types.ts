@@ -6978,6 +6978,57 @@ export type Database = {
           },
         ]
       }
+      prateleira_viewer_events: {
+        Row: {
+          created_at: string
+          email: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          product_id: string
+          section: string | null
+          target: string | null
+          viewer_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          product_id: string
+          section?: string | null
+          target?: string | null
+          viewer_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          product_id?: string
+          section?: string | null
+          target?: string | null
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prateleira_viewer_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "experience_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prateleira_viewer_events_viewer_id_fkey"
+            columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "prateleira_product_viewers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_marketing_assets: {
         Row: {
           created_at: string
