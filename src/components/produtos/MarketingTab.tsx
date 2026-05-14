@@ -44,6 +44,8 @@ interface Props {
   hotelStars?: string;
   nights?: string;
   seatsLeft?: string;
+  paxMin?: string | number;
+  paxMax?: string | number;
   isPromo?: boolean;
   paymentTerms?: {
     entryPercent?: number;
