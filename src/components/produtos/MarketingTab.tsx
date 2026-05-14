@@ -101,7 +101,7 @@ function groupByDay(list: Asset[]): { day: string; label: string; items: Asset[]
 
 export default function MarketingTab(props: Props) {
   const {
-    productId, title, destination, shortDescription, priceFrom, pricePromo,
+    productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
     hotelName, hotelStars, nights, seatsLeft, isPromo, paymentTerms,
   } = props;
