@@ -13,7 +13,7 @@ import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
 import PublicFooter from "@/components/prateleira/PublicFooter";
-import GalleryLightbox from "@/components/prateleira/GalleryLightbox";
+import GalleryModal from "@/components/prateleira/GalleryModal";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -452,7 +452,7 @@ export default function PrateleiraVendaPublica() {
 
       <PublicFooter />
 
-      <GalleryLightbox
+      <GalleryModal
         open={galleryOpen}
         images={allImages}
         initialIndex={galleryIdx}
