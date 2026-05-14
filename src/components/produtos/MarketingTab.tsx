@@ -46,6 +46,8 @@ interface Props {
   seatsLeft?: string;
   paxMin?: string | number;
   paxMax?: string | number;
+  paxAdults?: string | number;
+  paxChildren?: string | number;
   isPromo?: boolean;
   paymentTerms?: {
     entryPercent?: number;
