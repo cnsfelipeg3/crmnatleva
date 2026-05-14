@@ -349,6 +349,13 @@ export default function MarketingTab(props: Props) {
                 {formatBRDate(departureDate)}{returnDate ? ` → ${formatBRDate(returnDate)}` : ""}
               </Badge>
             )}
+            {originCity ? (
+              <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/40 hover:bg-amber-500/15">
+                Saindo de {originCity}
+              </Badge>
+            ) : (
+              <Badge variant="destructive">Defina a cidade de origem</Badge>
+            )}
             {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
             {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
             {scarcity && <Badge variant="destructive" className="gap-1"><Zap className="w-3 h-3" />{scarcity}</Badge>}
