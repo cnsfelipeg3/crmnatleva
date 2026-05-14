@@ -252,6 +252,57 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     });
   };
 
+  // OCR · detecta palavras na arte para permitir clique-para-editar
+  async function runDetect() {
+    if (!asset) return;
+    setDetecting(true);
+    try {
+      const words = await detectTextRegions(asset.url);
+      setDetectedWords(words);
+      if (words.length === 0) toast.info("Nenhum texto detectado na arte");
+      else toast.success(`${words.length} palavras detectadas · clique sobre uma para editar`);
+    } catch (e: any) {
+      toast.error("Falha no OCR", { description: e?.message });
+    } finally {
+      setDetecting(false);
+    }
+  }
+
+  // Clique em uma palavra detectada · cria patch (cobre original) + camada de texto editável
+  function editDetectedWord(w: DetectedWord) {
+    const padX = 0.4, padY = 0.3;
+    const patch = newRectLayer({
+      xPct: Math.max(0, w.xPct - padX),
+      yPct: Math.max(0, w.yPct - padY),
+      wPct: w.wPct + padX * 2,
+      hPct: w.hPct + padY * 2,
+      bgColor: w.bg,
+      radius: 2,
+      opacity: 1,
+      z: 0,
+    });
+    const fontSizePct = Math.max(1.5, Math.min(12, w.hPct * 0.95));
+    const text = newTextLayer({
+      xPct: w.xPct,
+      yPct: w.yPct - 0.2,
+      wPct: w.wPct + 6,
+      hPct: w.hPct,
+      text: w.text,
+      color: NATLEVA_BRAND.colors.linen,
+      bgColor: "",
+      fontFamily: "'Instrument Sans', sans-serif",
+      fontSizePct,
+      weight: 700,
+      paddingX: 0,
+      paddingY: 0,
+      align: "left",
+      z: 1,
+    });
+    setLayers((prev) => [...prev, patch, text]);
+    setSelectedId(text.id);
+    setDetectedWords((prev) => prev.filter((x) => x !== w));
+  }
+
   // Export · cria render em alta resolução baseado nas dimensões reais do formato
   async function exportAndSave(action: "save" | "download") {
     if (!stageRef.current) return;
