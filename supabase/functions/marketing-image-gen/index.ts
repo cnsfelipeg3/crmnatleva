@@ -94,17 +94,10 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginX = Math.round(base.width * 0.065);
   const marginY = Math.round(base.height * 0.04);
 
-  // Auditoria visual · cobre a região reservada com Rolex Green semi-transparente
-  // antes do stamp · isso apaga qualquer wordmark "natleva" desenhado pela IA
-  // e garante que o logo oficial não fique sobreposto a um duplicado.
-  const reservedW = Math.round(base.width * 0.30);
-  const reservedH = Math.round(base.height * 0.18);
-  try {
-    paintReservedArea(base, 0, 0, reservedW, reservedH);
-  } catch (e) {
-    console.warn("paintReservedArea falhou, prosseguindo com stamp direto:", e);
-  }
-
+  // Stamp do logo oficial NatLeva (PNG transparente · sem fundo) diretamente
+  // sobre a arte. O prompt instrui a IA a manter a área superior-esquerda livre
+  // de wordmarks e elementos pesados, então o logo apoia direto no fundo natural
+  // da imagem · sem caixa verde, sem retângulo, integrado à arte.
   base.composite(resizedLogo, marginX, marginY);
   return await base.encode();
 }
