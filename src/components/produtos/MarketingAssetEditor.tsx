@@ -380,7 +380,11 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
         <DialogHeader className="px-4 py-3 border-b">
           <div className="flex items-center justify-between gap-3">
             <DialogTitle className="text-sm">Editor de arte · {fmt.label}</DialogTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={runDetect} disabled={detecting || !imageReady}>
+                {detecting ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <ScanText className="w-4 h-4 mr-1.5" />}
+                {detectedWords.length > 0 ? `${detectedWords.length} textos detectados` : "Detectar textos clicáveis"}
+              </Button>
               <Button variant="outline" size="sm" onClick={() => exportAndSave("download")} disabled={saving}>
                 {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Download className="w-4 h-4 mr-1.5" />}
                 Baixar PNG
