@@ -72,18 +72,22 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
   const marginY = Math.round(base.height * 0.045);
 
   // ─────────────────────────────────────────────────────────────
-  // Fade radial verde NatLeva por trás do logo · padrão de marca.
-  // Cria um halo elíptico suave em verde escuro (#1F3A2E) que
-  // escurece o fundo e destaca o wordmark champagne, sem cortar
-  // em retângulo. A opacidade cai para 0 nas bordas do halo,
-  // dando o efeito de "fade" pedido pelo usuário.
+  // Fade verde NatLeva por trás do logo · padrão de marca.
+  // Cobre toda a área reservada do top-left (≈28% × 15%) com um
+  // gradiente Rolex Green opaco no centro que esmaece suave nas
+  // bordas, escondendo qualquer "plaqueta" ou wordmark que a IA
+  // tenha desenhado por engano e dando ao logo champagne um fundo
+  // verde elegante e consistente em todas as artes.
   // ─────────────────────────────────────────────────────────────
+  const reservedW = base.width * 0.32;
+  const reservedH = base.height * 0.18;
   const haloCx = marginX + targetLogoW / 2;
   const haloCy = marginY + targetLogoH / 2;
-  const haloRx = targetLogoW * 0.95;        // raio horizontal · cobre o wordmark com folga
-  const haloRy = targetLogoH * 1.85;        // raio vertical · estende um pouco acima/abaixo
-  const maxAlpha = 165;                     // 0-255 · intensidade central do verde
-  const greenR = 31, greenG = 58, greenB = 46; // #1F3A2E
+  const haloRx = reservedW / 2;
+  const haloRy = reservedH / 2;
+  const corePeak = 0.85;          // até onde a opacidade fica no máximo (em fração de raio)
+  const maxAlpha = 240;           // núcleo praticamente opaco · cobre artefatos da IA
+  const greenR = 20, greenG = 69, greenB = 47; // #14452F · Rolex Green NatLeva
 
   const xMin = Math.max(0, Math.floor(haloCx - haloRx));
   const xMax = Math.min(base.width - 1, Math.ceil(haloCx + haloRx));
@@ -96,9 +100,14 @@ async function stampOfficialLogoOrThrow(baseBytes: Uint8Array, logoUrl: string):
       const dy = (y - haloCy) / haloRy;
       const d = Math.sqrt(dx * dx + dy * dy);
       if (d >= 1) continue;
-      // smoothstep para fade mais natural nas bordas
-      const t = 1 - d;
-      const fade = t * t * (3 - 2 * t);
+      // Núcleo opaco até corePeak, depois smoothstep até 0 na borda
+      let fade: number;
+      if (d <= corePeak) {
+        fade = 1;
+      } else {
+        const t = 1 - (d - corePeak) / (1 - corePeak);
+        fade = t * t * (3 - 2 * t);
+      }
       const a = Math.round(maxAlpha * fade);
       if (a <= 0) continue;
 
