@@ -291,7 +291,7 @@ export default function CinematicHero({
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.85, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="relative mb-4 sm:mb-5 flex h-16 w-fit min-w-44 items-center justify-start overflow-visible sm:h-20 sm:min-w-64"
+            className="relative mb-8 sm:mb-12 flex h-12 w-fit min-w-44 items-center justify-start overflow-visible sm:h-16 sm:min-w-64"
           >
             {/* Halo elegante · vinheta escura suave que apenas aumenta legibilidade do logo */}
             <div
