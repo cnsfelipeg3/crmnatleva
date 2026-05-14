@@ -31,6 +31,7 @@ interface Props {
   productId: string | null;
   title: string;
   destination: string;
+  originCity?: string;
   shortDescription: string;
   priceFrom: string;
   pricePromo: string;
