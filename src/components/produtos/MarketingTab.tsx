@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap,
+  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
+import MarketingAssetEditor from "./MarketingAssetEditor";
 import { FORMATS, type FormatId, findFormat } from "@/lib/marketing/formats";
 import {
   buildArtUserPrompt,
@@ -118,6 +119,7 @@ export default function MarketingTab(props: Props) {
   const [refining, setRefining] = useState<string | null>(null);
   const [refinePrompt, setRefinePrompt] = useState("");
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
 
   const allImages = useMemo(() => {
     const arr = [coverUrl, ...galleryUrls].filter(Boolean);
@@ -491,6 +493,9 @@ export default function MarketingTab(props: Props) {
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setPreviewAsset(a)} title="Visualizar">
                             <Eye className="w-4 h-4" />
                           </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingAsset(a)} title="Editar (estilo Canva)">
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => downloadAsset(a)} title="Baixar">
                             <Download className="w-4 h-4" />
                           </Button>
@@ -537,6 +542,9 @@ export default function MarketingTab(props: Props) {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => { setEditingAsset(previewAsset); setPreviewAsset(null); }}>
+                    <Pencil className="w-4 h-4 mr-1.5" /> Editar
+                  </Button>
                   <Button variant="outline" onClick={() => downloadAsset(previewAsset)}>
                     <Download className="w-4 h-4 mr-1.5" /> Baixar
                   </Button>
@@ -549,6 +557,12 @@ export default function MarketingTab(props: Props) {
           )}
         </DialogContent>
       </Dialog>
+
+      <MarketingAssetEditor
+        asset={editingAsset}
+        onClose={() => setEditingAsset(null)}
+        onSaved={refreshAssets}
+      />
     </div>
   );
 }

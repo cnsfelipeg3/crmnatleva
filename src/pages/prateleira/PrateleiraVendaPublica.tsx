@@ -231,14 +231,44 @@ export default function PrateleiraVendaPublica() {
   const installmentsLine = p.installments_max ? `Em até ${p.installments_max}x${p.installments_no_interest ? ` (${p.installments_no_interest}x sem juros)` : ""}` : null;
   const pixLine = p.pix_discount_percent ? `${p.pix_discount_percent}% off no PIX` : null;
 
-  const share = async () => {
+  const trackShare = (channel: string, destination: string) => {
+    trackerRef.current?.trackEvent("share", {
+      section: "hero",
+      target: channel,
+      metadata: { destination, clicked_at: new Date().toISOString(), url: window.location.href },
+    });
+  };
+
+  const share = async (channel?: "whatsapp" | "copy" | "twitter" | "facebook" | "telegram" | "native") => {
     const url = window.location.href;
-    trackerRef.current?.trackClick("share_button", "hero");
-    if (navigator.share) {
-      try { await navigator.share({ title: p.title, url }); return; } catch {}
+    const text = `Confira: ${p.title}`;
+    const ch = channel || (navigator.share ? "native" : "copy");
+    let destination = "";
+    try {
+      if (ch === "whatsapp") {
+        destination = `https://wa.me/?text=${encodeURIComponent(text + " " + url)}`;
+        window.open(destination, "_blank");
+      } else if (ch === "twitter") {
+        destination = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        window.open(destination, "_blank");
+      } else if (ch === "facebook") {
+        destination = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        window.open(destination, "_blank");
+      } else if (ch === "telegram") {
+        destination = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+        window.open(destination, "_blank");
+      } else if (ch === "native" && navigator.share) {
+        destination = "navigator.share";
+        await navigator.share({ title: p.title, url });
+      } else {
+        destination = "clipboard";
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copiado");
+      }
+    } catch {
+      // user cancelled native share · still record attempt
     }
-    await navigator.clipboard.writeText(url);
-    toast.success("Link copiado");
+    trackShare(ch, destination);
   };
 
   const handleCTA = async () => {
