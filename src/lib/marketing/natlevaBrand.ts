@@ -62,6 +62,7 @@ export interface ArtBriefing {
   cta: string;
   tone: ArtTone;
   destination?: string;
+  originCity?: string;        // ex: "São Paulo" · OBRIGATÓRIO em artes promocionais
   hotelName?: string;
   hotelStars?: string;
   nights?: string;
