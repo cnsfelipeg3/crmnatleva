@@ -360,7 +360,7 @@ export default function PrateleiraVendaPublica() {
 
           {/* Logística */}
           {(p.airline || p.hotel_name || p.origin_city || p.nights || p.departure_date || p.return_date) && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="logistica">
               <h2 className="font-serif text-xl mb-4">Logística</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {p.origin_city && <div className="flex items-center gap-2"><Plane className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Saída:</span> {p.origin_city}{p.origin_iata ? ` (${p.origin_iata})` : ""}</span></div>}
