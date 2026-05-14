@@ -80,7 +80,7 @@ function isLogoLikePixel(pixel: number): boolean {
   return champagneGold || paleWordmark;
 }
 
-function localBackgroundPixel(image: any, x: number, y: number, radius: number, fallback: number): number {
+function localBackgroundPixel(image: any, x: number, y: number, radius: number, fallback: number, mask?: boolean[], maskW?: number): number {
   let r = 0;
   let g = 0;
   let b = 0;
@@ -89,6 +89,7 @@ function localBackgroundPixel(image: any, x: number, y: number, radius: number, 
 
   for (let py = Math.max(0, y - radius); py <= Math.min(image.height - 1, y + radius); py += 3) {
     for (let px = Math.max(0, x - radius); px <= Math.min(image.width - 1, x + radius); px += 3) {
+      if (mask && maskW && px < maskW && mask[py * maskW + px]) continue;
       const sample = image.getPixelAt(px + 1, py + 1);
       if (isLogoLikePixel(sample)) continue;
       const rgba = unpackPixel(sample);
@@ -109,12 +110,39 @@ function clearLogoArtifacts(image: any, areaW: number, areaH: number) {
   const replacements: Array<{ x: number; y: number; pixel: number }> = [];
   const maxX = Math.min(image.width, areaW);
   const maxY = Math.min(image.height, areaH);
+  const sourceMask = new Array(maxX * maxY).fill(false);
+  const healedMask = new Array(maxX * maxY).fill(false);
 
   for (let y = 0; y < maxY; y++) {
     for (let x = 0; x < maxX; x++) {
       const current = image.getPixelAt(x + 1, y + 1);
-      if (!isLogoLikePixel(current)) continue;
-      const healed = localBackgroundPixel(image, x, y, 18, current);
+      if (isLogoLikePixel(current)) sourceMask[y * maxX + x] = true;
+    }
+  }
+
+  for (let y = 0; y < maxY; y++) {
+    for (let x = 0; x < maxX; x++) {
+      let shouldHeal = false;
+      for (let dy = -7; dy <= 7 && !shouldHeal; dy++) {
+        for (let dx = -7; dx <= 7; dx++) {
+          const px = x + dx;
+          const py = y + dy;
+          if (px < 0 || py < 0 || px >= maxX || py >= maxY) continue;
+          if (sourceMask[py * maxX + px]) {
+            shouldHeal = true;
+            break;
+          }
+        }
+      }
+      healedMask[y * maxX + x] = shouldHeal;
+    }
+  }
+
+  for (let y = 0; y < maxY; y++) {
+    for (let x = 0; x < maxX; x++) {
+      if (!healedMask[y * maxX + x]) continue;
+      const current = image.getPixelAt(x + 1, y + 1);
+      const healed = localBackgroundPixel(image, x, y, 34, current, healedMask, maxX);
       replacements.push({ x, y, pixel: healed });
     }
   }
