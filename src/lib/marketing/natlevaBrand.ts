@@ -230,10 +230,10 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
     `· CTA button text: "${briefing.cta}"`,
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
-    "· DO NOT draw the natleva wordmark anywhere · the official logo will be stamped at the top-left in post-processing. Leave the top-left ~22% × ~14% reserved area completely empty.",
+    "· DO NOT draw the natleva wordmark anywhere · the official transparent PNG logo will be stamped at the top-left in post-processing. Leave the top-left ~28% × ~15% reserved area as clean photographic background only, with no box, plaque or logo.",
     "",
     "IMAGE 1 (attached, FIRST) = destination background photo selected by the user · USE THIS as the actual background scene. Preserve its composition, lighting, palette, horizon and recognizable landmarks. DO NOT invent a different destination.",
-    "FINAL IMAGE REFERENCE = OFFICIAL NatLeva logotype · FOR REFERENCE ONLY · DO NOT draw, redraw, trace or render this logo on the artwork. It will be composited in post-processing.",
+    "NO LOGO IMAGE IS ATTACHED TO THE MODEL · do not create any logo. The official transparent NatLeva PNG will be composited in post-processing.",
     "Apply the NatLeva brand identity defined in the system instructions.",
   ];
   return lines.filter(Boolean).join("\n");
