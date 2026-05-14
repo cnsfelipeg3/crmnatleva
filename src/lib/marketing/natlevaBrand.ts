@@ -117,7 +117,7 @@ export function buildBrandSystemPrompt(): string {
     "VISUAL STRUCTURE (mandatory)",
     "================================",
     "1. Background: cinematic destination photo (IMAGE 1) with a subtle Rolex Green gradient overlay (rgba(20,69,47,0.55) at the bottom · transparent at the top) for legibility.",
-    "2. Top-left: NatLeva logotype (IMAGE 2) in its original color.",
+    "2. Top-left RESERVED AREA (~22% width × ~14% height): leave EMPTY · only the background photo with subtle dark gradient. The official natleva logo will be stamped here in post-processing. DO NOT draw any wordmark, logo, text or shape in this area.",
     "3. Top-right (only if scarcity provided): small Champagne pill with Rolex Green text.",
     "4. Headline (Sand or Linen color, Playfair Display, weight 700, tight tracking): large editorial title.",
     "5. Subheadline (Sand 80% opacity, Instrument Sans regular): one short line directly below.",
