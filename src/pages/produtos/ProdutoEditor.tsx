@@ -1019,12 +1019,21 @@ export default function ProdutoEditor() {
                 <Input type="number" value={form.nights} onChange={(e) => set("nights", e.target.value)} />
               </div>
               <div>
-                <Label>Pax mínimo</Label>
+                <Label>Pax mínimo (total)</Label>
                 <Input type="number" value={form.pax_min} onChange={(e) => set("pax_min", e.target.value)} />
               </div>
               <div>
-                <Label>Pax máximo</Label>
+                <Label>Pax máximo (total)</Label>
                 <Input type="number" value={form.pax_max} onChange={(e) => set("pax_max", e.target.value)} />
+              </div>
+              <div>
+                <Label>Adultos</Label>
+                <Input type="number" min={0} value={form.pax_adults} onChange={(e) => set("pax_adults", e.target.value)} placeholder="Ex: 2" />
+                <p className="text-[11px] text-muted-foreground mt-1">Aparece nas artes (Ex: 2 adultos + 1 criança)</p>
+              </div>
+              <div>
+                <Label>Crianças</Label>
+                <Input type="number" min={0} value={form.pax_children} onChange={(e) => set("pax_children", e.target.value)} placeholder="Ex: 1" />
               </div>
               <div>
                 <Label>Vagas totais</Label>
