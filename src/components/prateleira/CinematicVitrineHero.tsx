@@ -4,6 +4,7 @@ import { Search, Sparkles, MapPin, ChevronLeft, ChevronRight, Play, Compass } fr
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import logoNatleva from "@/assets/logo-natleva-clean.webp";
 
 type Slide = {
   id: string;
