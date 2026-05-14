@@ -340,6 +340,7 @@ export default function ProdutoEditor() {
           hotel_stars: data.hotel_stars?.toString() ?? "",
           nights: data.nights?.toString() ?? "",
           pax_min: data.pax_min?.toString() ?? "", pax_max: data.pax_max?.toString() ?? "",
+          pax_adults: data.pax_adults?.toString() ?? "", pax_children: data.pax_children?.toString() ?? "",
           seats_total: data.seats_total?.toString() ?? "", seats_left: data.seats_left?.toString() ?? "",
           seo_title: data.seo_title ?? "", seo_description: data.seo_description ?? "",
           og_image: data.og_image ?? "", whatsapp_cta_text: data.whatsapp_cta_text ?? "",
