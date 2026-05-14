@@ -248,13 +248,17 @@ export default function PrateleiraVendaPublica() {
     }
     const msg = buildCtaMessage(p);
     try {
-      // Atualiza viewer + incrementa lead_count (best effort)
       const email = sessionStorage.getItem(`prateleira_viewer_${slug}`);
       if (email) {
         (supabase as any).from("prateleira_product_viewers")
-          .update({ clicked_cta: true, cta_clicked_at: new Date().toISOString(), last_active_at: new Date().toISOString() })
+          .update({
+            cta_clicked: true,
+            whatsapp_clicked: true,
+            last_active_at: new Date().toISOString(),
+          })
           .eq("product_id", p.id).eq("email", email);
       }
+      trackerRef.current?.trackClick("cta_whatsapp", "offer", { agency_whatsapp: !!agencyWhatsApp });
       (supabase as any).from("experience_products")
         .update({ lead_count: (p.lead_count ?? 0) + 1 }).eq("id", p.id);
     } catch {}
