@@ -11,10 +11,11 @@ type Props = {
   compact?: boolean;
   paxMin?: number | null;
   paxMax?: number | null;
+  customInstallments?: number[];
 };
 
-export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax }: Props) {
-  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency });
+export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax, customInstallments }: Props) {
+  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency, customInstallments });
   if (!plan) return null;
 
   const longInstallments = plan.installments >= 8;
