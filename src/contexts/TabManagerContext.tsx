@@ -37,11 +37,9 @@ function makeId(): string {
 }
 
 function isFeatureDisabled(): boolean {
-  try {
-    return typeof window !== "undefined" && window.localStorage.getItem("natleva-tabs-disabled") === "1";
-  } catch {
-    return false;
-  }
+  // Feature SEMPRE habilitada · garantia de acessibilidade universal
+  // (flag legada removida para evitar usuários travados sem barra de abas)
+  return false;
 }
 
 function isPublicPath(p: string): boolean {
@@ -102,7 +100,8 @@ export function TabManagerProvider({ children }: { children: React.ReactNode }) 
       }
       hydratedRef.current = true;
     } catch (err) {
-      console.warn("[TabManager] hydrate failed", err);
+      console.warn("[TabManager] hydrate failed · limpando estado corrompido", err);
+      try { window.localStorage.removeItem(storageKey(userId)); } catch { /* ignore */ }
       hydratedRef.current = true;
     }
   }, [enabled, isAuthenticated, userId, location.pathname, location.search]);
@@ -118,12 +117,27 @@ export function TabManagerProvider({ children }: { children: React.ReactNode }) 
   }, [enabled, tabs, activeId, userId]);
 
   // Sincroniza: quando o usuário navega (sidebar, links internos), atualiza o path da aba ativa
+  // E auto-cura: se por qualquer motivo não houver abas em rota privada, cria uma.
   useEffect(() => {
-    if (!enabled || !hydratedRef.current || !activeId) return;
+    if (!enabled || !hydratedRef.current) return;
     const currentPath = location.pathname + location.search;
     if (isPublicPath(currentPath)) return;
+
+    // Auto-heal: nenhum tab existente em rota privada · cria a aba inicial
+    if (tabs.length === 0 || !activeId) {
+      const initial: AppTab = { id: makeId(), path: currentPath, title: titleForPath(currentPath), createdAt: Date.now() };
+      setTabs((prev) => (prev.length === 0 ? [initial] : prev));
+      setActiveId((prev) => prev ?? initial.id);
+      lastSyncedPathRef.current = currentPath;
+      return;
+    }
+
     const activeTab = tabs.find((t) => t.id === activeId);
-    if (!activeTab) return;
+    if (!activeTab) {
+      // activeId aponta para aba inexistente · ativa a primeira disponível
+      setActiveId(tabs[0].id);
+      return;
+    }
     if (activeTab.path === currentPath) {
       lastSyncedPathRef.current = currentPath;
       return;
