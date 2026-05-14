@@ -37,11 +37,9 @@ function makeId(): string {
 }
 
 function isFeatureDisabled(): boolean {
-  try {
-    return typeof window !== "undefined" && window.localStorage.getItem("natleva-tabs-disabled") === "1";
-  } catch {
-    return false;
-  }
+  // Feature SEMPRE habilitada · garantia de acessibilidade universal
+  // (flag legada removida para evitar usuários travados sem barra de abas)
+  return false;
 }
 
 function isPublicPath(p: string): boolean {
