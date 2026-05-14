@@ -116,7 +116,7 @@ serve(async (req) => {
     // Enriquecer com dados do produto se faltar
     if (productId && (!briefing?.destination || !briefing?.payment)) {
       const { data: prod } = await supabase
-        .from("products")
+        .from("experience_products")
         .select("title, destination, origin_city, hotel_name, hotel_stars, nights, departure_date, return_date, includes, price_from, price_promo")
         .eq("id", productId)
         .maybeSingle();
