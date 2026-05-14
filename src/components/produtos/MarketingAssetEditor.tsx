@@ -303,6 +303,41 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
     });
   };
 
+  // Undo · volta ao estado anterior do stack de histórico
+  const undo = () => {
+    setHistory((h) => {
+      if (h.length < 2) return h;
+      const prev = h[h.length - 2];
+      setLayers(prev);
+      return h.slice(0, -1);
+    });
+  };
+
+  // Atalhos de teclado · Delete remove, Ctrl/Cmd+Z desfaz, Ctrl/Cmd+D duplica, Esc desseleciona
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tgt = e.target as HTMLElement;
+      const isTyping =
+        tgt && (tgt.tagName === "INPUT" || tgt.tagName === "TEXTAREA" || (tgt as any).isContentEditable);
+      if (isTyping) return;
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        e.preventDefault();
+        removeLayer(selectedId);
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        undo();
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "d" && selectedId) {
+        e.preventDefault();
+        duplicateLayer(selectedId);
+      } else if (e.key === "Escape") {
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, layers]);
+
   // OCR · detecta palavras na arte para permitir clique-para-editar
   async function runDetect() {
     if (!asset) return;
