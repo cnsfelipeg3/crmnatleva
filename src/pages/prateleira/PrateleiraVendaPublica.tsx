@@ -336,7 +336,7 @@ export default function PrateleiraVendaPublica() {
                   return (
                     <button
                       key={i}
-                      onClick={() => openGallery(i)}
+                      onClick={() => { trackerRef.current?.trackClick(`gallery_thumb_${i}`, "gallery"); openGallery(i); }}
                       className="relative aspect-[4/3] overflow-hidden rounded-lg group bg-muted"
                       aria-label={`Abrir foto ${i + 1}`}
                     >
