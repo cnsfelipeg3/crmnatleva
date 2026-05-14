@@ -229,7 +229,7 @@ serve(async (req) => {
     const m = imageDataUrl.match(/^data:(image\/\w+);base64,(.+)$/);
     if (!m) throw new Error("Formato de imagem inesperado");
     const mime = m[1];
-    let bytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
+    const generatedBytes = Uint8Array.from(atob(m[2]), (ch) => ch.charCodeAt(0));
     let finalMime = mime;
     let finalExt = mime.split("/")[1] || "png";
 
@@ -237,7 +237,7 @@ serve(async (req) => {
     // Post-processing obrigatório · STAMP da logo oficial NatLeva
     // Se a logo não puder ser aplicada, a arte não é salva.
     // ============================================================
-    bytes = await stampOfficialLogoOrThrow(bytes, LOGO_URL);
+    const bytes = await stampOfficialLogoOrThrow(generatedBytes, LOGO_URL);
     finalMime = "image/png";
     finalExt = "png";
 
