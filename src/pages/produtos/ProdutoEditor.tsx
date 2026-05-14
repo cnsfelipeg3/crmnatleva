@@ -404,6 +404,7 @@ export default function ProdutoEditor() {
       airline: form.airline || null, hotel_name: form.hotel_name || null,
       hotel_stars: numOrNull(form.hotel_stars), nights: numOrNull(form.nights),
       pax_min: numOrNull(form.pax_min), pax_max: numOrNull(form.pax_max),
+      pax_adults: numOrNull(form.pax_adults), pax_children: numOrNull(form.pax_children),
       seats_total: numOrNull(form.seats_total), seats_left: numOrNull(form.seats_left),
       seo_title: form.seo_title || null, seo_description: form.seo_description || null,
       og_image: form.og_image || null, whatsapp_cta_text: form.whatsapp_cta_text || null,
