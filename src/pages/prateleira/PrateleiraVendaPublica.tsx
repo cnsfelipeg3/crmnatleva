@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import { buildWhatsAppLink } from "@/components/ui/phone-input";
+import { resolveAgencyWhatsApp, DEFAULT_AGENCY_WHATSAPP } from "@/lib/natleva/whatsapp";
 import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
@@ -78,7 +79,7 @@ export default function PrateleiraVendaPublica() {
   const [loading, setLoading] = useState(true);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryIdx, setGalleryIdx] = useState(0);
-  const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
+  const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>(DEFAULT_AGENCY_WHATSAPP);
   const [unlocked, setUnlocked] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
   const trackerRef = useRef<ReturnType<typeof initViewerTracking> | null>(null);
@@ -103,9 +104,13 @@ export default function PrateleiraVendaPublica() {
         meta.setAttribute("content", data.seo_description || data.short_description || `${data.title} · ${data.destination}`);
       }
 
-      // Agency WhatsApp from agency_config
-      const { data: cfg } = await (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle();
-      if (cfg?.whatsapp_number) setAgencyWhatsApp(cfg.whatsapp_number);
+      // Agency WhatsApp from agency_config (com fallback para o número oficial)
+      try {
+        const { data: cfg } = await (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle();
+        setAgencyWhatsApp(resolveAgencyWhatsApp(cfg?.whatsapp_number));
+      } catch {
+        setAgencyWhatsApp(resolveAgencyWhatsApp(null));
+      }
 
       // Já desbloqueado nessa sessão?
       try {
@@ -273,10 +278,7 @@ export default function PrateleiraVendaPublica() {
 
   const handleCTA = async () => {
     // Lead já foi capturado no gate · vai direto pro WhatsApp com mensagem do pacote
-    if (!agencyWhatsApp) {
-      toast.error("WhatsApp da agência não configurado");
-      return;
-    }
+    const targetWhatsApp = resolveAgencyWhatsApp(agencyWhatsApp);
     const msg = buildCtaMessage(p);
     try {
       const email = sessionStorage.getItem(`prateleira_viewer_${slug}`);
@@ -293,7 +295,7 @@ export default function PrateleiraVendaPublica() {
       (supabase as any).from("experience_products")
         .update({ lead_count: (p.lead_count ?? 0) + 1 }).eq("id", p.id);
     } catch {}
-    window.open(buildWhatsAppLink(agencyWhatsApp, msg), "_blank");
+    window.open(buildWhatsAppLink(targetWhatsApp, msg), "_blank");
   };
 
   return (
