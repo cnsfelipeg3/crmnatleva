@@ -285,6 +285,17 @@ export default function CinematicHero({
             transformStyle: "preserve-3d",
           }}
         >
+          {/* Logo NatLeva oficial · alinhado à esquerda, acima das badges */}
+          <motion.img
+            src="https://mexlhkqcmiaktjxsyvod.supabase.co/storage/v1/object/public/marketing-assets/_brand%2Flogo-natleva-champagne.png"
+            alt="NatLeva"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.85, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="block mb-4 sm:mb-5 h-10 sm:h-14 w-auto select-none pointer-events-none drop-shadow-[0_4px_18px_rgba(0,0,0,0.55)]"
+            draggable={false}
+          />
+
           {/* Top eyebrow */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
