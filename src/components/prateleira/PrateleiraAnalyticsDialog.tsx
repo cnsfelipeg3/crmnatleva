@@ -190,23 +190,7 @@ export default function PrateleiraAnalyticsDialog({ open, onOpenChange, product 
                 {filteredViewers.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-8">Nenhum visitante registrado ainda.</p>
                 ) : filteredViewers.map((v) => (
-                  <div key={v.id} className="rounded-lg border border-border/60 bg-card px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
-                    <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">{v.name || "Sem nome"}</div>
-                      <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
-                        {v.email && <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {v.email}</span>}
-                        {v.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {v.phone}</span>}
-                      </div>
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3" />
-                      {[v.city, v.region, v.country].filter(Boolean).join(", ") || "—"}
-                    </div>
-                    <Badge variant="outline" className="text-[10px]">{v.device_type || "desktop"}</Badge>
-                    <div className="text-xs text-muted-foreground tabular-nums">
-                      {v.total_views || 1} visita{(v.total_views || 1) > 1 ? "s" : ""} · {fmtDate(v.last_active_at)}
-                    </div>
-                  </div>
+                  <ViewerRow key={v.id} v={v} productId={product.id} />
                 ))}
               </div>
             ) : (
