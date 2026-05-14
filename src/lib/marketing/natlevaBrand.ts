@@ -180,7 +180,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
           `   · Big Champagne figure: "${briefing.payment.entryLabel}"`,
           `   · Hunter sub line: "${briefing.payment.installmentsLabel}"`,
           briefing.payment.pixLabel ? `   · Eucalyptus tiny line: "${briefing.payment.pixLabel}"` : "",
-          "   · MANDATORY caption right next to the entry value (Eucalyptus, italic, ~10-11px): \"Valor total para 2 pessoas\". This caption is REQUIRED on every art.",
+          `   · MANDATORY caption right next to the entry value (Eucalyptus, italic, ~10-11px): "${briefing.payment.paxLabel || "Valor total do pacote"}". This caption is REQUIRED on every art and must reflect the EXACT pax of the package · NEVER hardcode a different number of people.`,
           "   · DO NOT print the total amount anywhere on the artwork. The 'A partir de' caption is also forbidden if it shows the full sum.",
         ].filter(Boolean).join("\n")
       : "",
