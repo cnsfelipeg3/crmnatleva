@@ -1095,6 +1095,8 @@ export default function ProdutoEditor() {
             seatsLeft={form.seats_left}
             paxMin={form.pax_min}
             paxMax={form.pax_max}
+            paxAdults={form.pax_adults}
+            paxChildren={form.pax_children}
             isPromo={form.is_promo}
             paymentTerms={{
               entryPercent: Number(form.payment_entry_percent) || 30,
