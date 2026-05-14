@@ -217,6 +217,12 @@ export default function MarketingTab(props: Props) {
     }
     if (formatsToGenerate.length === 0) { toast.error("Selecione ao menos um formato"); return; }
     if (!refImage) { toast.error("Selecione a imagem de referência"); return; }
+    if (!originCity?.trim()) {
+      toast.error("Cidade de origem obrigatória", {
+        description: "Toda arte promocional precisa da origem (ex: São Paulo). Cadastre em 'Cidade de origem' na aba do produto.",
+      });
+      return;
+    }
 
     setGenerating(true);
     const briefing = buildBriefing();
