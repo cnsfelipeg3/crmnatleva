@@ -197,13 +197,19 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
         initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1.4, duration: 0.6 }}
       >
-        <div className="flex items-center gap-2 text-white">
-          <div className="w-8 h-8 rounded-md bg-amber-400 grid place-items-center text-black">
-            <Compass className="w-4 h-4" />
-          </div>
-          <div className="leading-none">
-            <div className="text-[10px] tracking-[0.3em] uppercase text-white/60">NatLeva</div>
-            <div className="font-serif text-base">Prateleira</div>
+        <div className="flex items-center gap-3 text-white">
+          <img
+            src="/src/assets/logo-natleva-clean.webp"
+            alt="NatLeva"
+            className="h-9 sm:h-10 w-auto object-contain"
+            style={{ filter: "brightness(0) invert(1)", WebkitFilter: "brightness(0) invert(1)" }}
+            loading="eager"
+            decoding="async"
+          />
+          <div className="hidden sm:block h-6 w-px bg-white/15" />
+          <div className="hidden sm:block leading-none">
+            <div className="text-[10px] tracking-[0.3em] uppercase text-white/55">Curadoria</div>
+            <div className="font-serif text-sm text-white/90 mt-1">Prateleira</div>
           </div>
         </div>
         {valid.length > 1 && (
