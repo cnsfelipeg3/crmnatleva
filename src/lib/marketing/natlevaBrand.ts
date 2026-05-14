@@ -157,7 +157,8 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
   const includes = mergeIncludes(briefing.includes);
   const period = formatCompactPeriod(briefing.departureDate, briefing.returnDate);
   const lines = [
-    `Generate a finished social media ad in ${formatLabel} format (aspect ratio ${aspect}).`,
+    `Generate a finished social media ad in ${formatLabel} format (aspect ratio ${aspect}) WITHOUT any logo.`,
+    "The logo is not part of the AI generation. Keep the upper-left area clean because code will apply the official transparent PNG logo with a soft green fade after the image is generated.",
     "",
     "BRIEFING (use EXACTLY this content, in Brazilian Portuguese, NEVER paraphrase numbers or dates):",
     `· Headline: "${briefing.headline}"`,
@@ -185,10 +186,11 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
     `· CTA button text: "${briefing.cta}"`,
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
-    "· DO NOT draw the natleva wordmark anywhere · the official transparent PNG logo will be stamped at the top-left in post-processing. Leave the top-left ~28% × ~15% reserved area as clean photographic background only, with no box, plaque or logo.",
+    "· LOGO SAFE AREA: top-left ~30% width × ~18% height must contain only clean destination photo with subtle darkening. Do not place text, card, shape, logo, plaque, brand name, rectangle or decorative element there.",
+    "· FORBIDDEN VISIBLE TEXT: NatLeva, natleva, Viagens, logo, wordmark, brandbook, font names, color names, hex codes, style notes.",
     "",
     "IMAGE 1 (attached, FIRST) = destination background photo selected by the user · USE THIS as the actual background scene. Preserve its composition, lighting, palette, horizon and recognizable landmarks. DO NOT invent a different destination.",
-    "NO LOGO IMAGE IS ATTACHED TO THE MODEL · do not create any logo. The official transparent NatLeva PNG will be composited in post-processing.",
+    "NO LOGO IMAGE IS ATTACHED TO THE MODEL · do not create, imitate, type or approximate any logo. The official transparent PNG will be composited in post-processing.",
     "Apply the NatLeva brand identity defined in the system instructions.",
   ];
   return lines.filter(Boolean).join("\n");
