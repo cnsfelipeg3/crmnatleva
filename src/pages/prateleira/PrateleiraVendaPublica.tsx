@@ -378,7 +378,7 @@ export default function PrateleiraVendaPublica() {
           {((Array.isArray(p.includes) && p.includes.length > 0) || (Array.isArray(p.excludes) && p.excludes.length > 0)) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {Array.isArray(p.includes) && p.includes.length > 0 && (
-                <Card className="p-6">
+                <Card className="p-6" data-section="includes">
                   <h3 className="font-medium mb-3 text-emerald-700 dark:text-emerald-400 flex items-center gap-2"><Check className="w-4 h-4" /> Está incluso</h3>
                   <ul className="space-y-2 text-sm">
                     {p.includes.map((it: string, i: number) => (
