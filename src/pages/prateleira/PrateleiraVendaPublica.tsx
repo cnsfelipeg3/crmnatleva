@@ -104,9 +104,13 @@ export default function PrateleiraVendaPublica() {
         meta.setAttribute("content", data.seo_description || data.short_description || `${data.title} · ${data.destination}`);
       }
 
-      // Agency WhatsApp from agency_config
-      const { data: cfg } = await (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle();
-      if (cfg?.whatsapp_number) setAgencyWhatsApp(cfg.whatsapp_number);
+      // Agency WhatsApp from agency_config (com fallback para o número oficial)
+      try {
+        const { data: cfg } = await (supabase as any).from("agency_config").select("whatsapp_number").maybeSingle();
+        setAgencyWhatsApp(resolveAgencyWhatsApp(cfg?.whatsapp_number));
+      } catch {
+        setAgencyWhatsApp(resolveAgencyWhatsApp(null));
+      }
 
       // Já desbloqueado nessa sessão?
       try {
