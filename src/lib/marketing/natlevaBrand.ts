@@ -256,15 +256,12 @@ export function buildSalesSubheadline(opts: {
   if (opts.hotelName) {
     parts.push(`${opts.hotelName}${opts.hotelStars ? ` ${opts.hotelStars}★` : ""}`);
   }
-  if (opts.departureDate && opts.returnDate) {
-    parts.push(`${opts.departureDate} a ${opts.returnDate}`);
-  } else if (opts.departureDate) {
-    parts.push(`Saída ${opts.departureDate}`);
-  }
+  const period = formatCompactPeriod(opts.departureDate, opts.returnDate);
+  if (period) parts.push(period);
   if (parts.length === 0 && opts.shortDescription) {
     return opts.shortDescription.slice(0, 110);
   }
-  return parts.join(" · ").slice(0, 110);
+  return parts.join(" · ").slice(0, 120);
 }
 
 export function buildScarcityBadge(seatsLeft?: string | number): string | undefined {
