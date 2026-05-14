@@ -119,7 +119,7 @@ serve(async (req) => {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: SYSTEM_PROMPT + draftSummary },
           ...messages,
@@ -159,12 +159,12 @@ serve(async (req) => {
 
     // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta openai/gpt-5-mini
     if (!toolCall || Object.keys(product).length === 0) {
-      console.log("[product-from-chat] retry with openai/gpt-5-mini");
+      console.log("[product-from-chat] retry with google/gemini-2.5-pro");
       const retry = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "openai/gpt-5-mini",
+          model: "google/gemini-2.5-pro",
           messages: [
             { role: "system", content: SYSTEM_PROMPT + draftSummary },
             ...messages,
