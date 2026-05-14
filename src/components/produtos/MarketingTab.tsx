@@ -9,9 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
-  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap,
+  Loader2, Sparkles, Download, Wand2, ImagePlus, RefreshCw, Trash2, Eye, Calendar, Zap, Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
+import MarketingAssetEditor from "./MarketingAssetEditor";
 import { FORMATS, type FormatId, findFormat } from "@/lib/marketing/formats";
 import {
   buildArtUserPrompt,
