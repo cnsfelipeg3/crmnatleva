@@ -200,7 +200,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
       >
         <div className="flex items-center gap-3 text-white">
           <img
-            src="/src/assets/logo-natleva-clean.webp"
+            src={logoNatleva}
             alt="NatLeva"
             className="h-9 sm:h-10 w-auto object-contain"
             style={{ filter: "brightness(0) invert(1)", WebkitFilter: "brightness(0) invert(1)" }}
