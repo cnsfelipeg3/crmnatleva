@@ -57,7 +57,7 @@ type ProductForm = {
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
   airline: string; hotel_name: string; hotel_stars: string;
-  nights: string; pax_min: string; pax_max: string; seats_total: string; seats_left: string;
+  nights: string; pax_min: string; pax_max: string; pax_adults: string; pax_children: string; seats_total: string; seats_left: string;
   // sales page
   seo_title: string; seo_description: string; og_image: string; whatsapp_cta_text: string;
 };
