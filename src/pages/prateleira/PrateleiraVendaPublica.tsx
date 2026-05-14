@@ -198,8 +198,8 @@ export default function PrateleiraVendaPublica() {
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Carregando...</div>;
   if (!p) return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-muted-foreground mb-4">Produto não encontrado</p><Button onClick={() => navigate("/p")}>Ver vitrine</Button></div></div>;
-  if (p.sale_page_enabled === false || p.status === "paused") {
-    return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-muted-foreground mb-4">Este produto está pausado no momento</p><Button onClick={() => navigate("/p")}>Ver outros produtos</Button></div></div>;
+  if (p.is_active === false || p.sale_page_enabled === false || p.status === "paused") {
+    return <div className="min-h-screen flex items-center justify-center"><div className="text-center"><p className="text-muted-foreground mb-4">Este produto está indisponível no momento</p><Button onClick={() => navigate("/p")}>Ver outros produtos</Button></div></div>;
   }
 
   // Gate de captura · libera após preencher nome, e-mail e WhatsApp
