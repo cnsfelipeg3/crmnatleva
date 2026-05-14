@@ -293,7 +293,7 @@ export default function PrateleiraVendaPublica() {
         {/* Main */}
         <div className="lg:col-span-3 space-y-6">
           {Array.isArray(p.highlights) && p.highlights.length > 0 && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="highlights">
               <h2 className="font-serif text-xl mb-4">Por que vale a pena</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {p.highlights.map((h: string, i: number) => (
