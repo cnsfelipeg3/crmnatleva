@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Users, MapPin, Smartphone, Loader2, Search, Mail, Phone, Globe, MessageCircle, Download } from "lucide-react";
+import { Eye, Users, MapPin, Smartphone, Loader2, Search, Mail, Phone, Globe, MessageCircle, Download, Clock, MousePointerClick, ChevronDown, ChevronUp } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -16,11 +16,41 @@ interface Props {
 
 type Viewer = any;
 type Lead = any;
+type ViewerEvent = any;
 
 function fmtDate(d?: string | null) {
   if (!d) return "-";
   try { return format(parseISO(d), "dd/MM HH:mm", { locale: ptBR }); } catch { return d; }
 }
+
+function fmtDuration(seconds?: number | null) {
+  const s = Math.max(0, Math.floor(seconds || 0));
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  if (m < 60) return r ? `${m}m ${r}s` : `${m}m`;
+  const h = Math.floor(m / 60);
+  return `${h}h ${m % 60}m`;
+}
+
+const SECTION_LABEL: Record<string, string> = {
+  hero: "Capa",
+  highlights: "Por que vale a pena",
+  description: "Sobre a viagem",
+  gallery: "Galeria",
+  logistica: "Logística",
+  includes: "Está incluso",
+  how_it_works: "Como funciona",
+  recommendations: "Recomendações",
+  sales_triggers: "Prova social",
+  offer: "Bloco de oferta",
+};
+
+const TARGET_LABEL: Record<string, string> = {
+  cta_whatsapp: "Clicou no CTA WhatsApp",
+  share_button: "Compartilhou o link",
+  gallery_open_all: "Abriu galeria completa",
+};
 
 export default function PrateleiraAnalyticsDialog({ open, onOpenChange, product }: Props) {
   const [loading, setLoading] = useState(true);
