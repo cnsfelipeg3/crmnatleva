@@ -227,8 +227,8 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
     "· DO NOT draw the natleva wordmark anywhere · the official logo will be stamped at the top-left in post-processing. Leave the top-left ~22% × ~14% reserved area completely empty.",
     "",
-    "IMAGE 1 (attached, FIRST) = destination background photo · USE THIS as the actual background scene. Reproduce its composition, lighting, palette and landmarks. DO NOT invent a different destination.",
-    "IMAGE 2 (attached, SECOND) = OFFICIAL NatLeva logotype · FOR REFERENCE ONLY · DO NOT draw, redraw, trace or render this logo on the artwork. It will be composited in post-processing.",
+    "IMAGE 1 (attached, FIRST) = destination background photo selected by the user · USE THIS as the actual background scene. Preserve its composition, lighting, palette, horizon and recognizable landmarks. DO NOT invent a different destination.",
+    "FINAL IMAGE REFERENCE = OFFICIAL NatLeva logotype · FOR REFERENCE ONLY · DO NOT draw, redraw, trace or render this logo on the artwork. It will be composited in post-processing.",
     "Apply the NatLeva brand identity defined in the system instructions.",
   ];
   return lines.filter(Boolean).join("\n");
