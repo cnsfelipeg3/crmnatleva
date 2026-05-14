@@ -16,6 +16,7 @@ import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan
 import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
+import GalleryManager from "@/components/produtos/GalleryManager";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
