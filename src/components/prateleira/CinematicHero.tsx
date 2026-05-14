@@ -293,12 +293,20 @@ export default function CinematicHero({
             transition={{ delay: 0.85, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
             className="relative mb-4 sm:mb-5 flex h-16 w-fit min-w-44 items-center justify-start overflow-visible sm:h-20 sm:min-w-64"
           >
-            <div className="absolute -inset-x-5 -inset-y-3 rounded-full bg-primary/80 blur-2xl opacity-70" aria-hidden="true" />
-            <div className="absolute -inset-x-3 -inset-y-2 rounded-full bg-primary/35 blur-md opacity-80" aria-hidden="true" />
+            {/* Halo elegante · vinheta escura suave que apenas aumenta legibilidade do logo */}
+            <div
+              className="pointer-events-none absolute -inset-x-10 -inset-y-6 opacity-70"
+              aria-hidden="true"
+              style={{
+                background:
+                  "radial-gradient(ellipse at center, hsl(0 0% 0% / 0.55) 0%, hsl(0 0% 0% / 0.25) 45%, transparent 75%)",
+                filter: "blur(14px)",
+              }}
+            />
             <img
               src={natlevaChampagneLogo}
               alt="NatLeva"
-              className="relative z-10 block h-10 w-auto select-none object-contain drop-shadow-[0_8px_24px_hsl(var(--background)/0.55)] sm:h-14"
+              className="relative z-10 block h-10 w-auto select-none object-contain drop-shadow-[0_2px_12px_hsl(0_0%_0%/0.45)] sm:h-14"
               draggable={false}
             />
           </motion.div>
