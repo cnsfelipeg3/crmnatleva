@@ -57,7 +57,7 @@ type ProductForm = {
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
   airline: string; hotel_name: string; hotel_stars: string;
-  nights: string; pax_min: string; pax_max: string; seats_total: string; seats_left: string;
+  nights: string; pax_min: string; pax_max: string; pax_adults: string; pax_children: string; seats_total: string; seats_left: string;
   // sales page
   seo_title: string; seo_description: string; og_image: string; whatsapp_cta_text: string;
 };
@@ -87,7 +87,7 @@ const empty: ProductForm = {
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
-  nights: "", pax_min: "", pax_max: "", seats_total: "", seats_left: "",
+  nights: "", pax_min: "", pax_max: "", pax_adults: "", pax_children: "", seats_total: "", seats_left: "",
   seo_title: "", seo_description: "", og_image: "", whatsapp_cta_text: "",
 };
 
@@ -340,6 +340,7 @@ export default function ProdutoEditor() {
           hotel_stars: data.hotel_stars?.toString() ?? "",
           nights: data.nights?.toString() ?? "",
           pax_min: data.pax_min?.toString() ?? "", pax_max: data.pax_max?.toString() ?? "",
+          pax_adults: data.pax_adults?.toString() ?? "", pax_children: data.pax_children?.toString() ?? "",
           seats_total: data.seats_total?.toString() ?? "", seats_left: data.seats_left?.toString() ?? "",
           seo_title: data.seo_title ?? "", seo_description: data.seo_description ?? "",
           og_image: data.og_image ?? "", whatsapp_cta_text: data.whatsapp_cta_text ?? "",
@@ -403,6 +404,7 @@ export default function ProdutoEditor() {
       airline: form.airline || null, hotel_name: form.hotel_name || null,
       hotel_stars: numOrNull(form.hotel_stars), nights: numOrNull(form.nights),
       pax_min: numOrNull(form.pax_min), pax_max: numOrNull(form.pax_max),
+      pax_adults: numOrNull(form.pax_adults), pax_children: numOrNull(form.pax_children),
       seats_total: numOrNull(form.seats_total), seats_left: numOrNull(form.seats_left),
       seo_title: form.seo_title || null, seo_description: form.seo_description || null,
       og_image: form.og_image || null, whatsapp_cta_text: form.whatsapp_cta_text || null,
@@ -1017,12 +1019,21 @@ export default function ProdutoEditor() {
                 <Input type="number" value={form.nights} onChange={(e) => set("nights", e.target.value)} />
               </div>
               <div>
-                <Label>Pax mínimo</Label>
+                <Label>Pax mínimo (total)</Label>
                 <Input type="number" value={form.pax_min} onChange={(e) => set("pax_min", e.target.value)} />
               </div>
               <div>
-                <Label>Pax máximo</Label>
+                <Label>Pax máximo (total)</Label>
                 <Input type="number" value={form.pax_max} onChange={(e) => set("pax_max", e.target.value)} />
+              </div>
+              <div>
+                <Label>Adultos</Label>
+                <Input type="number" min={0} value={form.pax_adults} onChange={(e) => set("pax_adults", e.target.value)} placeholder="Ex: 2" />
+                <p className="text-[11px] text-muted-foreground mt-1">Aparece nas artes (Ex: 2 adultos + 1 criança)</p>
+              </div>
+              <div>
+                <Label>Crianças</Label>
+                <Input type="number" min={0} value={form.pax_children} onChange={(e) => set("pax_children", e.target.value)} placeholder="Ex: 1" />
               </div>
               <div>
                 <Label>Vagas totais</Label>
@@ -1084,6 +1095,8 @@ export default function ProdutoEditor() {
             seatsLeft={form.seats_left}
             paxMin={form.pax_min}
             paxMax={form.pax_max}
+            paxAdults={form.pax_adults}
+            paxChildren={form.pax_children}
             isPromo={form.is_promo}
             paymentTerms={{
               entryPercent: Number(form.payment_entry_percent) || 30,
