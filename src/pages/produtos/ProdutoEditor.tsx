@@ -87,7 +87,7 @@ const empty: ProductForm = {
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
-  nights: "", pax_min: "", pax_max: "", seats_total: "", seats_left: "",
+  nights: "", pax_min: "", pax_max: "", pax_adults: "", pax_children: "", seats_total: "", seats_left: "",
   seo_title: "", seo_description: "", og_image: "", whatsapp_cta_text: "",
 };
 
