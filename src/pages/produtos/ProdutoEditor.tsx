@@ -49,6 +49,7 @@ type ProductForm = {
   payment_balance_installments_max: string;
   payment_balance_min_installment: string;
   payment_balance_interest_percent: string;
+  payment_balance_custom_installments: number[];
   payment_pix_discount_percent: string;
   payment_notes: string;
   is_promo: boolean; promo_badge: string;
