@@ -305,6 +305,57 @@ export default function MarketingTab(props: Props) {
     toast.success("Arte removida");
   }
 
+  async function generateCaption(asset: Asset, regenerate = false) {
+    setCaptioning((s) => ({ ...s, [asset.id]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke("marketing-caption-gen", {
+        body: {
+          asset_id: asset.id,
+          product_id: productId,
+          format: asset.format,
+          briefing: buildBriefing(),
+          regenerate,
+        },
+      });
+      if (error || (data as any)?.error) throw new Error(error?.message || (data as any).error);
+      const caption = (data as any).caption as string;
+      setAssets((prev) => prev.map((a) => (a.id === asset.id ? { ...a, caption } : a)));
+      toast.success(regenerate ? "Legenda regerada" : "Legenda gerada");
+    } catch (e: any) {
+      toast.error("Falha ao gerar legenda", { description: e?.message });
+    } finally {
+      setCaptioning((s) => ({ ...s, [asset.id]: false }));
+    }
+  }
+
+  async function generateMissingCaptions() {
+    const pending = assets.filter((a) => !a.caption);
+    if (pending.length === 0) { toast.info("Todas as artes já têm legenda"); return; }
+    setBulkCaptioning(true);
+    try {
+      let ok = 0;
+      for (const a of pending) {
+        try {
+          await generateCaption(a, false);
+          ok++;
+        } catch { /* segue */ }
+      }
+      toast.success(`${ok} legenda(s) gerada(s)`);
+    } finally {
+      setBulkCaptioning(false);
+    }
+  }
+
+  async function copyCaption(asset: Asset) {
+    if (!asset.caption) return;
+    try {
+      await navigator.clipboard.writeText(asset.caption);
+      toast.success("Legenda copiada");
+    } catch {
+      toast.error("Não foi possível copiar");
+    }
+  }
+
   function downloadAsset(a: Asset) {
     const link = document.createElement("a");
     link.href = a.url;
