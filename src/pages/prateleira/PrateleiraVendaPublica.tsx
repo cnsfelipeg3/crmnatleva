@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { initViewerTracking } from "@/lib/prateleira/viewerTracking";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export default function PrateleiraVendaPublica() {
   const [agencyWhatsApp, setAgencyWhatsApp] = useState<string>("");
   const [unlocked, setUnlocked] = useState(false);
   const [gateLoading, setGateLoading] = useState(false);
+  const trackerRef = useRef<ReturnType<typeof initViewerTracking> | null>(null);
 
   // Print mode bypassa o gate (PDF/render server)
   const isPrintMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("print") === "1";
@@ -112,6 +114,16 @@ export default function PrateleiraVendaPublica() {
       } catch {}
     })();
   }, [slug, isPrintMode]);
+
+  // Inicia tracking de tempo + cliques + seções vistas após o gate
+  useEffect(() => {
+    if (!unlocked || !p?.id || isPrintMode) return;
+    let email = "";
+    try { email = sessionStorage.getItem(`prateleira_viewer_${slug}`) || ""; } catch {}
+    if (!email) return;
+    trackerRef.current = initViewerTracking({ productId: p.id, email });
+    return () => { trackerRef.current?.dispose(); trackerRef.current = null; };
+  }, [unlocked, p?.id, slug, isPrintMode]);
 
   const handleGateSubmit = async ({ name, email, phone, countryCode }: { name: string; email: string; phone: string; countryCode: string }) => {
     if (!p?.id) return;
@@ -221,6 +233,7 @@ export default function PrateleiraVendaPublica() {
 
   const share = async () => {
     const url = window.location.href;
+    trackerRef.current?.trackClick("share_button", "hero");
     if (navigator.share) {
       try { await navigator.share({ title: p.title, url }); return; } catch {}
     }
@@ -236,13 +249,17 @@ export default function PrateleiraVendaPublica() {
     }
     const msg = buildCtaMessage(p);
     try {
-      // Atualiza viewer + incrementa lead_count (best effort)
       const email = sessionStorage.getItem(`prateleira_viewer_${slug}`);
       if (email) {
         (supabase as any).from("prateleira_product_viewers")
-          .update({ clicked_cta: true, cta_clicked_at: new Date().toISOString(), last_active_at: new Date().toISOString() })
+          .update({
+            cta_clicked: true,
+            whatsapp_clicked: true,
+            last_active_at: new Date().toISOString(),
+          })
           .eq("product_id", p.id).eq("email", email);
       }
+      trackerRef.current?.trackClick("cta_whatsapp", "offer", { agency_whatsapp: !!agencyWhatsApp });
       (supabase as any).from("experience_products")
         .update({ lead_count: (p.lead_count ?? 0) + 1 }).eq("id", p.id);
     } catch {}
@@ -276,7 +293,7 @@ export default function PrateleiraVendaPublica() {
         {/* Main */}
         <div className="lg:col-span-3 space-y-6">
           {Array.isArray(p.highlights) && p.highlights.length > 0 && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="highlights">
               <h2 className="font-serif text-xl mb-4">Por que vale a pena</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {p.highlights.map((h: string, i: number) => (
@@ -290,7 +307,7 @@ export default function PrateleiraVendaPublica() {
           )}
 
           {p.description && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="description">
               <h2 className="font-serif text-xl mb-3">Sobre essa viagem</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.description}</div>
             </Card>
@@ -298,7 +315,7 @@ export default function PrateleiraVendaPublica() {
 
           {/* Galeria de fotos · visível e clicável */}
           {allImages.length > 0 && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="gallery">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-serif text-xl flex items-center gap-2">
                   <Images className="w-5 h-5 text-muted-foreground" />
@@ -308,7 +325,7 @@ export default function PrateleiraVendaPublica() {
                   </span>
                 </h2>
                 {allImages.length > 1 && (
-                  <Button variant="ghost" size="sm" onClick={() => openGallery(0)} className="text-xs">
+                  <Button variant="ghost" size="sm" onClick={() => { trackerRef.current?.trackClick("gallery_open_all", "gallery"); openGallery(0); }} className="text-xs">
                     Ver todas
                   </Button>
                 )}
@@ -319,7 +336,7 @@ export default function PrateleiraVendaPublica() {
                   return (
                     <button
                       key={i}
-                      onClick={() => openGallery(i)}
+                      onClick={() => { trackerRef.current?.trackClick(`gallery_thumb_${i}`, "gallery"); openGallery(i); }}
                       className="relative aspect-[4/3] overflow-hidden rounded-lg group bg-muted"
                       aria-label={`Abrir foto ${i + 1}`}
                     >
@@ -343,7 +360,7 @@ export default function PrateleiraVendaPublica() {
 
           {/* Logística */}
           {(p.airline || p.hotel_name || p.origin_city || p.nights || p.departure_date || p.return_date) && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="logistica">
               <h2 className="font-serif text-xl mb-4">Logística</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 {p.origin_city && <div className="flex items-center gap-2"><Plane className="w-4 h-4 text-muted-foreground" /> <span><span className="text-muted-foreground">Saída:</span> {p.origin_city}{p.origin_iata ? ` (${p.origin_iata})` : ""}</span></div>}
@@ -361,7 +378,7 @@ export default function PrateleiraVendaPublica() {
           {((Array.isArray(p.includes) && p.includes.length > 0) || (Array.isArray(p.excludes) && p.excludes.length > 0)) && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {Array.isArray(p.includes) && p.includes.length > 0 && (
-                <Card className="p-6">
+                <Card className="p-6" data-section="includes">
                   <h3 className="font-medium mb-3 text-emerald-700 dark:text-emerald-400 flex items-center gap-2"><Check className="w-4 h-4" /> Está incluso</h3>
                   <ul className="space-y-2 text-sm">
                     {p.includes.map((it: string, i: number) => (
@@ -384,24 +401,25 @@ export default function PrateleiraVendaPublica() {
           )}
 
           {p.how_it_works && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="how_it_works">
               <h2 className="font-serif text-xl mb-3">Como funciona</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.how_it_works}</div>
             </Card>
           )}
 
           {p.recommendations && (
-            <Card className="p-6">
+            <Card className="p-6" data-section="recommendations">
               <h2 className="font-serif text-xl mb-3">Recomendações</h2>
               <div className="text-sm text-foreground/80 whitespace-pre-line leading-relaxed">{p.recommendations}</div>
             </Card>
           )}
-          {/* Gatilhos estratégicos · prova social, manifesto, garantias */}
-          <SalesTriggersBlock destination={p.destination} productKind={p.product_kind} />
+          <div data-section="sales_triggers">
+            <SalesTriggersBlock destination={p.destination} productKind={p.product_kind} />
+          </div>
         </div>
 
         {/* Sticky offer stack */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2" data-section="offer">
           <OfferStack
             promoPrice={promoPrice}
             fullPrice={fullPrice}
