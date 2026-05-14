@@ -149,7 +149,15 @@ export default function Produtos() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {filtered.map((p) => <AdminProductCard key={p.id} p={p} />)}
+            {filtered.map((p) => (
+              <AdminProductCard
+                key={p.id}
+                p={p}
+                onToggleActive={(next) =>
+                  setItems((prev) => prev.map((it) => (it.id === p.id ? { ...it, is_active: next } : it)))
+                }
+              />
+            ))}
           </div>
         )}
       </div>
