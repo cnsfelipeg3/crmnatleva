@@ -462,17 +462,28 @@ export default function MarketingAssetEditor({ asset, onClose, onSaved }: Props)
               style={{ aspectRatio: aspect, width: "min(100%, 720px)" }}
               onPointerDown={() => setSelectedId(null)}
             >
-              <img
-                src={asset.url}
-                alt=""
-                crossOrigin="anonymous"
-                onLoad={() => setImageReady(true)}
-                draggable={false}
-                className="absolute inset-0 w-full h-full object-cover pointer-events-none"
-              />
-              {!imageReady && (
-                <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs">
+              {localImageUrl && (
+                <img
+                  src={localImageUrl}
+                  alt=""
+                  onLoad={() => setImageReady(true)}
+                  onError={() => setImageError("Imagem falhou ao renderizar")}
+                  draggable={false}
+                  className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+                />
+              )}
+              {!imageReady && !imageError && (
+                <div className="absolute inset-0 flex items-center justify-center text-white/70 text-xs bg-black/40">
                   <Loader2 className="w-4 h-4 animate-spin mr-2" /> carregando arte...
+                </div>
+              )}
+              {imageError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white text-xs bg-black/70 gap-2 px-4 text-center">
+                  <span>Não foi possível carregar a arte</span>
+                  <span className="text-white/60">{imageError}</span>
+                  <a href={asset.url} target="_blank" rel="noreferrer" className="underline text-primary-foreground">
+                    Abrir original em nova aba
+                  </a>
                 </div>
               )}
 
