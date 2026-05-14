@@ -419,7 +419,7 @@ export default function PrateleiraVendaPublica() {
         </div>
 
         {/* Sticky offer stack */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2" data-section="offer">
           <OfferStack
             promoPrice={promoPrice}
             fullPrice={fullPrice}
