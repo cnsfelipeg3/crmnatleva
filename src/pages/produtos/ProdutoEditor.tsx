@@ -953,6 +953,8 @@ export default function ProdutoEditor() {
             hotelStars={form.hotel_stars}
             nights={form.nights}
             seatsLeft={form.seats_left}
+            paxMin={form.pax_min}
+            paxMax={form.pax_max}
             isPromo={form.is_promo}
             paymentTerms={{
               entryPercent: Number(form.payment_entry_percent) || 30,
