@@ -207,6 +207,9 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
     `· Headline: "${briefing.headline}"`,
     `· Subheadline: "${briefing.subheadline}"`,
     briefing.destination ? `· Destination tag: ${briefing.destination}` : "",
+    briefing.originCity
+      ? `· ORIGEM (MANDATORY · render como badge bem visível em Champagne pill no topo do card de informações, com texto Rolex Green em Instrument Sans Bold uppercase): "SAINDO DE ${briefing.originCity.toUpperCase()}". Esta informação é OBRIGATÓRIA em toda arte promocional · NUNCA omita.`
+      : "· ATENÇÃO: origem não informada · adicione 'Cidade de origem' no cadastro do produto antes de gerar a arte.",
     briefing.hotelName
       ? `· Hotel: ${briefing.hotelName}${briefing.hotelStars ? ` · ${briefing.hotelStars}★` : ""}`
       : "",
