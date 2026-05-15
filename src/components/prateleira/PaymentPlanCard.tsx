@@ -73,7 +73,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
-              Entrada {plan.entryPercent}%
+              Entrada
             </div>
             <div className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1] mt-1 whitespace-nowrap">
               {formatMoneyBR(plan.entryAmount, plan.currency)}
@@ -101,7 +101,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
-              Saldo {balancePercent}% · boleto sem juros
+              Saldo · boleto sem juros
             </div>
             <div className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap flex-wrap">
               <span className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1]">
