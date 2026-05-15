@@ -135,23 +135,14 @@ export function formatCompactPeriod(dep?: string, ret?: string): string | undefi
   return `De ${a.d}/${a.mo}/${a.y} a ${b.d}/${b.mo}/${b.y}`;
 }
 
-// Itens padrão obrigatórios em todas as artes
-export const DEFAULT_INCLUDES = [
-  "Aéreo de ida e volta",
-  "Hospedagem All Inclusive",
-  "Assessoria completa",
-] as const;
+// Não forçamos itens padrão · cada produto define exatamente o que está incluso.
+// Adicionar itens automáticos (ex: "Aéreo de ida e volta") gera propaganda enganosa
+// quando o pacote é só hospedagem.
+export const DEFAULT_INCLUDES: readonly string[] = [] as const;
 
 export function mergeIncludes(custom?: string[]): string[] {
   const base = (custom || []).map((s) => s.trim()).filter(Boolean);
-  // Garante os 3 itens essenciais sempre presentes (sem duplicar)
-  const merged = [...base];
-  for (const item of DEFAULT_INCLUDES) {
-    if (!merged.some((m) => m.toLowerCase().includes(item.toLowerCase().split(" ")[0]))) {
-      merged.push(item);
-    }
-  }
-  return merged.slice(0, 4);
+  return base.slice(0, 5);
 }
 
 export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, aspect: string): string {
