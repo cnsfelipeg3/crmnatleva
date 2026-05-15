@@ -12,6 +12,7 @@ import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyti
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 
 type Product = any;
 
