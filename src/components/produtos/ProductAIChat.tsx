@@ -398,6 +398,25 @@ export default function ProductAIChat({ current, onApply }: Props) {
             <Square className="w-4 h-4" />
           </Button>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            const u = window.prompt("Cole a URL da página (anúncio, hotel, cotação, anúncio Decolar/Booking, etc):");
+            if (!u) return;
+            const trimmed = u.trim();
+            if (!/^https?:\/\//i.test(trimmed)) {
+              toast.error("URL inválida · use http:// ou https://");
+              return;
+            }
+            setInput((cur) => (cur ? `${cur} ${trimmed}` : trimmed));
+          }}
+          disabled={disabled}
+          title="Colar URL para a IA extrair"
+        >
+          <LinkIcon className="w-4 h-4" />
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
