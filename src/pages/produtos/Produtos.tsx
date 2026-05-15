@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp } from "lucide-react";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -72,13 +72,24 @@ export default function Produtos() {
     return true;
   }), [items, kind, status, destination, q, onlyPromo]);
 
-  const totals = useMemo(() => ({
-    total: items.length,
-    active: items.filter((p) => (p.status || "active") === "active" && p.is_active).length,
-    promo: items.filter((p) => p.is_promo).length,
-    leads: items.reduce((s, p) => s + (p.lead_count || 0), 0),
-    views: items.reduce((s, p) => s + (p.view_count || 0), 0),
-  }), [items]);
+  const totals = useMemo(() => {
+    const totalProfit = items.reduce((s, p) => {
+      const price = Number(p.price_promo) || Number(p.price_from) || 0;
+      const isPP = (p.price_label || "").toLowerCase().includes("pessoa");
+      const pax = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+      const revenue = isPP ? price * pax : price;
+      const cost = Number(p.internal_cost) || 0;
+      return s + (revenue - cost);
+    }, 0);
+    return {
+      total: items.length,
+      active: items.filter((p) => (p.status || "active") === "active" && p.is_active).length,
+      promo: items.filter((p) => p.is_promo).length,
+      leads: items.reduce((s, p) => s + (p.lead_count || 0), 0),
+      views: items.reduce((s, p) => s + (p.view_count || 0), 0),
+      profit: totalProfit,
+    };
+  }, [items]);
 
   return (
     <div className="min-h-screen">
@@ -104,12 +115,13 @@ export default function Produtos() {
           </div>
 
           {/* KPI strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-6">
             <KPI label="Total" value={totals.total} />
             <KPI label="Ativos" value={totals.active} />
             <KPI label="Em promo" value={totals.promo} />
             <KPI label="Visualizações" value={totals.views} />
             <KPI label="Leads" value={totals.leads} />
+            <KPI label="Lucro 🔒" value={fmtMoney(totals.profit)} highlight />
           </div>
         </div>
       </div>
@@ -156,6 +168,7 @@ export default function Produtos() {
                 onToggleActive={(next) =>
                   setItems((prev) => prev.map((it) => (it.id === p.id ? { ...it, is_active: next } : it)))
                 }
+                onDelete={() => setItems((prev) => prev.filter((it) => it.id !== p.id))}
               />
             ))}
           </div>
@@ -165,18 +178,19 @@ export default function Produtos() {
   );
 }
 
-function KPI({ label, value }: { label: string; value: number }) {
+function KPI({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
   return (
-    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-3 backdrop-blur">
-      <div className="text-[11px] text-white/60 uppercase tracking-wide">{label}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+    <div className={cn("rounded-lg px-4 py-3 backdrop-blur border", highlight ? "bg-amber-500/15 border-amber-300/30" : "bg-white/10 border-white/15")}>
+      <div className={cn("text-[11px] uppercase tracking-wide", highlight ? "text-amber-200" : "text-white/60")}>{label}</div>
+      <div className={cn("font-bold text-white", typeof value === "string" ? "text-lg" : "text-2xl")}>{value}</div>
     </div>
   );
 }
 
-function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (next: boolean) => void }) {
+function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isActive = p.is_active !== false;
   const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
   const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
@@ -184,6 +198,16 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
     : p.departure_date && p.return_date ? `${fmtDate(p.departure_date)}-${fmtDate(p.return_date)}`
     : p.departure_date ? `${fmtDate(p.departure_date)}` : null;
   const statusBadge = p.status === "draft" ? "secondary" : p.status === "paused" ? "outline" : "default";
+
+  // Lucro estimado · uso interno
+  const priceNum = Number(p.price_promo) || Number(p.price_from) || 0;
+  const isPP = (p.price_label || "").toLowerCase().includes("pessoa");
+  const paxCount = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+  const revenue = isPP ? priceNum * paxCount : priceNum;
+  const cost = Number(p.internal_cost) || 0;
+  const profit = revenue - cost;
+  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const hasCost = cost > 0;
 
   async function handleToggleActive(next: boolean) {
     setSavingActive(true);
@@ -204,6 +228,23 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
         ? "Voltou pra vitrine pública e a página de venda tá no ar."
         : "Sumiu da vitrine pública e a página de venda fica indisponível.",
     });
+  }
+
+  async function handleDelete() {
+    const ok = window.confirm(`Excluir "${p.title}" da prateleira?\n\nEssa ação não pode ser desfeita.`);
+    if (!ok) return;
+    setDeleting(true);
+    const { error } = await (supabase as any)
+      .from("experience_products")
+      .delete()
+      .eq("id", p.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: "Não rolou excluir", description: error.message, variant: "destructive" });
+      return;
+    }
+    onDelete();
+    toast({ title: "Produto excluído", description: "Removido da vitrine." });
   }
 
   return (
@@ -241,6 +282,46 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
             <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
           </button>
+        </div>
+        {/* Lucro estimado · uso interno */}
+        <div
+          className={cn(
+            "mt-2 px-3 py-2 rounded-md border flex items-center justify-between gap-2",
+            hasCost
+              ? profit > 0
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : profit < 0
+                  ? "border-red-500/30 bg-red-500/5"
+                  : "border-border bg-muted/30"
+              : "border-dashed border-amber-500/30 bg-amber-500/5"
+          )}
+          title="Uso interno · não aparece na proposta"
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <TrendingUp className={cn("w-3.5 h-3.5 shrink-0",
+              hasCost ? (profit > 0 ? "text-emerald-600" : profit < 0 ? "text-red-600" : "text-muted-foreground") : "text-amber-600"
+            )} />
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Lucro 🔒</div>
+              {hasCost ? (
+                <div className="text-[12px] font-bold tabular-nums leading-tight mt-0.5">
+                  {fmtMoney(profit, p.currency)} <span className="text-[10px] font-normal text-muted-foreground">· {margin.toFixed(0)}%</span>
+                </div>
+              ) : (
+                <Link to={`/prateleira/${p.slug}/editar`} className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline">
+                  Cadastre o custo
+                </Link>
+              )}
+            </div>
+          </div>
+          {hasCost && (
+            <div className="text-right">
+              <div className="text-[9px] text-muted-foreground leading-none">Receita · custo</div>
+              <div className="text-[10px] tabular-nums text-muted-foreground mt-0.5">
+                {fmtMoney(revenue, p.currency)} · {fmtMoney(cost, p.currency)}
+              </div>
+            </div>
+          )}
         </div>
         <div
           className={cn(
@@ -280,6 +361,16 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
           <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm" title="Abrir página"><ExternalLink className="w-3.5 h-3.5" /></Button>
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Excluir produto"
+            className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
       <PrateleiraAnalyticsDialog
