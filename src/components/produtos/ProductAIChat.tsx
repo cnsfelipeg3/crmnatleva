@@ -138,36 +138,47 @@ export default function ProductAIChat({ current, onApply }: Props) {
     const hasImgs = images.length > 0;
     if ((!hasText && !hasImgs) || busy) return;
 
-    // 1) Detecta URLs no texto e faz scraping antes de enviar pra IA.
-    const urlRe = /\bhttps?:\/\/[^\s<>"')]+/gi;
-    const foundUrls = Array.from(new Set(text.match(urlRe) || []));
-    let enrichedText = text.trim();
-    let scrapedImages: string[] = [];
+    // 1) Garante que todas as URLs do texto tenham preview pronto. Se o
+    // usuário acabou de colar e ainda está carregando, espera concluir.
+    const foundUrls = Array.from(new Set((text.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, "")))).slice(0, 3);
+    for (const u of foundUrls) {
+      if (!urlPreviews.some((p) => p.url === u)) {
+        await fetchPreview(u);
+      }
+    }
+    // Aguarda previews em loading (até 30s)
     if (foundUrls.length) {
-      setScrapingUrl(true);
-      const t = toast.loading(`Lendo ${foundUrls.length === 1 ? "página" : `${foundUrls.length} páginas`}...`);
-      try {
-        for (const u of foundUrls.slice(0, 3)) {
-          try {
-            const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url: u } });
-            if (error || !data || data.error) continue;
-            const md = (data.markdown || "").trim();
-            const title = data.title || "";
-            if (md) {
-              enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${u}\nTítulo: ${title}\n\n${md}`;
-            }
-            if (Array.isArray(data.images)) scrapedImages.push(...data.images.slice(0, 12));
-          } catch {/* segue */}
-        }
-        toast.dismiss(t);
-      } catch {
-        toast.dismiss(t);
-      } finally {
-        setScrapingUrl(false);
+      const start = Date.now();
+      while (Date.now() - start < 30000) {
+        const stillLoading = foundUrls.some((u) => {
+          const p = urlPreviews.find((x) => x.url === u);
+          return p?.status === "loading";
+        });
+        if (!stillLoading) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
-      if (scrapedImages.length) {
-        enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+    }
+
+    // 2) Monta o conteúdo enriquecido a partir do cache de previews.
+    const previewsForUrls = foundUrls
+      .map((u) => urlPreviews.find((p) => p.url === u))
+      .filter((p): p is UrlPreview => !!p && p.status === "ready");
+
+    let enrichedText = text.trim();
+    const scrapedImages: string[] = [];
+    for (const p of previewsForUrls) {
+      if (p.markdown) {
+        enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
       }
+      if (p.images?.length) scrapedImages.push(...p.images.slice(0, 12));
+    }
+    if (scrapedImages.length) {
+      enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+    }
+
+    if (foundUrls.length && !previewsForUrls.length) {
+      toast.error("Não consegui ler a página · tente novamente ou use prints");
+      return;
     }
 
     const fallbackText = hasText
@@ -187,6 +198,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
     setMessages(next);
     setInput("");
     setPendingImages([]);
+    setUrlPreviews([]);
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("product-from-chat", {
