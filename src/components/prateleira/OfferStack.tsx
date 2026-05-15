@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import PaymentPlanCard from "./PaymentPlanCard";
+import { paymentPlanOptionsFromTerms } from "@/lib/prateleira/payment-plan";
 
 type Props = {
   promoPrice?: string | null;
@@ -107,11 +108,8 @@ export default function OfferStack({
   const symbol = currency === "USD" ? "US$" : currency === "EUR" ? "€" : "R$";
 
   const pt = (paymentTerms ?? {}) as any;
-  const entryPercent = typeof pt.entry_percent === "number" ? pt.entry_percent : 30;
-  const entryAmount = typeof pt.entry_amount === "number" && pt.entry_amount > 0 ? pt.entry_amount : undefined;
-  const daysBefore =
-    typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20;
   const priceForPlan = rawPricePromo ?? rawPriceFrom;
+  const planOptions = paymentPlanOptionsFromTerms(pt, { currency, maxInstallments: installmentsMax });
 
   return (
     <div className="lg:sticky lg:top-6 space-y-3">
@@ -183,12 +181,16 @@ export default function OfferStack({
             price={priceForPlan}
             departureDate={departureDate}
             currency={currency}
-            entryPercent={entryPercent}
-            entryAmount={entryAmount}
-            daysBefore={daysBefore}
+            entryPercent={planOptions.entryPercent}
+            entryAmount={planOptions.entryAmount}
+            daysBefore={planOptions.daysBefore}
+            maxInstallments={planOptions.maxInstallments}
+            minInstallment={planOptions.minInstallment}
             paxMin={paxMin}
             paxMax={paxMax}
-            customInstallments={Array.isArray(pt.balance_custom_installments) ? pt.balance_custom_installments : undefined}
+            customInstallments={planOptions.customInstallments}
+            balanceMethod={pt.balance_method || "boleto"}
+            balanceInterestPercent={pt.balance_interest_percent}
           />
 
           {/* Valor total do pacote · discreto · embaixo do plano de pagamento */}
