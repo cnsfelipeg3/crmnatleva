@@ -313,10 +313,10 @@ export default function ProductAIChat({ current, onApply }: Props) {
             </div>
           </div>
         ))}
-        {(busy || transcribing) && (
+        {(busy || transcribing || scrapingUrl) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            {transcribing ? "Transcrevendo áudio..." : "Pensando..."}
+            {scrapingUrl ? "Lendo a página..." : transcribing ? "Transcrevendo áudio..." : "Pensando..."}
           </div>
         )}
       </div>
