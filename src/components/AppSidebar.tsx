@@ -480,6 +480,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
               { to: "/admin/conversas-excluidas", icon: Inbox, label: "Conversas Excluídas" },
               { to: "/admin/regras-globais", icon: ScrollText, label: "Regras Globais Agentes" },
+              { to: "/admin/megafone", icon: Megaphone, label: "MegaFone" },
               { to: "/settings", icon: Settings, label: "Configurações" },
             ])}
           </>
