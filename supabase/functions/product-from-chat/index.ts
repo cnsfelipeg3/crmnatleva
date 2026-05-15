@@ -196,17 +196,18 @@ serve(async (req) => {
     }
     console.log(`[product-from-chat] toolCall=${!!toolCall} keys=${Object.keys(product).length} contentLen=${(msg?.content||"").length}`);
 
-    // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta openai/gpt-5-mini
+    // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta o modelo alternativo
     if (!toolCall || Object.keys(product).length === 0) {
-      console.log("[product-from-chat] retry with google/gemini-2.5-pro");
+      const retryModel = hasImages ? "openai/gpt-5" : "google/gemini-2.5-pro";
+      console.log(`[product-from-chat] retry tool_call with ${retryModel}`);
       const retry = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: retryModel,
           messages: [
             { role: "system", content: SYSTEM_PROMPT + draftSummary },
-            ...messages,
+            ...toMultimodal(messages as RawMsg[]),
           ],
           tools: [SET_PRODUCT_TOOL],
           tool_choice: { type: "function", function: { name: "set_product" } },
