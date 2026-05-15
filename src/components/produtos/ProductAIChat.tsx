@@ -8,6 +8,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type ChatMsg = { role: "user" | "assistant"; content: string; images?: string[] };
+type UrlPreview = {
+  url: string;
+  status: "loading" | "ready" | "error";
+  title?: string;
+  markdown?: string;
+  images?: string[];
+  error?: string;
+};
 
 interface Props {
   /** Rascunho atual já normalizado para o JSON do produto. */
