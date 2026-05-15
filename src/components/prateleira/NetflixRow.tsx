@@ -160,6 +160,11 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
                         <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
                         <span className="text-white/55"> no boleto</span>
                       </div>
+                      {paxLabel && (
+                        <div className="text-[9.5px] text-white/55 leading-tight mt-1 line-clamp-1">
+                          {paxLabel}
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="t-numeric text-white/95 text-sm font-bold">Sob consulta</div>
