@@ -717,233 +717,291 @@ export default function ProdutoEditor() {
               </div>
             </Card>
 
-            {/* ============ 7 · PREÇO & PAGAMENTO ============ */}
+            {/* ============ 7 · PREÇO & PAGAMENTO (simplificado) ============ */}
             <Card className="p-5 space-y-4">
-              <SectionHeader icon={CreditCard} title="Preço e pagamento" subtitle="Valor, entrada e parcelamento do saldo" />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <Label>Preço cheio</Label>
-                  <Input type="number" value={form.price_from} onChange={(e) => set("price_from", e.target.value)} placeholder="3500" />
-                </div>
-                <div>
-                  <Label>Preço promocional</Label>
-                  <Input type="number" value={form.price_promo} onChange={(e) => set("price_promo", e.target.value)} placeholder="2990" />
-                </div>
-                <div>
-                  <Label>Moeda</Label>
-                  <Select value={form.currency} onValueChange={(v) => set("currency", v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BRL">BRL · R$</SelectItem>
-                      <SelectItem value="USD">USD · US$</SelectItem>
-                      <SelectItem value="EUR">EUR · €</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label>Rótulo do preço</Label>
-                  <Input value={form.price_label} onChange={(e) => set("price_label", e.target.value)} placeholder="por pessoa, casal, total..." />
-                </div>
-                <div className="md:col-span-2">
-                  <Label>Badge promocional (opcional)</Label>
-                  <Input value={form.promo_badge} onChange={(e) => set("promo_badge", e.target.value)} placeholder="Black Friday, Últimas vagas..." />
-                </div>
-              </div>
+              <SectionHeader icon={CreditCard} title="Preço e pagamento" subtitle="Direto ao ponto · só o essencial" />
 
-              {/* ENTRADA */}
-              <div className="pt-3 border-t border-border/60">
-                <div className="flex flex-wrap items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded bg-emerald-500" />
-                  <h3 className="font-semibold text-foreground">Entrada</h3>
-                  <span className="text-xs text-muted-foreground">· o que o cliente paga pra reservar</span>
-                  <div className="ml-auto inline-flex rounded-md border border-border bg-muted/30 p-0.5">
-                    <button
-                      type="button"
-                      onClick={() => set("payment_entry_amount", "")}
-                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${!form.payment_entry_amount ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                    >Em %</button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!form.payment_entry_amount) {
-                          const price = Number(form.price_promo) || Number(form.price_from) || 0;
-                          const pct = Number(form.payment_entry_percent) || 0;
-                          const v = price && pct ? Math.round((price * pct) / 100) : 0;
-                          set("payment_entry_amount", v ? String(v) : "0");
-                        }
-                      }}
-                      className={`px-3 py-1 text-xs font-medium rounded transition-colors ${form.payment_entry_amount ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-                    >Em R$</button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {form.payment_entry_amount ? (
-                    <div>
-                      <Label>Entrada fixa (R$)</Label>
-                      <Input type="number" value={form.payment_entry_amount} onChange={(e) => set("payment_entry_amount", e.target.value)} placeholder="ex: 3000" />
-                    </div>
-                  ) : (
-                    <div>
-                      <Label>Entrada padrão (%)</Label>
-                      <Input type="number" value={form.payment_entry_percent} onChange={(e) => set("payment_entry_percent", e.target.value)} placeholder="30" />
-                    </div>
-                  )}
-                  <div>
-                    <Label>Mín (%)</Label>
-                    <Input type="number" value={form.payment_entry_percent_min} onChange={(e) => set("payment_entry_percent_min", e.target.value)} placeholder="20" />
-                  </div>
-                  <div>
-                    <Label>Máx (%)</Label>
-                    <Input type="number" value={form.payment_entry_percent_max} onChange={(e) => set("payment_entry_percent_max", e.target.value)} placeholder="50" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Label className="mb-2 block">Métodos aceitos para a entrada</Label>
-                  <div className="flex flex-wrap gap-3">
-                    {([
-                      { k: "pix", label: "PIX" },
-                      { k: "cartao", label: "Cartão de crédito" },
-                      { k: "link", label: "Link de pagamento" },
-                    ] as const).map((m) => (
-                      <label key={m.k} className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card cursor-pointer hover:bg-accent/50 transition">
-                        <Switch
-                          checked={form.payment_entry_methods[m.k]}
-                          onCheckedChange={(v) => set("payment_entry_methods", { ...form.payment_entry_methods, [m.k]: v })}
+              {(() => {
+                // Cálculos derivados pra ficar tudo simples e claro
+                const total = Number(form.price_promo) || Number(form.price_from) || 0;
+                const entryAmt = Number(form.payment_entry_amount) || 0;
+                const balance = Math.max(0, total - entryAmt);
+                const nParc = Math.max(1, Number(form.payment_balance_installments_max) || 1);
+                const parcVal = balance > 0 ? balance / nParc : 0;
+                const isPerPerson = (form.price_label || "").toLowerCase().includes("pessoa");
+                const pax = Math.max(1, (Number(form.pax_adults) || 0) + (Number(form.pax_children) || 0));
+
+                return (
+                  <>
+                    {/* 1 · Valor total + base de cálculo */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-sm font-semibold">Valor total do pacote (R$)</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={form.price_promo}
+                          onChange={(e) => {
+                            set("price_promo", e.target.value);
+                            // Mantém price_from sincronizado pra compatibilidade
+                            if (!form.price_from) set("price_from", e.target.value);
+                          }}
+                          placeholder="2999"
+                          className="text-lg font-semibold"
                         />
-                        <span className="text-sm">{m.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                {form.payment_entry_methods.cartao && (
-                  <div className="mt-4 max-w-xs">
-                    <Label>Parcelar entrada no cartão · até</Label>
-                    <Input type="number" min={1} max={12} value={form.payment_entry_card_installments_max} onChange={(e) => set("payment_entry_card_installments_max", e.target.value)} placeholder="3" />
-                  </div>
-                )}
-              </div>
-
-              {/* SALDO */}
-              <div className="pt-4 border-t border-border/60">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-1 h-5 rounded bg-amber-500" />
-                  <h3 className="font-semibold text-foreground">Saldo restante</h3>
-                  <span className="text-xs text-muted-foreground">· como o cliente quita o restante</span>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <Label>Forma de pagamento</Label>
-                    <Select value={form.payment_balance_method} onValueChange={(v) => set("payment_balance_method", v as any)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="boleto">Boleto bancário</SelectItem>
-                        <SelectItem value="cartao">Cartão de crédito</SelectItem>
-                        <SelectItem value="ambos">Boleto ou cartão</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Máximo de parcelas</Label>
-                    <Input type="number" min={1} max={24} value={form.payment_balance_installments_max} onChange={(e) => set("payment_balance_installments_max", e.target.value)} placeholder="12" />
-                  </div>
-                  <div>
-                    <Label>Valor mínimo da parcela ({form.currency})</Label>
-                    <Input type="number" value={form.payment_balance_min_installment} onChange={(e) => set("payment_balance_min_installment", e.target.value)} placeholder="200" />
-                  </div>
-                  <div>
-                    <Label>Juros ao mês (%)</Label>
-                    <Input type="number" step="0.1" value={form.payment_balance_interest_percent} onChange={(e) => set("payment_balance_interest_percent", e.target.value)} placeholder="0" />
-                  </div>
-                  <div>
-                    <Label>Quitação até (dias antes)</Label>
-                    <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
-                  </div>
-                  <div>
-                    <Label>Desconto à vista no PIX (%)</Label>
-                    <Input type="number" step="0.1" value={form.payment_pix_discount_percent} onChange={(e) => set("payment_pix_discount_percent", e.target.value)} placeholder="0" />
-                  </div>
-                </div>
-
-                {/* Personalizar parcelas individualmente */}
-                <div className="mt-5 rounded-lg border border-border/60 bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <div>
-                      <Label className="text-sm font-semibold text-foreground">Personalizar valor de cada parcela</Label>
-                      <p className="text-[11px] text-muted-foreground mt-0.5">Defina manualmente cada boleto · ignora "máximo" e "mínimo"</p>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          {isPerPerson
+                            ? `Valor cobrado de cada pessoa · ${pax} pax = ${formatMoneyBR(total * pax, form.currency)} no total`
+                            : `Valor total do pacote inteiro · dividido entre ${pax} pax = ${formatMoneyBR(total / pax, form.currency)} por pessoa`}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold">Esse valor é</Label>
+                        <div className="inline-flex w-full rounded-md border border-border bg-muted/30 p-0.5 mt-1">
+                          <button
+                            type="button"
+                            onClick={() => set("price_label", "por pessoa")}
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded transition-colors ${isPerPerson ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            Por pessoa
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => set("price_label", "total")}
+                            className={`flex-1 px-3 py-2 text-sm font-medium rounded transition-colors ${!isPerPerson ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            Total ({pax} {pax === 1 ? "pessoa" : "pessoas"})
+                          </button>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Ajuste a quantidade de pax na seção <span className="font-medium">Passageiros</span>
+                        </p>
+                      </div>
                     </div>
-                    <Switch
-                      checked={form.payment_balance_custom_installments.length > 0}
-                      onCheckedChange={(on) => {
-                        if (on) {
-                          const total = Number(form.price_promo) || Number(form.price_from) || 0;
-                          const entry = Number(form.payment_entry_amount) > 0
-                            ? Number(form.payment_entry_amount)
-                            : Math.round(total * (Number(form.payment_entry_percent) || 30) / 100);
-                          const balance = Math.max(0, total - entry);
-                          const n = Math.max(1, Math.min(12, Number(form.payment_balance_installments_max) || 6));
-                          const v = balance > 0 ? Math.round((balance / n) * 100) / 100 : 0;
-                          set("payment_balance_custom_installments", Array.from({ length: n }, () => v));
-                        } else {
-                          set("payment_balance_custom_installments", []);
-                        }
-                      }}
-                    />
-                  </div>
-                  {form.payment_balance_custom_installments.length > 0 && (() => {
-                    const list = form.payment_balance_custom_installments;
-                    const total = Number(form.price_promo) || Number(form.price_from) || 0;
-                    const entry = Number(form.payment_entry_amount) > 0
-                      ? Number(form.payment_entry_amount)
-                      : Math.round(total * (Number(form.payment_entry_percent) || 30) / 100);
-                    const balance = Math.max(0, total - entry);
-                    const sum = list.reduce((a, b) => a + (Number(b) || 0), 0);
-                    const diff = Math.round((sum - balance) * 100) / 100;
-                    const updateAt = (i: number, v: number) => {
-                      const next = [...list]; next[i] = v;
-                      set("payment_balance_custom_installments", next);
-                    };
-                    return (
-                      <div className="space-y-2">
-                        {list.map((v, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <span className="text-xs text-muted-foreground w-20 shrink-0">Parcela {i + 1}</span>
-                            <Input type="number" step="0.01" value={v} onChange={(e) => updateAt(i, Number(e.target.value) || 0)} className="flex-1" />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => set("payment_balance_custom_installments", list.filter((_, j) => j !== i))} aria-label="Remover parcela">
-                              <Trash2 className="w-4 h-4 text-muted-foreground" />
-                            </Button>
+
+                    {/* 2 · Entrada + parcelas */}
+                    <div className="pt-3 border-t border-border/60 grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label className="text-sm font-semibold">Valor da entrada (R$)</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={form.payment_entry_amount}
+                          onChange={(e) => {
+                            set("payment_entry_amount", e.target.value);
+                            // Mantém entry_percent coerente pra preview e BI
+                            const v = Number(e.target.value) || 0;
+                            if (total > 0) set("payment_entry_percent", String(Math.round((v / total) * 100)));
+                          }}
+                          placeholder="499"
+                          className="text-base font-semibold"
+                        />
+                        {total > 0 && entryAmt > 0 && (
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            {Math.round((entryAmt / total) * 100)}% do total · saldo de {formatMoneyBR(balance, form.currency)}
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold">Parcelas do saldo (boleto)</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={24}
+                          value={form.payment_balance_installments_max}
+                          onChange={(e) => set("payment_balance_installments_max", e.target.value)}
+                          placeholder="12"
+                          className="text-base font-semibold"
+                        />
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Quantidade de boletos pra quitar o saldo
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-sm font-semibold">Valor de cada parcela</Label>
+                        <div className="h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center text-base font-bold tabular-nums">
+                          {parcVal > 0 ? formatMoneyBR(parcVal, form.currency) : "—"}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-1">
+                          Calculado automaticamente · {nParc}x de {formatMoneyBR(parcVal, form.currency)}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 3 · Avançado (colapsável) */}
+                    <Accordion type="single" collapsible className="w-full pt-2">
+                      <AccordionItem value="precoavancado" className="border border-border/60 rounded-lg bg-muted/20">
+                        <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                          <div className="flex items-center gap-2 text-sm">
+                            <Settings2 className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">Opções avançadas de pagamento</span>
+                            <span className="text-[11px] text-muted-foreground">· promo, métodos, juros, observações</span>
                           </div>
-                        ))}
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
-                          <Button type="button" variant="outline" size="sm" onClick={() => set("payment_balance_custom_installments", [...list, list[list.length - 1] ?? 0])}>Adicionar parcela</Button>
-                          <Button type="button" variant="ghost" size="sm" onClick={() => {
-                            if (list.length === 0) return;
-                            const v = Math.round((balance / list.length) * 100) / 100;
-                            set("payment_balance_custom_installments", list.map(() => v));
-                          }}>Distribuir igualmente</Button>
-                          <div className="ml-auto text-[11px] text-right">
-                            <div className="text-muted-foreground">
-                              Soma: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(sum, form.currency)}</span>
-                              {" · "}Saldo: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(balance, form.currency)}</span>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4 space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label>Preço cheio (riscado)</Label>
+                              <Input type="number" value={form.price_from} onChange={(e) => set("price_from", e.target.value)} placeholder="3500" />
                             </div>
-                            {Math.abs(diff) > 1 && (
-                              <div className={diff > 0 ? "text-rose-600 dark:text-rose-400 font-semibold mt-0.5" : "text-amber-600 dark:text-amber-400 font-semibold mt-0.5"}>
-                                {diff > 0 ? "Excesso" : "Falta"} de {formatMoneyBR(Math.abs(diff), form.currency)}
+                            <div>
+                              <Label>Moeda</Label>
+                              <Select value={form.currency} onValueChange={(v) => set("currency", v)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="BRL">BRL · R$</SelectItem>
+                                  <SelectItem value="USD">USD · US$</SelectItem>
+                                  <SelectItem value="EUR">EUR · €</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>Badge promocional</Label>
+                              <Input value={form.promo_badge} onChange={(e) => set("promo_badge", e.target.value)} placeholder="Black Friday..." />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-border/60">
+                            <div>
+                              <Label>Mín entrada (%)</Label>
+                              <Input type="number" value={form.payment_entry_percent_min} onChange={(e) => set("payment_entry_percent_min", e.target.value)} placeholder="20" />
+                            </div>
+                            <div>
+                              <Label>Máx entrada (%)</Label>
+                              <Input type="number" value={form.payment_entry_percent_max} onChange={(e) => set("payment_entry_percent_max", e.target.value)} placeholder="50" />
+                            </div>
+                            <div>
+                              <Label>Quitação até (dias antes)</Label>
+                              <Input type="number" value={form.payment_days_before} onChange={(e) => set("payment_days_before", e.target.value)} placeholder="20" />
+                            </div>
+                          </div>
+
+                          <div>
+                            <Label className="mb-2 block">Métodos aceitos para a entrada</Label>
+                            <div className="flex flex-wrap gap-3">
+                              {([
+                                { k: "pix", label: "PIX" },
+                                { k: "cartao", label: "Cartão de crédito" },
+                                { k: "link", label: "Link de pagamento" },
+                              ] as const).map((m) => (
+                                <label key={m.k} className="flex items-center gap-2 px-3 py-2 rounded-md border border-border bg-card cursor-pointer hover:bg-accent/50 transition">
+                                  <Switch
+                                    checked={form.payment_entry_methods[m.k]}
+                                    onCheckedChange={(v) => set("payment_entry_methods", { ...form.payment_entry_methods, [m.k]: v })}
+                                  />
+                                  <span className="text-sm">{m.label}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {form.payment_entry_methods.cartao && (
+                              <div>
+                                <Label>Parcelar entrada no cartão até</Label>
+                                <Input type="number" min={1} max={12} value={form.payment_entry_card_installments_max} onChange={(e) => set("payment_entry_card_installments_max", e.target.value)} placeholder="3" />
                               </div>
                             )}
+                            <div>
+                              <Label>Forma do saldo</Label>
+                              <Select value={form.payment_balance_method} onValueChange={(v) => set("payment_balance_method", v as any)}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="boleto">Boleto bancário</SelectItem>
+                                  <SelectItem value="cartao">Cartão de crédito</SelectItem>
+                                  <SelectItem value="ambos">Boleto ou cartão</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label>Valor mínimo da parcela</Label>
+                              <Input type="number" value={form.payment_balance_min_installment} onChange={(e) => set("payment_balance_min_installment", e.target.value)} placeholder="200" />
+                            </div>
+                            <div>
+                              <Label>Juros ao mês (%)</Label>
+                              <Input type="number" step="0.1" value={form.payment_balance_interest_percent} onChange={(e) => set("payment_balance_interest_percent", e.target.value)} placeholder="0" />
+                            </div>
+                            <div>
+                              <Label>Desconto à vista no PIX (%)</Label>
+                              <Input type="number" step="0.1" value={form.payment_pix_discount_percent} onChange={(e) => set("payment_pix_discount_percent", e.target.value)} placeholder="0" />
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-                </div>
 
-                <div className="mt-4">
-                  <Label>Observações de pagamento (opcional)</Label>
-                  <Textarea value={form.payment_notes} onChange={(e) => set("payment_notes", e.target.value)} placeholder="Ex: parcelas no boleto vencem todo dia 10..." rows={2} />
-                </div>
-              </div>
+                          {/* Personalizar parcelas individualmente */}
+                          <div className="rounded-lg border border-border/60 bg-background p-3">
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <div>
+                                <Label className="text-sm font-semibold text-foreground">Personalizar valor de cada parcela</Label>
+                                <p className="text-[11px] text-muted-foreground mt-0.5">Defina manualmente cada boleto · ignora "máximo" e "mínimo"</p>
+                              </div>
+                              <Switch
+                                checked={form.payment_balance_custom_installments.length > 0}
+                                onCheckedChange={(on) => {
+                                  if (on) {
+                                    const n = Math.max(1, Math.min(12, Number(form.payment_balance_installments_max) || 6));
+                                    const v = balance > 0 ? Math.round((balance / n) * 100) / 100 : 0;
+                                    set("payment_balance_custom_installments", Array.from({ length: n }, () => v));
+                                  } else {
+                                    set("payment_balance_custom_installments", []);
+                                  }
+                                }}
+                              />
+                            </div>
+                            {form.payment_balance_custom_installments.length > 0 && (() => {
+                              const list = form.payment_balance_custom_installments;
+                              const sum = list.reduce((a, b) => a + (Number(b) || 0), 0);
+                              const diff = Math.round((sum - balance) * 100) / 100;
+                              const updateAt = (i: number, v: number) => {
+                                const next = [...list]; next[i] = v;
+                                set("payment_balance_custom_installments", next);
+                              };
+                              return (
+                                <div className="space-y-2">
+                                  {list.map((v, i) => (
+                                    <div key={i} className="flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground w-20 shrink-0">Parcela {i + 1}</span>
+                                      <Input type="number" step="0.01" value={v} onChange={(e) => updateAt(i, Number(e.target.value) || 0)} className="flex-1" />
+                                      <Button type="button" variant="ghost" size="icon" onClick={() => set("payment_balance_custom_installments", list.filter((_, j) => j !== i))} aria-label="Remover parcela">
+                                        <Trash2 className="w-4 h-4 text-muted-foreground" />
+                                      </Button>
+                                    </div>
+                                  ))}
+                                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                                    <Button type="button" variant="outline" size="sm" onClick={() => set("payment_balance_custom_installments", [...list, list[list.length - 1] ?? 0])}>Adicionar parcela</Button>
+                                    <Button type="button" variant="ghost" size="sm" onClick={() => {
+                                      if (list.length === 0) return;
+                                      const v = Math.round((balance / list.length) * 100) / 100;
+                                      set("payment_balance_custom_installments", list.map(() => v));
+                                    }}>Distribuir igualmente</Button>
+                                    <div className="ml-auto text-[11px] text-right">
+                                      <div className="text-muted-foreground">
+                                        Soma: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(sum, form.currency)}</span>
+                                        {" · "}Saldo: <span className="font-semibold text-foreground tabular-nums">{formatMoneyBR(balance, form.currency)}</span>
+                                      </div>
+                                      {Math.abs(diff) > 1 && (
+                                        <div className={diff > 0 ? "text-rose-600 dark:text-rose-400 font-semibold mt-0.5" : "text-amber-600 dark:text-amber-400 font-semibold mt-0.5"}>
+                                          {diff > 0 ? "Excesso" : "Falta"} de {formatMoneyBR(Math.abs(diff), form.currency)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })()}
+                          </div>
 
-              <PaymentPreview form={form} />
+                          <div>
+                            <Label>Observações de pagamento</Label>
+                            <Textarea value={form.payment_notes} onChange={(e) => set("payment_notes", e.target.value)} placeholder="Ex: parcelas no boleto vencem todo dia 10..." rows={2} />
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
+
+                    <PaymentPreview form={form} />
+                  </>
+                );
+              })()}
             </Card>
 
             {/* ============ 8 · AVANÇADO (collapsible) ============ */}
