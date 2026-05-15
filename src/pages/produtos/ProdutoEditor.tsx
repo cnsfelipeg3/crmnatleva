@@ -17,6 +17,9 @@ import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
 import GalleryManager from "@/components/produtos/GalleryManager";
+import ProductLivePreview from "@/components/produtos/ProductLivePreview";
+import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
