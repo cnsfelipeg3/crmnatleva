@@ -72,13 +72,24 @@ export default function Produtos() {
     return true;
   }), [items, kind, status, destination, q, onlyPromo]);
 
-  const totals = useMemo(() => ({
-    total: items.length,
-    active: items.filter((p) => (p.status || "active") === "active" && p.is_active).length,
-    promo: items.filter((p) => p.is_promo).length,
-    leads: items.reduce((s, p) => s + (p.lead_count || 0), 0),
-    views: items.reduce((s, p) => s + (p.view_count || 0), 0),
-  }), [items]);
+  const totals = useMemo(() => {
+    const totalProfit = items.reduce((s, p) => {
+      const price = Number(p.price_promo) || Number(p.price_from) || 0;
+      const isPP = (p.price_label || "").toLowerCase().includes("pessoa");
+      const pax = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+      const revenue = isPP ? price * pax : price;
+      const cost = Number(p.internal_cost) || 0;
+      return s + (revenue - cost);
+    }, 0);
+    return {
+      total: items.length,
+      active: items.filter((p) => (p.status || "active") === "active" && p.is_active).length,
+      promo: items.filter((p) => p.is_promo).length,
+      leads: items.reduce((s, p) => s + (p.lead_count || 0), 0),
+      views: items.reduce((s, p) => s + (p.view_count || 0), 0),
+      profit: totalProfit,
+    };
+  }, [items]);
 
   return (
     <div className="min-h-screen">
