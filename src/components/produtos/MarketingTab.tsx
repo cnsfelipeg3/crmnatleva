@@ -20,6 +20,7 @@ import {
   buildSalesHeadline,
   buildSalesSubheadline,
   buildScarcityBadge,
+  autoDeriveIncludes,
   TONE_LABEL,
   type ArtBriefing,
   type ArtTone,
