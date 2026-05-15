@@ -169,10 +169,15 @@ serve(async (req) => {
       ? `\n\nRASCUNHO ATUAL DO PRODUTO (já preenchido):\n${JSON.stringify(current, null, 2)}\n\nMantenha esses valores e some o que for novo.`
       : "";
 
-    console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length}`);
-    const primary = await callProductAI("openai/gpt-5-mini", LOVABLE_API_KEY, messages, draftSummary);
+    const hasImages = Array.isArray(messages) && messages.some((m: any) => Array.isArray(m?.images) && m.images.length > 0);
+    const totalImages = Array.isArray(messages) ? messages.reduce((n: number, m: any) => n + (Array.isArray(m?.images) ? m.images.length : 0), 0) : 0;
+    console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length} images=${totalImages}`);
+    // Imagens => Gemini Pro como primário (melhor visão multimodal). Texto => gpt-5-mini.
+    const primaryModel = hasImages ? "google/gemini-2.5-pro" : "openai/gpt-5-mini";
+    const fallbackModel = hasImages ? "openai/gpt-5" : "google/gemini-2.5-pro";
+    const primary = await callProductAI(primaryModel, LOVABLE_API_KEY, messages, draftSummary);
     if (!primary.ok) {
-      const retry = await callProductAI("google/gemini-2.5-pro", LOVABLE_API_KEY, messages, draftSummary);
+      const retry = await callProductAI(fallbackModel, LOVABLE_API_KEY, messages, draftSummary);
       if (!retry.ok) {
         if (primary.status === 429 || retry.status === 429) return serviceFallback("A IA atingiu um limite momentâneo. Aguarde alguns instantes e tente de novo.");
         if (primary.status === 402 || retry.status === 402) return serviceFallback("Os créditos de IA estão indisponíveis no momento.");
