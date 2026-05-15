@@ -110,6 +110,15 @@ export default function ProdutoEditor() {
   const [ytUrl, setYtUrl] = useState("");
   const [ytLoading, setYtLoading] = useState(false);
   const [hotelSearchOpen, setHotelSearchOpen] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem("produto-editor-preview-visible");
+    return v === null ? true : v === "1";
+  });
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  useEffect(() => {
+    localStorage.setItem("produto-editor-preview-visible", previewVisible ? "1" : "0");
+  }, [previewVisible]);
 
   const applyHotelEnrichment = (data: PlacesEnrichmentData) => {
     setForm((f) => {
