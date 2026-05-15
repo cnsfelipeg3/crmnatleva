@@ -164,7 +164,9 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
       : "",
     briefing.nights ? `· Duration: ${briefing.nights} noites` : "",
     period ? `· Period (render EXACTLY like this, do NOT reformat): ${period}` : "",
-    `· "Está incluso:" section (MANDATORY · render with the bold Hunter-green title "Está incluso:" centered, then EACH item below as ITS OWN bullet line, one per row, NEVER on the same line, NEVER joined by mid-dots · use a small Champagne mid-dot as bullet marker · items in this exact order):\n${includes.map((i) => `      · ${i}`).join("\n")}`,
+    includes.length > 0
+      ? `· "Está incluso:" section (MANDATORY · render with the bold Hunter-green title "Está incluso:" centered, then EACH item below as ITS OWN bullet line, one per row, NEVER on the same line, NEVER joined by mid-dots · use a small Champagne mid-dot as bullet marker · render ONLY these items, EXACTLY as written, in this exact order · NEVER invent, add, expand, or assume extra items like "passagem aérea", "aéreo", "transfer" or "seguro" if they are not listed below):\n${includes.map((i) => `      · ${i}`).join("\n")}`
+      : `· DO NOT render any "Está incluso:" section. The package has no inclusions defined · NEVER invent items like "passagem aérea de ida e volta", "hospedagem", "transfer" or "seguro viagem". Simply omit this block entirely.`,
     briefing.payment
       ? [
           "· PRICE BLOCK (render EXACTLY like this · entry + installments ONLY · NEVER show or mention the total package price):",
