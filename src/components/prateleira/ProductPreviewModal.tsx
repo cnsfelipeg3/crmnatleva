@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/compone
 import { cn } from "@/lib/utils";
 import type { RowItem } from "./NetflixRow";
 import SmartImage from "./SmartImage";
+import { computeNatlevaPlan, formatMoneyBR, paymentBalanceLabel, paymentPlanOptionsFromTerms } from "@/lib/prateleira/payment-plan";
 
 function money(v?: number | null, currency = "BRL") {
   if (v == null) return null;
@@ -63,6 +64,12 @@ export default function ProductPreviewModal({
 
   const promo = money(item.pricePromo, item.currency ?? "BRL");
   const full = money(item.priceFrom, item.currency ?? "BRL");
+  const pt = item.paymentTerms ?? {};
+  const plan = computeNatlevaPlan(item.pricePromo ?? item.priceFrom, item.departureDate, paymentPlanOptionsFromTerms(pt, {
+    currency: item.currency ?? "BRL",
+    maxInstallments: item.installmentsMax,
+  }));
+  const balanceLabel = paymentBalanceLabel(typeof pt.balance_method === "string" ? pt.balance_method : "boleto", pt.balance_interest_percent as number | string | null | undefined);
   const dateRange = item.flexibleDates
     ? "Datas flexíveis"
     : item.departureDate && item.returnDate
@@ -210,13 +217,20 @@ export default function ProductPreviewModal({
             <div className="border-t border-white/10 p-5 sm:p-6 bg-black/40 backdrop-blur space-y-3">
               <div className="flex items-end justify-between gap-3">
                 <div>
-                  <div className="t-eyebrow text-white/45">A partir de</div>
+                  <div className="t-eyebrow text-white/45">Entrada</div>
                   {promo && full && (
                     <div className="t-numeric text-[11px] text-white/45 line-through leading-none">{full}</div>
                   )}
                   <div className="t-numeric text-white font-bold text-2xl leading-tight">
-                    {promo || full || "Sob consulta"}
+                    {plan ? formatMoneyBR(plan.entryAmount, plan.currency) : promo || full || "Sob consulta"}
                   </div>
+                  {plan && (
+                    <div className="text-[12px] text-white/70 leading-tight mt-1">
+                      + <span className="font-semibold tabular-nums">{plan.installments}x</span> de{" "}
+                      <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>{" "}
+                      <span className="text-white/50">{balanceLabel}</span>
+                    </div>
+                  )}
                 </div>
                 {item.isPromo && (
                   <span className="inline-flex items-center gap-1 bg-amber-400 text-black px-2.5 py-1 rounded-full text-[11px] font-semibold">
