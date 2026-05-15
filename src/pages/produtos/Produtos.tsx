@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp } from "lucide-react";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
