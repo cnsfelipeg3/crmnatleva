@@ -168,6 +168,7 @@ export default function Produtos() {
                 onToggleActive={(next) =>
                   setItems((prev) => prev.map((it) => (it.id === p.id ? { ...it, is_active: next } : it)))
                 }
+                onDelete={() => setItems((prev) => prev.filter((it) => it.id !== p.id))}
               />
             ))}
           </div>
