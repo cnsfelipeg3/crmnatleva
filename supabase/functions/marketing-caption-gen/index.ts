@@ -144,7 +144,7 @@ serve(async (req) => {
 
     const userPrompt = buildUserPrompt(briefing, format);
 
-    const order = ["google/gemini-2.5-pro", "google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
+    const order = ["google/gemini-2.5-flash", "google/gemini-3-flash-preview", "google/gemini-2.5-flash-lite"];
     let caption = "";
     let lastErr = "";
     for (const model of order) {
