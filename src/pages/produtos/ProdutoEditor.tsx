@@ -57,6 +57,7 @@ type ProductForm = {
   payment_balance_custom_installments: number[];
   payment_pix_discount_percent: string;
   payment_notes: string;
+  internal_cost: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
