@@ -88,22 +88,42 @@ export default function ProposalPublicView() {
   }, [slug]);
 
   // Handle email submission
+  // CRITICAL: this MUST never block the user from entering the proposal.
+  // We unlock the gate immediately with a local viewer id and run all
+  // network/DB work in background with timeouts. If anything fails (adblock
+  // killing ipapi.co, RLS, slow DB, offline), the proposal still opens.
   const handleEmailSubmit = useCallback(async (email: string, name?: string, phone?: string) => {
     if (!proposal?.id) return;
     setGateLoading(true);
 
-    try {
-      const deviceType = /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
-      const ua = navigator.userAgent.slice(0, 200);
+    const deviceType = /Mobi/i.test(navigator.userAgent) ? "mobile" : "desktop";
+    const ua = (navigator.userAgent || "").slice(0, 200);
 
-      // Fetch IP geolocation (free API, no key needed)
+    // 1) Generate a stable local viewer id and unlock IMMEDIATELY
+    const localVid = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      ? crypto.randomUUID()
+      : `local-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    try { sessionStorage.setItem(`proposal_viewer_${slug}`, email); } catch {}
+    try { sessionStorage.setItem(`proposal_viewer_id_${slug}`, localVid); } catch {}
+    setViewerId(localVid);
+    setViewerEmail(email);
+    setUnlocked(true);
+    setGateLoading(false);
+
+    // 2) Background tracking · never await on the UI thread
+    (async () => {
+      // Geo with hard 2.5s timeout · ipapi.co is rate-limited and often blocked
       let geo: any = {};
       try {
-        const geoRes = await fetch("https://ipapi.co/json/");
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 2500);
+        const geoRes = await fetch("https://ipapi.co/json/", { signal: ctrl.signal });
+        clearTimeout(t);
         if (geoRes.ok) geo = await geoRes.json();
       } catch {}
 
-      // Resolve share referrer (if any)
+      // Share referrer
       let referredByShareId: string | null = null;
       if (viaToken) {
         try {
@@ -115,50 +135,33 @@ export default function ProposalPublicView() {
             .maybeSingle();
           if (share) {
             referredByShareId = (share as any).id;
-            await supabase.from("proposal_shares" as any).update({
+            supabase.from("proposal_shares" as any).update({
               open_count: ((share as any).open_count || 0) + 1,
               last_opened_at: new Date().toISOString(),
-            }).eq("id", referredByShareId);
+            }).eq("id", referredByShareId).then(() => {}, () => {});
           }
         } catch (err) {
           console.warn("[ProposalView] share resolve failed", err);
         }
       }
 
-      // Upsert viewer record
-      const { data: existing } = await supabase
-        .from("proposal_viewers" as any)
-        .select("id, total_views")
-        .eq("proposal_id", proposal.id)
-        .eq("email", email)
-        .maybeSingle();
-
-      let vid: string;
-      if (existing) {
-        vid = (existing as any).id;
-        await supabase.from("proposal_viewers" as any).update({
-          last_active_at: new Date().toISOString(),
-          total_views: ((existing as any).total_views || 1) + 1,
-          name: name || undefined,
-          phone: phone || undefined,
-          device_type: deviceType,
-          user_agent: ua,
-          ip_address: geo.ip || null,
-          city: geo.city || null,
-          region: geo.region || null,
-          country: geo.country_name || null,
-          latitude: geo.latitude || null,
-          longitude: geo.longitude || null,
-          ...(referredByShareId ? { referred_by_share_id: referredByShareId } : {}),
-        }).eq("id", vid);
-      } else {
-        const { data: newViewer } = await supabase
+      // Upsert viewer record · if it succeeds we swap the local id for the real one
+      try {
+        const { data: existing } = await supabase
           .from("proposal_viewers" as any)
-          .insert({
-            proposal_id: proposal.id,
-            email,
-            name: name || null,
-            phone: phone || null,
+          .select("id, total_views")
+          .eq("proposal_id", proposal.id)
+          .eq("email", email)
+          .maybeSingle();
+
+        let vid: string | null = null;
+        if (existing) {
+          vid = (existing as any).id;
+          await supabase.from("proposal_viewers" as any).update({
+            last_active_at: new Date().toISOString(),
+            total_views: ((existing as any).total_views || 1) + 1,
+            name: name || undefined,
+            phone: phone || undefined,
             device_type: deviceType,
             user_agent: ua,
             ip_address: geo.ip || null,
@@ -167,36 +170,48 @@ export default function ProposalPublicView() {
             country: geo.country_name || null,
             latitude: geo.latitude || null,
             longitude: geo.longitude || null,
-            referred_by_share_id: referredByShareId,
-          })
-          .select("id")
-          .single();
-        vid = (newViewer as any)?.id;
-      }
+            ...(referredByShareId ? { referred_by_share_id: referredByShareId } : {}),
+          }).eq("id", vid);
+        } else {
+          const { data: newViewer } = await supabase
+            .from("proposal_viewers" as any)
+            .insert({
+              proposal_id: proposal.id,
+              email,
+              name: name || null,
+              phone: phone || null,
+              device_type: deviceType,
+              user_agent: ua,
+              ip_address: geo.ip || null,
+              city: geo.city || null,
+              region: geo.region || null,
+              country: geo.country_name || null,
+              latitude: geo.latitude || null,
+              longitude: geo.longitude || null,
+              referred_by_share_id: referredByShareId,
+            })
+            .select("id")
+            .single();
+          vid = (newViewer as any)?.id ?? null;
+        }
 
-      if (vid) {
-        setViewerId(vid);
-        setViewerEmail(email);
-        setUnlocked(true);
-        try {
-          sessionStorage.setItem(`proposal_viewer_${slug}`, email);
-          sessionStorage.setItem(`proposal_viewer_id_${slug}`, vid);
-        } catch {}
+        if (vid && vid !== localVid) {
+          setViewerId(vid);
+          try { sessionStorage.setItem(`proposal_viewer_id_${slug}`, vid); } catch {}
+        }
 
-        // Update proposal views
-        await supabase.from("proposals").update({
+        // Update proposal counters · fire and forget
+        supabase.from("proposals").update({
           views_count: (proposal.views_count || 0) + 1,
           last_viewed_at: new Date().toISOString(),
-        }).eq("id", proposal.id);
+        }).eq("id", proposal.id).then(() => {}, () => {});
 
-        // Also insert legacy proposal_views
-        await supabase.from("proposal_views").insert({
+        supabase.from("proposal_views").insert({
           proposal_id: proposal.id,
           device_type: deviceType,
           user_agent: ua,
-        });
+        }).then(() => {}, () => {});
 
-        // Emit learning event
         emitLearningEvent({
           event_type: "proposal_opened",
           proposal_id: proposal.id,
@@ -204,17 +219,16 @@ export default function ProposalPublicView() {
           metadata: {
             viewer_email: email,
             viewer_name: name,
-            viewer_id: vid,
+            viewer_id: vid || localVid,
             device_type: deviceType,
             is_return_visit: !!existing,
           },
         });
+      } catch (err) {
+        // Tracking failure is non-fatal · client is already inside the proposal
+        console.warn("[ProposalView] background tracking failed", err);
       }
-    } catch (err) {
-      console.error("[ProposalView] Email gate error:", err);
-    } finally {
-      setGateLoading(false);
-    }
+    })();
   }, [proposal, slug, viaToken]);
 
   // Extract destination from items for the gate
