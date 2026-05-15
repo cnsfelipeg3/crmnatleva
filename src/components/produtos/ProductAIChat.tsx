@@ -84,13 +84,51 @@ export default function ProductAIChat({ current, onApply }: Props) {
     const hasImgs = images.length > 0;
     if ((!hasText && !hasImgs) || busy) return;
 
+    // 1) Detecta URLs no texto e faz scraping antes de enviar pra IA.
+    const urlRe = /\bhttps?:\/\/[^\s<>"')]+/gi;
+    const foundUrls = Array.from(new Set(text.match(urlRe) || []));
+    let enrichedText = text.trim();
+    let scrapedImages: string[] = [];
+    if (foundUrls.length) {
+      setScrapingUrl(true);
+      const t = toast.loading(`Lendo ${foundUrls.length === 1 ? "página" : `${foundUrls.length} páginas`}...`);
+      try {
+        for (const u of foundUrls.slice(0, 3)) {
+          try {
+            const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url: u } });
+            if (error || !data || data.error) continue;
+            const md = (data.markdown || "").trim();
+            const title = data.title || "";
+            if (md) {
+              enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${u}\nTítulo: ${title}\n\n${md}`;
+            }
+            if (Array.isArray(data.images)) scrapedImages.push(...data.images.slice(0, 12));
+          } catch {/* segue */}
+        }
+        toast.dismiss(t);
+      } catch {
+        toast.dismiss(t);
+      } finally {
+        setScrapingUrl(false);
+      }
+      if (scrapedImages.length) {
+        enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+      }
+    }
+
     const fallbackText = hasText
       ? text.trim()
       : `Anexei ${images.length} ${images.length === 1 ? "print" : "prints"} · extraia tudo que conseguir.`;
 
+    const userVisible = hasText ? text.trim() : fallbackText;
     const next: ChatMsg[] = [
       ...messages,
-      { role: "user", content: fallbackText, images: hasImgs ? images : undefined },
+      { role: "user", content: userVisible, images: hasImgs ? images : undefined },
+    ];
+    // Mensagem enviada pra IA carrega o conteúdo enriquecido (scraping), mas a UI mostra só o texto do usuário.
+    const apiMessages: ChatMsg[] = [
+      ...messages,
+      { role: "user", content: enrichedText || fallbackText, images: hasImgs ? images : undefined },
     ];
     setMessages(next);
     setInput("");
