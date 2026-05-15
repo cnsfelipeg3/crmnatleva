@@ -1070,6 +1070,53 @@ export default function ProdutoEditor() {
           </div>
         );
       })()}
+        </div>
+
+        {previewVisible && (
+          <aside className="hidden lg:block">
+            <div className="sticky top-4 space-y-2">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" /> Pré-visualização ao vivo
+                </div>
+                <div className="flex items-center rounded-lg border border-border/40 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode("desktop")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-medium transition-colors",
+                      previewMode === "desktop" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Desktop"
+                  >
+                    <Monitor className="w-3 h-3" /> Desktop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode("mobile")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-medium transition-colors",
+                      previewMode === "mobile" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Mobile"
+                  >
+                    <Smartphone className="w-3 h-3" /> Mobile
+                  </button>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "rounded-xl border border-border/40 bg-background overflow-hidden shadow-sm",
+                  "max-h-[calc(100vh-7rem)] overflow-y-auto",
+                  previewMode === "mobile" && "mx-auto max-w-[390px]",
+                )}
+              >
+                <ProductLivePreview form={form as any} />
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
