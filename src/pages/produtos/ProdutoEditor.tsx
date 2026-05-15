@@ -1027,6 +1027,59 @@ export default function ProdutoEditor() {
                       </AccordionItem>
                     </Accordion>
 
+                    {/* Custo interno + lucro · NÃO aparece na proposta */}
+                    {(() => {
+                      const cost = Number(form.internal_cost) || 0;
+                      const isPP = (form.price_label || "").toLowerCase().includes("pessoa");
+                      const pax = Math.max(1, (Number(form.pax_adults) || 0) + (Number(form.pax_children) || 0));
+                      const totalRevenue = isPP ? total * pax : total;
+                      const profit = totalRevenue - cost;
+                      const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+                      const profitColor = profit > 0 ? "text-emerald-600 dark:text-emerald-400" : profit < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground";
+                      return (
+                        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <Lock className="w-3.5 h-3.5 text-amber-600" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Uso interno · não aparece na proposta</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label className="text-sm font-semibold">Custo do pacote (R$)</Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                value={form.internal_cost}
+                                onChange={(e) => set("internal_cost", e.target.value)}
+                                placeholder="0"
+                                className="text-base font-semibold"
+                              />
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                Quanto a agência paga pra fornecer este pacote
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">Receita total</Label>
+                              <div className="h-10 px-3 rounded-md border border-border bg-background flex items-center text-base font-bold tabular-nums">
+                                {totalRevenue > 0 ? formatMoneyBR(totalRevenue, form.currency) : "—"}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {isPP ? `${pax} pax × ${formatMoneyBR(total, form.currency)}` : "Valor total do pacote"}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">Lucro estimado</Label>
+                              <div className={`h-10 px-3 rounded-md border border-border bg-background flex items-center text-base font-bold tabular-nums ${profitColor}`}>
+                                {totalRevenue > 0 || cost > 0 ? formatMoneyBR(profit, form.currency) : "—"}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {totalRevenue > 0 && cost > 0 ? `Margem de ${margin.toFixed(1)}%` : "Receita · custo"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <PaymentPreview form={form} />
                   </>
                 );
