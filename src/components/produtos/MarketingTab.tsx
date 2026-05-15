@@ -115,6 +115,7 @@ export default function MarketingTab(props: Props) {
     productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
     hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, paxAdults, paxChildren, isPromo, paymentTerms,
+    productKind, airline, originIata, destinationIata, highlights,
   } = props;
 
   const [headline, setHeadline] = useState("");
