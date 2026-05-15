@@ -59,6 +59,13 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
   const full = money(item.priceFrom, item.currency ?? "BRL");
   const basePrice = item.pricePromo ?? item.priceFrom ?? null;
   const plan = computeNatlevaPlan(basePrice, item.departureDate, { currency: item.currency ?? "BRL" });
+  const adults = Number(item.paxAdults || 0);
+  const children = Number(item.paxChildren || 0);
+  const paxLabel = adults > 0 || children > 0
+    ? (children > 0
+        ? `Valor para ${adults} ${adults === 1 ? "adulto" : "adultos"}${children > 0 ? ` + ${children} ${children === 1 ? "criança" : "crianças"}` : ""}`
+        : `Valor para ${adults} ${adults === 1 ? "pessoa" : "pessoas"}`)
+    : null;
   const dateRange = item.flexibleDates
     ? "Datas flexíveis"
     : item.departureDate && item.returnDate
