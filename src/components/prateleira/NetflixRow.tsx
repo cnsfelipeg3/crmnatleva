@@ -28,6 +28,8 @@ export type RowItem = {
   gallery?: string[] | null;
   nights?: number | null;
   hotelName?: string | null;
+  paxAdults?: number | null;
+  paxChildren?: number | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
@@ -57,6 +59,13 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
   const full = money(item.priceFrom, item.currency ?? "BRL");
   const basePrice = item.pricePromo ?? item.priceFrom ?? null;
   const plan = computeNatlevaPlan(basePrice, item.departureDate, { currency: item.currency ?? "BRL" });
+  const adults = Number(item.paxAdults || 0);
+  const children = Number(item.paxChildren || 0);
+  const paxLabel = adults > 0 || children > 0
+    ? (children > 0
+        ? `Valor para ${adults} ${adults === 1 ? "adulto" : "adultos"}${children > 0 ? ` + ${children} ${children === 1 ? "criança" : "crianças"}` : ""}`
+        : `Valor para ${adults} ${adults === 1 ? "pessoa" : "pessoas"}`)
+    : null;
   const dateRange = item.flexibleDates
     ? "Datas flexíveis"
     : item.departureDate && item.returnDate
@@ -151,6 +160,11 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
                         <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
                         <span className="text-white/55"> no boleto</span>
                       </div>
+                      {paxLabel && (
+                        <div className="text-[9.5px] text-white/55 leading-tight mt-1 line-clamp-1">
+                          {paxLabel}
+                        </div>
+                      )}
                     </>
                   ) : (
                     <div className="t-numeric text-white/95 text-sm font-bold">Sob consulta</div>
