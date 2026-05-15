@@ -189,6 +189,9 @@ export default function ProposalEditor() {
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
   // Chave única para rascunho local de NOVA proposta (recuperação após fechar/voltar)
   const NEW_DRAFT_KEY = "proposal-new-draft-v1";
+  // Chave de rascunho local por proposta (NOVA ou EXISTENTE) · espelha tudo que
+  // o usuário digita para recuperação 100% à prova de queda de internet/refresh.
+  const LOCAL_DRAFT_KEY = isNew ? NEW_DRAFT_KEY : `proposal-draft-${id}`;
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
