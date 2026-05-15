@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Mic, Square, Send, Loader2, Wand2, ImagePlus, X } from "lucide-react";
+import { Sparkles, Mic, Square, Send, Loader2, Wand2, ImagePlus, X, Link as LinkIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
