@@ -447,7 +447,9 @@ export default function ProdutoEditor() {
   if (loading) return <div className="p-8 text-muted-foreground text-sm">Carregando...</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5">
+    <div className={cn("mx-auto p-4 sm:p-6", previewVisible ? "max-w-[1600px]" : "max-w-5xl")}>
+      <div className={cn("grid gap-6", previewVisible ? "lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]" : "grid-cols-1")}>
+        <div className="space-y-5 min-w-0">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Link to="/prateleira"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1.5" /> Prateleira</Button></Link>
         <div className="flex flex-wrap gap-2">
@@ -460,6 +462,9 @@ export default function ProdutoEditor() {
               <Button variant="outline" size="sm" onClick={remove}><Trash2 className="w-4 h-4 mr-1.5" /> Excluir</Button>
             </>
           )}
+          <Button variant="outline" size="sm" onClick={() => setPreviewVisible((v) => !v)} className="hidden lg:inline-flex">
+            {previewVisible ? <><EyeOff className="w-4 h-4 mr-1.5" /> Esconder preview</> : <><Eye className="w-4 h-4 mr-1.5" /> Mostrar preview</>}
+          </Button>
           <Button size="sm" onClick={save} disabled={saving}>
             <Save className="w-4 h-4 mr-1.5" /> {saving ? "Salvando..." : "Salvar"}
           </Button>
