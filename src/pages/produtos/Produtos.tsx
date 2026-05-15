@@ -208,6 +208,8 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
   const profit = revenue - cost;
   const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
   const hasCost = cost > 0;
+  const commission = Number(p.commission_per_sale) || 0;
+  const hasCommission = commission > 0;
 
   async function handleToggleActive(next: boolean) {
     setSavingActive(true);
