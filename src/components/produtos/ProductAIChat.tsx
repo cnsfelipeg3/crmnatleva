@@ -436,7 +436,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
               handleFiles(dt.files);
             }
           }}
-          placeholder={recording ? "Gravando... fale o que quiser" : pendingImages.length > 0 ? "Mensagem opcional · ou clique enviar" : "Descreva o produto ou anexe prints..."}
+          placeholder={recording ? "Gravando... fale o que quiser" : pendingImages.length > 0 ? "Mensagem opcional · ou clique enviar" : "Descreva, cole uma URL ou arraste prints aqui..."}
           disabled={disabled}
           className="flex-1"
         />
