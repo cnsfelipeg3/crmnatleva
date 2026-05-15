@@ -387,6 +387,69 @@ export default function ProductAIChat({ current, onApply }: Props) {
         )}
       </div>
 
+      {urlPreviews.length > 0 && (
+        <div className="px-3 pt-2 pb-2 border-t border-primary/15 bg-background/40 space-y-2">
+          {urlPreviews.map((p) => (
+            <div key={p.url} className="rounded-lg border border-border bg-background overflow-hidden">
+              <div className="flex items-start gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                <LinkIcon className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate">{p.title || p.url}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{p.url}</div>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0">
+                  {p.status === "loading" && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin" /> lendo
+                    </span>
+                  )}
+                  {p.status === "ready" && (
+                    <span className="text-primary font-medium">
+                      {p.markdown ? `${Math.round(p.markdown.length / 100) / 10}k chars` : "ok"} · {p.images?.length || 0} fotos
+                    </span>
+                  )}
+                  {p.status === "error" && <span className="text-destructive">erro</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removePreview(p.url)}
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  aria-label="Remover preview"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {p.status === "ready" && (
+                <div className="p-2 space-y-2">
+                  {p.images && p.images.length > 0 && (
+                    <div className="flex gap-1 overflow-x-auto pb-1">
+                      {p.images.slice(0, 12).map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          className="w-14 h-14 rounded object-cover border border-border shrink-0"
+                          onError={(e) => ((e.currentTarget.style.display = "none"))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {p.markdown && (
+                    <div className="max-h-32 overflow-y-auto text-[11px] leading-snug text-muted-foreground whitespace-pre-wrap font-mono bg-muted/20 rounded p-2 border border-border">
+                      {p.markdown.slice(0, 800)}{p.markdown.length > 800 ? "..." : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+              {p.status === "error" && (
+                <div className="p-2 text-[11px] text-destructive">{p.error || "Falha ao ler"}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {pendingImages.length > 0 && (
         <div className="px-3 pt-2 pb-1 border-t border-primary/15 bg-background/40">
           <div className="flex items-center justify-between mb-1.5">
