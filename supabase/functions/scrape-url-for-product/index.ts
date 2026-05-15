@@ -150,15 +150,6 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if (false) {
-      return new Response(JSON.stringify({
-        url,
-        error: "A página bloqueou a leitura automática. Use prints desta tela ou tente um link público do hotel/anúncio.",
-        blocked: true,
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const markdown = best.doc.markdown;
     const title = best.doc.title || new URL(best.doc.url).hostname.replace(/^www\./, "");
