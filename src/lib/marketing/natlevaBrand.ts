@@ -250,6 +250,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
       : "",
     briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
     `· CTA button text: "${briefing.cta}"`,
+    `· OFFICIAL CONTACT FOOTER (MANDATORY · render EXACTLY these strings, NEVER invent any other phone number, NEVER alter a single digit): handle "${NATLEVA_BRAND.handle}" · WhatsApp "${NATLEVA_BRAND.whatsapp}". Qualquer outro número de telefone está PROIBIDO na arte.`,
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
     "· LOGO SAFE AREA: top-left ~30% width × ~18% height must contain only clean destination photo with subtle darkening. Do not place text, card, shape, logo, plaque, brand name, rectangle or decorative element there.",
     "· FORBIDDEN VISIBLE TEXT: NatLeva, natleva, Viagens, logo, wordmark, brandbook, font names, color names, hex codes, style notes.",
