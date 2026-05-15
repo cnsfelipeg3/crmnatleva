@@ -233,10 +233,47 @@ export default function ProductAIChat({ current, onApply }: Props) {
     );
   }
 
-  const disabled = busy || recording || transcribing;
+  const disabled = busy || recording || transcribing || scrapingUrl;
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const dt = e.dataTransfer;
+    if (!dt) return;
+    // Imagens
+    const files = Array.from(dt.files || []).filter((f) => f.type.startsWith("image/"));
+    if (files.length) {
+      const tr = new DataTransfer();
+      files.forEach((f) => tr.items.add(f));
+      handleFiles(tr.files);
+    }
+    // URL solta
+    const droppedText = dt.getData("text/uri-list") || dt.getData("text/plain");
+    if (droppedText && /^https?:\/\//i.test(droppedText.trim())) {
+      const u = droppedText.trim();
+      setInput((cur) => (cur ? `${cur} ${u}` : u));
+      toast.info("Link adicionado · clique enviar para a IA ler a página");
+    }
+  };
 
   return (
-    <Card className="p-0 border-primary/30 bg-primary/5 overflow-hidden">
+    <Card
+      className={cn(
+        "p-0 border-primary/30 bg-primary/5 overflow-hidden relative transition-colors",
+        dragOver && "ring-2 ring-primary ring-offset-2 bg-primary/10",
+      )}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+      onDrop={onDrop}
+    >
+      {dragOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/15 backdrop-blur-sm pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary font-semibold text-sm">
+            <Upload className="w-8 h-8" />
+            Solte aqui · prints ou link
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between px-4 py-3 border-b border-primary/15 bg-primary/10">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Wand2 className="w-4 h-4 text-primary" /> Cadastrar com IA
@@ -247,7 +284,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
       <div ref={scrollRef} className="max-h-[340px] overflow-y-auto px-4 py-3 space-y-2">
         {messages.length === 0 && (
           <div className="text-xs text-muted-foreground text-center py-6">
-            Descreva o pacote, grave um áudio ou anexe prints (cotação, planilha, conversa, anúncio). A IA lê tudo e monta o produto sozinha · até {MAX_IMAGES} imagens por envio.
+            Descreva o pacote, grave áudio, anexe prints (até {MAX_IMAGES}) ou cole o link de um anúncio/cotação · arraste arquivos ou URLs aqui dentro · a IA lê tudo e monta o produto sozinha.
           </div>
         )}
         {messages.map((m, i) => (
