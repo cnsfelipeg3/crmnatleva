@@ -283,6 +283,46 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
             <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
           </button>
         </div>
+        {/* Lucro estimado · uso interno */}
+        <div
+          className={cn(
+            "mt-2 px-3 py-2 rounded-md border flex items-center justify-between gap-2",
+            hasCost
+              ? profit > 0
+                ? "border-emerald-500/30 bg-emerald-500/5"
+                : profit < 0
+                  ? "border-red-500/30 bg-red-500/5"
+                  : "border-border bg-muted/30"
+              : "border-dashed border-amber-500/30 bg-amber-500/5"
+          )}
+          title="Uso interno · não aparece na proposta"
+        >
+          <div className="flex items-center gap-1.5 min-w-0">
+            <TrendingUp className={cn("w-3.5 h-3.5 shrink-0",
+              hasCost ? (profit > 0 ? "text-emerald-600" : profit < 0 ? "text-red-600" : "text-muted-foreground") : "text-amber-600"
+            )} />
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Lucro 🔒</div>
+              {hasCost ? (
+                <div className="text-[12px] font-bold tabular-nums leading-tight mt-0.5">
+                  {fmtMoney(profit, p.currency)} <span className="text-[10px] font-normal text-muted-foreground">· {margin.toFixed(0)}%</span>
+                </div>
+              ) : (
+                <Link to={`/prateleira/${p.slug}/editar`} className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline">
+                  Cadastre o custo
+                </Link>
+              )}
+            </div>
+          </div>
+          {hasCost && (
+            <div className="text-right">
+              <div className="text-[9px] text-muted-foreground leading-none">Receita · custo</div>
+              <div className="text-[10px] tabular-nums text-muted-foreground mt-0.5">
+                {fmtMoney(revenue, p.currency)} · {fmtMoney(cost, p.currency)}
+              </div>
+            </div>
+          )}
+        </div>
         <div
           className={cn(
             "flex items-center justify-between gap-3 mt-3 px-3 py-2 rounded-md border",
