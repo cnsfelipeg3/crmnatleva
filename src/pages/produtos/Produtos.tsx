@@ -318,6 +318,41 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
             </div>
           );
         })()}
+        {/* Comissão por venda · uso interno · destaque */}
+        <div
+          className={cn(
+            "mt-2 px-3 py-2.5 rounded-lg border-2 flex items-center justify-between gap-2 shadow-sm",
+            hasCommission
+              ? "border-sky-500/60 bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-sky-500/15"
+              : "border-dashed border-amber-500/50 bg-amber-500/10"
+          )}
+          title="Uso interno · comissão paga ao vendedor"
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+              hasCommission ? "bg-sky-500 text-white" : "bg-amber-500/20 text-amber-700"
+            )}>
+              <Users className="w-3.5 h-3.5" />
+            </div>
+            <div className="min-w-0">
+              <div className={cn("text-[10px] uppercase tracking-wider font-bold leading-none",
+                hasCommission ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-400"
+              )}>
+                Comissão vendedor 🔒
+              </div>
+              {hasCommission ? (
+                <div className="text-[15px] font-extrabold tabular-nums leading-tight mt-1 text-sky-900 dark:text-sky-100">
+                  {fmtMoney(commission, p.currency)}
+                  <span className="text-[10px] font-medium text-muted-foreground ml-1">por venda</span>
+                </div>
+              ) : (
+                <Link to={`/prateleira/${p.slug}/editar`} className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:underline mt-0.5 inline-block">
+                  Defina a comissão
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
         {/* Lucro estimado · uso interno */}
         <div
           className={cn(
@@ -357,30 +392,6 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
               </div>
             </div>
           )}
-        </div>
-        {/* Comissão por venda · uso interno */}
-        <div
-          className={cn(
-            "mt-2 px-3 py-2 rounded-md border flex items-center justify-between gap-2",
-            hasCommission ? "border-sky-500/30 bg-sky-500/5" : "border-dashed border-amber-500/30 bg-amber-500/5"
-          )}
-          title="Uso interno · comissão paga ao vendedor"
-        >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Users className={cn("w-3.5 h-3.5 shrink-0", hasCommission ? "text-sky-600" : "text-amber-600")} />
-            <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none">Comissão vendedor 🔒</div>
-              {hasCommission ? (
-                <div className="text-[12px] font-bold tabular-nums leading-tight mt-0.5">
-                  {fmtMoney(commission, p.currency)} <span className="text-[10px] font-normal text-muted-foreground">por venda</span>
-                </div>
-              ) : (
-                <Link to={`/prateleira/${p.slug}/editar`} className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline">
-                  Defina a comissão
-                </Link>
-              )}
-            </div>
-          </div>
         </div>
         <div
           className={cn(
