@@ -274,14 +274,15 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
         </div>
         {(() => {
           const planPrice = Number(p.price_promo) || Number(p.price_from) || 0;
+          const pt = (p as any).payment_terms || {};
           const plan = computeNatlevaPlan(planPrice, p.departure_date, {
-            entryPercent: Number(p.payment_entry_percent) || undefined,
-            entryAmount: Number(p.payment_entry_amount) || undefined,
-            daysBefore: Number(p.payment_days_before) || undefined,
+            entryPercent: Number(pt.entry_percent) || undefined,
+            entryAmount: Number(pt.entry_amount) || undefined,
+            daysBefore: Number(pt.min_days_before_checkin) || undefined,
             currency: p.currency || "BRL",
-            maxInstallments: Number(p.payment_balance_installments_max) || undefined,
-            minInstallment: Number(p.payment_balance_min_installment) || undefined,
-            customInstallments: Array.isArray(p.payment_balance_custom_installments) ? p.payment_balance_custom_installments : undefined,
+            maxInstallments: Number(pt.balance_installments_max) || undefined,
+            minInstallment: Number(pt.balance_min_installment) || undefined,
+            customInstallments: Array.isArray(pt.balance_custom_installments) ? pt.balance_custom_installments : undefined,
           });
           return (
             <div className="flex items-end justify-between mt-3 pt-3 border-t border-border/30 gap-2">
