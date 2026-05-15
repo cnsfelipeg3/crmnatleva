@@ -195,6 +195,7 @@ export default function AppLayout() {
           </header>
         )}
         <WhatsAppStatusBanner />
+        <MegaFoneBanners />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:text-sm"
