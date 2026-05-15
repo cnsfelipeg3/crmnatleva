@@ -150,7 +150,101 @@ Deno.serve(async (req) => {
     const title = best.doc.title || new URL(best.doc.url).hostname.replace(/^www\./, "");
     const images = best.images;
 
-    return new Response(JSON.stringify({ url, title, markdown, images }), {
+    // === Extração estruturada com IA ===
+    // Pede pra Lovable AI ler o markdown e devolver um JSON com TODOS os campos
+    // úteis pra montar o produto (hotel, local, datas, hóspedes, preço, quarto, etc).
+    let structured: Record<string, unknown> | null = null;
+    try {
+      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+      if (LOVABLE_API_KEY && markdown.length > 80) {
+        const ai = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages: [
+              {
+                role: "system",
+                content:
+                  "Você extrai dados estruturados de páginas de hotéis, pacotes, voos e cotações. " +
+                  "Devolva SOMENTE chamando a função extract_product_info com o que conseguir inferir do conteúdo. " +
+                  "Datas SEMPRE em ISO YYYY-MM-DD. Preço em número puro (sem R$, sem vírgula). " +
+                  "Não invente — se não achar o dado, omita o campo. " +
+                  "Ignore marcas/preços de concorrentes (Booking, Decolar, Despegar, Expedia, Hoteis.com, Trivago, Hurb) e capture só dados objetivos.",
+              },
+              {
+                role: "user",
+                content: `URL: ${url}\nTítulo: ${title}\n\n=== CONTEÚDO ===\n${markdown.slice(0, 16000)}`,
+              },
+            ],
+            tools: [{
+              type: "function",
+              function: {
+                name: "extract_product_info",
+                description: "Dados estruturados extraídos da página",
+                parameters: {
+                  type: "object",
+                  properties: {
+                    title: { type: "string", description: "Nome principal do produto/hotel/pacote" },
+                    product_kind: { type: "string", enum: ["pacote", "aereo", "hospedagem", "passeio", "cruzeiro", "outros"] },
+                    hotel_name: { type: "string" },
+                    hotel_stars: { type: "number" },
+                    hotel_address: { type: "string" },
+                    destination: { type: "string", description: "Cidade principal" },
+                    destination_country: { type: "string" },
+                    checkin_date: { type: "string", description: "YYYY-MM-DD" },
+                    checkout_date: { type: "string", description: "YYYY-MM-DD" },
+                    nights: { type: "number" },
+                    departure_date: { type: "string", description: "YYYY-MM-DD" },
+                    return_date: { type: "string", description: "YYYY-MM-DD" },
+                    adults: { type: "number" },
+                    children: { type: "number" },
+                    children_ages: { type: "array", items: { type: "number" } },
+                    rooms: { type: "number" },
+                    room_type: { type: "string", description: "Nome do quarto/categoria" },
+                    bed_type: { type: "string" },
+                    room_size_sqm: { type: "string" },
+                    room_view: { type: "string" },
+                    room_description: { type: "string" },
+                    meal_plan: { type: "string", description: "Café, meia pensão, pensão completa, all inclusive..." },
+                    amenities: { type: "array", items: { type: "string" } },
+                    includes: { type: "array", items: { type: "string" } },
+                    excludes: { type: "array", items: { type: "string" } },
+                    cancellation_policy: { type: "string" },
+                    price_total: { type: "number", description: "Preço total em BRL (número puro)" },
+                    price_per_person: { type: "number" },
+                    currency: { type: "string", enum: ["BRL", "USD", "EUR"] },
+                    payment_notes: { type: "string", description: "Condições de pagamento/parcelamento" },
+                    airline: { type: "string" },
+                    flight_origin: { type: "string" },
+                    flight_destination: { type: "string" },
+                    flight_class: { type: "string" },
+                    flight_baggage: { type: "string" },
+                    short_description: { type: "string", description: "1 frase resumo (máx 160 chars)" },
+                    description: { type: "string", description: "2-3 parágrafos descritivos em PT-BR" },
+                    highlights: { type: "array", items: { type: "string" }, description: "3-6 destaques" },
+                  },
+                },
+              },
+            }],
+            tool_choice: { type: "function", function: { name: "extract_product_info" } },
+          }),
+        });
+        if (ai.ok) {
+          const j = await ai.json();
+          const args = j?.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+          if (args) {
+            try { structured = JSON.parse(args); } catch { /* ignore */ }
+          }
+        } else {
+          console.warn("[scrape-url-for-product] AI extract status", ai.status);
+        }
+      }
+    } catch (e) {
+      console.warn("[scrape-url-for-product] AI extract error", e);
+    }
+
+    return new Response(JSON.stringify({ url, title, markdown, images, structured }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

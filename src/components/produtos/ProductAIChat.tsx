@@ -14,6 +14,7 @@ type UrlPreview = {
   title?: string;
   markdown?: string;
   images?: string[];
+  structured?: Record<string, any> | null;
   error?: string;
 };
 
@@ -78,6 +79,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
         title: data.title || "",
         markdown: (data.markdown || "").trim(),
         images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+        structured: data.structured && typeof data.structured === "object" ? data.structured : null,
       };
       setUrlPreviews((cur) =>
         cur.some((p) => p.url === url)
@@ -187,8 +189,11 @@ export default function ProductAIChat({ current, onApply }: Props) {
     let enrichedText = text.trim();
     const scrapedImages: string[] = [];
     for (const p of previewsForUrls) {
+      if (p.structured && Object.keys(p.structured).length) {
+        enrichedText += `\n\n=== DADOS ESTRUTURADOS DA PÁGINA (extraídos por IA · use como verdade) ===\nURL: ${p.url}\n${JSON.stringify(p.structured, null, 2)}`;
+      }
       if (p.markdown) {
-        enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
+        enrichedText += `\n\n=== CONTEÚDO BRUTO DA PÁGINA (markdown) ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
       }
       if (p.images?.length) scrapedImages.push(...p.images.slice(0, 12));
     }
@@ -442,6 +447,44 @@ export default function ProductAIChat({ current, onApply }: Props) {
               </div>
               {p.status === "ready" && (
                 <div className="p-2 space-y-2">
+                  {p.structured && Object.keys(p.structured).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {(() => {
+                        const s = p.structured!;
+                        const chips: { label: string; value: string }[] = [];
+                        const push = (label: string, v: any) => {
+                          if (v === undefined || v === null || v === "" || (Array.isArray(v) && !v.length)) return;
+                          const value = Array.isArray(v) ? `${v.length} itens` : String(v);
+                          chips.push({ label, value });
+                        };
+                        push("Hotel", s.hotel_name || s.title);
+                        push("Local", [s.destination, s.destination_country].filter(Boolean).join(", "));
+                        push("Check-in", s.checkin_date || s.departure_date);
+                        push("Check-out", s.checkout_date || s.return_date);
+                        if (s.nights) push("Noites", s.nights);
+                        if (s.adults || s.children) push("Hóspedes", `${s.adults || 0} ad${s.children ? ` + ${s.children} cri` : ""}`);
+                        if (s.rooms) push("Quartos", s.rooms);
+                        push("Quarto", s.room_type);
+                        push("Cama", s.bed_type);
+                        push("Vista", s.room_view);
+                        push("Regime", s.meal_plan);
+                        if (s.price_total) push("Total", `${s.currency || "BRL"} ${Number(s.price_total).toLocaleString("pt-BR")}`);
+                        if (s.price_per_person) push("Por pessoa", `${s.currency || "BRL"} ${Number(s.price_per_person).toLocaleString("pt-BR")}`);
+                        push("Cia aérea", s.airline);
+                        push("Trecho", s.flight_origin && s.flight_destination ? `${s.flight_origin} → ${s.flight_destination}` : null);
+                        push("Inclusos", s.includes);
+                        push("Comodidades", s.amenities);
+                        return chips.slice(0, 14).map((c, i) => (
+                          <span
+                            key={i}
+                            className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+                          >
+                            <span className="opacity-70">{c.label}:</span> <span className="font-medium">{c.value}</span>
+                          </span>
+                        ));
+                      })()}
+                    </div>
+                  )}
                   {p.images && p.images.length > 0 && (
                     <div className="flex gap-1 overflow-x-auto pb-1">
                       {p.images.slice(0, 12).map((src, i) => (
