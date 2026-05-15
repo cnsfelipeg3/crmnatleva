@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Sparkles, Mic, Square, Send, Loader2, Wand2, ImagePlus, X } from "lucide-react";
+import { Sparkles, Mic, Square, Send, Loader2, Wand2, ImagePlus, X, Link as LinkIcon, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +36,8 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [scrapingUrl, setScrapingUrl] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -82,13 +84,51 @@ export default function ProductAIChat({ current, onApply }: Props) {
     const hasImgs = images.length > 0;
     if ((!hasText && !hasImgs) || busy) return;
 
+    // 1) Detecta URLs no texto e faz scraping antes de enviar pra IA.
+    const urlRe = /\bhttps?:\/\/[^\s<>"')]+/gi;
+    const foundUrls = Array.from(new Set(text.match(urlRe) || []));
+    let enrichedText = text.trim();
+    let scrapedImages: string[] = [];
+    if (foundUrls.length) {
+      setScrapingUrl(true);
+      const t = toast.loading(`Lendo ${foundUrls.length === 1 ? "página" : `${foundUrls.length} páginas`}...`);
+      try {
+        for (const u of foundUrls.slice(0, 3)) {
+          try {
+            const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url: u } });
+            if (error || !data || data.error) continue;
+            const md = (data.markdown || "").trim();
+            const title = data.title || "";
+            if (md) {
+              enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${u}\nTítulo: ${title}\n\n${md}`;
+            }
+            if (Array.isArray(data.images)) scrapedImages.push(...data.images.slice(0, 12));
+          } catch {/* segue */}
+        }
+        toast.dismiss(t);
+      } catch {
+        toast.dismiss(t);
+      } finally {
+        setScrapingUrl(false);
+      }
+      if (scrapedImages.length) {
+        enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+      }
+    }
+
     const fallbackText = hasText
       ? text.trim()
       : `Anexei ${images.length} ${images.length === 1 ? "print" : "prints"} · extraia tudo que conseguir.`;
 
+    const userVisible = hasText ? text.trim() : fallbackText;
     const next: ChatMsg[] = [
       ...messages,
-      { role: "user", content: fallbackText, images: hasImgs ? images : undefined },
+      { role: "user", content: userVisible, images: hasImgs ? images : undefined },
+    ];
+    // Mensagem enviada pra IA carrega o conteúdo enriquecido (scraping), mas a UI mostra só o texto do usuário.
+    const apiMessages: ChatMsg[] = [
+      ...messages,
+      { role: "user", content: enrichedText || fallbackText, images: hasImgs ? images : undefined },
     ];
     setMessages(next);
     setInput("");
@@ -96,7 +136,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("product-from-chat", {
-        body: { messages: next, current },
+        body: { messages: apiMessages, current },
       });
       if (error) throw error;
       if (data?.fallback) {
@@ -184,7 +224,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
               Cadastrar com IA <Sparkles className="w-3.5 h-3.5 text-primary" />
             </h2>
             <p className="text-xs text-muted-foreground">
-              Escreva, grave áudio ou anexe até {MAX_IMAGES} prints · a IA interpreta destino, datas, preços, pagamento e busca fotos reais.
+              Escreva, grave áudio, anexe até {MAX_IMAGES} prints ou cole o link de um anúncio · arraste arquivos e URLs · a IA lê tudo, extrai dados e busca fotos reais.
             </p>
           </div>
           <Button size="sm" variant="default">Abrir chat</Button>
@@ -193,10 +233,47 @@ export default function ProductAIChat({ current, onApply }: Props) {
     );
   }
 
-  const disabled = busy || recording || transcribing;
+  const disabled = busy || recording || transcribing || scrapingUrl;
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const dt = e.dataTransfer;
+    if (!dt) return;
+    // Imagens
+    const files = Array.from(dt.files || []).filter((f) => f.type.startsWith("image/"));
+    if (files.length) {
+      const tr = new DataTransfer();
+      files.forEach((f) => tr.items.add(f));
+      handleFiles(tr.files);
+    }
+    // URL solta
+    const droppedText = dt.getData("text/uri-list") || dt.getData("text/plain");
+    if (droppedText && /^https?:\/\//i.test(droppedText.trim())) {
+      const u = droppedText.trim();
+      setInput((cur) => (cur ? `${cur} ${u}` : u));
+      toast.info("Link adicionado · clique enviar para a IA ler a página");
+    }
+  };
 
   return (
-    <Card className="p-0 border-primary/30 bg-primary/5 overflow-hidden">
+    <Card
+      className={cn(
+        "p-0 border-primary/30 bg-primary/5 overflow-hidden relative transition-colors",
+        dragOver && "ring-2 ring-primary ring-offset-2 bg-primary/10",
+      )}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={(e) => { e.preventDefault(); setDragOver(false); }}
+      onDrop={onDrop}
+    >
+      {dragOver && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-primary/15 backdrop-blur-sm pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary font-semibold text-sm">
+            <Upload className="w-8 h-8" />
+            Solte aqui · prints ou link
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between px-4 py-3 border-b border-primary/15 bg-primary/10">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Wand2 className="w-4 h-4 text-primary" /> Cadastrar com IA
@@ -207,7 +284,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
       <div ref={scrollRef} className="max-h-[340px] overflow-y-auto px-4 py-3 space-y-2">
         {messages.length === 0 && (
           <div className="text-xs text-muted-foreground text-center py-6">
-            Descreva o pacote, grave um áudio ou anexe prints (cotação, planilha, conversa, anúncio). A IA lê tudo e monta o produto sozinha · até {MAX_IMAGES} imagens por envio.
+            Descreva o pacote, grave áudio, anexe prints (até {MAX_IMAGES}) ou cole o link de um anúncio/cotação · arraste arquivos ou URLs aqui dentro · a IA lê tudo e monta o produto sozinha.
           </div>
         )}
         {messages.map((m, i) => (
@@ -236,10 +313,10 @@ export default function ProductAIChat({ current, onApply }: Props) {
             </div>
           </div>
         ))}
-        {(busy || transcribing) && (
+        {(busy || transcribing || scrapingUrl) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            {transcribing ? "Transcrevendo áudio..." : "Pensando..."}
+            {scrapingUrl ? "Lendo a página..." : transcribing ? "Transcrevendo áudio..." : "Pensando..."}
           </div>
         )}
       </div>
@@ -321,6 +398,25 @@ export default function ProductAIChat({ current, onApply }: Props) {
             <Square className="w-4 h-4" />
           </Button>
         )}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            const u = window.prompt("Cole a URL da página (anúncio, hotel, cotação, anúncio Decolar/Booking, etc):");
+            if (!u) return;
+            const trimmed = u.trim();
+            if (!/^https?:\/\//i.test(trimmed)) {
+              toast.error("URL inválida · use http:// ou https://");
+              return;
+            }
+            setInput((cur) => (cur ? `${cur} ${trimmed}` : trimmed));
+          }}
+          disabled={disabled}
+          title="Colar URL para a IA extrair"
+        >
+          <LinkIcon className="w-4 h-4" />
+        </Button>
         <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -340,7 +436,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
               handleFiles(dt.files);
             }
           }}
-          placeholder={recording ? "Gravando... fale o que quiser" : pendingImages.length > 0 ? "Mensagem opcional · ou clique enviar" : "Descreva o produto ou anexe prints..."}
+          placeholder={recording ? "Gravando... fale o que quiser" : pendingImages.length > 0 ? "Mensagem opcional · ou clique enviar" : "Descreva, cole uma URL ou arraste prints aqui..."}
           disabled={disabled}
           className="flex-1"
         />
