@@ -243,7 +243,11 @@ export function useInboxRealtime(
               return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
             });
           }
-          return [{
+          // Conversa desconhecida na lista local. Só insere se for um INSERT real
+          // (created_at ~ last_message_at). Para UPDATEs de conversas antigas que
+          // ainda não estão carregadas, ignoramos para não embaralhar a ordem.
+          if (payload.eventType !== 'INSERT') return prev;
+          const newConv = {
             id: waKey,
             db_id: u.id,
             phone: cleanPhone || u.phone,
@@ -258,7 +262,14 @@ export function useInboxRealtime(
             assigned_to: u.assigned_to || "",
             score_potential: u.score_potential || 0,
             score_risk: u.score_risk || 0,
-          }, ...prev];
+          } as any;
+          // Inserção ordenada (pinned primeiro, depois desc por last_message_at)
+          const all = [...prev, newConv];
+          return all.sort((a, b) => {
+            if (a.is_pinned && !b.is_pinned) return -1;
+            if (!a.is_pinned && b.is_pinned) return 1;
+            return new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime();
+          });
         });
       })
       .subscribe();
