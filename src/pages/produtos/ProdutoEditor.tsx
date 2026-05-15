@@ -1085,6 +1085,20 @@ export default function ProdutoEditor() {
 // =====================================================================
 // Preview ao vivo do plano de pagamento · espelha o que o cliente verá
 // =====================================================================
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: any; title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-start gap-3 pb-2 border-b border-border/40">
+      <div className="shrink-0 w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center">
+        <Icon className="w-4 h-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-sm font-semibold text-foreground leading-tight">{title}</h2>
+        {subtitle && <p className="text-[11px] text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
+
 function PaymentPreview({ form }: { form: any }) {
   const price = Number(form.price_promo) || Number(form.price_from) || 0;
   if (price <= 0) {
