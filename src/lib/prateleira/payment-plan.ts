@@ -27,7 +27,7 @@ const SYMBOL: Record<string, string> = { BRL: "R$", USD: "US$", EUR: "€" };
 
 export function formatMoneyBR(v: number, currency = "BRL") {
   const s = SYMBOL[currency] || "R$";
-  return `${s} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return `${s} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function computeNatlevaPlan(
@@ -106,7 +106,9 @@ export function computeNatlevaPlan(
       const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
       installments = Math.min(installments, maxByMin);
     }
-    installmentAmount = Math.round((balanceAmount / installments) * 100) / 100;
+    // Arredonda pra cima em centavo pra garantir que entrada + n×parcela >= total
+    // (a última parcela absorve a diferença · UI mostra o valor padrão)
+    installmentAmount = Math.ceil((balanceAmount / installments) * 100) / 100;
   }
 
   const pixTotal = pixDiscountPercent > 0
