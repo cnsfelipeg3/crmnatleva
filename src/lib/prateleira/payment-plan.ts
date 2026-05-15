@@ -102,10 +102,8 @@ export function computeNatlevaPlan(
     customMismatch = Math.abs(sum - balanceAmount) > 1;
   } else {
     installments = monthsAvailable;
-    if (minInstallment > 0 && balanceAmount > 0) {
-      const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
-      installments = Math.min(installments, maxByMin);
-    }
+    // minInstallment é piso informativo · NÃO reduz o número de parcelas configurado pelo usuário
+    // (se o usuário configurou 10x, mostramos 10x mesmo que o valor por parcela fique abaixo do mínimo)
     // Arredonda pra cima em centavo pra garantir que entrada + n×parcela >= total
     // (a última parcela absorve a diferença · UI mostra o valor padrão)
     installmentAmount = Math.ceil((balanceAmount / installments) * 100) / 100;
