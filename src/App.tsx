@@ -331,6 +331,7 @@ function AppRoutes() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/conversas-excluidas" element={<ConversasExcluidas />} />
           <Route path="/admin/regras-globais" element={<RegrasGlobaisAgentes />} />
+          <Route path="/admin/megafone" element={<Megafone />} />
 
           {/* Portal Admin */}
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />
