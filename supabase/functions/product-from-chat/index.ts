@@ -9,7 +9,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é a Nath, assistente de cadastro de produtos da prateleira NatLeva. O usuário descreve um pacote/passeio em texto ou áudio (já transcrito), em conversa natural. Sua missão:
+const SYSTEM_PROMPT = `Você é a Nath, assistente de cadastro de produtos da prateleira NatLeva. O usuário descreve um pacote/passeio em texto, áudio (já transcrito) e/ou ANEXA PRINTS (cotações, planilhas, conversas, anúncios, sites de hotel, etc). Sua missão:
+
+0. Quando vierem imagens, LEIA cuidadosamente cada uma · extraia título, destino, hotel, datas, noites, preço, condições de pagamento, inclusos, voos, companhia aérea, etc. Combine o que estiver em prints diferentes (ex: print 1 = aéreo, print 2 = hotel) em um único produto coerente. Ignore marcas/preços de concorrentes (Booking, Decolar, etc) e adapte só os dados objetivos.
 
 1. Conversar de forma curta, humana e objetiva (pt-BR, tom NatLeva, sem firula, sem emojis).
 2. INFERIR e EXTRAIR o máximo possível de informação a cada turno usando a função set_product. Pode preencher parcialmente — campos vão se completando ao longo da conversa.
@@ -98,7 +100,23 @@ const SET_PRODUCT_TOOL = {
   },
 };
 
-async function callProductAI(model: string, apiKey: string, messages: unknown[], draftSummary: string) {
+type RawMsg = { role: string; content: string; images?: string[] };
+
+function toMultimodal(messages: RawMsg[]) {
+  return messages.map((m) => {
+    if (m.role === "user" && Array.isArray(m.images) && m.images.length > 0) {
+      const parts: any[] = [];
+      if (m.content && m.content.trim()) parts.push({ type: "text", text: m.content });
+      for (const url of m.images) {
+        if (typeof url === "string" && url.length > 0) parts.push({ type: "image_url", image_url: { url } });
+      }
+      return { role: m.role, content: parts };
+    }
+    return { role: m.role, content: m.content };
+  });
+}
+
+async function callProductAI(model: string, apiKey: string, messages: RawMsg[], draftSummary: string) {
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -107,7 +125,7 @@ async function callProductAI(model: string, apiKey: string, messages: unknown[],
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT + draftSummary },
-          ...messages,
+          ...toMultimodal(messages),
         ],
         tools: [SET_PRODUCT_TOOL],
         tool_choice: { type: "function", function: { name: "set_product" } },
@@ -153,10 +171,15 @@ serve(async (req) => {
       ? `\n\nRASCUNHO ATUAL DO PRODUTO (já preenchido):\n${JSON.stringify(current, null, 2)}\n\nMantenha esses valores e some o que for novo.`
       : "";
 
-    console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length}`);
-    const primary = await callProductAI("openai/gpt-5-mini", LOVABLE_API_KEY, messages, draftSummary);
+    const hasImages = Array.isArray(messages) && messages.some((m: any) => Array.isArray(m?.images) && m.images.length > 0);
+    const totalImages = Array.isArray(messages) ? messages.reduce((n: number, m: any) => n + (Array.isArray(m?.images) ? m.images.length : 0), 0) : 0;
+    console.log(`[product-from-chat] msgs=${messages.length} draftKeys=${Object.keys(current||{}).length} images=${totalImages}`);
+    // Imagens => Gemini Pro como primário (melhor visão multimodal). Texto => gpt-5-mini.
+    const primaryModel = hasImages ? "google/gemini-2.5-pro" : "openai/gpt-5-mini";
+    const fallbackModel = hasImages ? "openai/gpt-5" : "google/gemini-2.5-pro";
+    const primary = await callProductAI(primaryModel, LOVABLE_API_KEY, messages, draftSummary);
     if (!primary.ok) {
-      const retry = await callProductAI("google/gemini-2.5-pro", LOVABLE_API_KEY, messages, draftSummary);
+      const retry = await callProductAI(fallbackModel, LOVABLE_API_KEY, messages, draftSummary);
       if (!retry.ok) {
         if (primary.status === 429 || retry.status === 429) return serviceFallback("A IA atingiu um limite momentâneo. Aguarde alguns instantes e tente de novo.");
         if (primary.status === 402 || retry.status === 402) return serviceFallback("Os créditos de IA estão indisponíveis no momento.");
@@ -175,17 +198,18 @@ serve(async (req) => {
     }
     console.log(`[product-from-chat] toolCall=${!!toolCall} keys=${Object.keys(product).length} contentLen=${(msg?.content||"").length}`);
 
-    // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta openai/gpt-5-mini
+    // Fallback: se não veio tool_call (Gemini às vezes ignora forced tool_choice), tenta o modelo alternativo
     if (!toolCall || Object.keys(product).length === 0) {
-      console.log("[product-from-chat] retry with google/gemini-2.5-pro");
+      const retryModel = hasImages ? "openai/gpt-5" : "google/gemini-2.5-pro";
+      console.log(`[product-from-chat] retry tool_call with ${retryModel}`);
       const retry = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: retryModel,
           messages: [
             { role: "system", content: SYSTEM_PROMPT + draftSummary },
-            ...messages,
+            ...toMultimodal(messages as RawMsg[]),
           ],
           tools: [SET_PRODUCT_TOOL],
           tool_choice: { type: "function", function: { name: "set_product" } },
