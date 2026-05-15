@@ -58,6 +58,7 @@ type ProductForm = {
   payment_pix_discount_percent: string;
   payment_notes: string;
   internal_cost: string;
+  commission_per_sale: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
@@ -90,6 +91,7 @@ const empty: ProductForm = {
   payment_pix_discount_percent: "0",
   payment_notes: "",
   internal_cost: "",
+  commission_per_sale: "",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
@@ -349,6 +351,7 @@ export default function ProdutoEditor() {
           payment_pix_discount_percent: (data.payment_terms?.pix_discount_percent ?? 0).toString(),
           payment_notes: data.payment_terms?.notes ?? "",
           internal_cost: data.internal_cost != null ? String(data.internal_cost) : "",
+          commission_per_sale: data.commission_per_sale != null ? String(data.commission_per_sale) : "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
@@ -415,6 +418,7 @@ export default function ProdutoEditor() {
         notes: form.payment_notes || null,
       },
       internal_cost: numOrNull(form.internal_cost),
+      commission_per_sale: numOrNull(form.commission_per_sale),
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
@@ -1042,7 +1046,7 @@ export default function ProdutoEditor() {
                             <LockIcon className="w-3.5 h-3.5 text-amber-600" />
                             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Uso interno · não aparece na proposta</span>
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                             <div>
                               <Label className="text-sm font-semibold">Custo do pacote (R$)</Label>
                               <Input
@@ -1055,6 +1059,20 @@ export default function ProdutoEditor() {
                               />
                               <p className="text-[11px] text-muted-foreground mt-1">
                                 Quanto a agência paga pra fornecer este pacote
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">Comissão por venda (R$)</Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                value={form.commission_per_sale}
+                                onChange={(e) => set("commission_per_sale", e.target.value)}
+                                placeholder="0"
+                                className="text-base font-semibold"
+                              />
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                Quanto o vendedor ganha ao vender este pacote
                               </p>
                             </div>
                             <div>

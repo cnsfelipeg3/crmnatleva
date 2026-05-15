@@ -3784,6 +3784,7 @@ export type Database = {
           airline: string | null
           available_dates: Json
           category: string | null
+          commission_per_sale: number | null
           cover_image_url: string | null
           created_at: string
           currency: string | null
@@ -3845,6 +3846,7 @@ export type Database = {
           airline?: string | null
           available_dates?: Json
           category?: string | null
+          commission_per_sale?: number | null
           cover_image_url?: string | null
           created_at?: string
           currency?: string | null
@@ -3906,6 +3908,7 @@ export type Database = {
           airline?: string | null
           available_dates?: Json
           category?: string | null
+          commission_per_sale?: number | null
           cover_image_url?: string | null
           created_at?: string
           currency?: string | null
