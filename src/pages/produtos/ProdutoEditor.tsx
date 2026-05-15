@@ -666,32 +666,7 @@ export default function ProdutoEditor() {
               </div>
             </Card>
 
-            {/* ============ 5 · MÍDIA ============ */}
-            <Card className="p-5 space-y-5">
-              <SectionHeader icon={ImageIcon} title="Mídia" subtitle="Capa e galeria · arrastar para reordenar" />
-              <div>
-                <Label>Imagem de capa</Label>
-                <Input value={form.cover_image_url} onChange={(e) => set("cover_image_url", e.target.value)} placeholder="https://..." className="mt-1" />
-                {form.cover_image_url && (
-                  <div className="mt-3 relative inline-block">
-                    <img src={form.cover_image_url} alt="capa" className="max-h-48 rounded-lg object-cover border-2 border-amber-500" />
-                    <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider font-bold bg-amber-500 text-black px-2 py-0.5 rounded">Capa atual</span>
-                  </div>
-                )}
-              </div>
-              <GalleryManager
-                gallery={form.gallery}
-                coverUrl={form.cover_image_url}
-                onChange={(g) => set("gallery", g)}
-                onSetCover={(url) => {
-                  const oldCover = form.cover_image_url;
-                  const lines = form.gallery.split("\n").map((s) => s.trim()).filter(Boolean).filter((u) => u !== url);
-                  const next = oldCover && oldCover !== url ? [oldCover, ...lines.filter((u) => u !== oldCover)] : lines;
-                  set("cover_image_url", url);
-                  set("gallery", next.join("\n"));
-                }}
-              />
-            </Card>
+            {/* Mídia removida · capa e galeria são preenchidas automaticamente pela busca de hotel */}
 
             {/* ============ 6 · CONTEÚDO ============ */}
             <Card className="p-5 space-y-4">
