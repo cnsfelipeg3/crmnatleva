@@ -272,20 +272,52 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
           <Badge variant="outline" className="text-[10px]">{p.product_kind || "passeio"}</Badge>
           {dateRange && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {dateRange}</span>}
         </div>
-        <div className="flex items-end justify-between mt-3 pt-3 border-t border-border/30">
-          <div>
-            {promo && full && <div className="text-[10px] text-muted-foreground line-through">{full}</div>}
-            <div className="text-sm font-semibold">{promo || full || "Sob consulta"}</div>
-          </div>
-          <button
-            onClick={() => setAnalyticsOpen(true)}
-            className="flex items-center gap-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-            title="Ver analytics deste produto"
-          >
-            <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
-            <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
-          </button>
-        </div>
+        {(() => {
+          const planPrice = Number(p.price_promo) || Number(p.price_from) || 0;
+          const plan = computeNatlevaPlan(planPrice, p.departure_date, {
+            entryPercent: Number(p.payment_entry_percent) || undefined,
+            entryAmount: Number(p.payment_entry_amount) || undefined,
+            daysBefore: Number(p.payment_days_before) || undefined,
+            currency: p.currency || "BRL",
+            maxInstallments: Number(p.payment_balance_installments_max) || undefined,
+            minInstallment: Number(p.payment_balance_min_installment) || undefined,
+            customInstallments: Array.isArray(p.payment_balance_custom_installments) ? p.payment_balance_custom_installments : undefined,
+          });
+          return (
+            <div className="flex items-end justify-between mt-3 pt-3 border-t border-border/30 gap-2">
+              <div className="min-w-0">
+                {plan ? (
+                  <>
+                    <div className="text-sm font-semibold leading-tight text-foreground">
+                      <span className="tabular-nums">{formatMoneyBR(plan.entryAmount, plan.currency)}</span>
+                      <span className="text-muted-foreground font-normal"> de entrada</span>
+                    </div>
+                    <div className="text-[12px] text-foreground/80 leading-tight mt-0.5">
+                      <span className="font-semibold tabular-nums">+ {plan.installments}x</span>
+                      <span className="text-muted-foreground"> de </span>
+                      <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
+                      <span className="text-muted-foreground"> sem juros</span>
+                    </div>
+                    <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
+                      Total {formatMoneyBR(plan.total, plan.currency)}
+                      {full && promo && <span className="line-through ml-1.5">{full}</span>}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm font-semibold">{promo || full || "Sob consulta"}</div>
+                )}
+              </div>
+              <button
+                onClick={() => setAnalyticsOpen(true)}
+                className="flex items-center gap-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                title="Ver analytics deste produto"
+              >
+                <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
+                <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
+              </button>
+            </div>
+          );
+        })()}
         {/* Lucro estimado · uso interno */}
         <div
           className={cn(
