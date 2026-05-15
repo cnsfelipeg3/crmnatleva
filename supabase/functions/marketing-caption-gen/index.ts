@@ -61,18 +61,25 @@ function buildUserPrompt(briefing: any, format?: string): string {
   return lines.join("\n");
 }
 
-async function callGateway(model: string, system: string, user: string, apiKey: string) {
-  return fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
-  });
+async function callGateway(model: string, system: string, user: string, apiKey: string, timeoutMs = 35000) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(t);
+  }
 }
 
 serve(async (req) => {
@@ -137,7 +144,7 @@ serve(async (req) => {
 
     const userPrompt = buildUserPrompt(briefing, format);
 
-    const order = ["google/gemini-2.5-pro", "google/gemini-3-flash-preview", "google/gemini-2.5-flash"];
+    const order = ["google/gemini-2.5-flash", "google/gemini-3-flash-preview", "google/gemini-2.5-flash-lite"];
     let caption = "";
     let lastErr = "";
     for (const model of order) {
