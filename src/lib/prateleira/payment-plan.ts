@@ -106,7 +106,9 @@ export function computeNatlevaPlan(
       const maxByMin = Math.max(1, Math.floor(balanceAmount / minInstallment));
       installments = Math.min(installments, maxByMin);
     }
-    installmentAmount = Math.round((balanceAmount / installments) * 100) / 100;
+    // Arredonda pra cima em centavo pra garantir que entrada + n×parcela >= total
+    // (a última parcela absorve a diferença · UI mostra o valor padrão)
+    installmentAmount = Math.ceil((balanceAmount / installments) * 100) / 100;
   }
 
   const pixTotal = pixDiscountPercent > 0
