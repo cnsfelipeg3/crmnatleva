@@ -46,10 +46,56 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [scrapingUrl, setScrapingUrl] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [urlPreviews, setUrlPreviews] = useState<UrlPreview[]>([]);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const URL_RE = /\bhttps?:\/\/[^\s<>"')]+/gi;
+
+  // Auto-scrape de URLs: assim que o usuário cola/digita uma URL, a gente
+  // dispara o scraping e mostra o preview do markdown + imagens antes de enviar.
+  const fetchPreview = async (url: string) => {
+    setUrlPreviews((cur) => {
+      if (cur.some((p) => p.url === url)) return cur;
+      return [...cur, { url, status: "loading" }];
+    });
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url } });
+      if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || "Falha");
+      setUrlPreviews((cur) =>
+        cur.map((p) =>
+          p.url === url
+            ? {
+                ...p,
+                status: "ready",
+                title: data.title || "",
+                markdown: (data.markdown || "").trim(),
+                images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+              }
+            : p,
+        ),
+      );
+    } catch (e: any) {
+      setUrlPreviews((cur) =>
+        cur.map((p) => (p.url === url ? { ...p, status: "error", error: e?.message || "Falha ao ler" } : p)),
+      );
+    }
+  };
+
+  // Detecta novas URLs no input com debounce.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const found = Array.from(new Set((input.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, ""))));
+      const seen = new Set(urlPreviews.map((p) => p.url));
+      for (const u of found.slice(0, 3)) if (!seen.has(u)) fetchPreview(u);
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input]);
+
+  const removePreview = (url: string) => setUrlPreviews((cur) => cur.filter((p) => p.url !== url));
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
