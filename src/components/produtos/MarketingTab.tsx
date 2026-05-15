@@ -185,6 +185,24 @@ export default function MarketingTab(props: Props) {
 
   const scarcity = useMemo(() => buildScarcityBadge(seatsLeft), [seatsLeft]);
 
+  // Lista final de "Está incluso" · usa o cadastro manual quando preenchido,
+  // senão deriva automaticamente das infos do produto (kind, hotel, noites, aéreo, highlights).
+  const effectiveIncludes = useMemo(() => {
+    const manual = (includes || []).filter(Boolean);
+    if (manual.length > 0) return manual.slice(0, 5);
+    return autoDeriveIncludes({
+      productKind,
+      nights,
+      hotelName,
+      hotelStars,
+      airline,
+      originIata,
+      destinationIata,
+      highlights: (highlights || []).filter(Boolean),
+      mealPlan: shortDescription,
+    });
+  }, [includes, productKind, nights, hotelName, hotelStars, airline, originIata, destinationIata, highlights, shortDescription]);
+
   // Pré-preenche briefing usando gatilhos de venda
   useEffect(() => {
     if (headline) return;
