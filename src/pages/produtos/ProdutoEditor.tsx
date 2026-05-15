@@ -17,6 +17,9 @@ import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
 import GalleryManager from "@/components/produtos/GalleryManager";
+import ProductLivePreview from "@/components/produtos/ProductLivePreview";
+import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const KIND_OPTIONS = [
   { value: "pacote", label: "Pacote completo" },
@@ -107,6 +110,15 @@ export default function ProdutoEditor() {
   const [ytUrl, setYtUrl] = useState("");
   const [ytLoading, setYtLoading] = useState(false);
   const [hotelSearchOpen, setHotelSearchOpen] = useState(false);
+  const [previewVisible, setPreviewVisible] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    const v = localStorage.getItem("produto-editor-preview-visible");
+    return v === null ? true : v === "1";
+  });
+  const [previewMode, setPreviewMode] = useState<"desktop" | "mobile">("desktop");
+  useEffect(() => {
+    localStorage.setItem("produto-editor-preview-visible", previewVisible ? "1" : "0");
+  }, [previewVisible]);
 
   const applyHotelEnrichment = (data: PlacesEnrichmentData) => {
     setForm((f) => {
@@ -435,7 +447,9 @@ export default function ProdutoEditor() {
   if (loading) return <div className="p-8 text-muted-foreground text-sm">Carregando...</div>;
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5">
+    <div className={cn("mx-auto p-4 sm:p-6", previewVisible ? "max-w-[1600px]" : "max-w-5xl")}>
+      <div className={cn("grid gap-6", previewVisible ? "lg:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]" : "grid-cols-1")}>
+        <div className="space-y-5 min-w-0">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <Link to="/prateleira"><Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1.5" /> Prateleira</Button></Link>
         <div className="flex flex-wrap gap-2">
@@ -448,6 +462,9 @@ export default function ProdutoEditor() {
               <Button variant="outline" size="sm" onClick={remove}><Trash2 className="w-4 h-4 mr-1.5" /> Excluir</Button>
             </>
           )}
+          <Button variant="outline" size="sm" onClick={() => setPreviewVisible((v) => !v)} className="hidden lg:inline-flex">
+            {previewVisible ? <><EyeOff className="w-4 h-4 mr-1.5" /> Esconder preview</> : <><Eye className="w-4 h-4 mr-1.5" /> Mostrar preview</>}
+          </Button>
           <Button size="sm" onClick={save} disabled={saving}>
             <Save className="w-4 h-4 mr-1.5" /> {saving ? "Salvando..." : "Salvar"}
           </Button>
@@ -1053,6 +1070,53 @@ export default function ProdutoEditor() {
           </div>
         );
       })()}
+        </div>
+
+        {previewVisible && (
+          <aside className="hidden lg:block">
+            <div className="sticky top-4 space-y-2">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                  <Eye className="w-3.5 h-3.5" /> Pré-visualização ao vivo
+                </div>
+                <div className="flex items-center rounded-lg border border-border/40 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode("desktop")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-medium transition-colors",
+                      previewMode === "desktop" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Desktop"
+                  >
+                    <Monitor className="w-3 h-3" /> Desktop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode("mobile")}
+                    className={cn(
+                      "flex items-center gap-1 rounded-md px-2 py-1 text-[10.5px] font-medium transition-colors",
+                      previewMode === "mobile" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground",
+                    )}
+                    title="Mobile"
+                  >
+                    <Smartphone className="w-3 h-3" /> Mobile
+                  </button>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  "rounded-xl border border-border/40 bg-background overflow-hidden shadow-sm",
+                  "max-h-[calc(100vh-7rem)] overflow-y-auto",
+                  previewMode === "mobile" && "mx-auto max-w-[390px]",
+                )}
+              >
+                <ProductLivePreview form={form as any} />
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
