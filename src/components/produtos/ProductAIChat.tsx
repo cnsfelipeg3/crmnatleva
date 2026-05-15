@@ -51,37 +51,67 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const urlPreviewsRef = useRef<UrlPreview[]>([]);
   const URL_RE = /\bhttps?:\/\/[^\s<>"')]+/gi;
+
+  useEffect(() => {
+    urlPreviewsRef.current = urlPreviews;
+  }, [urlPreviews]);
 
   // Auto-scrape de URLs: assim que o usuário cola/digita uma URL, a gente
   // dispara o scraping e mostra o preview do markdown + imagens antes de enviar.
-  const fetchPreview = async (url: string) => {
+  const fetchPreview = async (url: string): Promise<UrlPreview | null> => {
+    const existing = urlPreviewsRef.current.find((p) => p.url === url);
+    if (existing) return existing;
     setUrlPreviews((cur) => {
       if (cur.some((p) => p.url === url)) return cur;
       return [...cur, { url, status: "loading" }];
     });
+    setScrapingUrl(true);
     try {
       const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url } });
       if (error) throw error;
       if (!data || data.error) throw new Error(data?.error || "Falha");
+      const nextPreview: UrlPreview = {
+        url,
+        status: "ready",
+        title: data.title || "",
+        markdown: (data.markdown || "").trim(),
+        images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+      };
       setUrlPreviews((cur) =>
-        cur.map((p) =>
-          p.url === url
-            ? {
-                ...p,
-                status: "ready",
-                title: data.title || "",
-                markdown: (data.markdown || "").trim(),
-                images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
-              }
-            : p,
-        ),
+        cur.some((p) => p.url === url)
+          ? cur.map((p) => (p.url === url ? nextPreview : p))
+          : [...cur, nextPreview],
       );
+      urlPreviewsRef.current = urlPreviewsRef.current.some((p) => p.url === url)
+        ? urlPreviewsRef.current.map((p) => (p.url === url ? nextPreview : p))
+        : [...urlPreviewsRef.current, nextPreview];
+      return nextPreview;
     } catch (e: any) {
+      const failedPreview: UrlPreview = { url, status: "error", error: e?.message || "Falha ao ler" };
       setUrlPreviews((cur) =>
-        cur.map((p) => (p.url === url ? { ...p, status: "error", error: e?.message || "Falha ao ler" } : p)),
+        cur.some((p) => p.url === url)
+          ? cur.map((p) => (p.url === url ? failedPreview : p))
+          : [...cur, failedPreview],
       );
+      urlPreviewsRef.current = urlPreviewsRef.current.some((p) => p.url === url)
+        ? urlPreviewsRef.current.map((p) => (p.url === url ? failedPreview : p))
+        : [...urlPreviewsRef.current, failedPreview];
+      return failedPreview;
+    } finally {
+      setScrapingUrl(false);
     }
+  };
+
+  const waitForPreview = async (url: string) => {
+    const start = Date.now();
+    while (Date.now() - start < 30000) {
+      const preview = urlPreviewsRef.current.find((p) => p.url === url);
+      if (preview && preview.status !== "loading") return preview;
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    return urlPreviewsRef.current.find((p) => p.url === url) || null;
   };
 
   // Detecta novas URLs no input com debounce.
@@ -142,26 +172,16 @@ export default function ProductAIChat({ current, onApply }: Props) {
     // usuário acabou de colar e ainda está carregando, espera concluir.
     const foundUrls = Array.from(new Set((text.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, "")))).slice(0, 3);
     for (const u of foundUrls) {
-      if (!urlPreviews.some((p) => p.url === u)) {
+      if (!urlPreviewsRef.current.some((p) => p.url === u)) {
         await fetchPreview(u);
       }
     }
     // Aguarda previews em loading (até 30s)
-    if (foundUrls.length) {
-      const start = Date.now();
-      while (Date.now() - start < 30000) {
-        const stillLoading = foundUrls.some((u) => {
-          const p = urlPreviews.find((x) => x.url === u);
-          return p?.status === "loading";
-        });
-        if (!stillLoading) break;
-        await new Promise((r) => setTimeout(r, 400));
-      }
-    }
+    await Promise.all(foundUrls.map(waitForPreview));
 
     // 2) Monta o conteúdo enriquecido a partir do cache de previews.
     const previewsForUrls = foundUrls
-      .map((u) => urlPreviews.find((p) => p.url === u))
+      .map((u) => urlPreviewsRef.current.find((p) => p.url === u))
       .filter((p): p is UrlPreview => !!p && p.status === "ready");
 
     let enrichedText = text.trim();
@@ -177,7 +197,8 @@ export default function ProductAIChat({ current, onApply }: Props) {
     }
 
     if (foundUrls.length && !previewsForUrls.length) {
-      toast.error("Não consegui ler a página · tente novamente ou use prints");
+      const failed = foundUrls.map((u) => urlPreviewsRef.current.find((p) => p.url === u)).find((p) => p?.status === "error");
+      toast.error("Não consegui ler a página", { description: failed?.error || "Tente novamente ou use prints" });
       return;
     }
 
