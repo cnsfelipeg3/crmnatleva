@@ -361,6 +361,16 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
           <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
             <Button variant="outline" size="sm" title="Abrir página"><ExternalLink className="w-3.5 h-3.5" /></Button>
           </a>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDelete}
+            disabled={deleting}
+            title="Excluir produto"
+            className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
         </div>
       </div>
       <PrateleiraAnalyticsDialog
