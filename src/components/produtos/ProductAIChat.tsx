@@ -36,6 +36,8 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const [recording, setRecording] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
+  const [scrapingUrl, setScrapingUrl] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
