@@ -348,6 +348,7 @@ export default function ProdutoEditor() {
             : [],
           payment_pix_discount_percent: (data.payment_terms?.pix_discount_percent ?? 0).toString(),
           payment_notes: data.payment_terms?.notes ?? "",
+          internal_cost: data.internal_cost != null ? String(data.internal_cost) : "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
