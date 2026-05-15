@@ -20,6 +20,7 @@ import {
   buildSalesHeadline,
   buildSalesSubheadline,
   buildScarcityBadge,
+  autoDeriveIncludes,
   TONE_LABEL,
   type ArtBriefing,
   type ArtTone,
@@ -49,6 +50,11 @@ interface Props {
   paxAdults?: string | number;
   paxChildren?: string | number;
   isPromo?: boolean;
+  productKind?: string;
+  airline?: string;
+  originIata?: string;
+  destinationIata?: string;
+  highlights?: string[];
   paymentTerms?: {
     entryPercent?: number;
     entryAmount?: number;
@@ -109,6 +115,7 @@ export default function MarketingTab(props: Props) {
     productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
     coverUrl, galleryUrls, departureDate, returnDate, includes,
     hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, paxAdults, paxChildren, isPromo, paymentTerms,
+    productKind, airline, originIata, destinationIata, highlights,
   } = props;
 
   const [headline, setHeadline] = useState("");
@@ -178,6 +185,24 @@ export default function MarketingTab(props: Props) {
 
   const scarcity = useMemo(() => buildScarcityBadge(seatsLeft), [seatsLeft]);
 
+  // Lista final de "Está incluso" · usa o cadastro manual quando preenchido,
+  // senão deriva automaticamente das infos do produto (kind, hotel, noites, aéreo, highlights).
+  const effectiveIncludes = useMemo(() => {
+    const manual = (includes || []).filter(Boolean);
+    if (manual.length > 0) return manual.slice(0, 5);
+    return autoDeriveIncludes({
+      productKind,
+      nights,
+      hotelName,
+      hotelStars,
+      airline,
+      originIata,
+      destinationIata,
+      highlights: (highlights || []).filter(Boolean),
+      mealPlan: shortDescription,
+    });
+  }, [includes, productKind, nights, hotelName, hotelStars, airline, originIata, destinationIata, highlights, shortDescription]);
+
   // Pré-preenche briefing usando gatilhos de venda
   useEffect(() => {
     if (headline) return;
@@ -216,7 +241,7 @@ export default function MarketingTab(props: Props) {
     nights: nights || undefined,
     departureDate: formatBRDate(departureDate) || undefined,
     returnDate: formatBRDate(returnDate) || undefined,
-    includes: (includes || []).filter(Boolean).slice(0, 4),
+    includes: effectiveIncludes.slice(0, 4),
     payment,
     scarcity,
   });
@@ -436,7 +461,7 @@ export default function MarketingTab(props: Props) {
             {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
             {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
             {scarcity && <Badge variant="destructive" className="gap-1"><Zap className="w-3 h-3" />{scarcity}</Badge>}
-            {(includes || []).slice(0, 3).map((i, idx) => (
+            {effectiveIncludes.slice(0, 3).map((i, idx) => (
               <Badge key={idx} variant="outline" className="font-normal">{i}</Badge>
             ))}
           </div>

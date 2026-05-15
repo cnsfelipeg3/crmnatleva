@@ -145,6 +145,76 @@ export function mergeIncludes(custom?: string[]): string[] {
   return base.slice(0, 5);
 }
 
+// ====================================================================
+// Auto-derivação de "Está incluso" a partir das infos do produto
+// Só é usada quando o usuário NÃO preencheu manualmente o campo "includes".
+// Regras conservadoras · NUNCA inventa aéreo se o produto não tiver aéreo.
+// ====================================================================
+export interface AutoIncludesInput {
+  productKind?: string;        // pacote · aereo · hospedagem · passeio · cruzeiro · outros
+  nights?: string | number;
+  hotelName?: string;
+  hotelStars?: string | number;
+  airline?: string;
+  originIata?: string;
+  destinationIata?: string;
+  highlights?: string[];       // bullets opcionais já cadastrados
+  mealPlan?: string;           // ex: "All Inclusive", "Café da manhã"
+}
+
+function detectMealPlan(text?: string): string | undefined {
+  if (!text) return undefined;
+  const t = text.toLowerCase();
+  if (t.includes("all inclusive") || t.includes("all-inclusive") || t.includes("tudo incluso")) return "Regime All Inclusive (refeições e bebidas)";
+  if (t.includes("pensão completa") || t.includes("pensao completa")) return "Pensão completa";
+  if (t.includes("meia pensão") || t.includes("meia pensao")) return "Meia pensão";
+  if (t.includes("café da manhã") || t.includes("cafe da manha") || t.includes("breakfast")) return "Café da manhã incluso";
+  return undefined;
+}
+
+export function autoDeriveIncludes(input: AutoIncludesInput): string[] {
+  const out: string[] = [];
+  const kind = (input.productKind || "").toLowerCase();
+  const nights = Number(input.nights) || 0;
+  const hotelLabel = input.hotelName
+    ? `${input.hotelName}${input.hotelStars ? ` ${input.hotelStars}★` : ""}`
+    : "";
+
+  // 1) Hospedagem · só se for hospedagem/pacote E tiver hotel ou noites
+  const isLodging = kind === "hospedagem" || kind === "pacote" || kind === "outros" || kind === "";
+  if (isLodging && (hotelLabel || nights > 0)) {
+    if (nights > 0 && hotelLabel) out.push(`${nights} noites no ${hotelLabel}`);
+    else if (nights > 0) out.push(`${nights} noites de hospedagem`);
+    else if (hotelLabel) out.push(`Hospedagem no ${hotelLabel}`);
+  }
+
+  // 2) Regime alimentar · detectado em hotelName/highlights/mealPlan
+  const mealSource = [input.mealPlan, input.hotelName, ...(input.highlights || [])].join(" · ");
+  const meal = detectMealPlan(mealSource);
+  if (meal) out.push(meal);
+
+  // 3) Aéreo · APENAS se for explícito (kind=aereo/pacote E (airline OR origin+destination IATA))
+  const hasFlightSignal = !!input.airline || (!!input.originIata && !!input.destinationIata);
+  if ((kind === "aereo" || kind === "pacote") && hasFlightSignal) {
+    out.push(input.airline ? `Aéreo ida e volta · ${input.airline}` : "Aéreo de ida e volta");
+  }
+
+  // 4) Highlights cadastrados (até 2) · evita repetir o que já entrou
+  const lower = out.map((s) => s.toLowerCase());
+  for (const h of (input.highlights || []).slice(0, 4)) {
+    const t = h.trim();
+    if (!t) continue;
+    if (lower.some((x) => x.includes(t.toLowerCase()) || t.toLowerCase().includes(x))) continue;
+    out.push(t);
+    if (out.length >= 4) break;
+  }
+
+  // 5) Assessoria NatLeva · sempre fecha a lista (se sobrar espaço)
+  if (out.length < 5) out.push("Assessoria NatLeva durante toda a viagem");
+
+  return out.slice(0, 5);
+}
+
 export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, aspect: string): string {
   const includes = mergeIncludes(briefing.includes);
   const period = formatCompactPeriod(briefing.departureDate, briefing.returnDate);
