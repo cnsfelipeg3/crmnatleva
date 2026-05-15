@@ -17,6 +17,7 @@ import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
 import GalleryManager from "@/components/produtos/GalleryManager";
+import GalleryEditorBlock from "@/components/produtos/GalleryEditorBlock";
 import ProductLivePreview from "@/components/produtos/ProductLivePreview";
 import { Eye, EyeOff, Monitor, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -643,6 +644,14 @@ export default function ProdutoEditor() {
                     <Input type="number" min={1} max={5} value={form.hotel_stars} onChange={(e) => set("hotel_stars", e.target.value)} />
                   </div>
                 </div>
+
+                {/* Galeria editável · permanece visível mesmo após buscar/aplicar fotos */}
+                <GalleryEditorBlock
+                  gallery={form.gallery}
+                  coverUrl={form.cover_image_url}
+                  onChange={(g) => set("gallery", g)}
+                  onSetCover={(u) => set("cover_image_url", u)}
+                />
               </Card>
             )}
 
