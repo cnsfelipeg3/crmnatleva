@@ -28,6 +28,8 @@ export type RowItem = {
   gallery?: string[] | null;
   nights?: number | null;
   hotelName?: string | null;
+  paxAdults?: number | null;
+  paxChildren?: number | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
