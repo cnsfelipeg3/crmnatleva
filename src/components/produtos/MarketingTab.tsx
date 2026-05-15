@@ -241,22 +241,7 @@ export default function MarketingTab(props: Props) {
     nights: nights || undefined,
     departureDate: formatBRDate(departureDate) || undefined,
     returnDate: formatBRDate(returnDate) || undefined,
-    includes: (() => {
-      const manual = (includes || []).filter(Boolean);
-      if (manual.length > 0) return manual.slice(0, 4);
-      // Auto-derivação a partir das infos cadastradas no produto
-      return autoDeriveIncludes({
-        productKind,
-        nights,
-        hotelName,
-        hotelStars,
-        airline,
-        originIata,
-        destinationIata,
-        highlights: (highlights || []).filter(Boolean),
-        mealPlan: shortDescription,
-      }).slice(0, 4);
-    })(),
+    includes: effectiveIncludes.slice(0, 4),
     payment,
     scarcity,
   });
