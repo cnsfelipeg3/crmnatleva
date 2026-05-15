@@ -1,6 +1,6 @@
 // Scrape any URL via Firecrawl and return condensed markdown + image candidates.
 // Used by ProductAIChat so the AI can build a product from a link.
-import { corsHeaders } from "@supabase/supabase-js/cors";
+import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 
 const FIRECRAWL_V2 = "https://api.firecrawl.dev/v2";
 
