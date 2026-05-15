@@ -189,8 +189,11 @@ export default function ProductAIChat({ current, onApply }: Props) {
     let enrichedText = text.trim();
     const scrapedImages: string[] = [];
     for (const p of previewsForUrls) {
+      if (p.structured && Object.keys(p.structured).length) {
+        enrichedText += `\n\n=== DADOS ESTRUTURADOS DA PÁGINA (extraídos por IA · use como verdade) ===\nURL: ${p.url}\n${JSON.stringify(p.structured, null, 2)}`;
+      }
       if (p.markdown) {
-        enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
+        enrichedText += `\n\n=== CONTEÚDO BRUTO DA PÁGINA (markdown) ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
       }
       if (p.images?.length) scrapedImages.push(...p.images.slice(0, 12));
     }
