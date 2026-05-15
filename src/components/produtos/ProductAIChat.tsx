@@ -14,6 +14,7 @@ type UrlPreview = {
   title?: string;
   markdown?: string;
   images?: string[];
+  structured?: Record<string, any> | null;
   error?: string;
 };
 
