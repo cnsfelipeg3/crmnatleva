@@ -1,0 +1,1 @@
+ALTER TABLE public.experience_products ADD COLUMN IF NOT EXISTS internal_cost numeric;
