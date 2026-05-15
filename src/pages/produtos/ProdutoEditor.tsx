@@ -414,6 +414,7 @@ export default function ProdutoEditor() {
         min_days_before_checkin: numOrNull(form.payment_days_before) ?? 20,
         notes: form.payment_notes || null,
       },
+      internal_cost: numOrNull(form.internal_cost),
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
