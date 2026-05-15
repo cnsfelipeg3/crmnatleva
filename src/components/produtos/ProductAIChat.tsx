@@ -172,26 +172,16 @@ export default function ProductAIChat({ current, onApply }: Props) {
     // usuário acabou de colar e ainda está carregando, espera concluir.
     const foundUrls = Array.from(new Set((text.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, "")))).slice(0, 3);
     for (const u of foundUrls) {
-      if (!urlPreviews.some((p) => p.url === u)) {
+      if (!urlPreviewsRef.current.some((p) => p.url === u)) {
         await fetchPreview(u);
       }
     }
     // Aguarda previews em loading (até 30s)
-    if (foundUrls.length) {
-      const start = Date.now();
-      while (Date.now() - start < 30000) {
-        const stillLoading = foundUrls.some((u) => {
-          const p = urlPreviews.find((x) => x.url === u);
-          return p?.status === "loading";
-        });
-        if (!stillLoading) break;
-        await new Promise((r) => setTimeout(r, 400));
-      }
-    }
+    await Promise.all(foundUrls.map(waitForPreview));
 
     // 2) Monta o conteúdo enriquecido a partir do cache de previews.
     const previewsForUrls = foundUrls
-      .map((u) => urlPreviews.find((p) => p.url === u))
+      .map((u) => urlPreviewsRef.current.find((p) => p.url === u))
       .filter((p): p is UrlPreview => !!p && p.status === "ready");
 
     let enrichedText = text.trim();
@@ -207,7 +197,8 @@ export default function ProductAIChat({ current, onApply }: Props) {
     }
 
     if (foundUrls.length && !previewsForUrls.length) {
-      toast.error("Não consegui ler a página · tente novamente ou use prints");
+      const failed = foundUrls.map((u) => urlPreviewsRef.current.find((p) => p.url === u)).find((p) => p?.status === "error");
+      toast.error("Não consegui ler a página", { description: failed?.error || "Tente novamente ou use prints" });
       return;
     }
 
