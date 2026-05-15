@@ -42,6 +42,8 @@ function toRowItem(p: Product): RowItem {
     hotelName: p.hotel_name,
     paxAdults: p.pax_adults,
     paxChildren: p.pax_children,
+    paymentTerms: p.payment_terms,
+    installmentsMax: p.installments_max,
   };
 }
 
