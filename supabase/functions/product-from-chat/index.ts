@@ -98,7 +98,23 @@ const SET_PRODUCT_TOOL = {
   },
 };
 
-async function callProductAI(model: string, apiKey: string, messages: unknown[], draftSummary: string) {
+type RawMsg = { role: string; content: string; images?: string[] };
+
+function toMultimodal(messages: RawMsg[]) {
+  return messages.map((m) => {
+    if (m.role === "user" && Array.isArray(m.images) && m.images.length > 0) {
+      const parts: any[] = [];
+      if (m.content && m.content.trim()) parts.push({ type: "text", text: m.content });
+      for (const url of m.images) {
+        if (typeof url === "string" && url.length > 0) parts.push({ type: "image_url", image_url: { url } });
+      }
+      return { role: m.role, content: parts };
+    }
+    return { role: m.role, content: m.content };
+  });
+}
+
+async function callProductAI(model: string, apiKey: string, messages: RawMsg[], draftSummary: string) {
   try {
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -107,7 +123,7 @@ async function callProductAI(model: string, apiKey: string, messages: unknown[],
         model,
         messages: [
           { role: "system", content: SYSTEM_PROMPT + draftSummary },
-          ...messages,
+          ...toMultimodal(messages),
         ],
         tools: [SET_PRODUCT_TOOL],
         tool_choice: { type: "function", function: { name: "set_product" } },
