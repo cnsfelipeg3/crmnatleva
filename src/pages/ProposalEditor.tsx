@@ -189,6 +189,9 @@ export default function ProposalEditor() {
   const visualDraftKey = `proposal-visual-draft-${id || "novo"}`;
   // Chave única para rascunho local de NOVA proposta (recuperação após fechar/voltar)
   const NEW_DRAFT_KEY = "proposal-new-draft-v1";
+  // Chave de rascunho local por proposta (NOVA ou EXISTENTE) · espelha tudo que
+  // o usuário digita para recuperação 100% à prova de queda de internet/refresh.
+  const LOCAL_DRAFT_KEY = isNew ? NEW_DRAFT_KEY : `proposal-draft-${id}`;
   const [activeItemCategory, setActiveItemCategory] = useState<string>("flight");
   const [flightWizardOpen, setFlightWizardOpen] = useState(false);
 
@@ -336,16 +339,48 @@ export default function ProposalEditor() {
     }
   }, [isNew, existing, existingItems]);
 
-  // ── Recuperação de rascunho local para NOVA proposta ──────────────────
+  // ── Recuperação de rascunho local (NOVA ou EXISTENTE) ────────────────
   // Hidrata automaticamente o que o usuário tinha preenchido antes de
-  // fechar/voltar/recarregar (mesmo sem título). Roda apenas no mount.
+  // fechar/voltar/recarregar. Para propostas existentes, só aplica se o
+  // rascunho for mais novo que o updated_at do banco (evita sobrescrever
+  // alterações vindas de outro lugar).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isNew) return;
+    if (isNew) {
+      try {
+        const raw = localStorage.getItem(NEW_DRAFT_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (draft?.form && typeof draft.form === "object") {
+          setForm((prev) => ({ ...prev, ...draft.form }));
+        }
+        if (Array.isArray(draft?.items) && draft.items.length > 0) {
+          setItems(draft.items);
+        }
+        if (draft?.visualOverrides && typeof draft.visualOverrides === "object") {
+          setVisualOverrides({
+            styles: draft.visualOverrides.styles ?? {},
+            groups: draft.visualOverrides.groups ?? [],
+          });
+        }
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Hidrata rascunho local de proposta EXISTENTE caso seja mais recente que o banco
+  useEffect(() => {
+    if (isNew || !existing) return;
     try {
-      const raw = localStorage.getItem(NEW_DRAFT_KEY);
+      const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
       if (!raw) return;
       const draft = JSON.parse(raw);
+      const draftAt = draft?.savedAt ? new Date(draft.savedAt).getTime() : 0;
+      const dbAt = (existing as any)?.updated_at ? new Date((existing as any).updated_at).getTime() : 0;
+      // Só restaura se o rascunho é mais novo que o último save no banco
+      if (draftAt <= dbAt + 1000) {
+        localStorage.removeItem(LOCAL_DRAFT_KEY);
+        return;
+      }
       if (draft?.form && typeof draft.form === "object") {
         setForm((prev) => ({ ...prev, ...draft.form }));
       }
@@ -358,16 +393,18 @@ export default function ProposalEditor() {
           groups: draft.visualOverrides.groups ?? [],
         });
       }
+      toast.info("Rascunho local recuperado · alterações não salvas restauradas");
     } catch { /* ignore */ }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing]);
 
-  // Espelha rascunho local em todo keystroke (debounced) para nunca perder
-  // — mesmo sem título e mesmo offline. Limpa quando a proposta é persistida.
+  // Espelha rascunho local em todo keystroke (debounced 250ms) para nunca perder
+  // — funciona offline, sem internet, com queda de luz. Limpa quando persiste.
   useEffect(() => {
-    if (!isNew) return;
+    if (!hydratedRef.current && !isNew) return;
     try {
       localStorage.setItem(
-        NEW_DRAFT_KEY,
+        LOCAL_DRAFT_KEY,
         JSON.stringify({
           form: debouncedForm,
           items: debouncedItems,
@@ -376,7 +413,7 @@ export default function ProposalEditor() {
         })
       );
     } catch { /* ignore quota */ }
-  }, [isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
+  }, [LOCAL_DRAFT_KEY, isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
 
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
@@ -656,7 +693,7 @@ export default function ProposalEditor() {
       } finally {
         isAutoSavingRef.current = false;
       }
-    }, 1500);
+    }, 600);
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -664,16 +701,58 @@ export default function ProposalEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedForm, debouncedItems, debouncedVisualOverrides]);
 
-  // Avisa antes de sair se ainda houver gravação em andamento
+  // Avisa antes de sair se ainda houver gravação em andamento · e força flush
+  // imediato (sem esperar debounce) quando a aba é escondida/fechada
   useEffect(() => {
+    const flushNow = () => {
+      // Cancela debounce pendente e tenta gravar AGORA · best-effort
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      const snapshot = JSON.stringify({
+        f: formRef.current,
+        i: itemsRef.current,
+        v: visualOverridesRef.current,
+      });
+      if (snapshot === lastAutoSavedSnapshotRef.current) return;
+      const hasContent =
+        (formRef.current.title && formRef.current.title.trim()) ||
+        (formRef.current.client_name && formRef.current.client_name.trim()) ||
+        (itemsRef.current && itemsRef.current.length > 0);
+      if (!hasContent) return;
+      if (saveMutation.isPending || isAutoSavingRef.current) return;
+      isAutoSavingRef.current = true;
+      setAutoSaveStatus("saving");
+      // Promise dispara, navegador pode fechar antes · localStorage cobre o gap
+      saveMutation
+        .mutateAsync()
+        .then(() => {
+          lastAutoSavedSnapshotRef.current = snapshot;
+          setLastSavedAt(new Date());
+          setAutoSaveStatus("saved");
+        })
+        .catch(() => setAutoSaveStatus("error"))
+        .finally(() => { isAutoSavingRef.current = false; });
+    };
+    const onVisibility = () => { if (document.visibilityState === "hidden") flushNow(); };
     const handler = (e: BeforeUnloadEvent) => {
-      if (autoSaveStatus === "saving") {
+      flushNow();
+      if (autoSaveStatus === "saving" || isAutoSavingRef.current) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    window.addEventListener("pagehide", flushNow);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      window.removeEventListener("pagehide", flushNow);
+      document.removeEventListener("visibilitychange", onVisibility);
+      // Ao desmontar (navegação SPA), também tenta flush
+      flushNow();
+    };
   }, [autoSaveStatus]);
 
   const addDest = () => {
