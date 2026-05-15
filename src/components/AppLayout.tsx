@@ -125,6 +125,7 @@ export default function AppLayout() {
         </Sheet>
 
         <WhatsAppStatusBanner />
+        <MegaFoneBanners />
 
         <a
           href="#main-content"
