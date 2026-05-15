@@ -127,16 +127,30 @@ Deno.serve(async (req) => {
 
     const candidates = [url, ...knownFallbackUrls(url)];
     let best: { doc: ScrapeDoc; images: string[] } | null = null;
+    let lastError: string | null = null;
     for (const candidate of candidates) {
-      const doc = await scrapeUrl(candidate, FIRECRAWL_API_KEY);
-      const images = extractImages(doc.html, doc.markdown, doc.links, candidate);
-      if (!best || doc.markdown.length + images.length * 300 > best.doc.markdown.length + best.images.length * 300) {
-        best = { doc, images };
+      try {
+        const doc = await scrapeUrl(candidate, FIRECRAWL_API_KEY);
+        const images = extractImages(doc.html, doc.markdown, doc.links, candidate);
+        if (!best || doc.markdown.length + images.length * 300 > best.doc.markdown.length + best.images.length * 300) {
+          best = { doc, images };
+        }
+        if (!isBlockedOrEmpty(doc.markdown, images)) break;
+      } catch (err) {
+        lastError = (err as Error).message;
+        console.warn("[scrape-url-for-product] candidate failed", candidate, lastError);
       }
-      if (!isBlockedOrEmpty(doc.markdown, images)) break;
     }
 
     if (!best || isBlockedOrEmpty(best.doc.markdown, best.images)) {
+      const msg = !best
+        ? (lastError || "Não foi possível ler a página")
+        : "A página bloqueou a leitura automática. Use prints desta tela ou tente um link público do hotel/anúncio.";
+      return new Response(JSON.stringify({ url, error: msg, blocked: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (false) {
       return new Response(JSON.stringify({
         url,
         error: "A página bloqueou a leitura automática. Use prints desta tela ou tente um link público do hotel/anúncio.",
