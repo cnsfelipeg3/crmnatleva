@@ -1244,10 +1244,21 @@ function PaymentPreview({ form }: { form: any }) {
     );
   }
 
-  const customInst = (form.payment_balance_custom_installments || []).filter((v: number) => Number.isFinite(v) && v > 0);
+  const customInstRaw = (form.payment_balance_custom_installments || []).filter((v: number) => Number.isFinite(v) && v > 0);
+
+  // Se o usuário definiu entrada + nº parcelas explicitamente, geramos as parcelas
+  // exatas (entrada + parcVal × N) pra que o preview mostre EXATAMENTE o que ele digitou.
+  const entryAmtNum = Number(form.payment_entry_amount) || 0;
+  const nParcNum = Math.max(1, Number(form.payment_balance_installments_max) || 1);
+  const balanceNum = Math.max(0, price - entryAmtNum);
+  const parcValExact = entryAmtNum > 0 && balanceNum > 0 ? Math.round((balanceNum / nParcNum) * 100) / 100 : 0;
+  const customInst = customInstRaw.length > 0
+    ? customInstRaw
+    : (parcValExact > 0 ? Array.from({ length: nParcNum }, () => parcValExact) : []);
 
   const plan = computeNatlevaPlan(price, form.departure_date || null, {
     entryPercent: Number(form.payment_entry_percent) || 30,
+    entryAmount: entryAmtNum > 0 ? entryAmtNum : undefined,
     daysBefore: Number(form.payment_days_before) || 20,
     currency: form.currency || "BRL",
     maxInstallments: Number(form.payment_balance_installments_max) || 12,
@@ -1278,6 +1289,7 @@ function PaymentPreview({ form }: { form: any }) {
           departureDate={form.departure_date || null}
           currency={form.currency || "BRL"}
           entryPercent={Number(form.payment_entry_percent) || 30}
+          entryAmount={entryAmtNum > 0 ? entryAmtNum : undefined}
           daysBefore={Number(form.payment_days_before) || 20}
           customInstallments={customInst.length > 0 ? customInst : undefined}
         />
