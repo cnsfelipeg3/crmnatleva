@@ -461,7 +461,7 @@ export default function MarketingTab(props: Props) {
             {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
             {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
             {scarcity && <Badge variant="destructive" className="gap-1"><Zap className="w-3 h-3" />{scarcity}</Badge>}
-            {(includes || []).slice(0, 3).map((i, idx) => (
+            {effectiveIncludes.slice(0, 3).map((i, idx) => (
               <Badge key={idx} variant="outline" className="font-normal">{i}</Badge>
             ))}
           </div>
