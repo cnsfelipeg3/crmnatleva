@@ -3805,6 +3805,7 @@ export type Database = {
           includes: Json
           installments_max: number | null
           installments_no_interest: number | null
+          internal_cost: number | null
           is_active: boolean
           is_promo: boolean
           lead_count: number
@@ -3865,6 +3866,7 @@ export type Database = {
           includes?: Json
           installments_max?: number | null
           installments_no_interest?: number | null
+          internal_cost?: number | null
           is_active?: boolean
           is_promo?: boolean
           lead_count?: number
@@ -3925,6 +3927,7 @@ export type Database = {
           includes?: Json
           installments_max?: number | null
           installments_no_interest?: number | null
+          internal_cost?: number | null
           is_active?: boolean
           is_promo?: boolean
           lead_count?: number

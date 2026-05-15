@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search, Plane, Image as ImageIcon, FileText, CreditCard, Users, Megaphone, Settings2, MapPin, Calendar } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search, Plane, Image as ImageIcon, FileText, CreditCard, Users, Megaphone, Settings2, MapPin, Calendar, Lock as LockIcon } from "lucide-react";
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
@@ -57,6 +57,7 @@ type ProductForm = {
   payment_balance_custom_installments: number[];
   payment_pix_discount_percent: string;
   payment_notes: string;
+  internal_cost: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
@@ -88,6 +89,7 @@ const empty: ProductForm = {
   payment_balance_custom_installments: [],
   payment_pix_discount_percent: "0",
   payment_notes: "",
+  internal_cost: "",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
@@ -346,6 +348,7 @@ export default function ProdutoEditor() {
             : [],
           payment_pix_discount_percent: (data.payment_terms?.pix_discount_percent ?? 0).toString(),
           payment_notes: data.payment_terms?.notes ?? "",
+          internal_cost: data.internal_cost != null ? String(data.internal_cost) : "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
@@ -411,6 +414,7 @@ export default function ProdutoEditor() {
         min_days_before_checkin: numOrNull(form.payment_days_before) ?? 20,
         notes: form.payment_notes || null,
       },
+      internal_cost: numOrNull(form.internal_cost),
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
@@ -1023,6 +1027,59 @@ export default function ProdutoEditor() {
                       </AccordionItem>
                     </Accordion>
 
+                    {/* Custo interno + lucro · NÃO aparece na proposta */}
+                    {(() => {
+                      const cost = Number(form.internal_cost) || 0;
+                      const isPP = (form.price_label || "").toLowerCase().includes("pessoa");
+                      const pax = Math.max(1, (Number(form.pax_adults) || 0) + (Number(form.pax_children) || 0));
+                      const totalRevenue = isPP ? total * pax : total;
+                      const profit = totalRevenue - cost;
+                      const margin = totalRevenue > 0 ? (profit / totalRevenue) * 100 : 0;
+                      const profitColor = profit > 0 ? "text-emerald-600 dark:text-emerald-400" : profit < 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground";
+                      return (
+                        <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+                          <div className="flex items-center gap-2 mb-3">
+                            <LockIcon className="w-3.5 h-3.5 text-amber-600" />
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Uso interno · não aparece na proposta</span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <Label className="text-sm font-semibold">Custo do pacote (R$)</Label>
+                              <Input
+                                type="number"
+                                inputMode="decimal"
+                                value={form.internal_cost}
+                                onChange={(e) => set("internal_cost", e.target.value)}
+                                placeholder="0"
+                                className="text-base font-semibold"
+                              />
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                Quanto a agência paga pra fornecer este pacote
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">Receita total</Label>
+                              <div className="h-10 px-3 rounded-md border border-border bg-background flex items-center text-base font-bold tabular-nums">
+                                {totalRevenue > 0 ? formatMoneyBR(totalRevenue, form.currency) : "—"}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {isPP ? `${pax} pax × ${formatMoneyBR(total, form.currency)}` : "Valor total do pacote"}
+                              </p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-semibold">Lucro estimado</Label>
+                              <div className={`h-10 px-3 rounded-md border border-border bg-background flex items-center text-base font-bold tabular-nums ${profitColor}`}>
+                                {totalRevenue > 0 || cost > 0 ? formatMoneyBR(profit, form.currency) : "—"}
+                              </div>
+                              <p className="text-[11px] text-muted-foreground mt-1">
+                                {totalRevenue > 0 && cost > 0 ? `Margem de ${margin.toFixed(1)}%` : "Receita · custo"}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                     <PaymentPreview form={form} />
                   </>
                 );
@@ -1240,10 +1297,21 @@ function PaymentPreview({ form }: { form: any }) {
     );
   }
 
-  const customInst = (form.payment_balance_custom_installments || []).filter((v: number) => Number.isFinite(v) && v > 0);
+  const customInstRaw = (form.payment_balance_custom_installments || []).filter((v: number) => Number.isFinite(v) && v > 0);
+
+  // Se o usuário definiu entrada + nº parcelas explicitamente, geramos as parcelas
+  // exatas (entrada + parcVal × N) pra que o preview mostre EXATAMENTE o que ele digitou.
+  const entryAmtNum = Number(form.payment_entry_amount) || 0;
+  const nParcNum = Math.max(1, Number(form.payment_balance_installments_max) || 1);
+  const balanceNum = Math.max(0, price - entryAmtNum);
+  const parcValExact = entryAmtNum > 0 && balanceNum > 0 ? Math.round((balanceNum / nParcNum) * 100) / 100 : 0;
+  const customInst = customInstRaw.length > 0
+    ? customInstRaw
+    : (parcValExact > 0 ? Array.from({ length: nParcNum }, () => parcValExact) : []);
 
   const plan = computeNatlevaPlan(price, form.departure_date || null, {
     entryPercent: Number(form.payment_entry_percent) || 30,
+    entryAmount: entryAmtNum > 0 ? entryAmtNum : undefined,
     daysBefore: Number(form.payment_days_before) || 20,
     currency: form.currency || "BRL",
     maxInstallments: Number(form.payment_balance_installments_max) || 12,
@@ -1274,6 +1342,7 @@ function PaymentPreview({ form }: { form: any }) {
           departureDate={form.departure_date || null}
           currency={form.currency || "BRL"}
           entryPercent={Number(form.payment_entry_percent) || 30}
+          entryAmount={entryAmtNum > 0 ? entryAmtNum : undefined}
           daysBefore={Number(form.payment_days_before) || 20}
           customInstallments={customInst.length > 0 ? customInst : undefined}
         />
