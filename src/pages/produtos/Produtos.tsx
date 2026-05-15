@@ -187,9 +187,10 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
   );
 }
 
-function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (next: boolean) => void }) {
+function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const isActive = p.is_active !== false;
   const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
   const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
@@ -197,6 +198,16 @@ function AdminProductCard({ p, onToggleActive }: { p: Product; onToggleActive: (
     : p.departure_date && p.return_date ? `${fmtDate(p.departure_date)}-${fmtDate(p.return_date)}`
     : p.departure_date ? `${fmtDate(p.departure_date)}` : null;
   const statusBadge = p.status === "draft" ? "secondary" : p.status === "paused" ? "outline" : "default";
+
+  // Lucro estimado · uso interno
+  const priceNum = Number(p.price_promo) || Number(p.price_from) || 0;
+  const isPP = (p.price_label || "").toLowerCase().includes("pessoa");
+  const paxCount = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+  const revenue = isPP ? priceNum * paxCount : priceNum;
+  const cost = Number(p.internal_cost) || 0;
+  const profit = revenue - cost;
+  const margin = revenue > 0 ? (profit / revenue) * 100 : 0;
+  const hasCost = cost > 0;
 
   async function handleToggleActive(next: boolean) {
     setSavingActive(true);
