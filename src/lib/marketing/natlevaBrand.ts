@@ -171,7 +171,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
           `   · Big Champagne figure: "${briefing.payment.entryLabel}"`,
           `   · Hunter sub line: "${briefing.payment.installmentsLabel}"`,
           briefing.payment.pixLabel ? `   · Eucalyptus tiny line: "${briefing.payment.pixLabel}"` : "",
-          `   · MANDATORY caption right next to the entry value (Eucalyptus, italic, ~10-11px): "${briefing.payment.paxLabel || "Valor total do pacote"}". This caption is REQUIRED on every art and must reflect the EXACT pax of the package · NEVER hardcode a different number of people.`,
+          `   · MANDATORY pax caption right next to the entry value (Eucalyptus, italic, ~10-11px), render EXACTLY this string character by character: "${briefing.payment.paxLabel || "Valor total do pacote"}". This caption is OBRIGATÓRIA em toda arte · jamais altere o número de adultos, jamais troque "adultos + crianças" por "pessoas", jamais arredonde, jamais omita "criança/crianças" quando houver. Se o briefing disser "2 adultos + 1 criança", a arte DEVE dizer "2 adultos + 1 criança" e NUNCA "3 pessoas".`,
           "   · DO NOT print the total amount anywhere on the artwork. The 'A partir de' caption is also forbidden if it shows the full sum.",
         ].filter(Boolean).join("\n")
       : "",
