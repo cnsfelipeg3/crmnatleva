@@ -224,7 +224,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
               Cadastrar com IA <Sparkles className="w-3.5 h-3.5 text-primary" />
             </h2>
             <p className="text-xs text-muted-foreground">
-              Escreva, grave áudio ou anexe até {MAX_IMAGES} prints · a IA interpreta destino, datas, preços, pagamento e busca fotos reais.
+              Escreva, grave áudio, anexe até {MAX_IMAGES} prints ou cole o link de um anúncio · arraste arquivos e URLs · a IA lê tudo, extrai dados e busca fotos reais.
             </p>
           </div>
           <Button size="sm" variant="default">Abrir chat</Button>
