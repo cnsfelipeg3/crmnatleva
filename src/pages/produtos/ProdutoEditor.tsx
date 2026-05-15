@@ -89,6 +89,7 @@ const empty: ProductForm = {
   payment_balance_custom_installments: [],
   payment_pix_discount_percent: "0",
   payment_notes: "",
+  internal_cost: "",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
