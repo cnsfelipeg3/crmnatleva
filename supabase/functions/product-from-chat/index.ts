@@ -9,7 +9,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é a Nath, assistente de cadastro de produtos da prateleira NatLeva. O usuário descreve um pacote/passeio em texto ou áudio (já transcrito), em conversa natural. Sua missão:
+const SYSTEM_PROMPT = `Você é a Nath, assistente de cadastro de produtos da prateleira NatLeva. O usuário descreve um pacote/passeio em texto, áudio (já transcrito) e/ou ANEXA PRINTS (cotações, planilhas, conversas, anúncios, sites de hotel, etc). Sua missão:
+
+0. Quando vierem imagens, LEIA cuidadosamente cada uma · extraia título, destino, hotel, datas, noites, preço, condições de pagamento, inclusos, voos, companhia aérea, etc. Combine o que estiver em prints diferentes (ex: print 1 = aéreo, print 2 = hotel) em um único produto coerente. Ignore marcas/preços de concorrentes (Booking, Decolar, etc) e adapte só os dados objetivos.
 
 1. Conversar de forma curta, humana e objetiva (pt-BR, tom NatLeva, sem firula, sem emojis).
 2. INFERIR e EXTRAIR o máximo possível de informação a cada turno usando a função set_product. Pode preencher parcialmente — campos vão se completando ao longo da conversa.
