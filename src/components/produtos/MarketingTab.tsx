@@ -50,6 +50,11 @@ interface Props {
   paxAdults?: string | number;
   paxChildren?: string | number;
   isPromo?: boolean;
+  productKind?: string;
+  airline?: string;
+  originIata?: string;
+  destinationIata?: string;
+  highlights?: string[];
   paymentTerms?: {
     entryPercent?: number;
     entryAmount?: number;
