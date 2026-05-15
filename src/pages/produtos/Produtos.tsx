@@ -230,6 +230,23 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
     });
   }
 
+  async function handleDelete() {
+    const ok = window.confirm(`Excluir "${p.title}" da prateleira?\n\nEssa ação não pode ser desfeita.`);
+    if (!ok) return;
+    setDeleting(true);
+    const { error } = await (supabase as any)
+      .from("experience_products")
+      .delete()
+      .eq("id", p.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: "Não rolou excluir", description: error.message, variant: "destructive" });
+      return;
+    }
+    onDelete();
+    toast({ title: "Produto excluído", description: "Removido da vitrine." });
+  }
+
   return (
     <Card className={cn("overflow-hidden flex flex-col p-0 transition-opacity", !isActive && "opacity-70")}>
       <div className="relative aspect-[16/10] bg-muted overflow-hidden">
