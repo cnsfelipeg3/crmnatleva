@@ -809,7 +809,16 @@ export default function ProdutoEditor() {
                           min={1}
                           max={24}
                           value={form.payment_balance_installments_max}
-                          onChange={(e) => set("payment_balance_installments_max", e.target.value)}
+                          onChange={(e) => {
+                            const newN = Math.max(1, Number(e.target.value) || 1);
+                            set("payment_balance_installments_max", e.target.value);
+                            // Se já existe parcVal informada manualmente, recalcula o total
+                            if (parcVal > 0 && entryAmt > 0) {
+                              const newTotal = Math.round((entryAmt + parcVal * newN) * 100) / 100;
+                              set("price_promo", String(newTotal));
+                              if (!form.price_from) set("price_from", String(newTotal));
+                            }
+                          }}
                           placeholder="12"
                           className="text-base font-semibold"
                         />
@@ -818,12 +827,28 @@ export default function ProdutoEditor() {
                         </p>
                       </div>
                       <div>
-                        <Label className="text-sm font-semibold">Valor de cada parcela</Label>
-                        <div className="h-10 px-3 rounded-md border border-border bg-muted/40 flex items-center text-base font-bold tabular-nums">
-                          {parcVal > 0 ? formatMoneyBR(parcVal, form.currency) : "—"}
-                        </div>
+                        <Label className="text-sm font-semibold">Valor de cada parcela (R$)</Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={parcVal > 0 ? String(Math.round(parcVal * 100) / 100) : ""}
+                          onChange={(e) => {
+                            const v = Number(e.target.value) || 0;
+                            // Calcula novo total = entrada + (parcela × nº parcelas)
+                            const newTotal = Math.round((entryAmt + v * nParc) * 100) / 100;
+                            set("price_promo", String(newTotal));
+                            if (!form.price_from) set("price_from", String(newTotal));
+                            if (newTotal > 0) {
+                              set("payment_entry_percent", String(Math.round((entryAmt / newTotal) * 100)));
+                            }
+                          }}
+                          placeholder="0"
+                          className="text-base font-semibold"
+                        />
                         <p className="text-[11px] text-muted-foreground mt-1">
-                          Calculado automaticamente · {nParc}x de {formatMoneyBR(parcVal, form.currency)}
+                          {entryAmt > 0
+                            ? `Total = entrada + ${nParc}× parcela · preenche automaticamente`
+                            : "Informe a entrada primeiro pra calcular o total"}
                         </p>
                       </div>
                     </div>
