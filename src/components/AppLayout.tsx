@@ -18,6 +18,7 @@ import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConne
 import { useFailedMessagesWatcher } from "@/hooks/useFailedMessagesWatcher";
 import { FailedMessagesBadge } from "@/components/header/FailedMessagesBadge";
 import TabBar from "@/components/tabs/TabBar";
+import MegaFoneBanners from "@/components/megafone/MegaFoneBanners";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
