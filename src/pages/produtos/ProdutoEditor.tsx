@@ -1039,7 +1039,7 @@ export default function ProdutoEditor() {
                       return (
                         <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
                           <div className="flex items-center gap-2 mb-3">
-                            <Lock className="w-3.5 h-3.5 text-amber-600" />
+                            <LockIcon className="w-3.5 h-3.5 text-amber-600" />
                             <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">Uso interno · não aparece na proposta</span>
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
