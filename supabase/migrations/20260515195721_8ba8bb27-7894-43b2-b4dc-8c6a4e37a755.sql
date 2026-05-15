@@ -1,0 +1,1 @@
+ALTER TABLE public.experience_products ADD COLUMN IF NOT EXISTS commission_per_sale numeric;
