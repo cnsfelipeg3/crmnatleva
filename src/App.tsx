@@ -103,6 +103,7 @@ const FechamentoFornecedores = lazy(() => import("@/pages/financeiro/FechamentoF
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const ConversasExcluidas = lazy(() => import("@/pages/admin/ConversasExcluidas"));
 const RegrasGlobaisAgentes = lazy(() => import("@/pages/admin/RegrasGlobaisAgentes"));
+const Megafone = lazy(() => import("@/pages/admin/Megafone"));
 
 // Portal Admin
 const PortalAdminDashboard = lazy(() => import("@/pages/portal-admin/PortalAdminDashboard"));
@@ -330,6 +331,7 @@ function AppRoutes() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/conversas-excluidas" element={<ConversasExcluidas />} />
           <Route path="/admin/regras-globais" element={<RegrasGlobaisAgentes />} />
+          <Route path="/admin/megafone" element={<Megafone />} />
 
           {/* Portal Admin */}
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />

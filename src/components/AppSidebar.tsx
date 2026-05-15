@@ -11,7 +11,7 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera, Megaphone,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -480,6 +480,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/admin/users", icon: Users, label: "Usuários & Permissões" },
               { to: "/admin/conversas-excluidas", icon: Inbox, label: "Conversas Excluídas" },
               { to: "/admin/regras-globais", icon: ScrollText, label: "Regras Globais Agentes" },
+              { to: "/admin/megafone", icon: Megaphone, label: "MegaFone" },
               { to: "/settings", icon: Settings, label: "Configurações" },
             ])}
           </>

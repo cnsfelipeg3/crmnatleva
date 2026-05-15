@@ -5046,6 +5046,60 @@ export type Database = {
         }
         Relationships: []
       }
+      megafone_banners: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dismissible: boolean
+          ends_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          link_label: string | null
+          link_url: string | null
+          message: string
+          position: string
+          starts_at: string
+          title: string
+          updated_at: string
+          variant: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dismissible?: boolean
+          ends_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          message: string
+          position?: string
+          starts_at?: string
+          title: string
+          updated_at?: string
+          variant?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dismissible?: boolean
+          ends_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          link_label?: string | null
+          link_url?: string | null
+          message?: string
+          position?: string
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          variant?: string
+        }
+        Relationships: []
+      }
       message_queue: {
         Row: {
           conversation_id: string | null

@@ -18,6 +18,7 @@ import { useWhatsAppConnection, formatTimeSince } from "@/hooks/useWhatsAppConne
 import { useFailedMessagesWatcher } from "@/hooks/useFailedMessagesWatcher";
 import { FailedMessagesBadge } from "@/components/header/FailedMessagesBadge";
 import TabBar from "@/components/tabs/TabBar";
+import MegaFoneBanners from "@/components/megafone/MegaFoneBanners";
 
 const IMMERSIVE_ROUTES: string[] = ["/operacao/inbox"];
 const GlobalSearch = lazy(() => import("./GlobalSearch"));
@@ -124,6 +125,7 @@ export default function AppLayout() {
         </Sheet>
 
         <WhatsAppStatusBanner />
+        <MegaFoneBanners />
 
         <a
           href="#main-content"
@@ -193,6 +195,7 @@ export default function AppLayout() {
           </header>
         )}
         <WhatsAppStatusBanner />
+        <MegaFoneBanners />
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-1.5 focus:rounded-md focus:bg-primary focus:text-primary-foreground focus:shadow-lg focus:text-sm"
