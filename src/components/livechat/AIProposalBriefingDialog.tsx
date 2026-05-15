@@ -443,6 +443,12 @@ export function AIProposalBriefingDialog({ open, onOpenChange, conversationDbId,
       });
       if (fnErr) throw fnErr;
 
+      if (data?.error) {
+        setError(data.message || "Falha ao analisar conversa.");
+        setStep("review");
+        return;
+      }
+
       if (data?.briefing && data.briefing.confidence !== "none") {
         const b = data.briefing as ProposalBriefing;
         setBriefing(b);

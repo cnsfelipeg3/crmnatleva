@@ -120,6 +120,14 @@ export function QuoteSummaryCard({ conversationDbId }: QuoteSummaryCardProps) {
       });
       if (error) throw error;
 
+      if (data?.error) {
+        if (forceRebuild) {
+          toast({ title: "Não foi possível analisar", description: data.message || "Falha ao acessar a IA.", variant: "destructive" });
+        }
+        setQuote(null);
+        return;
+      }
+
       const briefing = data?.briefing;
       if (briefing && briefing.confidence !== "none") {
         const activeCycle = briefing.detected_trip_cycles?.find((cycle: any) => cycle.is_current_demand);

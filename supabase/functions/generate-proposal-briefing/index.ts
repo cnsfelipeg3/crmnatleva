@@ -570,19 +570,30 @@ ${transcript}`;
     });
 
     if (!response.ok) {
+      // Retornamos 200 com payload estruturado para que o cliente do supabase-js
+      // não dispare exceção ("Edge function returned 402") e a UI possa exibir
+      // uma mensagem amigável ao usuário.
       if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit. Tente novamente em alguns segundos." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({
+          briefing: null,
+          error: "AI_RATE_LIMIT",
+          message: "Muitas requisições à IA. Tente novamente em alguns segundos.",
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA insuficientes." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(JSON.stringify({
+          briefing: null,
+          error: "AI_CREDITS_EXHAUSTED",
+          message: "Créditos de IA esgotados. Adicione créditos em Lovable Cloud para continuar usando a análise automática.",
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       const t = await response.text();
       console.error("AI error:", response.status, t);
-      throw new Error("AI gateway error");
+      return new Response(JSON.stringify({
+        briefing: null,
+        error: "AI_GATEWAY_ERROR",
+        message: "Falha temporária ao analisar a conversa. Tente novamente em instantes.",
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const data = await response.json();
