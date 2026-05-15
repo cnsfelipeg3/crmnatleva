@@ -79,6 +79,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
         title: data.title || "",
         markdown: (data.markdown || "").trim(),
         images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+        structured: data.structured && typeof data.structured === "object" ? data.structured : null,
       };
       setUrlPreviews((cur) =>
         cur.some((p) => p.url === url)
