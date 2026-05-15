@@ -27,7 +27,7 @@ const SYMBOL: Record<string, string> = { BRL: "R$", USD: "US$", EUR: "€" };
 
 export function formatMoneyBR(v: number, currency = "BRL") {
   const s = SYMBOL[currency] || "R$";
-  return `${s} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+  return `${s} ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 export function computeNatlevaPlan(
