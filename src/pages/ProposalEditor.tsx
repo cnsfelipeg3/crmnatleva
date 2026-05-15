@@ -339,16 +339,48 @@ export default function ProposalEditor() {
     }
   }, [isNew, existing, existingItems]);
 
-  // ── Recuperação de rascunho local para NOVA proposta ──────────────────
+  // ── Recuperação de rascunho local (NOVA ou EXISTENTE) ────────────────
   // Hidrata automaticamente o que o usuário tinha preenchido antes de
-  // fechar/voltar/recarregar (mesmo sem título). Roda apenas no mount.
+  // fechar/voltar/recarregar. Para propostas existentes, só aplica se o
+  // rascunho for mais novo que o updated_at do banco (evita sobrescrever
+  // alterações vindas de outro lugar).
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isNew) return;
+    if (isNew) {
+      try {
+        const raw = localStorage.getItem(NEW_DRAFT_KEY);
+        if (!raw) return;
+        const draft = JSON.parse(raw);
+        if (draft?.form && typeof draft.form === "object") {
+          setForm((prev) => ({ ...prev, ...draft.form }));
+        }
+        if (Array.isArray(draft?.items) && draft.items.length > 0) {
+          setItems(draft.items);
+        }
+        if (draft?.visualOverrides && typeof draft.visualOverrides === "object") {
+          setVisualOverrides({
+            styles: draft.visualOverrides.styles ?? {},
+            groups: draft.visualOverrides.groups ?? [],
+          });
+        }
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  // Hidrata rascunho local de proposta EXISTENTE caso seja mais recente que o banco
+  useEffect(() => {
+    if (isNew || !existing) return;
     try {
-      const raw = localStorage.getItem(NEW_DRAFT_KEY);
+      const raw = localStorage.getItem(LOCAL_DRAFT_KEY);
       if (!raw) return;
       const draft = JSON.parse(raw);
+      const draftAt = draft?.savedAt ? new Date(draft.savedAt).getTime() : 0;
+      const dbAt = (existing as any)?.updated_at ? new Date((existing as any).updated_at).getTime() : 0;
+      // Só restaura se o rascunho é mais novo que o último save no banco
+      if (draftAt <= dbAt + 1000) {
+        localStorage.removeItem(LOCAL_DRAFT_KEY);
+        return;
+      }
       if (draft?.form && typeof draft.form === "object") {
         setForm((prev) => ({ ...prev, ...draft.form }));
       }
@@ -361,16 +393,18 @@ export default function ProposalEditor() {
           groups: draft.visualOverrides.groups ?? [],
         });
       }
+      toast.info("Rascunho local recuperado · alterações não salvas restauradas");
     } catch { /* ignore */ }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existing]);
 
-  // Espelha rascunho local em todo keystroke (debounced) para nunca perder
-  // — mesmo sem título e mesmo offline. Limpa quando a proposta é persistida.
+  // Espelha rascunho local em todo keystroke (debounced 250ms) para nunca perder
+  // — funciona offline, sem internet, com queda de luz. Limpa quando persiste.
   useEffect(() => {
-    if (!isNew) return;
+    if (!hydratedRef.current && !isNew) return;
     try {
       localStorage.setItem(
-        NEW_DRAFT_KEY,
+        LOCAL_DRAFT_KEY,
         JSON.stringify({
           form: debouncedForm,
           items: debouncedItems,
@@ -379,7 +413,7 @@ export default function ProposalEditor() {
         })
       );
     } catch { /* ignore quota */ }
-  }, [isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
+  }, [LOCAL_DRAFT_KEY, isNew, debouncedForm, debouncedItems, debouncedVisualOverrides]);
 
   // Auto-populate items from AI proposal_structure
   useEffect(() => {
