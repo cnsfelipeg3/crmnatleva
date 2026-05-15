@@ -51,37 +51,67 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const urlPreviewsRef = useRef<UrlPreview[]>([]);
   const URL_RE = /\bhttps?:\/\/[^\s<>"')]+/gi;
+
+  useEffect(() => {
+    urlPreviewsRef.current = urlPreviews;
+  }, [urlPreviews]);
 
   // Auto-scrape de URLs: assim que o usuário cola/digita uma URL, a gente
   // dispara o scraping e mostra o preview do markdown + imagens antes de enviar.
-  const fetchPreview = async (url: string) => {
+  const fetchPreview = async (url: string): Promise<UrlPreview | null> => {
+    const existing = urlPreviewsRef.current.find((p) => p.url === url);
+    if (existing) return existing;
     setUrlPreviews((cur) => {
       if (cur.some((p) => p.url === url)) return cur;
       return [...cur, { url, status: "loading" }];
     });
+    setScrapingUrl(true);
     try {
       const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url } });
       if (error) throw error;
       if (!data || data.error) throw new Error(data?.error || "Falha");
+      const nextPreview: UrlPreview = {
+        url,
+        status: "ready",
+        title: data.title || "",
+        markdown: (data.markdown || "").trim(),
+        images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+      };
       setUrlPreviews((cur) =>
-        cur.map((p) =>
-          p.url === url
-            ? {
-                ...p,
-                status: "ready",
-                title: data.title || "",
-                markdown: (data.markdown || "").trim(),
-                images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
-              }
-            : p,
-        ),
+        cur.some((p) => p.url === url)
+          ? cur.map((p) => (p.url === url ? nextPreview : p))
+          : [...cur, nextPreview],
       );
+      urlPreviewsRef.current = urlPreviewsRef.current.some((p) => p.url === url)
+        ? urlPreviewsRef.current.map((p) => (p.url === url ? nextPreview : p))
+        : [...urlPreviewsRef.current, nextPreview];
+      return nextPreview;
     } catch (e: any) {
+      const failedPreview: UrlPreview = { url, status: "error", error: e?.message || "Falha ao ler" };
       setUrlPreviews((cur) =>
-        cur.map((p) => (p.url === url ? { ...p, status: "error", error: e?.message || "Falha ao ler" } : p)),
+        cur.some((p) => p.url === url)
+          ? cur.map((p) => (p.url === url ? failedPreview : p))
+          : [...cur, failedPreview],
       );
+      urlPreviewsRef.current = urlPreviewsRef.current.some((p) => p.url === url)
+        ? urlPreviewsRef.current.map((p) => (p.url === url ? failedPreview : p))
+        : [...urlPreviewsRef.current, failedPreview];
+      return failedPreview;
+    } finally {
+      setScrapingUrl(false);
     }
+  };
+
+  const waitForPreview = async (url: string) => {
+    const start = Date.now();
+    while (Date.now() - start < 30000) {
+      const preview = urlPreviewsRef.current.find((p) => p.url === url);
+      if (preview && preview.status !== "loading") return preview;
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    return urlPreviewsRef.current.find((p) => p.url === url) || null;
   };
 
   // Detecta novas URLs no input com debounce.
