@@ -8,6 +8,14 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type ChatMsg = { role: "user" | "assistant"; content: string; images?: string[] };
+type UrlPreview = {
+  url: string;
+  status: "loading" | "ready" | "error";
+  title?: string;
+  markdown?: string;
+  images?: string[];
+  error?: string;
+};
 
 interface Props {
   /** Rascunho atual já normalizado para o JSON do produto. */
@@ -38,10 +46,56 @@ export default function ProductAIChat({ current, onApply }: Props) {
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const [scrapingUrl, setScrapingUrl] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [urlPreviews, setUrlPreviews] = useState<UrlPreview[]>([]);
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const URL_RE = /\bhttps?:\/\/[^\s<>"')]+/gi;
+
+  // Auto-scrape de URLs: assim que o usuário cola/digita uma URL, a gente
+  // dispara o scraping e mostra o preview do markdown + imagens antes de enviar.
+  const fetchPreview = async (url: string) => {
+    setUrlPreviews((cur) => {
+      if (cur.some((p) => p.url === url)) return cur;
+      return [...cur, { url, status: "loading" }];
+    });
+    try {
+      const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url } });
+      if (error) throw error;
+      if (!data || data.error) throw new Error(data?.error || "Falha");
+      setUrlPreviews((cur) =>
+        cur.map((p) =>
+          p.url === url
+            ? {
+                ...p,
+                status: "ready",
+                title: data.title || "",
+                markdown: (data.markdown || "").trim(),
+                images: Array.isArray(data.images) ? data.images.slice(0, 24) : [],
+              }
+            : p,
+        ),
+      );
+    } catch (e: any) {
+      setUrlPreviews((cur) =>
+        cur.map((p) => (p.url === url ? { ...p, status: "error", error: e?.message || "Falha ao ler" } : p)),
+      );
+    }
+  };
+
+  // Detecta novas URLs no input com debounce.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const found = Array.from(new Set((input.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, ""))));
+      const seen = new Set(urlPreviews.map((p) => p.url));
+      for (const u of found.slice(0, 3)) if (!seen.has(u)) fetchPreview(u);
+    }, 600);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [input]);
+
+  const removePreview = (url: string) => setUrlPreviews((cur) => cur.filter((p) => p.url !== url));
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -84,36 +138,47 @@ export default function ProductAIChat({ current, onApply }: Props) {
     const hasImgs = images.length > 0;
     if ((!hasText && !hasImgs) || busy) return;
 
-    // 1) Detecta URLs no texto e faz scraping antes de enviar pra IA.
-    const urlRe = /\bhttps?:\/\/[^\s<>"')]+/gi;
-    const foundUrls = Array.from(new Set(text.match(urlRe) || []));
-    let enrichedText = text.trim();
-    let scrapedImages: string[] = [];
+    // 1) Garante que todas as URLs do texto tenham preview pronto. Se o
+    // usuário acabou de colar e ainda está carregando, espera concluir.
+    const foundUrls = Array.from(new Set((text.match(URL_RE) || []).map((u) => u.replace(/[.,;]+$/, "")))).slice(0, 3);
+    for (const u of foundUrls) {
+      if (!urlPreviews.some((p) => p.url === u)) {
+        await fetchPreview(u);
+      }
+    }
+    // Aguarda previews em loading (até 30s)
     if (foundUrls.length) {
-      setScrapingUrl(true);
-      const t = toast.loading(`Lendo ${foundUrls.length === 1 ? "página" : `${foundUrls.length} páginas`}...`);
-      try {
-        for (const u of foundUrls.slice(0, 3)) {
-          try {
-            const { data, error } = await supabase.functions.invoke("scrape-url-for-product", { body: { url: u } });
-            if (error || !data || data.error) continue;
-            const md = (data.markdown || "").trim();
-            const title = data.title || "";
-            if (md) {
-              enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${u}\nTítulo: ${title}\n\n${md}`;
-            }
-            if (Array.isArray(data.images)) scrapedImages.push(...data.images.slice(0, 12));
-          } catch {/* segue */}
-        }
-        toast.dismiss(t);
-      } catch {
-        toast.dismiss(t);
-      } finally {
-        setScrapingUrl(false);
+      const start = Date.now();
+      while (Date.now() - start < 30000) {
+        const stillLoading = foundUrls.some((u) => {
+          const p = urlPreviews.find((x) => x.url === u);
+          return p?.status === "loading";
+        });
+        if (!stillLoading) break;
+        await new Promise((r) => setTimeout(r, 400));
       }
-      if (scrapedImages.length) {
-        enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+    }
+
+    // 2) Monta o conteúdo enriquecido a partir do cache de previews.
+    const previewsForUrls = foundUrls
+      .map((u) => urlPreviews.find((p) => p.url === u))
+      .filter((p): p is UrlPreview => !!p && p.status === "ready");
+
+    let enrichedText = text.trim();
+    const scrapedImages: string[] = [];
+    for (const p of previewsForUrls) {
+      if (p.markdown) {
+        enrichedText += `\n\n=== CONTEÚDO EXTRAÍDO DA PÁGINA ===\nURL: ${p.url}\nTítulo: ${p.title || ""}\n\n${p.markdown}`;
       }
+      if (p.images?.length) scrapedImages.push(...p.images.slice(0, 12));
+    }
+    if (scrapedImages.length) {
+      enrichedText += `\n\n=== IMAGENS CANDIDATAS DA PÁGINA (use as melhores como capa/galeria) ===\n${Array.from(new Set(scrapedImages)).join("\n")}`;
+    }
+
+    if (foundUrls.length && !previewsForUrls.length) {
+      toast.error("Não consegui ler a página · tente novamente ou use prints");
+      return;
     }
 
     const fallbackText = hasText
@@ -133,6 +198,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
     setMessages(next);
     setInput("");
     setPendingImages([]);
+    setUrlPreviews([]);
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("product-from-chat", {
@@ -320,6 +386,69 @@ export default function ProductAIChat({ current, onApply }: Props) {
           </div>
         )}
       </div>
+
+      {urlPreviews.length > 0 && (
+        <div className="px-3 pt-2 pb-2 border-t border-primary/15 bg-background/40 space-y-2">
+          {urlPreviews.map((p) => (
+            <div key={p.url} className="rounded-lg border border-border bg-background overflow-hidden">
+              <div className="flex items-start gap-2 px-3 py-2 border-b border-border bg-muted/30">
+                <LinkIcon className="w-3.5 h-3.5 mt-0.5 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-semibold truncate">{p.title || p.url}</div>
+                  <div className="text-[10px] text-muted-foreground truncate">{p.url}</div>
+                </div>
+                <span className="text-[10px] px-1.5 py-0.5 rounded shrink-0">
+                  {p.status === "loading" && (
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin" /> lendo
+                    </span>
+                  )}
+                  {p.status === "ready" && (
+                    <span className="text-primary font-medium">
+                      {p.markdown ? `${Math.round(p.markdown.length / 100) / 10}k chars` : "ok"} · {p.images?.length || 0} fotos
+                    </span>
+                  )}
+                  {p.status === "error" && <span className="text-destructive">erro</span>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => removePreview(p.url)}
+                  className="text-muted-foreground hover:text-destructive shrink-0"
+                  aria-label="Remover preview"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {p.status === "ready" && (
+                <div className="p-2 space-y-2">
+                  {p.images && p.images.length > 0 && (
+                    <div className="flex gap-1 overflow-x-auto pb-1">
+                      {p.images.slice(0, 12).map((src, i) => (
+                        <img
+                          key={i}
+                          src={src}
+                          alt=""
+                          loading="lazy"
+                          className="w-14 h-14 rounded object-cover border border-border shrink-0"
+                          onError={(e) => ((e.currentTarget.style.display = "none"))}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {p.markdown && (
+                    <div className="max-h-32 overflow-y-auto text-[11px] leading-snug text-muted-foreground whitespace-pre-wrap font-mono bg-muted/20 rounded p-2 border border-border">
+                      {p.markdown.slice(0, 800)}{p.markdown.length > 800 ? "..." : ""}
+                    </div>
+                  )}
+                </div>
+              )}
+              {p.status === "error" && (
+                <div className="p-2 text-[11px] text-destructive">{p.error || "Falha ao ler"}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {pendingImages.length > 0 && (
         <div className="px-3 pt-2 pb-1 border-t border-primary/15 bg-background/40">
