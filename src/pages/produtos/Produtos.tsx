@@ -177,11 +177,11 @@ export default function Produtos() {
   );
 }
 
-function KPI({ label, value }: { label: string; value: number }) {
+function KPI({ label, value, highlight }: { label: string; value: number | string; highlight?: boolean }) {
   return (
-    <div className="bg-white/10 border border-white/15 rounded-lg px-4 py-3 backdrop-blur">
-      <div className="text-[11px] text-white/60 uppercase tracking-wide">{label}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
+    <div className={cn("rounded-lg px-4 py-3 backdrop-blur border", highlight ? "bg-amber-500/15 border-amber-300/30" : "bg-white/10 border-white/15")}>
+      <div className={cn("text-[11px] uppercase tracking-wide", highlight ? "text-amber-200" : "text-white/60")}>{label}</div>
+      <div className={cn("font-bold text-white", typeof value === "string" ? "text-lg" : "text-2xl")}>{value}</div>
     </div>
   );
 }
