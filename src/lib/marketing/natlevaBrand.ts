@@ -201,12 +201,18 @@ export function autoDeriveIncludes(input: AutoIncludesInput): string[] {
   }
 
   // 4) Highlights cadastrados (até 2) · evita repetir o que já entrou
+  // Dedup semântico · qualquer highlight que comece com "N noites" é descartado
+  // se já existir uma linha de hospedagem com noites (item 1).
+  const hasNightsLine = out.some((s) => /^\d+\s*noites?\b/i.test(s));
   const lower = out.map((s) => s.toLowerCase());
   for (const h of (input.highlights || []).slice(0, 4)) {
     const t = h.trim();
     if (!t) continue;
-    if (lower.some((x) => x.includes(t.toLowerCase()) || t.toLowerCase().includes(x))) continue;
+    if (hasNightsLine && /^\d+\s*noites?\b/i.test(t)) continue;
+    const tl = t.toLowerCase();
+    if (lower.some((x) => x.includes(tl) || tl.includes(x))) continue;
     out.push(t);
+    lower.push(tl);
     if (out.length >= 4) break;
   }
 
