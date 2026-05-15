@@ -58,6 +58,7 @@ type ProductForm = {
   payment_pix_discount_percent: string;
   payment_notes: string;
   internal_cost: string;
+  commission_per_sale: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
