@@ -701,16 +701,58 @@ export default function ProposalEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedForm, debouncedItems, debouncedVisualOverrides]);
 
-  // Avisa antes de sair se ainda houver gravação em andamento
+  // Avisa antes de sair se ainda houver gravação em andamento · e força flush
+  // imediato (sem esperar debounce) quando a aba é escondida/fechada
   useEffect(() => {
+    const flushNow = () => {
+      // Cancela debounce pendente e tenta gravar AGORA · best-effort
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+      const snapshot = JSON.stringify({
+        f: formRef.current,
+        i: itemsRef.current,
+        v: visualOverridesRef.current,
+      });
+      if (snapshot === lastAutoSavedSnapshotRef.current) return;
+      const hasContent =
+        (formRef.current.title && formRef.current.title.trim()) ||
+        (formRef.current.client_name && formRef.current.client_name.trim()) ||
+        (itemsRef.current && itemsRef.current.length > 0);
+      if (!hasContent) return;
+      if (saveMutation.isPending || isAutoSavingRef.current) return;
+      isAutoSavingRef.current = true;
+      setAutoSaveStatus("saving");
+      // Promise dispara, navegador pode fechar antes · localStorage cobre o gap
+      saveMutation
+        .mutateAsync()
+        .then(() => {
+          lastAutoSavedSnapshotRef.current = snapshot;
+          setLastSavedAt(new Date());
+          setAutoSaveStatus("saved");
+        })
+        .catch(() => setAutoSaveStatus("error"))
+        .finally(() => { isAutoSavingRef.current = false; });
+    };
+    const onVisibility = () => { if (document.visibilityState === "hidden") flushNow(); };
     const handler = (e: BeforeUnloadEvent) => {
-      if (autoSaveStatus === "saving") {
+      flushNow();
+      if (autoSaveStatus === "saving" || isAutoSavingRef.current) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
+    window.addEventListener("pagehide", flushNow);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("beforeunload", handler);
+      window.removeEventListener("pagehide", flushNow);
+      document.removeEventListener("visibilitychange", onVisibility);
+      // Ao desmontar (navegação SPA), também tenta flush
+      flushNow();
+    };
   }, [autoSaveStatus]);
 
   const addDest = () => {
