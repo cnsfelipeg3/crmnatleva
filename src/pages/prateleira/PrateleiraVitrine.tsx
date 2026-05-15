@@ -40,6 +40,8 @@ function toRowItem(p: Product): RowItem {
     gallery: Array.isArray(p.gallery) ? p.gallery : null,
     nights: p.nights,
     hotelName: p.hotel_name,
+    paxAdults: p.pax_adults,
+    paxChildren: p.pax_children,
   };
 }
 
