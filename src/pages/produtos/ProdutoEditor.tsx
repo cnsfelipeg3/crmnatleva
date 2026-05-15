@@ -1098,6 +1098,11 @@ export default function ProdutoEditor() {
             paxAdults={form.pax_adults}
             paxChildren={form.pax_children}
             isPromo={form.is_promo}
+            productKind={form.product_kind}
+            airline={form.airline}
+            originIata={form.origin_iata}
+            destinationIata={form.destination_iata}
+            highlights={form.highlights.split("\n").map((s) => s.trim()).filter(Boolean)}
             paymentTerms={{
               entryPercent: Number(form.payment_entry_percent) || 30,
               entryAmount: Number(form.payment_entry_amount) || undefined,
