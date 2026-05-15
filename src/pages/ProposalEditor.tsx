@@ -693,7 +693,7 @@ export default function ProposalEditor() {
       } finally {
         isAutoSavingRef.current = false;
       }
-    }, 1500);
+    }, 600);
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
