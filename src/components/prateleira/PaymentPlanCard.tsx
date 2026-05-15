@@ -1,5 +1,5 @@
 import { CheckCircle2, CreditCard, FileText, CalendarClock, Wallet } from "lucide-react";
-import { computeNatlevaPlan, formatMoneyBR, formatPayoffDate } from "@/lib/prateleira/payment-plan";
+import { computeNatlevaPlan, formatMoneyBR, formatPayoffDate, paymentBalanceLabel } from "@/lib/prateleira/payment-plan";
 
 type Props = {
   price: number | null | undefined;
@@ -12,14 +12,19 @@ type Props = {
   paxMin?: number | null;
   paxMax?: number | null;
   customInstallments?: number[];
+  maxInstallments?: number;
+  minInstallment?: number;
+  balanceMethod?: string | null;
+  balanceInterestPercent?: number | string | null;
 };
 
-export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax, customInstallments }: Props) {
-  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency, customInstallments });
+export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax, customInstallments, maxInstallments, minInstallment, balanceMethod, balanceInterestPercent }: Props) {
+  const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency, maxInstallments, minInstallment, customInstallments });
   if (!plan) return null;
 
   const longInstallments = plan.installments >= 8;
   const balancePercent = 100 - plan.entryPercent;
+  const balanceLabel = paymentBalanceLabel(balanceMethod || "boleto", balanceInterestPercent);
 
   const paxLabel = (() => {
     if (!paxMin && !paxMax) return null;
@@ -30,8 +35,8 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
   })();
 
   const sellingCopy = longInstallments
-    ? "Quanto antes você fecha, mais a gente dilui o saldo no boleto · parcela menor, viagem mais leve no seu mês."
-    : "Não precisa de cartão pra viajar. Entrada à vista garante a reserva e o saldo vai no boleto, sem juros, ajustado pro seu embarque.";
+    ? `Quanto antes você fecha, mais a gente dilui o saldo · ${balanceLabel}, viagem mais leve no seu mês.`
+    : `Entrada à vista garante a reserva e o saldo segue ${balanceLabel}, ajustado pro seu embarque.`;
 
   return (
     <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
@@ -57,7 +62,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           <span className="font-bold tabular-nums">{plan.installments}x</span>
           <span className="text-muted-foreground"> de </span>
           <span className="font-bold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
-          <span className="text-muted-foreground"> sem juros</span>
+          <span className="text-muted-foreground"> {balanceLabel}</span>
         </div>
       </div>
 
@@ -101,7 +106,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">
-              Saldo · boleto sem juros
+              Saldo · {balanceLabel}
             </div>
             <div className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap flex-wrap">
               <span className="text-[22px] sm:text-[24px] font-bold text-foreground tabular-nums leading-[1.1]">
@@ -158,7 +163,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           <ul className="space-y-1.5">
             {[
               "Sem cartão também viaja · entrada no PIX já garante a reserva",
-              "Boleto sem juros · você paga só o que combinou",
+              `${balanceLabel.charAt(0).toUpperCase()}${balanceLabel.slice(1)} · você paga só o que combinou`,
               "Reservou cedo, parcelou em mais vezes · parcela cabe no mês",
             ].map((t) => (
               <li key={t} className="flex items-start gap-1.5 text-[11px] text-foreground/75 leading-relaxed">

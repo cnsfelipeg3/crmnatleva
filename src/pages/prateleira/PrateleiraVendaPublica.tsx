@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { MapPin, Calendar, Check, X, Plane, Hotel, Star, CreditCard, Sparkles, ArrowLeft, Share2, Images } from "lucide-react";
 import { motion } from "framer-motion";
 import PrateleiraEmailGate from "@/components/prateleira/PrateleiraEmailGate";
-import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
+import { computeNatlevaPlan, formatMoneyBR, paymentBalanceLabel, paymentPlanOptionsFromTerms } from "@/lib/prateleira/payment-plan";
 import { buildWhatsAppLink } from "@/components/ui/phone-input";
 import { resolveAgencyWhatsApp, DEFAULT_AGENCY_WHATSAPP } from "@/lib/natleva/whatsapp";
 import CinematicHero from "@/components/prateleira/CinematicHero";
@@ -513,19 +513,18 @@ export default function PrateleiraVendaPublica() {
         )}
         {(() => {
           const pt = (p.payment_terms ?? {}) as any;
-          const mobilePlan = computeNatlevaPlan(p.price_promo ?? p.price_from, p.departure_date, {
-            entryPercent: typeof pt.entry_percent === "number" ? pt.entry_percent : 30,
-            entryAmount: typeof pt.entry_amount === "number" && pt.entry_amount > 0 ? pt.entry_amount : undefined,
-            daysBefore: typeof pt.min_days_before_checkin === "number" ? pt.min_days_before_checkin : 20,
+          const mobilePlan = computeNatlevaPlan(p.price_promo ?? p.price_from, p.departure_date, paymentPlanOptionsFromTerms(pt, {
             currency: p.currency || "BRL",
-          });
+            maxInstallments: p.installments_max,
+          }));
+          const balanceLabel = paymentBalanceLabel(pt.balance_method || "boleto", pt.balance_interest_percent);
           return (
             <div className="flex items-center gap-3 p-3">
               <div className="flex-1 min-w-0">
                 {mobilePlan ? (
                   <>
                     <div className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground font-semibold leading-none">
-                      Boleto sem juros
+                      {balanceLabel}
                     </div>
                     <div className="text-base sm:text-lg font-bold tabular-nums leading-tight mt-0.5 truncate">
                       {mobilePlan.installments}x de {formatMoneyBR(mobilePlan.installmentAmount, mobilePlan.currency)}

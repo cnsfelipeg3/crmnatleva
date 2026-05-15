@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import ProductPreviewModal, { type PreviewItem } from "./ProductPreviewModal";
 import SmartImage from "./SmartImage";
 import { DEFAULT_CARD_SIZES } from "@/lib/imageOptimizer";
-import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
+import { computeNatlevaPlan, formatMoneyBR, paymentBalanceLabel, paymentPlanOptionsFromTerms } from "@/lib/prateleira/payment-plan";
 
 export type RowItem = {
   id: string;
@@ -30,6 +30,8 @@ export type RowItem = {
   hotelName?: string | null;
   paxAdults?: number | null;
   paxChildren?: number | null;
+  paymentTerms?: Record<string, unknown> | null;
+  installmentsMax?: number | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
@@ -58,7 +60,12 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
   const promo = money(item.pricePromo, item.currency ?? "BRL");
   const full = money(item.priceFrom, item.currency ?? "BRL");
   const basePrice = item.pricePromo ?? item.priceFrom ?? null;
-  const plan = computeNatlevaPlan(basePrice, item.departureDate, { currency: item.currency ?? "BRL" });
+  const pt = item.paymentTerms ?? {};
+  const plan = computeNatlevaPlan(basePrice, item.departureDate, paymentPlanOptionsFromTerms(pt, {
+    currency: item.currency ?? "BRL",
+    maxInstallments: item.installmentsMax,
+  }));
+  const balanceLabel = paymentBalanceLabel(typeof pt.balance_method === "string" ? pt.balance_method : "boleto", pt.balance_interest_percent as number | string | null | undefined);
   const adults = Number(item.paxAdults || 0);
   const children = Number(item.paxChildren || 0);
   const paxLabel = adults > 0 || children > 0
@@ -158,7 +165,7 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
                       <div className="text-[10.5px] text-white/80 leading-tight mt-0.5">
                         + <span className="font-semibold tabular-nums">{plan.installments}x</span> de{" "}
                         <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
-                        <span className="text-white/55"> no boleto</span>
+                        <span className="text-white/55"> {balanceLabel}</span>
                       </div>
                       {paxLabel && (
                         <div className="text-[9.5px] text-white/55 leading-tight mt-1 line-clamp-1">
