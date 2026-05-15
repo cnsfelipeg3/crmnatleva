@@ -35,8 +35,8 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
   })();
 
   const sellingCopy = longInstallments
-    ? "Quanto antes você fecha, mais a gente dilui o saldo no boleto · parcela menor, viagem mais leve no seu mês."
-    : "Não precisa de cartão pra viajar. Entrada à vista garante a reserva e o saldo vai no boleto, sem juros, ajustado pro seu embarque.";
+    ? `Quanto antes você fecha, mais a gente dilui o saldo · ${balanceLabel}, viagem mais leve no seu mês.`
+    : `Entrada à vista garante a reserva e o saldo segue ${balanceLabel}, ajustado pro seu embarque.`;
 
   return (
     <div className="rounded-xl border border-border/70 bg-card overflow-hidden">
@@ -163,7 +163,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
           <ul className="space-y-1.5">
             {[
               "Sem cartão também viaja · entrada no PIX já garante a reserva",
-              "Boleto sem juros · você paga só o que combinou",
+              `${balanceLabel.charAt(0).toUpperCase()}${balanceLabel.slice(1)} · você paga só o que combinou`,
               "Reservou cedo, parcelou em mais vezes · parcela cabe no mês",
             ].map((t) => (
               <li key={t} className="flex items-start gap-1.5 text-[11px] text-foreground/75 leading-relaxed">
