@@ -136,7 +136,7 @@ export default function ProductAIChat({ current, onApply }: Props) {
     setBusy(true);
     try {
       const { data, error } = await supabase.functions.invoke("product-from-chat", {
-        body: { messages: next, current },
+        body: { messages: apiMessages, current },
       });
       if (error) throw error;
       if (data?.fallback) {
