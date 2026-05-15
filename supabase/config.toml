@@ -172,6 +172,9 @@ verify_jwt = false  # Proxy de imagens públicas
 [functions.extract-from-url]
 verify_jwt = true  # paid Firecrawl + AI · só usuário logado
 
+[functions.scrape-url-for-product]
+verify_jwt = true  # paid Firecrawl · só usuário logado
+
 [functions.execute-flow]
 verify_jwt = true  # envia WhatsApp + muta CRM · só usuário logado
 
