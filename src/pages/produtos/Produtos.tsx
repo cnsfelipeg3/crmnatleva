@@ -297,7 +297,7 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
                       <span className="font-semibold tabular-nums">+ {plan.installments}x</span>
                       <span className="text-muted-foreground"> de </span>
                       <span className="font-semibold tabular-nums">{formatMoneyBR(plan.installmentAmount, plan.currency)}</span>
-                      <span className="text-muted-foreground"> sem juros</span>
+                      <span className="text-muted-foreground"> sem juros{(pt.balance_method || "boleto") === "boleto" ? " no boleto" : ""}</span>
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
                       Total {formatMoneyBR(plan.total, plan.currency)}
