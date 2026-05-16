@@ -119,6 +119,10 @@ const FLIGHT_SCHEMA = {
                 terminal: { type: "string", description: "Terminal de embarque" },
                 arrival_terminal: { type: "string", description: "Terminal de desembarque" },
                 aircraft_type: { type: "string", description: "Modelo da aeronave" },
+                cabin_class: {
+                  type: "string",
+                  description: "Classe da cabine DESTE trecho. Valores aceitos: 'Econômica', 'Econômica Premium', 'Executiva', 'Primeira Classe'. Mapeie sinônimos: Economy/Coach/Y → Econômica; Premium Economy/W → Econômica Premium; Business/Executive/J/C → Executiva; First/F → Primeira Classe. Cada trecho pode ter classe diferente, preencha individualmente.",
+                },
                 is_connection: {
                   type: "boolean",
                   description:
