@@ -465,7 +465,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
   const totalMin = totalFlightMin + totalLayoverMin;
 
   const depDate = firstSeg.departure_date;
-  const arrDate = lastSeg.arrival_date || lastSeg.departure_date;
+  const arrDate = lastSeg.arrival_date || inferArrivalDate(lastSeg) || lastSeg.departure_date;
   const fmtDateLabel = (raw: any) => {
     if (!raw) return "";
     try {
