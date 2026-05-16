@@ -140,6 +140,7 @@ export default function ProposalsPulseSection() {
     return WINDOWS.some((w) => w.value === parsed) ? parsed : 24;
   });
   const [expanded, setExpanded] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -148,6 +149,23 @@ export default function ProposalsPulseSection() {
   }, [hours]);
 
   const { data, isLoading, isError } = useProposalsPulse(hours);
+
+  const { data: sentList, isLoading: loadingList } = useQuery({
+    queryKey: ["proposals-pulse-list", hours],
+    enabled: listOpen,
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - hours * 3600_000).toISOString();
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("id, title, client_name, total_value, slug, status, created_at")
+        .gte("created_at", cutoff)
+        .eq("is_fictional", false)
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const windowLabel = useMemo(
     () => WINDOWS.find((w) => w.value === hours)?.label ?? "24h",
