@@ -238,7 +238,8 @@ export default function ProposalsPulseSection() {
               icon={Send}
               label="Propostas enviadas"
               value={String(data.sent_count)}
-              hint={`Ticket médio ${brl.format(data.avg_ticket || 0)}`}
+              hint={`Ticket médio ${brl.format(data.avg_ticket || 0)} · clique para ver`}
+              onClick={() => setListOpen(true)}
             />
             <MetricCard
               icon={DollarSign}
