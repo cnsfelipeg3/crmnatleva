@@ -194,6 +194,23 @@ export default function FlightSegmentForm({ seg, onUpdate, onUpdateMulti }: Flig
           <Label className="text-xs">Aeronave</Label>
           <Input value={seg.aircraft_type} onChange={(e) => onUpdate("aircraft_type", e.target.value)} placeholder="Boeing 777-300ER" />
         </div>
+        <div className="space-y-1">
+          <Label className="text-xs">Classe (cabine)</Label>
+          <Select
+            value={seg.cabin_class || ""}
+            onValueChange={(v) => onUpdate("cabin_class", v)}
+          >
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="Selecionar classe..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Econômica">Econômica</SelectItem>
+              <SelectItem value="Econômica Premium">Econômica Premium</SelectItem>
+              <SelectItem value="Executiva">Executiva</SelectItem>
+              <SelectItem value="Primeira Classe">Primeira Classe</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Baggage section */}
