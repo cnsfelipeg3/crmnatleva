@@ -399,6 +399,82 @@ export default function ProposalsPulseSection() {
           </div>
         </>
       )}
+
+      <Dialog open={listOpen} onOpenChange={setListOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Propostas enviadas · Últimas {windowLabel}
+            </DialogTitle>
+            <DialogDescription>
+              {sentList
+                ? `${sentList.length} ${sentList.length === 1 ? "proposta" : "propostas"} encontrada${sentList.length === 1 ? "" : "s"} no período.`
+                : "Carregando propostas do período..."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto -mx-2 px-2">
+            {loadingList ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+            ) : !sentList || sentList.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                Nenhuma proposta encontrada nas últimas {windowLabel}.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {sentList.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">
+                          {p.client_name || "Sem cliente"}
+                        </span>
+                        {p.status ? (
+                          <Badge variant="outline" className="text-[10px] font-normal capitalize">
+                            {p.status}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {p.title}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {new Date(p.created_at).toLocaleString("pt-BR")}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {brl.format(p.total_value || 0)}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                          <Link to={`/propostas?id=${p.id}`}>Detalhes</Link>
+                        </Button>
+                        {p.slug ? (
+                          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
+                            <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
+                              Abrir
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
