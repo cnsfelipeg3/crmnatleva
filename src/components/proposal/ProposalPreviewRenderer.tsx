@@ -725,7 +725,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
                               {seg.arrival_time || "—"}
                             </span>
                             <span className="text-[11px] text-muted-foreground">
-                              {fmtDateShort(seg.arrival_date || seg.departure_date)}
+                              {fmtDateShort(seg.arrival_date || inferArrivalDate(seg) || seg.departure_date)}
                             </span>
                           </div>
                           <p className="text-sm text-foreground mt-0.5">
