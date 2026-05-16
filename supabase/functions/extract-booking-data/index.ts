@@ -110,7 +110,7 @@ const FLIGHT_SCHEMA = {
                 },
                 arrival_date: {
                   type: "string",
-                  description: "Data de chegada YYYY-MM-DD (preencher se diferente da partida)",
+                  description: "Data de chegada YYYY-MM-DD no FUSO LOCAL DO DESTINO. OBRIGATÓRIO sempre que houver indicador '+1', '+2', 'Overnight', 'próximo dia' OU quando a hora de chegada for menor que a hora de partida OU quando a duração cruzar a meia-noite local do destino. NÃO copie cegamente a data de partida.",
                 },
                 duration_minutes: {
                   type: "number",
@@ -631,9 +631,11 @@ Deno.serve(async (req) => {
       ? `\n\nIMPORTANTE: Foram enviadas ${images.length} imagens/arquivos. CONSOLIDE TUDO em UMA única extração — use as imagens em conjunto para montar o itinerário completo (ex.: print da ida + print da volta = um único itinerário com todos os trechos em ordem cronológica). Não duplique trechos que aparecem em mais de uma imagem.`
       : "";
 
+    const overnightContext = `\n\nVOOS OVERNIGHT / CHEGADA EM OUTRO DIA — REGRA CRÍTICA: muitos prints (Google Flights, Skyscanner, Decolar, e-tickets) mostram a chegada como "10:30 AM+1", "06:05+2", "+1 dia", "next day", "Overnight" ou similar — isso significa que a chegada é N DIAS DEPOIS da partida. SEMPRE que houver QUALQUER indicador de +1, +2, Overnight, próximo dia OU quando a hora de chegada for MENOR que a hora de partida (ex.: parte 20:30 e chega 16:50) OU a duração for >= 6h cruzando madrugada, você DEVE preencher arrival_date com a data CORRETA (departure_date + N dias). NUNCA copie arrival_date = departure_date sem checar. Para conexões: a partida do trecho seguinte usa a data REAL da chegada do trecho anterior (que pode ser o dia seguinte). Considere fusos horários ao calcular: GRU (UTC-3) -> DOH (UTC+3) tem +6h de diferença, então um voo que sai 20:30 GRU e dura 14h20 chega ~16:50 do dia SEGUINTE em DOH.`;
+
     const userText =
       item_type === "flight"
-        ? `Extraia TODOS os trechos do voo destas imagens/PDFs como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${multiImageNote}${dateContext}`
+        ? `Extraia TODOS os trechos do voo destas imagens/PDFs como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${multiImageNote}${dateContext}${overnightContext}`
         : `Extraia os dados desta(s) reserva(s)/cotação(ões) no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.${multiImageNote}${dateContext}`;
 
     const aiResp = await fetch(
@@ -742,6 +744,49 @@ Deno.serve(async (req) => {
       for (const seg of extracted.data.flight_segments) {
         seg.departure_date = bumpYear(seg.departure_date);
         if (seg.arrival_date) seg.arrival_date = bumpYear(seg.arrival_date);
+      }
+
+      // Infer arrival_date when missing or equal to departure_date but arrival_time < departure_time
+      // (overnight flight indicator that the AI may have missed).
+      const toMinLocal = (t: string): number => {
+        if (!t || typeof t !== "string") return NaN;
+        const [h, m] = t.split(":").map(Number);
+        return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+      };
+      const isoToDateLocal = (iso: string | undefined): Date | null => {
+        const mm = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!mm) return null;
+        return new Date(Date.UTC(Number(mm[1]), Number(mm[2]) - 1, Number(mm[3])));
+      };
+      const dateToIsoLocal = (d: Date): string => d.toISOString().slice(0, 10);
+      for (const seg of extracted.data.flight_segments as any[]) {
+        if (!seg.departure_date || !seg.departure_time || !seg.arrival_time) continue;
+        const depD = isoToDateLocal(seg.departure_date);
+        if (!depD) continue;
+        const depT = toMinLocal(seg.departure_time);
+        const arrT = toMinLocal(seg.arrival_time);
+        if (!Number.isFinite(depT) || !Number.isFinite(arrT)) continue;
+        const dur = Number(seg.duration_minutes);
+
+        let extraDays = 0;
+        if (Number.isFinite(dur) && dur > 0) {
+          // Lower bound on day offset based on duration; ignores timezone but never < real value
+          // for long-haul. We use (depT + dur - arrT) / 1440 rounded.
+          const approx = Math.round((depT + dur - arrT) / 1440);
+          if (approx > 0) extraDays = approx;
+        } else if (arrT < depT) {
+          extraDays = 1;
+        }
+
+        if (extraDays > 0) {
+          const expected = new Date(depD);
+          expected.setUTCDate(expected.getUTCDate() + extraDays);
+          const expectedIso = dateToIsoLocal(expected);
+          if (!seg.arrival_date || seg.arrival_date === seg.departure_date) {
+            console.log(`[overnight-fix] ${seg.origin_iata}->${seg.destination_iata}: arrival_date ${seg.arrival_date ?? "(vazio)"} -> ${expectedIso}`);
+            seg.arrival_date = expectedIso;
+          }
+        }
       }
 
       // Sanity-check connection layovers. If two consecutive segments share an airport
