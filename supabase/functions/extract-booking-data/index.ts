@@ -631,9 +631,11 @@ Deno.serve(async (req) => {
       ? `\n\nIMPORTANTE: Foram enviadas ${images.length} imagens/arquivos. CONSOLIDE TUDO em UMA única extração — use as imagens em conjunto para montar o itinerário completo (ex.: print da ida + print da volta = um único itinerário com todos os trechos em ordem cronológica). Não duplique trechos que aparecem em mais de uma imagem.`
       : "";
 
+    const overnightContext = `\n\nVOOS OVERNIGHT / CHEGADA EM OUTRO DIA — REGRA CRÍTICA: muitos prints (Google Flights, Skyscanner, Decolar, e-tickets) mostram a chegada como "10:30 AM+1", "06:05+2", "+1 dia", "next day", "Overnight" ou similar — isso significa que a chegada é N DIAS DEPOIS da partida. SEMPRE que houver QUALQUER indicador de +1, +2, Overnight, próximo dia OU quando a hora de chegada for MENOR que a hora de partida (ex.: parte 20:30 e chega 16:50) OU a duração for >= 6h cruzando madrugada, você DEVE preencher arrival_date com a data CORRETA (departure_date + N dias). NUNCA copie arrival_date = departure_date sem checar. Para conexões: a partida do trecho seguinte usa a data REAL da chegada do trecho anterior (que pode ser o dia seguinte). Considere fusos horários ao calcular: GRU (UTC-3) -> DOH (UTC+3) tem +6h de diferença, então um voo que sai 20:30 GRU e dura 14h20 chega ~16:50 do dia SEGUINTE em DOH.`;
+
     const userText =
       item_type === "flight"
-        ? `Extraia TODOS os trechos do voo destas imagens/PDFs como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${multiImageNote}${dateContext}`
+        ? `Extraia TODOS os trechos do voo destas imagens/PDFs como segmentos separados em flight_segments. Inclua conexões. Use a função fornecida e respeite o schema (IATA 3 letras, HH:MM 24h, YYYY-MM-DD, duration_minutes em minutos, is_connection true para trechos após o primeiro de cada itinerário).${multiImageNote}${dateContext}${overnightContext}`
         : `Extraia os dados desta(s) reserva(s)/cotação(ões) no formato estruturado da função. Se um campo não estiver claramente presente, omita-o.${multiImageNote}${dateContext}`;
 
     const aiResp = await fetch(
