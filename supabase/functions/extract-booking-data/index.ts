@@ -110,7 +110,7 @@ const FLIGHT_SCHEMA = {
                 },
                 arrival_date: {
                   type: "string",
-                  description: "Data de chegada YYYY-MM-DD (preencher se diferente da partida)",
+                  description: "Data de chegada YYYY-MM-DD no FUSO LOCAL DO DESTINO. OBRIGATÓRIO sempre que houver indicador '+1', '+2', 'Overnight', 'próximo dia' OU quando a hora de chegada for menor que a hora de partida OU quando a duração cruzar a meia-noite local do destino. NÃO copie cegamente a data de partida.",
                 },
                 duration_minutes: {
                   type: "number",
