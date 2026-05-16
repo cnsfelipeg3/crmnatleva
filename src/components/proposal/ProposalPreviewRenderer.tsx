@@ -585,7 +585,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
             {lastSeg.arrival_time || "—"}
             {(() => {
               const dep = firstSeg?.departure_date;
-              const arr = lastSeg?.arrival_date || lastSeg?.departure_date;
+              const arr = lastSeg?.arrival_date || (lastSeg ? inferArrivalDate(lastSeg) : null) || lastSeg?.departure_date;
               if (!dep || !arr) return null;
               try {
                 const d1 = new Date(String(dep).length <= 10 ? `${dep}T00:00:00` : dep);
