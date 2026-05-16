@@ -707,7 +707,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
                                 <> · {fmtDuration(seg.duration_minutes)} de duração</>
                               )}
                               {seg.aircraft && <> · {seg.aircraft}</>}
-                              {seg.flight_class && <> · {seg.flight_class}</>}
+                              {(seg.cabin_class || seg.flight_class) && <> · {seg.cabin_class || seg.flight_class}</>}
                             </span>
                           </div>
                         </div>
