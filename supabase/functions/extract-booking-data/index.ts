@@ -746,6 +746,49 @@ Deno.serve(async (req) => {
         if (seg.arrival_date) seg.arrival_date = bumpYear(seg.arrival_date);
       }
 
+      // Infer arrival_date when missing or equal to departure_date but arrival_time < departure_time
+      // (overnight flight indicator that the AI may have missed).
+      const toMinLocal = (t: string): number => {
+        if (!t || typeof t !== "string") return NaN;
+        const [h, m] = t.split(":").map(Number);
+        return Number.isFinite(h) && Number.isFinite(m) ? h * 60 + m : NaN;
+      };
+      const isoToDateLocal = (iso: string | undefined): Date | null => {
+        const mm = iso?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!mm) return null;
+        return new Date(Date.UTC(Number(mm[1]), Number(mm[2]) - 1, Number(mm[3])));
+      };
+      const dateToIsoLocal = (d: Date): string => d.toISOString().slice(0, 10);
+      for (const seg of extracted.data.flight_segments as any[]) {
+        if (!seg.departure_date || !seg.departure_time || !seg.arrival_time) continue;
+        const depD = isoToDateLocal(seg.departure_date);
+        if (!depD) continue;
+        const depT = toMinLocal(seg.departure_time);
+        const arrT = toMinLocal(seg.arrival_time);
+        if (!Number.isFinite(depT) || !Number.isFinite(arrT)) continue;
+        const dur = Number(seg.duration_minutes);
+
+        let extraDays = 0;
+        if (Number.isFinite(dur) && dur > 0) {
+          // Lower bound on day offset based on duration; ignores timezone but never < real value
+          // for long-haul. We use (depT + dur - arrT) / 1440 rounded.
+          const approx = Math.round((depT + dur - arrT) / 1440);
+          if (approx > 0) extraDays = approx;
+        } else if (arrT < depT) {
+          extraDays = 1;
+        }
+
+        if (extraDays > 0) {
+          const expected = new Date(depD);
+          expected.setUTCDate(expected.getUTCDate() + extraDays);
+          const expectedIso = dateToIsoLocal(expected);
+          if (!seg.arrival_date || seg.arrival_date === seg.departure_date) {
+            console.log(`[overnight-fix] ${seg.origin_iata}->${seg.destination_iata}: arrival_date ${seg.arrival_date ?? "(vazio)"} -> ${expectedIso}`);
+            seg.arrival_date = expectedIso;
+          }
+        }
+      }
+
       // Sanity-check connection layovers. If two consecutive segments share an airport
       // (prev.destination == next.origin) and the implied layover is > 24h or negative,
       // the AI likely mis-read the date. Snap next.departure_date so layover ∈ [0, 24h].
