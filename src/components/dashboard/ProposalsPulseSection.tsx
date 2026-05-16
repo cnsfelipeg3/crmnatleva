@@ -58,15 +58,37 @@ function MetricCard({
   value,
   hint,
   accent,
+  onClick,
 }: {
   icon: typeof Send;
   label: string;
   value: string;
   hint?: string;
   accent?: boolean;
+  onClick?: () => void;
 }) {
+  const clickable = typeof onClick === "function";
   return (
-    <Card className="border-border bg-card transition-colors hover:border-primary/40">
+    <Card
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        "border-border bg-card transition-colors hover:border-primary/40",
+        clickable &&
+          "cursor-pointer hover:shadow-md hover:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+      )}
+    >
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Icon className="h-4 w-4" strokeWidth={1.75} />
