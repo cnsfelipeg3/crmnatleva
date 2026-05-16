@@ -707,7 +707,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
                                 <> · {fmtDuration(seg.duration_minutes)} de duração</>
                               )}
                               {seg.aircraft && <> · {seg.aircraft}</>}
-                              {seg.flight_class && <> · {seg.flight_class}</>}
+                              {(seg.cabin_class || seg.flight_class) && <> · {seg.cabin_class || seg.flight_class}</>}
                             </span>
                           </div>
                         </div>
@@ -874,12 +874,20 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
             {/* Bagagem por leg (ida/volta separadamente) */}
             {(() => {
               const legBadges = getBaggageBadgesForLeg(leg.segments);
-              if (!d.cabin && legBadges.length === 0) return null;
+              const segCabins = Array.from(
+                new Set(
+                  leg.segments
+                    .map((s: any) => s.cabin_class || s.flight_class)
+                    .filter(Boolean),
+                ),
+              ) as string[];
+              const cabinLabel = segCabins.length > 0 ? segCabins.join(" · ") : d.cabin;
+              if (!cabinLabel && legBadges.length === 0) return null;
               return (
                 <div className="flex flex-wrap items-center justify-center gap-2 mt-3 text-foreground">
-                  {d.cabin && (
+                  {cabinLabel && (
                     <span className="inline-flex items-center gap-1.5 text-[11px] bg-accent/5 border border-accent/10 px-2.5 py-1 rounded-full text-foreground">
-                      <BedDouble className="w-3 h-3 text-accent" /> {d.cabin}
+                      <BedDouble className="w-3 h-3 text-accent" /> {cabinLabel}
                     </span>
                   )}
                   {legBadges.map((b, i) => (
