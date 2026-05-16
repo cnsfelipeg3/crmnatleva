@@ -30,6 +30,7 @@ export interface FlightSegmentData {
   terminal: string;
   arrival_terminal: string;
   aircraft_type: string;
+  cabin_class?: string;
   notes: string;
   direction?: "ida" | "volta" | "trecho";
   is_connection?: boolean;
