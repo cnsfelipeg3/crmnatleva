@@ -1,5 +1,15 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { ExternalLink } from "lucide-react";
 import {
   Send,
   DollarSign,
@@ -48,15 +58,37 @@ function MetricCard({
   value,
   hint,
   accent,
+  onClick,
 }: {
   icon: typeof Send;
   label: string;
   value: string;
   hint?: string;
   accent?: boolean;
+  onClick?: () => void;
 }) {
+  const clickable = typeof onClick === "function";
   return (
-    <Card className="border-border bg-card transition-colors hover:border-primary/40">
+    <Card
+      onClick={onClick}
+      role={clickable ? "button" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={cn(
+        "border-border bg-card transition-colors hover:border-primary/40",
+        clickable &&
+          "cursor-pointer hover:shadow-md hover:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/40"
+      )}
+    >
       <CardContent className="p-4 sm:p-5">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Icon className="h-4 w-4" strokeWidth={1.75} />
@@ -108,6 +140,7 @@ export default function ProposalsPulseSection() {
     return WINDOWS.some((w) => w.value === parsed) ? parsed : 24;
   });
   const [expanded, setExpanded] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -116,6 +149,23 @@ export default function ProposalsPulseSection() {
   }, [hours]);
 
   const { data, isLoading, isError } = useProposalsPulse(hours);
+
+  const { data: sentList, isLoading: loadingList } = useQuery({
+    queryKey: ["proposals-pulse-list", hours],
+    enabled: listOpen,
+    queryFn: async () => {
+      const cutoff = new Date(Date.now() - hours * 3600_000).toISOString();
+      const { data, error } = await supabase
+        .from("proposals")
+        .select("id, title, client_name, total_value, slug, status, created_at")
+        .gte("created_at", cutoff)
+        .eq("is_fictional", false)
+        .neq("status", "draft")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const windowLabel = useMemo(
     () => WINDOWS.find((w) => w.value === hours)?.label ?? "24h",
@@ -188,7 +238,8 @@ export default function ProposalsPulseSection() {
               icon={Send}
               label="Propostas enviadas"
               value={String(data.sent_count)}
-              hint={`Ticket médio ${brl.format(data.avg_ticket || 0)}`}
+              hint={`Ticket médio ${brl.format(data.avg_ticket || 0)} · clique para ver`}
+              onClick={() => setListOpen(true)}
             />
             <MetricCard
               icon={DollarSign}
@@ -348,6 +399,82 @@ export default function ProposalsPulseSection() {
           </div>
         </>
       )}
+
+      <Dialog open={listOpen} onOpenChange={setListOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Propostas enviadas · Últimas {windowLabel}
+            </DialogTitle>
+            <DialogDescription>
+              {sentList
+                ? `${sentList.length} ${sentList.length === 1 ? "proposta" : "propostas"} encontrada${sentList.length === 1 ? "" : "s"} no período.`
+                : "Carregando propostas do período..."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto -mx-2 px-2">
+            {loadingList ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-16 rounded-lg" />
+                ))}
+              </div>
+            ) : !sentList || sentList.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                Nenhuma proposta encontrada nas últimas {windowLabel}.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {sentList.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex items-center gap-3 rounded-lg border border-border bg-card/50 p-3 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-foreground">
+                          {p.client_name || "Sem cliente"}
+                        </span>
+                        {p.status ? (
+                          <Badge variant="outline" className="text-[10px] font-normal capitalize">
+                            {p.status}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                        {p.title}
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {new Date(p.created_at).toLocaleString("pt-BR")}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      <span className="text-sm font-semibold tabular-nums text-foreground">
+                        {brl.format(p.total_value || 0)}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                          <Link to={`/propostas?id=${p.id}`}>Detalhes</Link>
+                        </Button>
+                        {p.slug ? (
+                          <Button asChild variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1">
+                            <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
+                              Abrir
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
