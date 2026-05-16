@@ -17,7 +17,7 @@ import { ptBR } from "date-fns/locale";
 import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import logoNatlevaChampagne from "@/assets/logo-natleva-champagne.webp";
 import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
-import { calcLayoverMinutes as calcPreciseLayoverMinutes } from "@/lib/flightTiming";
+import { calcLayoverMinutes as calcPreciseLayoverMinutes, inferArrivalDate } from "@/lib/flightTiming";
 import { buildFlightTitle } from "@/lib/airportCities";
 import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
@@ -465,7 +465,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
   const totalMin = totalFlightMin + totalLayoverMin;
 
   const depDate = firstSeg.departure_date;
-  const arrDate = lastSeg.arrival_date || lastSeg.departure_date;
+  const arrDate = lastSeg.arrival_date || inferArrivalDate(lastSeg) || lastSeg.departure_date;
   const fmtDateLabel = (raw: any) => {
     if (!raw) return "";
     try {
@@ -585,7 +585,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
             {lastSeg.arrival_time || "—"}
             {(() => {
               const dep = firstSeg?.departure_date;
-              const arr = lastSeg?.arrival_date || lastSeg?.departure_date;
+              const arr = lastSeg?.arrival_date || (lastSeg ? inferArrivalDate(lastSeg) : null) || lastSeg?.departure_date;
               if (!dep || !arr) return null;
               try {
                 const d1 = new Date(String(dep).length <= 10 ? `${dep}T00:00:00` : dep);
@@ -725,7 +725,7 @@ export function UnifiedLegCard({ segments }: { segments: any[] }) {
                               {seg.arrival_time || "—"}
                             </span>
                             <span className="text-[11px] text-muted-foreground">
-                              {fmtDateShort(seg.arrival_date || seg.departure_date)}
+                              {fmtDateShort(seg.arrival_date || inferArrivalDate(seg) || seg.departure_date)}
                             </span>
                           </div>
                           <p className="text-sm text-foreground mt-0.5">
