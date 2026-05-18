@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake } from "lucide-react";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
@@ -51,6 +51,13 @@ export default function Produtos() {
   const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
+  const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
+    if (typeof window === "undefined") return "ceo";
+    return (localStorage.getItem("prateleira_view_mode") as "ceo" | "afiliado") || "ceo";
+  });
+  useEffect(() => {
+    try { localStorage.setItem("prateleira_view_mode", viewMode); } catch {}
+  }, [viewMode]);
 
   useEffect(() => {
     (async () => {
@@ -105,24 +112,48 @@ export default function Produtos() {
               <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Marketplace de viagens prontas</h1>
               <p className="text-white/70 text-sm mt-2">Cadastre pacotes, aéreos, hospedagens e experiências com preços e condições especiais.</p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
+              <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
+                <button
+                  onClick={() => setViewMode("ceo")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
+                    viewMode === "ceo" ? "bg-amber-500 text-black" : "text-white/80 hover:text-white"
+                  )}
+                  title="Visão completa com lucro, custos e controles"
+                >
+                  <Crown className="w-3.5 h-3.5" /> Modo CEO
+                </button>
+                <button
+                  onClick={() => setViewMode("afiliado")}
+                  className={cn(
+                    "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
+                    viewMode === "afiliado" ? "bg-sky-500 text-white" : "text-white/80 hover:text-white"
+                  )}
+                  title="Visão do afiliado · apenas preços e comissão"
+                >
+                  <Handshake className="w-3.5 h-3.5" /> Modo Afiliado
+                </button>
+              </div>
               <a href="/p" target="_blank" rel="noreferrer">
                 <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20"><ExternalLink className="w-4 h-4 mr-1.5" /> Ver vitrine pública</Button>
               </a>
-              <Link to="/prateleira/novo">
-                <Button className="bg-amber-500 text-black hover:bg-amber-400"><Plus className="w-4 h-4 mr-1.5" /> Novo produto</Button>
-              </Link>
+              {viewMode === "ceo" && (
+                <Link to="/prateleira/novo">
+                  <Button className="bg-amber-500 text-black hover:bg-amber-400"><Plus className="w-4 h-4 mr-1.5" /> Novo produto</Button>
+                </Link>
+              )}
             </div>
           </div>
 
           {/* KPI strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-6">
+          <div className={cn("grid grid-cols-2 gap-3 mt-6", viewMode === "ceo" ? "sm:grid-cols-6" : "sm:grid-cols-3")}>
             <KPI label="Total" value={totals.total} />
             <KPI label="Ativos" value={totals.active} />
             <KPI label="Em promo" value={totals.promo} />
-            <KPI label="Visualizações" value={totals.views} />
-            <KPI label="Leads" value={totals.leads} />
-            <KPI label="Lucro 🔒" value={fmtMoney(totals.profit)} highlight />
+            {viewMode === "ceo" && <KPI label="Visualizações" value={totals.views} />}
+            {viewMode === "ceo" && <KPI label="Leads" value={totals.leads} />}
+            {viewMode === "ceo" && <KPI label="Lucro 🔒" value={fmtMoney(totals.profit)} highlight />}
           </div>
         </div>
       </div>
@@ -166,6 +197,7 @@ export default function Produtos() {
               <AdminProductCard
                 key={p.id}
                 p={p}
+                viewMode={viewMode}
                 onToggleActive={(next) =>
                   setItems((prev) => prev.map((it) => (it.id === p.id ? { ...it, is_active: next } : it)))
                 }
@@ -188,7 +220,8 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
   );
 }
 
-function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
+function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Product; viewMode: "ceo" | "afiliado"; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
+  const isAffiliate = viewMode === "afiliado";
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -354,6 +387,7 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
             </div>
           </div>
         </div>
+        {!isAffiliate && (<>
         {/* Lucro estimado · uso interno */}
         <div
           className={cn(
@@ -422,26 +456,33 @@ function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggl
             aria-label="Ativar ou desativar produto"
           />
         </div>
+        </>)}
         <div className="flex gap-2 mt-3">
-          <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
-          </Link>
-          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
+          {!isAffiliate && (
+            <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
+              <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
+            </Link>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics" className={isAffiliate ? "flex-1" : ""}>
             <BarChart3 className="w-3.5 h-3.5" />
           </Button>
-          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
-            <Button variant="outline" size="sm" title="Abrir página"><ExternalLink className="w-3.5 h-3.5" /></Button>
+          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
+            <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
+              <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
+            </Button>
           </a>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-            title="Excluir produto"
-            className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
+          {!isAffiliate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Excluir produto"
+              className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
       </div>
       <PrateleiraAnalyticsDialog
