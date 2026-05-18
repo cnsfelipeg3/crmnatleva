@@ -312,10 +312,10 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
   return (
     <Card className={cn("overflow-hidden flex flex-col p-0 transition-opacity", !isActive && "opacity-70")}>
       {hasCommission && (
-        <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm border-b-2 border-emerald-300/50">
+        <div className="bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-700 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm border-b-2 border-emerald-400/40">
           <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-white/25 flex items-center justify-center shrink-0 ring-2 ring-white/40">
-              <Sparkles className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 rounded-full bg-amber-300/95 flex items-center justify-center shrink-0 ring-2 ring-amber-200/60 shadow-md">
+              <Banknote className="w-4 h-4 text-emerald-900" />
             </div>
             <div className="min-w-0">
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
