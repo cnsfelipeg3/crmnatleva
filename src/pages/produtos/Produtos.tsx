@@ -376,7 +376,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               <div className={cn("text-[10px] uppercase tracking-wider font-bold leading-none",
                 hasCommission ? "text-sky-700 dark:text-sky-300" : "text-amber-700 dark:text-amber-400"
               )}>
-                Comissão vendedor 🔒
+                Bônus Indicação 🔒
               </div>
               {hasCommission ? (
                 <div className="text-[15px] font-extrabold tabular-nums leading-tight mt-1 text-sky-900 dark:text-sky-100">
