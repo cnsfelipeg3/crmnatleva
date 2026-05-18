@@ -394,7 +394,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
               <div className="text-[16px] font-extrabold tabular-nums leading-tight drop-shadow-sm mt-0.5 text-white">
                 <span className="bonus-value">{fmtMoney(commission, p.currency)}</span>
-                <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
+                <span className="text-[11px] font-semibold text-white/85 ml-1">por indicação bem sucedida</span>
               </div>
             </div>
           </div>
@@ -547,7 +547,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               {hasCommission ? (
                 <div className="text-[15px] font-extrabold tabular-nums leading-tight mt-1 text-sky-900 dark:text-sky-100">
                   {fmtMoney(commission, p.currency)}
-                  <span className="text-[10px] font-medium text-muted-foreground ml-1">por venda</span>
+                  <span className="text-[10px] font-medium text-muted-foreground ml-1">por indicação bem sucedida</span>
                 </div>
               ) : (
                 <Link to={`/prateleira/${p.slug}/editar`} className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 hover:underline mt-0.5 inline-block">
