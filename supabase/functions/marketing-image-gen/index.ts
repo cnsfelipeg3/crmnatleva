@@ -178,8 +178,11 @@ serve(async (req) => {
     // O refino usa a foto original + briefing + instrução textual, e o único logo
     // entra depois, via post-processing transparente.
     // Try preferred model -> flash -> fallback
+    // Pro model frequently exceeds the 150s edge timeout. Flash delivers
+    // near-Pro quality much faster · usamos Flash como primário sempre e
+    // mantemos Pro apenas como último recurso quando explicitamente pedido.
     const order = body.use_pro
-      ? [MODEL_PRO, MODEL_FLASH, MODEL_FALLBACK]
+      ? [MODEL_FLASH, MODEL_FALLBACK, MODEL_PRO]
       : [MODEL_FLASH, MODEL_FALLBACK];
 
     let lastErr = "";
