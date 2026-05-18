@@ -72,14 +72,24 @@ export default function Produtos() {
 
   const destinations = useMemo(() => Array.from(new Set(items.map((p) => p.destination))).sort(), [items]);
 
-  const filtered = useMemo(() => items.filter((p) => {
-    if (kind !== "all" && (p.product_kind || "passeio") !== kind) return false;
-    if (status !== "all" && (p.status || "active") !== status) return false;
-    if (destination !== "all" && p.destination !== destination) return false;
-    if (onlyPromo && !p.is_promo) return false;
-    if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  }), [items, kind, status, destination, q, onlyPromo]);
+  const filtered = useMemo(() => {
+    const arr = items.filter((p) => {
+      if (kind !== "all" && (p.product_kind || "passeio") !== kind) return false;
+      if (status !== "all" && (p.status || "active") !== status) return false;
+      if (destination !== "all" && p.destination !== destination) return false;
+      if (onlyPromo && !p.is_promo) return false;
+      if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+    const priceOf = (p: any) => Number(p.price_promo) || Number(p.price_from) || 0;
+    const commOf = (p: any) => Number(p.commission_per_sale) || 0;
+    const sorted = arr.slice();
+    if (sortBy === "commission_desc") sorted.sort((a, b) => commOf(b) - commOf(a));
+    else if (sortBy === "commission_asc") sorted.sort((a, b) => commOf(a) - commOf(b));
+    else if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
+    else if (sortBy === "price_desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
+    return sorted;
+  }, [items, kind, status, destination, q, onlyPromo, sortBy]);
 
   const totals = useMemo(() => {
     const totalProfit = items.reduce((s, p) => {
