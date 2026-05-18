@@ -255,7 +255,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
         ].filter(Boolean).join("\n")
       : "",
     briefing.scarcity ? `· Scarcity badge (small Champagne pill at top-right with Rolex Green text): "${briefing.scarcity}"` : "",
-    `· CTA button text: "${briefing.cta}"`,
+    `· CTA button text (render EXACTLY this string and NOTHING else · NEVER prefix with "CTA", "CTA ·", "CTA:" or any label · NEVER add quotes or extra words): "${briefing.cta}"`,
     `· OFFICIAL CONTACT FOOTER (MANDATORY · render EXACTLY and ONLY these two strings, no extra word/label before, between or after, do NOT write "handle"/"Instagram"/"WhatsApp"/"contato"/"siga"): "${NATLEVA_BRAND.handle}" · "${NATLEVA_BRAND.whatsapp}". Qualquer outro número, palavra solta ou rótulo está PROIBIDO na arte.`,
     `· Visual tone: ${TONE_LABEL[briefing.tone]}`,
     "· LOGO SAFE AREA: top-left ~30% width × ~18% height must contain only clean destination photo with subtle darkening. Do not place text, card, shape, logo, plaque, brand name, rectangle or decorative element there.",
