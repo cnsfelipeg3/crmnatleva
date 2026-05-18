@@ -11,7 +11,7 @@ import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calen
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import MarketingMediaDialog from "@/components/produtos/MarketingMediaDialog";
 import PublicFooter from "@/components/prateleira/PublicFooter";
-import logoNatleva from "@/assets/logo-natleva-clean.webp";
+import logoNatleva from "@/assets/logo-natleva.webp";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
