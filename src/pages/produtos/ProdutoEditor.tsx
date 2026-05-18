@@ -16,6 +16,7 @@ import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan
 import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
+import ProductInsightsPanel from "@/components/produtos/ProductInsightsPanel";
 import GalleryManager from "@/components/produtos/GalleryManager";
 import GalleryEditorBlock from "@/components/produtos/GalleryEditorBlock";
 import ProductLivePreview from "@/components/produtos/ProductLivePreview";
