@@ -437,11 +437,22 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                     <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
                       Total {formatMoneyBR(plan.total, plan.currency)}
                       {(() => {
-                        const pax = Math.max(1, (Number((p as any).pax_adults) || 0) + (Number((p as any).pax_children) || 0));
+                        const ad = Number((p as any).pax_adults) || 0;
+                        const ch = Number((p as any).pax_children) || 0;
+                        const pax = Math.max(1, ad + ch);
                         const isPP = ((p as any).price_label || "por pessoa") === "por pessoa";
+                        let label: string;
+                        if (isPP) {
+                          label = "por pessoa";
+                        } else {
+                          const parts: string[] = [];
+                          if (ad > 0) parts.push(`${ad} ${ad === 1 ? "adulto" : "adultos"}`);
+                          if (ch > 0) parts.push(`${ch} ${ch === 1 ? "criança" : "crianças"}`);
+                          label = `para ${parts.length ? parts.join(" + ") : `${pax} ${pax === 1 ? "pessoa" : "pessoas"}`}`;
+                        }
                         return (
                           <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary font-semibold uppercase tracking-wider text-[9px]">
-                            {isPP ? "por pessoa" : `para ${pax} ${pax === 1 ? "pessoa" : "pessoas"}`}
+                            {label}
                           </span>
                         );
                       })()}
