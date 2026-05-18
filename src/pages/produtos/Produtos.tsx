@@ -197,6 +197,7 @@ export default function Produtos() {
               <AdminProductCard
                 key={p.id}
                 p={p}
+                viewMode={viewMode}
                 onToggleActive={(next) =>
                   setItems((prev) => prev.map((it) => (it.id === p.id ? { ...it, is_active: next } : it)))
                 }
