@@ -394,7 +394,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
               <div className="text-[16px] font-extrabold tabular-nums leading-tight drop-shadow-sm mt-0.5 text-white">
                 <span className="bonus-value">{fmtMoney(commission, p.currency)}</span>
-                <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
+                <span className="text-[11px] font-semibold text-white/85 ml-1">por indicação bem sucedida</span>
               </div>
             </div>
           </div>
