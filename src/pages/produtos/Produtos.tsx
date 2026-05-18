@@ -380,6 +380,15 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
                       Total {formatMoneyBR(plan.total, plan.currency)}
+                      {(() => {
+                        const pax = Math.max(1, (Number((p as any).pax_adults) || 0) + (Number((p as any).pax_children) || 0));
+                        const isPP = ((p as any).price_label || "por pessoa") === "por pessoa";
+                        return (
+                          <span className="ml-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm bg-primary/10 text-primary font-semibold uppercase tracking-wider text-[9px]">
+                            {isPP ? "por pessoa" : `para ${pax} ${pax === 1 ? "pessoa" : "pessoas"}`}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </>
                 ) : (
