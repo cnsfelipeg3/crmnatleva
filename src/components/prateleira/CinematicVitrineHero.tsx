@@ -69,6 +69,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
   // Mouse tilt
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const onMouseMove = (e: React.MouseEvent) => {
+    if (isMobile || reduced) return;
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     setTilt({
