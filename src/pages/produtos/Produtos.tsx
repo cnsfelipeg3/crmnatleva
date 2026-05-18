@@ -269,6 +269,7 @@ export default function Produtos() {
           </div>
         )}
       </div>
+      <PublicFooter />
     </div>
   );
 }
