@@ -123,6 +123,10 @@ export default function Produtos() {
             <div>
               <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Indique & Ganhe</h1>
               <p className="text-white/70 text-sm mt-2">Pacotes completos, passagens aéreas, hospedagens e muito mais!</p>
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                Receba seu bônus ainda hoje, no PIX · vale para todos os pacotes
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
