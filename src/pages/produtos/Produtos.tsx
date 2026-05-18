@@ -411,6 +411,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
           </div>
         </div>
+        )}
         {!isAffiliate && (<>
         {/* Lucro estimado · uso interno */}
         <div
