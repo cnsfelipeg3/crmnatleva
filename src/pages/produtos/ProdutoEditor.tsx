@@ -9,13 +9,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search, Plane, Image as ImageIcon, FileText, CreditCard, Users, Megaphone, Settings2, MapPin, Calendar, Lock as LockIcon } from "lucide-react";
+import { ArrowLeft, Trash2, Save, Youtube, Sparkles, Loader2, ExternalLink, Copy, Hotel, Search, Plane, Image as ImageIcon, FileText, CreditCard, Users, Megaphone, Settings2, MapPin, Calendar, Lock as LockIcon, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import PaymentPlanCard from "@/components/prateleira/PaymentPlanCard";
 import { computeNatlevaPlan, formatMoneyBR } from "@/lib/prateleira/payment-plan";
 import ProductAIChat from "@/components/produtos/ProductAIChat";
 import PlacesSearchCard, { type PlacesEnrichmentData } from "@/components/proposal/PlacesSearchCard";
 import MarketingTab from "@/components/produtos/MarketingTab";
+import ProductInsightsPanel from "@/components/produtos/ProductInsightsPanel";
 import GalleryManager from "@/components/produtos/GalleryManager";
 import GalleryEditorBlock from "@/components/produtos/GalleryEditorBlock";
 import ProductLivePreview from "@/components/produtos/ProductLivePreview";
@@ -1179,6 +1180,14 @@ export default function ProdutoEditor() {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+
+            {/* ============ 8.5 · INSIGHTS DO PRODUTO ============ */}
+            {recordId && (
+              <Card className="p-5 space-y-4">
+                <SectionHeader icon={BarChart3} title="Insights do produto · em tempo real" subtitle="Quem está vendo, de onde, por quanto tempo e onde clica" />
+                <ProductInsightsPanel productId={recordId} />
+              </Card>
+            )}
 
             {/* ============ 9 · MARKETING ============ */}
             <Card className="p-5 space-y-4">
