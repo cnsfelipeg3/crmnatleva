@@ -386,14 +386,6 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
           )}
           title="Uso interno · comissão paga ao vendedor"
         >
-          className={cn(
-            "mt-2 px-3 py-2.5 rounded-lg border-2 flex items-center justify-between gap-2 shadow-sm",
-            hasCommission
-              ? "border-sky-500/60 bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-sky-500/15"
-              : "border-dashed border-amber-500/50 bg-amber-500/10"
-          )}
-          title="Uso interno · comissão paga ao vendedor"
-        >
           <div className="flex items-center gap-2 min-w-0">
             <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0",
               hasCommission ? "bg-sky-500 text-white" : "bg-amber-500/20 text-amber-700"
