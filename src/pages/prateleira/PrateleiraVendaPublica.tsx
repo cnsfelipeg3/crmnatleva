@@ -126,7 +126,9 @@ export default function PrateleiraVendaPublica() {
     let email = "";
     try { email = sessionStorage.getItem(`prateleira_viewer_${slug}`) || ""; } catch {}
     if (!email) return;
-    trackerRef.current = initViewerTracking({ productId: p.id, email });
+    let viewerId: string | null = null;
+    try { viewerId = sessionStorage.getItem(`prateleira_viewer_id_${slug}`) || null; } catch {}
+    trackerRef.current = initViewerTracking({ productId: p.id, email, viewerId });
     return () => { trackerRef.current?.dispose(); trackerRef.current = null; };
   }, [unlocked, p?.id, slug, isPrintMode]);
 
