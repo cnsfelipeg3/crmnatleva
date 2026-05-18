@@ -11,8 +11,10 @@ import {
   UserCheck, Clock, Receipt, Target, Star, MessageSquare, ShieldAlert, FileArchive, Shield, PieChart, Smile,
   GitBranch, Plug, Zap, BookOpen, FileDown, Presentation, RotateCcw,
   Inbox, Bot, Tag, TestTube, ScrollText, PackageOpen, Upload, Database, Globe,
-  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera, Megaphone,
+  PlaneTakeoff, Image as ImageIcon, Lightbulb, Home, Camera, Megaphone, RefreshCw,
 } from "lucide-react";
+import { forceAppRefresh } from "@/lib/forceRefresh";
+import { toast } from "sonner";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -508,6 +510,17 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         <button onClick={() => setDark(!dark)} className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] text-sidebar-foreground hover:bg-primary/5 hover:text-foreground w-full transition-all duration-200">
           {dark ? <Sun className="w-4 h-4 shrink-0" /> : <Moon className="w-4 h-4 shrink-0" />}
           {!isCollapsed && <span>{dark ? "Tema Claro" : "Tema Escuro"}</span>}
+        </button>
+        <button
+          onClick={async () => {
+            toast.loading("Atualizando app...", { id: "force-refresh" });
+            await forceAppRefresh();
+          }}
+          title="Limpa cache e recarrega o app na versão mais recente"
+          className="flex items-center gap-3 px-3 py-1.5 rounded-lg text-[13px] text-sidebar-foreground hover:bg-primary/5 hover:text-foreground w-full transition-all duration-200"
+        >
+          <RefreshCw className="w-4 h-4 shrink-0" />
+          {!isCollapsed && <span>Forçar atualização</span>}
         </button>
       </div>
     </aside>
