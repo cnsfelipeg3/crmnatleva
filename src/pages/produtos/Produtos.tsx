@@ -376,8 +376,16 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
           );
         })()}
-        {/* Comissão por venda · uso interno · destaque */}
+        {!isAffiliate && (
         <div
+          className={cn(
+            "mt-2 px-3 py-2.5 rounded-lg border-2 flex items-center justify-between gap-2 shadow-sm",
+            hasCommission
+              ? "border-sky-500/60 bg-gradient-to-r from-sky-500/15 via-indigo-500/10 to-sky-500/15"
+              : "border-dashed border-amber-500/50 bg-amber-500/10"
+          )}
+          title="Uso interno · comissão paga ao vendedor"
+        >
           className={cn(
             "mt-2 px-3 py-2.5 rounded-lg border-2 flex items-center justify-between gap-2 shadow-sm",
             hasCommission
