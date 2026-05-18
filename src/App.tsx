@@ -34,6 +34,7 @@ const NewSale = lazy(() => import("@/pages/NewSale"));
 const Passengers = lazy(() => import("@/pages/Passengers"));
 const PassengerProfile = lazy(() => import("@/pages/PassengerProfile"));
 const Birthdays = lazy(() => import("@/pages/Birthdays"));
+const Leads = lazy(() => import("@/pages/Leads"));
 const SettingsIndex = lazy(() => import("@/pages/settings/SettingsIndex"));
 const GenericSettingsList = lazy(() => import("@/pages/settings/GenericSettingsList"));
 const Checkin = lazy(() => import("@/pages/Checkin"));
