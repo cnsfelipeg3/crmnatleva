@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake, ImageIcon, Banknote } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake, ImageIcon, Banknote, PlaneTakeoff, BedDouble, Briefcase, Compass, ArrowRight } from "lucide-react";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import MarketingMediaDialog from "@/components/produtos/MarketingMediaDialog";
 import { cn } from "@/lib/utils";
