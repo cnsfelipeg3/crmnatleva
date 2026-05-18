@@ -144,7 +144,19 @@ export default function Produtos() {
       <div className="relative overflow-hidden border-b border-border" style={{ background: "linear-gradient(135deg, hsl(150 40% 6%) 0%, hsl(150 40% 12%) 100%)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex items-center gap-3 mb-4">
-            <img src={logoNatleva} alt="NatLeva" className="h-10 sm:h-12 w-auto" />
+            <div className="relative inline-block h-10 sm:h-12">
+              <img
+                src={logoNatleva}
+                alt="NatLeva"
+                className="h-full w-auto object-contain"
+                style={{ filter: 'brightness(0) invert(1)' }}
+                draggable={false}
+              />
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{ backgroundColor: 'hsl(var(--champagne))', mixBlendMode: 'multiply' }}
+              />
+            </div>
           </div>
           <div className="flex items-center gap-2 text-amber-300 text-xs font-medium tracking-widest uppercase mb-2">
             <Sparkles className="w-3.5 h-3.5" /> PROGRAMA DE BÔNUS - NATLEVA
