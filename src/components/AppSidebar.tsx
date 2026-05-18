@@ -31,6 +31,7 @@ const navItems = [
 
 const clientesItems = [
   { to: "/passengers", icon: Users, label: "Passageiros" },
+  { to: "/leads", icon: Target, label: "Leads" },
   { to: "/inteligencia-clientes", icon: Brain, label: "Inteligência Clientes" },
   { to: "/natleva-intelligence", icon: Sparkles, label: "NatLeva Intelligence" },
   { to: "/birthdays", icon: Cake, label: "Aniversariantes" },
