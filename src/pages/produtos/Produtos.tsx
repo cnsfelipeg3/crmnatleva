@@ -212,41 +212,43 @@ export default function Produtos() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-5">
         {/* Filters */}
         <Card className="p-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[220px]">
+          <div className="flex flex-col gap-3">
+            <div className="relative w-full">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input placeholder="Buscar título, destino..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
             </div>
-            <select value={kind} onChange={(e) => setKind(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
-              {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
-            </select>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
-              {STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-            <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
-              <option value="all">Todos destinos</option>
-              {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
-            </select>
-            <select value={paxFilter} onChange={(e) => setPaxFilter(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm" title="Filtrar por nº de pessoas">
-              <option value="all">Qtd. pessoas</option>
-              <option value="1">1 pessoa</option>
-              <option value="2">2 pessoas</option>
-              <option value="3">3 pessoas</option>
-              <option value="4">4 pessoas</option>
-              <option value="5">5+ pessoas</option>
-            </select>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
-              <option value="recent">Mais recentes</option>
-              <option value="commission_desc">💰 Maior bônus</option>
-              <option value="commission_asc">Menor bônus</option>
-              <option value="price_asc">Menor preço</option>
-              <option value="price_desc">Maior preço</option>
-            </select>
-            <button onClick={() => setOnlyPromo(!onlyPromo)}
-              className={cn("px-3 py-2 rounded-md text-sm border flex items-center gap-1.5",
-                onlyPromo ? "bg-amber-500 text-black border-amber-500" : "bg-background border-border")}>
-              <Sparkles className="w-3.5 h-3.5" /> Promos
-            </button>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap gap-2">
+              <select value={kind} onChange={(e) => setKind(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm min-w-0 w-full lg:w-auto">
+                {KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}
+              </select>
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm min-w-0 w-full lg:w-auto">
+                {STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+              <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm min-w-0 w-full lg:w-auto">
+                <option value="all">Todos destinos</option>
+                {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <select value={paxFilter} onChange={(e) => setPaxFilter(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm min-w-0 w-full lg:w-auto" title="Filtrar por nº de pessoas">
+                <option value="all">Qtd. pessoas</option>
+                <option value="1">1 pessoa</option>
+                <option value="2">2 pessoas</option>
+                <option value="3">3 pessoas</option>
+                <option value="4">4 pessoas</option>
+                <option value="5">5+ pessoas</option>
+              </select>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm min-w-0 w-full lg:w-auto">
+                <option value="recent">Mais recentes</option>
+                <option value="commission_desc">Maior bônus</option>
+                <option value="commission_asc">Menor bônus</option>
+                <option value="price_asc">Menor preço</option>
+                <option value="price_desc">Maior preço</option>
+              </select>
+              <button onClick={() => setOnlyPromo(!onlyPromo)}
+                className={cn("px-3 py-2 rounded-md text-sm border flex items-center justify-center gap-1.5 w-full lg:w-auto",
+                  onlyPromo ? "bg-amber-500 text-black border-amber-500" : "bg-background border-border")}>
+                <Sparkles className="w-3.5 h-3.5" /> Promos
+              </button>
+            </div>
           </div>
         </Card>
 
