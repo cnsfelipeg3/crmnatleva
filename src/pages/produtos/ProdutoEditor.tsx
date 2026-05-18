@@ -1192,6 +1192,7 @@ export default function ProdutoEditor() {
                   shortDescription={form.short_description}
                   priceFrom={form.price_from}
                   pricePromo={form.price_promo}
+                  priceLabel={form.price_label}
                   coverUrl={form.cover_image_url}
                   galleryUrls={form.gallery.split("\n").map((s) => s.trim()).filter(Boolean)}
                   departureDate={form.departure_date}
