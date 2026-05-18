@@ -336,7 +336,6 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                     </div>
                     <div className="text-[10px] text-muted-foreground mt-1 tabular-nums">
                       Total {formatMoneyBR(plan.total, plan.currency)}
-                      {full && promo && <span className="line-through ml-1.5">{full}</span>}
                     </div>
                   </>
                 ) : (
