@@ -51,6 +51,7 @@ export default function Produtos() {
   const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
+  const [sortBy, setSortBy] = useState<"recent" | "commission_desc" | "commission_asc" | "price_asc" | "price_desc">("recent");
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
     if (typeof window === "undefined") return "ceo";
     return (localStorage.getItem("prateleira_view_mode") as "ceo" | "afiliado") || "ceo";
@@ -71,14 +72,24 @@ export default function Produtos() {
 
   const destinations = useMemo(() => Array.from(new Set(items.map((p) => p.destination))).sort(), [items]);
 
-  const filtered = useMemo(() => items.filter((p) => {
-    if (kind !== "all" && (p.product_kind || "passeio") !== kind) return false;
-    if (status !== "all" && (p.status || "active") !== status) return false;
-    if (destination !== "all" && p.destination !== destination) return false;
-    if (onlyPromo && !p.is_promo) return false;
-    if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
-    return true;
-  }), [items, kind, status, destination, q, onlyPromo]);
+  const filtered = useMemo(() => {
+    const arr = items.filter((p) => {
+      if (kind !== "all" && (p.product_kind || "passeio") !== kind) return false;
+      if (status !== "all" && (p.status || "active") !== status) return false;
+      if (destination !== "all" && p.destination !== destination) return false;
+      if (onlyPromo && !p.is_promo) return false;
+      if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
+      return true;
+    });
+    const priceOf = (p: any) => Number(p.price_promo) || Number(p.price_from) || 0;
+    const commOf = (p: any) => Number(p.commission_per_sale) || 0;
+    const sorted = arr.slice();
+    if (sortBy === "commission_desc") sorted.sort((a, b) => commOf(b) - commOf(a));
+    else if (sortBy === "commission_asc") sorted.sort((a, b) => commOf(a) - commOf(b));
+    else if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
+    else if (sortBy === "price_desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
+    return sorted;
+  }, [items, kind, status, destination, q, onlyPromo, sortBy]);
 
   const totals = useMemo(() => {
     const totalProfit = items.reduce((s, p) => {
@@ -177,6 +188,13 @@ export default function Produtos() {
             <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
               <option value="all">Todos destinos</option>
               {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
+              <option value="recent">Mais recentes</option>
+              <option value="commission_desc">💰 Maior bônus</option>
+              <option value="commission_asc">Menor bônus</option>
+              <option value="price_asc">Menor preço</option>
+              <option value="price_desc">Maior preço</option>
             </select>
             <button onClick={() => setOnlyPromo(!onlyPromo)}
               className={cn("px-3 py-2 rounded-md text-sm border flex items-center gap-1.5",
