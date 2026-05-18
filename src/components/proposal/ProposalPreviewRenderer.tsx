@@ -1768,7 +1768,9 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
             {timeStr && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {timeStr}</span>}
             {guests && <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {guests}</span>}
           </div>
-          <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes <ChevronRight className="w-3 h-3" /></p>
+          {kind !== "transfer" && (
+            <p className="text-xs text-accent flex items-center gap-1 mt-3 font-medium">Ver detalhes <ChevronRight className="w-3 h-3" /></p>
+          )}
         </div>
       </ExpandableCard>
     </motion.div>
