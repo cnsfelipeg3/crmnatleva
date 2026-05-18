@@ -147,14 +147,16 @@ export default function Produtos() {
           </div>
 
           {/* KPI strip */}
-          <div className={cn("grid grid-cols-2 gap-3 mt-6", viewMode === "ceo" ? "sm:grid-cols-6" : "sm:grid-cols-3")}>
-            <KPI label="Total" value={totals.total} />
-            <KPI label="Ativos" value={totals.active} />
-            <KPI label="Em promo" value={totals.promo} />
-            {viewMode === "ceo" && <KPI label="Visualizações" value={totals.views} />}
-            {viewMode === "ceo" && <KPI label="Leads" value={totals.leads} />}
-            {viewMode === "ceo" && <KPI label="Lucro 🔒" value={fmtMoney(totals.profit)} highlight />}
-          </div>
+          {viewMode === "ceo" && (
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mt-6">
+              <KPI label="Total" value={totals.total} />
+              <KPI label="Ativos" value={totals.active} />
+              <KPI label="Em promo" value={totals.promo} />
+              <KPI label="Visualizações" value={totals.views} />
+              <KPI label="Leads" value={totals.leads} />
+              <KPI label="Lucro 🔒" value={fmtMoney(totals.profit)} highlight />
+            </div>
+          )}
         </div>
       </div>
 
