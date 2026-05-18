@@ -287,6 +287,25 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
 
   return (
     <Card className={cn("overflow-hidden flex flex-col p-0 transition-opacity", !isActive && "opacity-70")}>
+      {hasCommission && (
+        <div className="bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm border-b-2 border-emerald-300/50">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-full bg-white/25 flex items-center justify-center shrink-0 ring-2 ring-white/40">
+              <Sparkles className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
+              <div className="text-[16px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm mt-0.5">
+                {fmtMoney(commission, p.currency)}
+                <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
+              </div>
+            </div>
+          </div>
+          <div className="text-[10px] font-bold uppercase tracking-wider text-white bg-black/25 px-2 py-1 rounded shrink-0">
+            Bônus
+          </div>
+        </div>
+      )}
       <div className="relative aspect-[16/10] bg-muted overflow-hidden">
         {p.cover_image_url ? <img src={p.cover_image_url} alt={p.title} className={cn("w-full h-full object-cover", !isActive && "grayscale")} loading="lazy" />
           : <div className="w-full h-full bg-gradient-to-br from-muted to-muted-foreground/10" />}
@@ -300,25 +319,6 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             <Badge variant={statusBadge as any} className="capitalize">{p.status}</Badge>
           )}
         </div>
-        {hasCommission && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-3 py-2 flex items-center justify-between gap-2 shadow-lg backdrop-blur-sm border-t-2 border-emerald-300/50">
-            <div className="flex items-center gap-1.5 min-w-0">
-              <div className="w-6 h-6 rounded-full bg-white/25 flex items-center justify-center shrink-0 ring-2 ring-white/40">
-                <Sparkles className="w-3.5 h-3.5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
-                <div className="text-[15px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm">
-                  {fmtMoney(commission, p.currency)}
-                  <span className="text-[10px] font-semibold text-white/80 ml-1">por venda</span>
-                </div>
-              </div>
-            </div>
-            <div className="text-[10px] font-bold uppercase tracking-wider text-white/95 bg-black/20 px-2 py-1 rounded shrink-0">
-              Bônus
-            </div>
-          </div>
-        )}
       </div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
