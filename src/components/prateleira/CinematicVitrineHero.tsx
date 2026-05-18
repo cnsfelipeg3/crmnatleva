@@ -99,7 +99,7 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
       ref={ref}
       onMouseMove={onMouseMove}
       onMouseLeave={onMouseLeave}
-      className="relative w-full h-[92vh] min-h-[620px] max-h-[940px] overflow-hidden bg-black isolate"
+      className="relative w-full h-[78vh] min-h-[520px] sm:h-[92vh] sm:min-h-[620px] max-h-[940px] overflow-hidden bg-black isolate"
       style={{ perspective: 1400 }}
     >
       {/* === BACKGROUND CAROUSEL with Ken Burns + parallax === */}
@@ -298,17 +298,17 @@ export default function CinematicVitrineHero({ slides, q, setQ, sort, setSort }:
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                  className="flex items-center gap-3 text-white/80 font-light"
-                  style={{ fontSize: "clamp(0.9rem, 1.4vw, 1.15rem)" }}
+                  className="flex items-center gap-2 sm:gap-3 text-white/80 font-light min-w-0 flex-wrap"
+                  style={{ fontSize: "clamp(0.85rem, 1.4vw, 1.15rem)" }}
                 >
-                  <span className="h-px w-10 bg-amber-300/80" />
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5" />
-                    <span className="text-white">{active.destination}</span>
-                    {active.destinationCountry ? <span className="text-white/60">, {active.destinationCountry}</span> : null}
+                  <span className="hidden sm:inline-block h-px w-10 bg-amber-300/80 shrink-0" />
+                  <span className="inline-flex items-center gap-1.5 min-w-0">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />
+                    <span className="text-white truncate">{active.destination}</span>
+                    {active.destinationCountry ? <span className="text-white/60 hidden sm:inline">, {active.destinationCountry}</span> : null}
                   </span>
-                  <span className="text-white/40">·</span>
-                  <span className="line-clamp-1">{active.title}</span>
+                  <span className="text-white/40 hidden sm:inline">·</span>
+                  <span className="line-clamp-1 min-w-0 flex-1 sm:flex-initial">{active.title}</span>
                   {active.isPromo && active.promoBadge && (
                     <Badge className="bg-amber-400 text-black hover:bg-amber-400 ml-1 text-[10px] tracking-wider uppercase">
                       <Sparkles className="w-3 h-3 mr-1" /> {active.promoBadge}
