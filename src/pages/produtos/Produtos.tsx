@@ -52,6 +52,7 @@ export default function Produtos() {
   const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
+  const [paxFilter, setPaxFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "commission_desc" | "commission_asc" | "price_asc" | "price_desc">("recent");
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
     if (typeof window === "undefined") return "ceo";
@@ -80,6 +81,11 @@ export default function Produtos() {
       if (destination !== "all" && p.destination !== destination) return false;
       if (onlyPromo && !p.is_promo) return false;
       if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
+      if (paxFilter !== "all") {
+        const totalPax = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+        if (paxFilter === "5") { if (totalPax < 5) return false; }
+        else if (totalPax !== Number(paxFilter)) return false;
+      }
       return true;
     });
     const priceOf = (p: any) => Number(p.price_promo) || Number(p.price_from) || 0;
@@ -90,7 +96,7 @@ export default function Produtos() {
     else if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
     else if (sortBy === "price_desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
     return sorted;
-  }, [items, kind, status, destination, q, onlyPromo, sortBy]);
+  }, [items, kind, status, destination, q, onlyPromo, sortBy, paxFilter]);
 
   const totals = useMemo(() => {
     const totalProfit = items.reduce((s, p) => {
@@ -196,6 +202,14 @@ export default function Produtos() {
             <select value={destination} onChange={(e) => setDestination(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
               <option value="all">Todos destinos</option>
               {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            <select value={paxFilter} onChange={(e) => setPaxFilter(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm" title="Filtrar por nº de pessoas">
+              <option value="all">👥 Qtd. pessoas</option>
+              <option value="1">1 pessoa</option>
+              <option value="2">2 pessoas</option>
+              <option value="3">3 pessoas</option>
+              <option value="4">4 pessoas</option>
+              <option value="5">5+ pessoas</option>
             </select>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
               <option value="recent">Mais recentes</option>
