@@ -467,9 +467,11 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
             </Link>
           )}
-          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics" className={isAffiliate ? "flex-1" : ""}>
-            <BarChart3 className="w-3.5 h-3.5" />
-          </Button>
+          {!isAffiliate && (
+            <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
+              <BarChart3 className="w-3.5 h-3.5" />
+            </Button>
+          )}
           <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
             <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
               <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
