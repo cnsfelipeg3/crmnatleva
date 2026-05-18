@@ -325,15 +325,13 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
     <Card className={cn("overflow-hidden flex flex-col p-0 transition-opacity", !isActive && "opacity-70")}>
       {hasCommission && (
         <div className="relative overflow-hidden bg-gradient-to-r from-emerald-800 via-emerald-700 to-green-700 px-3 py-2.5 flex items-center justify-between gap-2 shadow-sm border-b-2 border-emerald-400/40">
-          <Sparkles className="bonus-sparkle pointer-events-none absolute top-1.5 right-16 w-3 h-3 text-amber-200/90" />
-          <Sparkles className="bonus-sparkle bonus-sparkle-delay pointer-events-none absolute bottom-1.5 left-12 w-2.5 h-2.5 text-amber-100/80" />
           <div className="flex items-center gap-2 min-w-0 relative">
-            <div className="bonus-icon-pulse w-7 h-7 rounded-full bg-amber-300/95 flex items-center justify-center shrink-0 ring-2 ring-amber-200/60 shadow-md">
+            <div className="w-7 h-7 rounded-full bg-amber-300/95 flex items-center justify-center shrink-0 ring-2 ring-amber-200/60 shadow-md">
               <Banknote className="w-4 h-4 text-emerald-900" />
             </div>
             <div className="min-w-0">
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
-              <div className="text-[16px] font-extrabold tabular-nums leading-tight drop-shadow-sm mt-0.5">
+              <div className="text-[16px] font-extrabold tabular-nums leading-tight drop-shadow-sm mt-0.5 text-white">
                 <span className="bonus-value">{fmtMoney(commission, p.currency)}</span>
                 <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
               </div>
