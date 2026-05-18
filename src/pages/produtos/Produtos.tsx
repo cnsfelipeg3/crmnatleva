@@ -105,12 +105,12 @@ export default function Produtos() {
       <div className="relative overflow-hidden border-b border-border" style={{ background: "linear-gradient(135deg, hsl(150 40% 6%) 0%, hsl(150 40% 12%) 100%)" }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           <div className="flex items-center gap-2 text-amber-300 text-xs font-medium tracking-widest uppercase mb-2">
-            <Sparkles className="w-3.5 h-3.5" /> Prateleira NatLeva
+            <Sparkles className="w-3.5 h-3.5" /> PROGRAMA DE BÔNUS - NATLEVA
           </div>
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Marketplace de viagens prontas</h1>
-              <p className="text-white/70 text-sm mt-2">Cadastre pacotes, aéreos, hospedagens e experiências com preços e condições especiais.</p>
+              <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Indique & Ganhe</h1>
+              <p className="text-white/70 text-sm mt-2">Pacotes completos, passagens aéreas, hospedagens e muito mais!</p>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
