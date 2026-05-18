@@ -168,7 +168,7 @@ export default function Produtos() {
             <div>
               <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Indique & Ganhe</h1>
               <p className="text-white/75 text-sm sm:text-[15px] mt-3 max-w-3xl leading-relaxed">
-                Funciona simples · você entra aqui, escolhe as viagens que quer divulgar (ou indica todas) e compartilha com a sua rede. Cada pacote já mostra o valor exato do seu bônus de indicação · quando alguém fechar a viagem com a gente, você recebe esse valor no Pix, no mesmo dia do fechamento.
+                Ganhar uma renda extra é muito mais simples do que você imagina! Você entra aqui, escolhe as viagens que quer divulgar (ou indica todas) e compartilha com a sua rede. Cada pacote já mostra o valor exato do seu bônus de indicação · quando alguém fechar a viagem com a gente, você recebe esse valor no Pix, no mesmo dia do fechamento.
               </p>
               <p className="text-amber-300/90 text-xs sm:text-[13px] mt-2 max-w-3xl leading-relaxed">
                 Ex · indicou Punta del Este? Ganha R$ 332. Indicou o Iberostar Selection? Ganha R$ 900. O bônus aparece em cada card, é só escolher e compartilhar.
