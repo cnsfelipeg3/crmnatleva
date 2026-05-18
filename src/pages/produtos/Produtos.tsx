@@ -257,9 +257,18 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
   const isActive = p.is_active !== false;
   const promo = p.price_promo ? fmtMoney(p.price_promo, p.currency) : null;
   const full = p.price_from ? fmtMoney(p.price_from, p.currency) : null;
-  const dateRange = p.flexible_dates ? "Flexíveis"
-    : p.departure_date && p.return_date ? `${fmtDate(p.departure_date)}-${fmtDate(p.return_date)}`
-    : p.departure_date ? `${fmtDate(p.departure_date)}` : null;
+  const kind: string = (p.product_kind || "passeio").toLowerCase();
+  const hasFlight = kind === "pacote" || kind === "aereo" || !!p.airline || !!p.origin_iata;
+  const kindMeta: { label: string; Icon: any } =
+    kind === "pacote" ? { label: "Pacote · Aéreo + Hospedagem", Icon: Briefcase }
+    : kind === "aereo" ? { label: "Somente aéreo", Icon: PlaneTakeoff }
+    : kind === "hospedagem" ? { label: "Somente hospedagem", Icon: BedDouble }
+    : { label: "Experiência", Icon: Compass };
+  const originLabel = hasFlight
+    ? [p.origin_city, p.origin_iata ? `(${p.origin_iata})` : null].filter(Boolean).join(" ")
+    : "";
+  const depDate = fmtDate(p.departure_date);
+  const retDate = fmtDate(p.return_date);
   const statusBadge = p.status === "draft" ? "secondary" : p.status === "paused" ? "outline" : "default";
 
   // Lucro estimado · uso interno
