@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Download, Loader2, ImageIcon, Copy, Check } from "lucide-react";
 import { FORMATS, type FormatId, findFormat } from "@/lib/marketing/formats";
-import { toast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 
 interface Asset {
   id: string;
