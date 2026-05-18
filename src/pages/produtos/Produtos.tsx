@@ -456,26 +456,33 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             aria-label="Ativar ou desativar produto"
           />
         </div>
+        </>)}
         <div className="flex gap-2 mt-3">
-          <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
-          </Link>
-          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
+          {!isAffiliate && (
+            <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
+              <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
+            </Link>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics" className={isAffiliate ? "flex-1" : ""}>
             <BarChart3 className="w-3.5 h-3.5" />
           </Button>
-          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer">
-            <Button variant="outline" size="sm" title="Abrir página"><ExternalLink className="w-3.5 h-3.5" /></Button>
+          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
+            <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
+              <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
+            </Button>
           </a>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-            title="Excluir produto"
-            className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-          </Button>
+          {!isAffiliate && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleDelete}
+              disabled={deleting}
+              title="Excluir produto"
+              className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </Button>
+          )}
         </div>
       </div>
       <PrateleiraAnalyticsDialog
