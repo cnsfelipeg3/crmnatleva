@@ -569,8 +569,13 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               </Button>
             )}
             <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
-              <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
-                <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
+              <Button
+                variant="outline"
+                size="sm"
+                title="Abrir página pública"
+                className={isAffiliate ? "w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary text-xs font-medium" : ""}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5">Abrir página</span>}
               </Button>
             </a>
             {!isAffiliate && (
@@ -590,7 +595,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             variant="outline"
             size="sm"
             onClick={() => setMediaOpen(true)}
-            className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary text-xs font-medium"
           >
             <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
             Mídias para Divulgação
