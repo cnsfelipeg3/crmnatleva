@@ -56,6 +56,14 @@ async function refetchProfilePicture(phone: string): Promise<string | null> {
 
   const promise = (async () => {
     try {
+      // Guard: só chama zapi-proxy se houver sessão autenticada.
+      // Sem isso, o invoke retorna 401 e polui o console (e dispara captors
+      // de runtime-error em alguns ambientes/PWAs).
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        refetchCache.set(key, { url: null, at: Date.now() });
+        return null;
+      }
       const { data, error } = await supabase.functions.invoke("zapi-proxy", {
         body: { action: "get-profile-picture", phone: key },
       });
@@ -76,6 +84,7 @@ async function refetchProfilePicture(phone: string): Promise<string | null> {
   inFlight.set(key, promise);
   return promise;
 }
+
 
 export function WhatsAppAvatar({
   src,
