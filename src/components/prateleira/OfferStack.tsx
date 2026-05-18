@@ -167,14 +167,23 @@ export default function OfferStack({
 
         <div className="px-5 py-5 relative space-y-4">
           {/* Badge de pax · destaque no topo */}
-          {(paxMin || paxMax) && (
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-              <Users className="w-3 h-3" />
-              {paxMin && paxMax && paxMin !== paxMax
-                ? `Preço total para ${paxMin} a ${paxMax} pessoas`
-                : `Preço total para ${paxMax || paxMin} ${(paxMax || paxMin) === 1 ? "pessoa" : "pessoas"}`}
-            </div>
-          )}
+          {(() => {
+            const isPerPerson = (priceLabel || "").toLowerCase().includes("pessoa");
+            if (!paxMin && !paxMax && !isPerPerson) return null;
+            const paxCount = paxMax || paxMin;
+            const paxText = paxMin && paxMax && paxMin !== paxMax
+              ? `${paxMin} a ${paxMax} pessoas`
+              : `${paxCount} ${paxCount === 1 ? "pessoa" : "pessoas"}`;
+            const label = isPerPerson
+              ? (paxCount ? `Preço por pessoa · pacote para ${paxText}` : "Preço por pessoa")
+              : `Preço total para ${paxText}`;
+            return (
+              <div className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                <Users className="w-3 h-3" />
+                {label}
+              </div>
+            );
+          })()}
 
           {/* Plano de pagamento detalhado */}
           <PaymentPlanCard
@@ -188,6 +197,7 @@ export default function OfferStack({
             minInstallment={planOptions.minInstallment}
             paxMin={paxMin}
             paxMax={paxMax}
+            isPerPerson={(priceLabel || "").toLowerCase().includes("pessoa")}
             customInstallments={planOptions.customInstallments}
             balanceMethod={pt.balance_method || "boleto"}
             balanceInterestPercent={pt.balance_interest_percent}
