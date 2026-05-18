@@ -123,6 +123,10 @@ export default function Produtos() {
             <div>
               <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Indique & Ganhe</h1>
               <p className="text-white/70 text-sm mt-2">Pacotes completos, passagens aéreas, hospedagens e muito mais!</p>
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 text-xs font-semibold">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
+                Receba seu bônus ainda hoje, no PIX · vale para todos os pacotes
+              </div>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
               <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
@@ -315,12 +319,9 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
             <div className="min-w-0">
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
-              <div className="text-[16px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm mt-0.5 flex items-baseline flex-wrap gap-x-1">
+              <div className="text-[16px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm mt-0.5">
                 <span>{fmtMoney(commission, p.currency)}</span>
-                <span className="text-[11px] font-semibold text-white/85">por venda</span>
-                <span className="text-[10px] font-semibold text-white/95 bg-black/25 px-1.5 py-0.5 rounded leading-none">
-                  Receba seu bônus ainda hoje, no PIX!
-                </span>
+                <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
               </div>
             </div>
           </div>
