@@ -315,9 +315,12 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
             <div className="min-w-0">
               <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
-              <div className="text-[16px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm mt-0.5">
-                {fmtMoney(commission, p.currency)}
-                <span className="text-[11px] font-semibold text-white/85 ml-1">por venda</span>
+              <div className="text-[16px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm mt-0.5 flex items-baseline flex-wrap gap-x-1">
+                <span>{fmtMoney(commission, p.currency)}</span>
+                <span className="text-[11px] font-semibold text-white/85">por venda</span>
+                <span className="text-[10px] font-semibold text-white/95 bg-black/25 px-1.5 py-0.5 rounded leading-none">
+                  Receba seu bônus ainda hoje, no PIX!
+                </span>
               </div>
             </div>
           </div>
