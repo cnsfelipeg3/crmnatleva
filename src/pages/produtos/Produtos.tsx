@@ -343,14 +343,16 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                   <div className="text-sm font-semibold">{promo || full || "Sob consulta"}</div>
                 )}
               </div>
-              <button
-                onClick={() => setAnalyticsOpen(true)}
-                className="flex items-center gap-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
-                title="Ver analytics deste produto"
-              >
-                <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
-                <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
-              </button>
+              {!isAffiliate && (
+                <button
+                  onClick={() => setAnalyticsOpen(true)}
+                  className="flex items-center gap-3 text-[11px] text-muted-foreground hover:text-foreground transition-colors shrink-0"
+                  title="Ver analytics deste produto"
+                >
+                  <span className="flex items-center gap-1"><Eye className="w-3 h-3" /> {p.view_count || 0}</span>
+                  <span className="flex items-center gap-1"><Users className="w-3 h-3" /> {p.lead_count || 0}</span>
+                </button>
+              )}
             </div>
           );
         })()}
