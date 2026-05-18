@@ -87,7 +87,7 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
       whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.45, delay: Math.min(index * 0.035, 0.32), ease: [0.16, 1, 0.3, 1] }}
-      className="snap-start shrink-0 w-[68vw] sm:w-[300px] lg:w-[340px]"
+      className="snap-start shrink-0 w-[78vw] xs:w-[68vw] sm:w-[300px] lg:w-[340px]"
     >
       <div
         onMouseEnter={() => setHover(true)}
@@ -104,7 +104,7 @@ function NetflixCard({ item, index, whatsapp, onPreview }: { item: RowItem; inde
           <motion.div
             animate={reduced ? undefined : { scale: hover ? 1.035 : 1, y: hover ? -4 : 0 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="relative aspect-[16/10] rounded-xl overflow-hidden bg-neutral-900 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/5 group-hover:ring-amber-400/40 group-hover:shadow-[0_25px_60px_-20px_rgba(0,0,0,0.9)]"
+            className="relative aspect-[4/5] sm:aspect-[16/10] rounded-xl overflow-hidden bg-neutral-900 shadow-[0_10px_30px_-15px_rgba(0,0,0,0.8)] ring-1 ring-white/5 group-hover:ring-amber-400/40 group-hover:shadow-[0_25px_60px_-20px_rgba(0,0,0,0.9)]"
             style={{ willChange: "transform" }}
           >
             {item.cover ? (
