@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import { initPWAVersionCheck } from "./lib/pwaVersionCheck";
 
 // Marca <html> como standalone PWA assim que possível (esconde elementos browser-only via CSS)
 if (typeof window !== "undefined") {
@@ -9,6 +10,10 @@ if (typeof window !== "undefined") {
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
   if (isStandalone) document.documentElement.classList.add("pwa-standalone");
 }
+
+// Verificador de versão · roda só em PWA standalone instalado e força
+// refresh automático sempre que detecta um build novo no servidor.
+initPWAVersionCheck();
 
 createRoot(document.getElementById("root")!).render(<App />);
 
