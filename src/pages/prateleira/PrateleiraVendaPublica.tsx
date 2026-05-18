@@ -137,14 +137,43 @@ export default function PrateleiraVendaPublica() {
     setGateLoading(true);
     try {
       const ua = navigator.userAgent || "";
-      const deviceType = /mobile|android|iphone/i.test(ua) ? "mobile" : /ipad|tablet/i.test(ua) ? "tablet" : "desktop";
+      // Detecção de dispositivo (iPad moderno se identifica como Macintosh)
+      const isIPadOS = /Macintosh/i.test(ua) && (navigator as any).maxTouchPoints > 1;
+      const deviceType = /iPad|tablet/i.test(ua) || isIPadOS
+        ? "tablet"
+        : /mobile|android|iphone|ipod/i.test(ua)
+        ? "mobile"
+        : "desktop";
 
-      // Geo lookup (best effort)
-      let geo: any = {};
-      try {
-        const r = await fetch("https://ipapi.co/json/");
-        if (r.ok) geo = await r.json();
-      } catch {}
+      // Geo lookup com fallback chain (ipwho.is é mais confiável e sem rate-limit agressivo)
+      let geo: { ip?: string; city?: string; region?: string; country?: string; lat?: number; lon?: number } = {};
+      const providers = [
+        async () => {
+          const r = await fetch("https://ipwho.is/");
+          if (!r.ok) throw new Error("ipwho fail");
+          const j = await r.json();
+          if (j.success === false) throw new Error("ipwho denied");
+          return { ip: j.ip, city: j.city, region: j.region, country: j.country, lat: j.latitude, lon: j.longitude };
+        },
+        async () => {
+          const r = await fetch("https://ipapi.co/json/");
+          if (!r.ok) throw new Error("ipapi fail");
+          const j = await r.json();
+          return { ip: j.ip, city: j.city, region: j.region, country: j.country_name, lat: j.latitude, lon: j.longitude };
+        },
+        async () => {
+          const r = await fetch("https://get.geojs.io/v1/ip/geo.json");
+          if (!r.ok) throw new Error("geojs fail");
+          const j = await r.json();
+          return { ip: j.ip, city: j.city, region: j.region, country: j.country, lat: Number(j.latitude), lon: Number(j.longitude) };
+        },
+      ];
+      for (const fn of providers) {
+        try {
+          geo = await fn();
+          if (geo.city || geo.country) break;
+        } catch {}
+      }
 
       const utm = new URLSearchParams(window.location.search);
 
@@ -156,31 +185,33 @@ export default function PrateleiraVendaPublica() {
         .eq("email", email)
         .maybeSingle();
 
+      let viewerId: string | null = existing?.id || null;
       if (existing) {
         await (supabase as any).from("prateleira_product_viewers").update({
           name, phone, country_code: countryCode,
           device_type: deviceType, user_agent: ua.slice(0, 500),
           ip_address: geo.ip || null,
-          city: geo.city || null, region: geo.region || null, country: geo.country_name || null,
-          latitude: geo.latitude || null, longitude: geo.longitude || null,
+          city: geo.city || null, region: geo.region || null, country: geo.country || null,
+          latitude: geo.lat || null, longitude: geo.lon || null,
           total_views: (existing.total_views || 1) + 1,
           last_active_at: new Date().toISOString(),
         }).eq("id", existing.id);
       } else {
-        await (supabase as any).from("prateleira_product_viewers").insert({
+        const { data: inserted } = await (supabase as any).from("prateleira_product_viewers").insert({
           product_id: p.id,
           product_slug: p.slug,
           email, name, phone, country_code: countryCode,
           device_type: deviceType, user_agent: ua.slice(0, 500),
           ip_address: geo.ip || null,
-          city: geo.city || null, region: geo.region || null, country: geo.country_name || null,
-          latitude: geo.latitude || null, longitude: geo.longitude || null,
+          city: geo.city || null, region: geo.region || null, country: geo.country || null,
+          latitude: geo.lat || null, longitude: geo.lon || null,
           utm_source: utm.get("utm_source"),
           utm_medium: utm.get("utm_medium"),
           utm_campaign: utm.get("utm_campaign"),
           utm_content: utm.get("utm_content"),
           utm_term: utm.get("utm_term"),
-        });
+        }).select("id").maybeSingle();
+        viewerId = inserted?.id || null;
 
         // Increment view_count apenas para visitas únicas
         (supabase as any).from("experience_products")
@@ -189,6 +220,7 @@ export default function PrateleiraVendaPublica() {
 
       try {
         sessionStorage.setItem(`prateleira_viewer_${slug}`, email);
+        if (viewerId) sessionStorage.setItem(`prateleira_viewer_id_${slug}`, viewerId);
       } catch {}
       setUnlocked(true);
     } catch (err: any) {
