@@ -11,6 +11,7 @@ type Props = {
   compact?: boolean;
   paxMin?: number | null;
   paxMax?: number | null;
+  isPerPerson?: boolean;
   customInstallments?: number[];
   maxInstallments?: number;
   minInstallment?: number;
@@ -18,7 +19,7 @@ type Props = {
   balanceInterestPercent?: number | string | null;
 };
 
-export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax, customInstallments, maxInstallments, minInstallment, balanceMethod, balanceInterestPercent }: Props) {
+export default function PaymentPlanCard({ price, departureDate, currency = "BRL", entryPercent, entryAmount, daysBefore, compact, paxMin, paxMax, isPerPerson, customInstallments, maxInstallments, minInstallment, balanceMethod, balanceInterestPercent }: Props) {
   const plan = computeNatlevaPlan(price, departureDate, { entryPercent, entryAmount, daysBefore, currency, maxInstallments, minInstallment, customInstallments });
   if (!plan) return null;
 
@@ -27,6 +28,7 @@ export default function PaymentPlanCard({ price, departureDate, currency = "BRL"
   const balanceLabel = paymentBalanceLabel(balanceMethod || "boleto", balanceInterestPercent);
 
   const paxLabel = (() => {
+    if (isPerPerson) return "Valor por pessoa";
     if (!paxMin && !paxMax) return null;
     const a = paxMin || paxMax!;
     const b = paxMax || paxMin!;
