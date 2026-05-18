@@ -45,22 +45,41 @@ function fmtDate(d?: string | null) {
 }
 
 export default function Produtos() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [kind, setKind] = useState("all");
-  const [status, setStatus] = useState("all");
-  const [destination, setDestination] = useState("all");
-  const [q, setQ] = useState("");
-  const [onlyPromo, setOnlyPromo] = useState(false);
-  const [paxFilter, setPaxFilter] = useState<string>("all");
-  const [sortBy, setSortBy] = useState<"recent" | "commission_desc" | "commission_asc" | "price_asc" | "price_desc">("recent");
+  const [kind, setKind] = useState(() => searchParams.get("kind") || "all");
+  const [status, setStatus] = useState(() => searchParams.get("status") || "all");
+  const [destination, setDestination] = useState(() => searchParams.get("destination") || "all");
+  const [q, setQ] = useState(() => searchParams.get("q") || "");
+  const [onlyPromo, setOnlyPromo] = useState(() => searchParams.get("promo") === "1");
+  const [paxFilter, setPaxFilter] = useState<string>(() => searchParams.get("pax") || "all");
+  const [sortBy, setSortBy] = useState<"recent" | "commission_desc" | "commission_asc" | "price_asc" | "price_desc">(
+    () => (searchParams.get("sort") as any) || "recent"
+  );
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
+    const fromUrl = searchParams.get("mode");
+    if (fromUrl === "ceo" || fromUrl === "afiliado") return fromUrl;
     if (typeof window === "undefined") return "ceo";
     return (localStorage.getItem("prateleira_view_mode") as "ceo" | "afiliado") || "ceo";
   });
   useEffect(() => {
     try { localStorage.setItem("prateleira_view_mode", viewMode); } catch {}
   }, [viewMode]);
+
+  // Sync filters to URL so they can be shared and restored
+  useEffect(() => {
+    const params: Record<string, string> = {};
+    if (kind !== "all") params.kind = kind;
+    if (status !== "all") params.status = status;
+    if (destination !== "all") params.destination = destination;
+    if (q) params.q = q;
+    if (onlyPromo) params.promo = "1";
+    if (paxFilter !== "all") params.pax = paxFilter;
+    if (sortBy !== "recent") params.sort = sortBy;
+    if (viewMode !== "ceo") params.mode = viewMode;
+    setSearchParams(params, { replace: true });
+  }, [kind, status, destination, q, onlyPromo, paxFilter, sortBy, viewMode, setSearchParams]);
 
   useEffect(() => {
     (async () => {
