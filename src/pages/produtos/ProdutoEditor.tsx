@@ -1181,6 +1181,14 @@ export default function ProdutoEditor() {
               </AccordionItem>
             </Accordion>
 
+            {/* ============ 8.5 · INSIGHTS DO PRODUTO ============ */}
+            {recordId && (
+              <Card className="p-5 space-y-4">
+                <SectionHeader icon={BarChart3} title="Insights do produto · em tempo real" subtitle="Quem está vendo, de onde, por quanto tempo e onde clica" />
+                <ProductInsightsPanel productId={recordId} />
+              </Card>
+            )}
+
             {/* ============ 9 · MARKETING ============ */}
             <Card className="p-5 space-y-4">
               <SectionHeader icon={Megaphone} title="Marketing · gerar artes" subtitle={recordId ? "Crie posts, stories e capas a partir deste produto" : "Salve o produto primeiro para liberar a geração de artes"} />
