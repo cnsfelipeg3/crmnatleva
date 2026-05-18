@@ -210,9 +210,6 @@ export default function OfferStack({
               <span className="tabular-nums font-medium text-foreground/60">
                 {promoPrice || fullPrice}
               </span>
-              {promoPrice && fullPrice && (
-                <span className="line-through opacity-60">{fullPrice}</span>
-              )}
               {savings && (
                 <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
                   <TrendingDown className="w-3 h-3" />
