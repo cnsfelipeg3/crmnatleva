@@ -377,21 +377,18 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               <span className="font-medium text-foreground">Datas flexíveis</span>
             </div>
           ) : (depDate || retDate) ? (
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <div className="flex flex-col gap-1 text-[11px]">
               {depDate && (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-foreground">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Ida</span>
+                <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-muted text-foreground self-start">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold w-8">Ida</span>
                   <span className="font-semibold tabular-nums">{depDate}</span>
                 </span>
               )}
               {retDate && (
-                <>
-                  <ArrowRight className="w-3 h-3 text-muted-foreground/60" />
-                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-foreground">
-                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Volta</span>
-                    <span className="font-semibold tabular-nums">{retDate}</span>
-                  </span>
-                </>
+                <span className="inline-flex items-center gap-1.5 px-1.5 py-0.5 rounded-md bg-muted text-foreground self-start">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold w-8">Volta</span>
+                  <span className="font-semibold tabular-nums">{retDate}</span>
+                </span>
               )}
             </div>
           ) : null}
@@ -572,8 +569,13 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               </Button>
             )}
             <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
-              <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
-                <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
+              <Button
+                variant="outline"
+                size="sm"
+                title="Abrir página pública"
+                className={isAffiliate ? "w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary text-xs font-medium" : ""}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5">Abrir página</span>}
               </Button>
             </a>
             {!isAffiliate && (
@@ -593,7 +595,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             variant="outline"
             size="sm"
             onClick={() => setMediaOpen(true)}
-            className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+            className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary text-xs font-medium"
           >
             <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
             Mídias para Divulgação
