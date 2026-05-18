@@ -56,7 +56,7 @@ export default function PublicFooter() {
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground">Confiança</h4>
             <div className="flex items-start gap-2 text-sm text-muted-foreground">
               <ShieldCheck className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-              <span>Pagamentos protegidos · proposta detalhada · sem letra miúda do orçamento ao voucher.</span>
+              <span>Pagamentos protegidos.</span>
             </div>
             <button
               type="button"
