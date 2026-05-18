@@ -294,7 +294,9 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
         </div>
         <div className="absolute top-2 right-2 flex items-center gap-1.5">
           {!isActive && <Badge variant="outline" className="bg-black/60 text-white border-white/30 backdrop-blur">Inativo</Badge>}
-          <Badge variant={statusBadge as any} className="capitalize">{p.status || "active"}</Badge>
+          {p.status && p.status !== "active" && p.status !== "draft" && (
+            <Badge variant={statusBadge as any} className="capitalize">{p.status}</Badge>
+          )}
         </div>
       </div>
       <div className="p-4 flex-1 flex flex-col">
