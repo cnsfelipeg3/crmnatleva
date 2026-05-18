@@ -203,6 +203,14 @@ export default function Produtos() {
               <option value="all">Todos destinos</option>
               {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
+            <select value={paxFilter} onChange={(e) => setPaxFilter(e.target.value)} className="bg-background border border-border rounded-md px-3 py-2 text-sm" title="Filtrar por nº de pessoas">
+              <option value="all">👥 Qtd. pessoas</option>
+              <option value="1">1 pessoa</option>
+              <option value="2">2 pessoas</option>
+              <option value="3">3 pessoas</option>
+              <option value="4">4 pessoas</option>
+              <option value="5">5+ pessoas</option>
+            </select>
             <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
               <option value="recent">Mais recentes</option>
               <option value="commission_desc">💰 Maior bônus</option>
