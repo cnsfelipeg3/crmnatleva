@@ -54,7 +54,7 @@ export interface PaymentSnapshot {
   installmentsLabel: string;   // ex: "+ 11x R$ 439 sem juros no boleto"
   pixLabel?: string;           // ex: "Ou R$ 6.555 à vista no PIX (-5%)"
   fromLabel?: string;          // ex: "A partir de R$ 6.890 por pessoa"
-  paxLabel?: string;           // ex: "Valor total para 3 pessoas" · derivado do pax do produto
+  paxLabel?: string;           // ex: "Valor por pessoa" ou "Valor total para 3 pessoas"
 }
 
 export interface ArtBriefing {
@@ -250,7 +250,7 @@ export function buildArtUserPrompt(briefing: ArtBriefing, formatLabel: string, a
           `   · Big Champagne figure: "${briefing.payment.entryLabel}"`,
           `   · Hunter sub line: "${briefing.payment.installmentsLabel}"`,
           briefing.payment.pixLabel ? `   · Eucalyptus tiny line: "${briefing.payment.pixLabel}"` : "",
-          `   · MANDATORY pax caption right next to the entry value (Eucalyptus, italic, ~10-11px), render EXACTLY this string character by character: "${briefing.payment.paxLabel || "Valor total do pacote"}". This caption is OBRIGATÓRIA em toda arte · jamais altere o número de adultos, jamais troque "adultos + crianças" por "pessoas", jamais arredonde, jamais omita "criança/crianças" quando houver. Se o briefing disser "2 adultos + 1 criança", a arte DEVE dizer "2 adultos + 1 criança" e NUNCA "3 pessoas".`,
+          `   · MANDATORY price-basis caption right next to the entry value (Eucalyptus, italic, ~10-11px), render EXACTLY this string character by character: "${briefing.payment.paxLabel || "Valor total do pacote"}". This caption is OBRIGATÓRIA em toda arte · if it says "Valor por pessoa", NEVER change it to "valor total", NEVER add passenger quantity, NEVER write "para 2 adultos". Only preserve passenger composition when the provided caption itself contains adults/children.`,
           "   · DO NOT print the total amount anywhere on the artwork. The 'A partir de' caption is also forbidden if it shows the full sum.",
         ].filter(Boolean).join("\n")
       : "",
