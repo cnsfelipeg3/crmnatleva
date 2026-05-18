@@ -81,6 +81,11 @@ export default function Produtos() {
       if (destination !== "all" && p.destination !== destination) return false;
       if (onlyPromo && !p.is_promo) return false;
       if (q && !`${p.title} ${p.short_description ?? ""} ${p.destination}`.toLowerCase().includes(q.toLowerCase())) return false;
+      if (paxFilter !== "all") {
+        const totalPax = Math.max(1, (Number(p.pax_adults) || 0) + (Number(p.pax_children) || 0));
+        if (paxFilter === "5") { if (totalPax < 5) return false; }
+        else if (totalPax !== Number(paxFilter)) return false;
+      }
       return true;
     });
     const priceOf = (p: any) => Number(p.price_promo) || Number(p.price_from) || 0;
