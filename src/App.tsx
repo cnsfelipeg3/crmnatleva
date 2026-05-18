@@ -279,6 +279,7 @@ function AppRoutes() {
           <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
           <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
           <Route path="/birthdays" element={<Birthdays />} />
+          <Route path="/leads" element={<Leads />} />
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
           <Route path="/cotacoes" element={<CotacoesPropostasPipeline />} />
