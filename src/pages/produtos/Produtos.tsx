@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake, ImageIcon } from "lucide-react";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
+import MarketingMediaDialog from "@/components/produtos/MarketingMediaDialog";
 import { cn } from "@/lib/utils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -243,6 +244,7 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
 function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Product; viewMode: "ceo" | "afiliado"; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
   const isAffiliate = viewMode === "afiliado";
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const isActive = p.is_active !== false;
@@ -500,40 +502,57 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
           />
         </div>
         </>)}
-        <div className="flex gap-2 mt-3">
-          {!isAffiliate && (
-            <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
-              <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
-            </Link>
-          )}
-          {!isAffiliate && (
-            <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
-              <BarChart3 className="w-3.5 h-3.5" />
-            </Button>
-          )}
-          <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
-            <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
-              <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
-            </Button>
-          </a>
-          {!isAffiliate && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDelete}
-              disabled={deleting}
-              title="Excluir produto"
-              className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
-          )}
+        <div className="flex flex-col gap-2 mt-3">
+          <div className="flex gap-2">
+            {!isAffiliate && (
+              <Link to={`/prateleira/${p.slug}/editar`} className="flex-1">
+                <Button variant="outline" size="sm" className="w-full"><Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar</Button>
+              </Link>
+            )}
+            {!isAffiliate && (
+              <Button variant="outline" size="sm" onClick={() => setAnalyticsOpen(true)} title="Analytics">
+                <BarChart3 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
+              <Button variant="outline" size="sm" title="Abrir página pública" className={isAffiliate ? "w-full" : ""}>
+                <ExternalLink className="w-3.5 h-3.5" />{isAffiliate && <span className="ml-1.5 text-xs">Abrir página</span>}
+              </Button>
+            </a>
+            {!isAffiliate && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDelete}
+                disabled={deleting}
+                title="Excluir produto"
+                className="text-red-600 hover:text-red-700 hover:bg-red-500/10 border-red-500/30"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </Button>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMediaOpen(true)}
+            className="w-full border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
+          >
+            <ImageIcon className="w-3.5 h-3.5 mr-1.5" />
+            Mídias para Divulgação
+          </Button>
         </div>
       </div>
       <PrateleiraAnalyticsDialog
         open={analyticsOpen}
         onOpenChange={setAnalyticsOpen}
         product={{ id: p.id, slug: p.slug, title: p.title }}
+      />
+      <MarketingMediaDialog
+        open={mediaOpen}
+        onOpenChange={setMediaOpen}
+        productId={p.id}
+        productTitle={p.title}
       />
     </Card>
   );
