@@ -300,6 +300,25 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             <Badge variant={statusBadge as any} className="capitalize">{p.status}</Badge>
           )}
         </div>
+        {hasCommission && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-3 py-2 flex items-center justify-between gap-2 shadow-lg backdrop-blur-sm border-t-2 border-emerald-300/50">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <div className="w-6 h-6 rounded-full bg-white/25 flex items-center justify-center shrink-0 ring-2 ring-white/40">
+                <Sparkles className="w-3.5 h-3.5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-[9px] uppercase tracking-widest font-bold text-white/90 leading-none">Você ganha</div>
+                <div className="text-[15px] font-extrabold tabular-nums leading-tight text-white drop-shadow-sm">
+                  {fmtMoney(commission, p.currency)}
+                  <span className="text-[10px] font-semibold text-white/80 ml-1">por venda</span>
+                </div>
+              </div>
+            </div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-white/95 bg-black/20 px-2 py-1 rounded shrink-0">
+              Bônus
+            </div>
+          </div>
+        )}
       </div>
       <div className="p-4 flex-1 flex flex-col">
         <div className="flex items-start justify-between gap-2">
@@ -357,7 +376,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
           );
         })()}
-        {/* Comissão por venda · uso interno · destaque */}
+        {!isAffiliate && (
         <div
           className={cn(
             "mt-2 px-3 py-2.5 rounded-lg border-2 flex items-center justify-between gap-2 shadow-sm",
@@ -392,6 +411,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
             </div>
           </div>
         </div>
+        )}
         {!isAffiliate && (<>
         {/* Lucro estimado · uso interno */}
         <div
