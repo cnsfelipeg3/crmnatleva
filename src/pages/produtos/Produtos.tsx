@@ -189,6 +189,13 @@ export default function Produtos() {
               <option value="all">Todos destinos</option>
               {destinations.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value as any)} className="bg-background border border-border rounded-md px-3 py-2 text-sm">
+              <option value="recent">Mais recentes</option>
+              <option value="commission_desc">💰 Maior bônus</option>
+              <option value="commission_asc">Menor bônus</option>
+              <option value="price_asc">Menor preço</option>
+              <option value="price_desc">Maior preço</option>
+            </select>
             <button onClick={() => setOnlyPromo(!onlyPromo)}
               className={cn("px-3 py-2 rounded-md text-sm border flex items-center gap-1.5",
                 onlyPromo ? "bg-amber-500 text-black border-amber-500" : "bg-background border-border")}>
