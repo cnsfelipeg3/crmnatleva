@@ -220,7 +220,8 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
   );
 }
 
-function AdminProductCard({ p, onToggleActive, onDelete }: { p: Product; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
+function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Product; viewMode: "ceo" | "afiliado"; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
+  const isAffiliate = viewMode === "afiliado";
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
   const [deleting, setDeleting] = useState(false);
