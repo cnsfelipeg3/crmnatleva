@@ -96,7 +96,7 @@ export default function Produtos() {
     else if (sortBy === "price_asc") sorted.sort((a, b) => priceOf(a) - priceOf(b));
     else if (sortBy === "price_desc") sorted.sort((a, b) => priceOf(b) - priceOf(a));
     return sorted;
-  }, [items, kind, status, destination, q, onlyPromo, sortBy]);
+  }, [items, kind, status, destination, q, onlyPromo, sortBy, paxFilter]);
 
   const totals = useMemo(() => {
     const totalProfit = items.reduce((s, p) => {
