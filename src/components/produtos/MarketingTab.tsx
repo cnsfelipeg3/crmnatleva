@@ -36,6 +36,7 @@ interface Props {
   shortDescription: string;
   priceFrom: string;
   pricePromo: string;
+  priceLabel?: string;
   coverUrl: string;
   galleryUrls: string[];
   departureDate: string;
@@ -113,7 +114,7 @@ function groupByDay(list: Asset[]): { day: string; label: string; items: Asset[]
 export default function MarketingTab(props: Props) {
   const {
     productId, title, destination, originCity, shortDescription, priceFrom, pricePromo,
-    coverUrl, galleryUrls, departureDate, returnDate, includes,
+    priceLabel, coverUrl, galleryUrls, departureDate, returnDate, includes,
     hotelName, hotelStars, nights, seatsLeft, paxMin, paxMax, paxAdults, paxChildren, isPromo, paymentTerms,
     productKind, airline, originIata, destinationIata, highlights,
   } = props;
@@ -141,8 +142,15 @@ export default function MarketingTab(props: Props) {
     return Array.from(new Set(arr));
   }, [coverUrl, galleryUrls]);
 
-  // Caption de pax · prioriza composição adultos + crianças (Ex: "Valor para 2 adultos + 1 criança")
+  const isPerPersonPrice = useMemo(() => {
+    const label = (priceLabel || "").toLowerCase();
+    return label.includes("pessoa");
+  }, [priceLabel]);
+
+  // Caption de preço · respeita a base configurada no produto (por pessoa ou total do pacote)
   const paxLabel = useMemo(() => {
+    if (isPerPersonPrice) return "Valor por pessoa";
+
     const adults = Number(paxAdults) || 0;
     const children = Number(paxChildren) || 0;
     if (adults > 0 || children > 0) {
@@ -157,7 +165,7 @@ export default function MarketingTab(props: Props) {
     const total = max || min;
     if (!total) return "Valor total do pacote";
     return `Valor total para ${total} ${total === 1 ? "pessoa" : "pessoas"}`;
-  }, [paxMin, paxMax, paxAdults, paxChildren]);
+  }, [isPerPersonPrice, paxMin, paxMax, paxAdults, paxChildren]);
 
   // Plano de pagamento atrativo (entrada + parcelas) · não exibe valor total cheio
   const payment: PaymentSnapshot | undefined = useMemo(() => {
