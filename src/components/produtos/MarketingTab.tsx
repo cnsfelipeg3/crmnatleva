@@ -268,9 +268,11 @@ export default function MarketingTab(props: Props) {
     }
     if (formatsToGenerate.length === 0) { toast.error("Selecione ao menos um formato"); return; }
     if (!refImage) { toast.error("Selecione a imagem de referência"); return; }
-    if (!originCity?.trim()) {
+    const kindLower = (productKind || "").toLowerCase();
+    const requiresOrigin = kindLower === "aereo" || kindLower === "pacote";
+    if (requiresOrigin && !originCity?.trim()) {
       toast.error("Cidade de origem obrigatória", {
-        description: "Toda arte promocional precisa da origem (ex: São Paulo). Cadastre em 'Cidade de origem' na aba do produto.",
+        description: "Para artes com aéreo, informe a 'Cidade de origem' no cadastro do produto.",
       });
       return;
     }
@@ -455,9 +457,9 @@ export default function MarketingTab(props: Props) {
               <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/40 hover:bg-amber-500/15">
                 Saindo de {originCity}
               </Badge>
-            ) : (
+            ) : (productKind || "").toLowerCase() === "aereo" || (productKind || "").toLowerCase() === "pacote" ? (
               <Badge variant="destructive">Defina a cidade de origem</Badge>
-            )}
+            ) : null}
             {hotelName && <Badge variant="secondary">{hotelName}{hotelStars ? ` · ${hotelStars}★` : ""}</Badge>}
             {payment && <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">{payment.entryLabel} · {payment.installmentsLabel.replace("+ ", "")}</Badge>}
             {scarcity && <Badge variant="destructive" className="gap-1"><Zap className="w-3 h-3" />{scarcity}</Badge>}
