@@ -52,6 +52,7 @@ export default function Produtos() {
   const [destination, setDestination] = useState("all");
   const [q, setQ] = useState("");
   const [onlyPromo, setOnlyPromo] = useState(false);
+  const [paxFilter, setPaxFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"recent" | "commission_desc" | "commission_asc" | "price_asc" | "price_desc">("recent");
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
     if (typeof window === "undefined") return "ceo";
