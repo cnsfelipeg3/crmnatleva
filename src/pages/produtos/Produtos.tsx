@@ -360,9 +360,41 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-serif text-base leading-tight line-clamp-2 flex-1">{p.title}</h3>
         </div>
-        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-2">
-          <Badge variant="outline" className="text-[10px]">{p.product_kind || "passeio"}</Badge>
-          {dateRange && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {dateRange}</span>}
+        <div className="mt-2.5 flex flex-col gap-1.5">
+          <div className="inline-flex items-center gap-1.5 self-start px-2 py-1 rounded-md bg-primary/8 border border-primary/20 text-[10.5px] font-semibold text-primary uppercase tracking-wide">
+            <kindMeta.Icon className="w-3 h-3" />
+            <span>{kindMeta.label}</span>
+          </div>
+          {hasFlight && originLabel && (
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <PlaneTakeoff className="w-3 h-3 text-foreground/60" />
+              <span>Saindo de <span className="font-semibold text-foreground">{originLabel}</span></span>
+            </div>
+          )}
+          {p.flexible_dates ? (
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Calendar className="w-3 h-3 text-foreground/60" />
+              <span className="font-medium text-foreground">Datas flexíveis</span>
+            </div>
+          ) : (depDate || retDate) ? (
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              {depDate && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-foreground">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Ida</span>
+                  <span className="font-semibold tabular-nums">{depDate}</span>
+                </span>
+              )}
+              {retDate && (
+                <>
+                  <ArrowRight className="w-3 h-3 text-muted-foreground/60" />
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-foreground">
+                    <span className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Volta</span>
+                    <span className="font-semibold tabular-nums">{retDate}</span>
+                  </span>
+                </>
+              )}
+            </div>
+          ) : null}
         </div>
         {(() => {
           const planPrice = Number(p.price_promo) || Number(p.price_from) || 0;
