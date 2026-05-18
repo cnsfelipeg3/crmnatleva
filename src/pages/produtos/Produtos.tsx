@@ -167,7 +167,12 @@ export default function Produtos() {
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="font-serif text-3xl sm:text-4xl text-white leading-tight">Indique & Ganhe</h1>
-              <p className="text-white/70 text-sm mt-2">Pacotes completos, passagens aéreas, hospedagens e muito mais!</p>
+              <p className="text-white/75 text-sm sm:text-[15px] mt-3 max-w-3xl leading-relaxed">
+                Funciona simples · você entra aqui, escolhe as viagens que quer divulgar (ou indica todas) e compartilha com a sua rede. Cada pacote já mostra o valor exato do seu bônus de indicação · quando alguém fechar a viagem com a gente, você recebe esse valor no Pix, no mesmo dia do fechamento.
+              </p>
+              <p className="text-amber-300/90 text-xs sm:text-[13px] mt-2 max-w-3xl leading-relaxed">
+                Ex · indicou Punta del Este? Ganha R$ 332. Indicou o Iberostar Selection? Ganha R$ 900. O bônus aparece em cada card, é só escolher e compartilhar.
+              </p>
               <div className="mt-3 inline-flex max-w-full items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 text-[11px] sm:text-xs font-semibold leading-snug">
                 <Banknote className="w-3.5 h-3.5 shrink-0 text-emerald-300" />
                 <span className="break-words">
