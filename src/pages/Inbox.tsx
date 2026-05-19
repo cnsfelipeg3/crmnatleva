@@ -40,6 +40,20 @@ import {
   Paperclip,
   X,
   ChevronDown,
+  Plus,
+  Folder,
+  FolderOpen,
+  Briefcase,
+  Tag,
+  Heart,
+  Plane,
+  Building2,
+  Bell,
+  Bookmark,
+  Flag,
+  CircleDollarSign,
+  Users,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
