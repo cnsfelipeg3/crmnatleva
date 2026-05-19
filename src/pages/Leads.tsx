@@ -502,6 +502,32 @@ export default function Leads() {
         </div>
       </Card>
 
+      {/* Barra de ações em massa */}
+      {selectedKeys.size > 0 && (
+        <Card className="p-2.5 flex items-center justify-between gap-2 bg-accent/5 border-accent/40">
+          <div className="flex items-center gap-2 text-[12px] text-foreground">
+            <Badge className="text-[10px] border-0 bg-accent/15 text-accent">
+              {selectedKeys.size} selecionado{selectedKeys.size > 1 ? "s" : ""}
+            </Badge>
+            <button
+              type="button"
+              className="text-[10.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              onClick={() => setSelectedKeys(new Set())}
+            >
+              <X className="w-3 h-3" /> Limpar seleção
+            </button>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 text-[11.5px]"
+            onClick={() => setBulkConfirm(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Excluir selecionados
+          </Button>
+        </Card>
+      )}
+
       {/* Tabela */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
