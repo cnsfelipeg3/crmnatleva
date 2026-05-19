@@ -312,6 +312,12 @@ export default function Leads() {
       if (v.whatsapp_clicked) lead.whatsappCount += 1;
       lead.prateleiraViewerIds.push(v.id);
       const p = products[v.product_id];
+      const pPrice = Number(p?.price_promo || p?.price_from || 0);
+      const pCost = Number(p?.internal_cost || 0);
+      const pProfit = pPrice > 0 ? (pCost > 0 ? Math.max(pPrice - pCost, 0) : pPrice * DEFAULT_MARGIN) : 0;
+      lead.totalValue += pPrice;
+      lead.profitPotential += pProfit;
+      if (pPrice > lead.topValue) lead.topValue = pPrice;
       lead.items.push({
         kind: "product",
         refId: v.product_id,
@@ -326,6 +332,8 @@ export default function Leads() {
         whatsapp: v.whatsapp_clicked,
         firstAt: v.first_viewed_at,
         lastAt: v.last_active_at,
+        value: pPrice,
+        profit: pProfit,
       });
     }
 
