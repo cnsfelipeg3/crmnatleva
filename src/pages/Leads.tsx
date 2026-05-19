@@ -534,6 +534,13 @@ export default function Leads() {
           <table className="w-full text-sm">
             <thead className="bg-muted/30 border-b border-border/40">
               <tr className="text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+                    onCheckedChange={(c) => toggleAllFiltered(c === true)}
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="text-left p-3 font-medium">Lead</th>
                 <th className="text-left p-3 font-medium">Contato</th>
                 <th className="text-left p-3 font-medium">Origem</th>
@@ -546,9 +553,9 @@ export default function Leads() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">
+                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">
                   {leads.length === 0 ? "Nenhum lead ainda. Compartilhe páginas da Prateleira ou envie propostas personalizadas para começar." : "Nenhum lead bate com os filtros."}
                 </td></tr>
               ) : filtered.map((l) => {
