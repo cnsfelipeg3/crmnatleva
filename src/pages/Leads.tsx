@@ -1,7 +1,8 @@
 // =====================================================================
-// /leads · rastreio completo de leads da Prateleira
-// Agrega prateleira_product_viewers + prateleira_viewer_events por email,
-// mostrando produtos visualizados, tempo por produto, cliques, geo etc.
+// /leads · rastreio completo de leads
+// Agrega Prateleira (prateleira_product_viewers + events) + Propostas
+// Personalizadas (proposal_viewers + proposal_clicks) por email,
+// mostrando origem, produtos/propostas, tempo, cliques, geo etc.
 // =====================================================================
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,18 +13,25 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Users, Search, Eye, Clock, MousePointerClick, MessageCircle,
+  Users, Search, Clock, MousePointerClick, MessageCircle,
   Smartphone, MapPin, ExternalLink, PackageOpen, Phone, Mail,
   TrendingUp, Wifi, Activity, Target, Filter as FilterIcon,
+  FileText, Trash2, Sparkles,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { formatTime, parseUA } from "@/lib/proposalAnalytics";
 import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
 
+// ─── Prateleira ────────────────────────────────────────────────────────
 type ViewerRow = {
   id: string;
   product_id: string;
@@ -65,9 +73,56 @@ type ProductMini = {
   destination: string | null;
 };
 
-type LeadProductRow = {
-  product: ProductMini | null;
-  productId: string;
+// ─── Propostas Personalizadas ──────────────────────────────────────────
+type ProposalViewerRow = {
+  id: string;
+  proposal_id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  city: string | null;
+  region: string | null;
+  country: string | null;
+  device_type: string | null;
+  user_agent: string | null;
+  total_views: number;
+  active_seconds: number;
+  total_time_seconds: number;
+  cta_clicked: boolean;
+  whatsapp_clicked: boolean;
+  sections_viewed: string[] | null;
+  first_viewed_at: string;
+  last_active_at: string;
+};
+
+type ProposalMini = {
+  id: string;
+  title: string | null;
+  slug: string | null;
+  cover_image_url: string | null;
+  destinations: string[] | null;
+  client_name: string | null;
+};
+
+type ProposalClickRow = {
+  id: string;
+  proposal_id: string;
+  viewer_id: string | null;
+  section_name: string | null;
+  target_tag: string | null;
+  target_text: string | null;
+  created_at: string;
+};
+
+// ─── Unificado ──────────────────────────────────────────────────────────
+type LeadItem = {
+  kind: "product" | "proposal";
+  refId: string;            // product_id ou proposal_id
+  viewerId: string;         // id da linha da viewer table (para delete)
+  title: string;
+  subtitle: string | null;  // destino / cliente
+  cover: string | null;
+  slug: string | null;
   views: number;
   activeSeconds: number;
   cta: boolean;
@@ -77,7 +132,7 @@ type LeadProductRow = {
 };
 
 type LeadAggregate = {
-  key: string; // email
+  key: string;
   email: string;
   name: string | null;
   phone: string | null;
@@ -89,108 +144,162 @@ type LeadAggregate = {
   utmSource: string | null;
   utmCampaign: string | null;
   productsViewed: number;
+  proposalsViewed: number;
   totalViews: number;
   totalSeconds: number;
   ctaCount: number;
   whatsappCount: number;
   firstAt: string;
   lastAt: string;
-  products: LeadProductRow[];
+  items: LeadItem[];
+  /** ids para deletar */
+  prateleiraViewerIds: string[];
+  proposalViewerIds: string[];
 };
 
+type OriginFilter = "all" | "prateleira" | "proposal";
+
 const isOnline = (iso: string) => Date.now() - new Date(iso).getTime() < 2 * 60 * 1000;
+
+function originLabel(l: LeadAggregate): { label: string; tone: "prateleira" | "proposal" | "both" } {
+  if (l.productsViewed > 0 && l.proposalsViewed > 0) return { label: "Ambos", tone: "both" };
+  if (l.proposalsViewed > 0) return { label: "Proposta", tone: "proposal" };
+  return { label: "Prateleira", tone: "prateleira" };
+}
 
 export default function Leads() {
   const [viewers, setViewers] = useState<ViewerRow[]>([]);
   const [events, setEvents] = useState<EventRow[]>([]);
   const [products, setProducts] = useState<Record<string, ProductMini>>({});
+  const [proposalViewers, setProposalViewers] = useState<ProposalViewerRow[]>([]);
+  const [proposals, setProposals] = useState<Record<string, ProposalMini>>({});
+  const [proposalClicks, setProposalClicks] = useState<ProposalClickRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "hot" | "online" | "whatsapp">("all");
+  const [origin, setOrigin] = useState<OriginFilter>("all");
   const [selected, setSelected] = useState<LeadAggregate | null>(null);
+  const [toDelete, setToDelete] = useState<LeadAggregate | null>(null);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    const [
+      { data: vData },
+      { data: eData },
+      { data: pvData },
+      { data: pcData },
+    ] = await Promise.all([
+      (supabase as any).from("prateleira_product_viewers").select("*").order("last_active_at", { ascending: false }).limit(2000),
+      (supabase as any).from("prateleira_viewer_events").select("id, viewer_id, product_id, email, event_type, section, target, created_at").order("created_at", { ascending: false }).limit(5000),
+      (supabase as any).from("proposal_viewers").select("*").order("last_active_at", { ascending: false }).limit(2000),
+      (supabase as any).from("proposal_clicks").select("id, proposal_id, viewer_id, section_name, target_tag, target_text, created_at").order("created_at", { ascending: false }).limit(5000),
+    ]);
+    const vs = (vData || []) as ViewerRow[];
+    const pvs = (pvData || []) as ProposalViewerRow[];
+    setViewers(vs);
+    setEvents((eData || []) as EventRow[]);
+    setProposalViewers(pvs);
+    setProposalClicks((pcData || []) as ProposalClickRow[]);
+
+    // hidratar produtos
+    const pIds = Array.from(new Set(vs.map((v) => v.product_id)));
+    if (pIds.length) {
+      const { data: pData } = await (supabase as any)
+        .from("experience_products")
+        .select("id, title, slug, cover_image_url, destination")
+        .in("id", pIds);
+      const map: Record<string, ProductMini> = {};
+      (pData || []).forEach((p: ProductMini) => { map[p.id] = p; });
+      setProducts(map);
+    }
+    // hidratar propostas
+    const prIds = Array.from(new Set(pvs.map((p) => p.proposal_id)));
+    if (prIds.length) {
+      const { data: prData } = await (supabase as any)
+        .from("proposals")
+        .select("id, title, slug, cover_image_url, destinations, client_name")
+        .in("id", prIds);
+      const map: Record<string, ProposalMini> = {};
+      (prData || []).forEach((p: ProposalMini) => { map[p.id] = p; });
+      setProposals(map);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      const [{ data: vData }, { data: eData }] = await Promise.all([
-        (supabase as any)
-          .from("prateleira_product_viewers")
-          .select("*")
-          .order("last_active_at", { ascending: false })
-          .limit(2000),
-        (supabase as any)
-          .from("prateleira_viewer_events")
-          .select("id, viewer_id, product_id, email, event_type, section, target, created_at")
-          .order("created_at", { ascending: false })
-          .limit(5000),
-      ]);
-      const vs = (vData || []) as ViewerRow[];
-      setViewers(vs);
-      setEvents((eData || []) as EventRow[]);
-
-      // hidratar produtos
-      const ids = Array.from(new Set(vs.map((v) => v.product_id)));
-      if (ids.length) {
-        const { data: pData } = await (supabase as any)
-          .from("experience_products")
-          .select("id, title, slug, cover_image_url, destination")
-          .in("id", ids);
-        const map: Record<string, ProductMini> = {};
-        (pData || []).forEach((p: ProductMini) => { map[p.id] = p; });
-        setProducts(map);
-      }
-      setLoading(false);
-    })();
+    fetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const leads = useMemo<LeadAggregate[]>(() => {
     const map = new Map<string, LeadAggregate>();
-    for (const v of viewers) {
-      const key = (v.email || "").toLowerCase().trim() || `anon:${v.id}`;
+
+    const ensure = (key: string, seed: Partial<LeadAggregate>) => {
       let lead = map.get(key);
       if (!lead) {
         lead = {
           key,
-          email: v.email,
-          name: v.name,
-          phone: v.phone,
-          city: v.city,
-          region: v.region,
-          country: v.country,
-          device: v.device_type,
-          userAgent: v.user_agent,
-          utmSource: v.utm_source,
-          utmCampaign: v.utm_campaign,
+          email: seed.email || "",
+          name: seed.name ?? null,
+          phone: seed.phone ?? null,
+          city: seed.city ?? null,
+          region: seed.region ?? null,
+          country: seed.country ?? null,
+          device: seed.device ?? null,
+          userAgent: seed.userAgent ?? null,
+          utmSource: seed.utmSource ?? null,
+          utmCampaign: seed.utmCampaign ?? null,
           productsViewed: 0,
+          proposalsViewed: 0,
           totalViews: 0,
           totalSeconds: 0,
           ctaCount: 0,
           whatsappCount: 0,
-          firstAt: v.first_viewed_at,
-          lastAt: v.last_active_at,
-          products: [],
+          firstAt: seed.firstAt || new Date().toISOString(),
+          lastAt: seed.lastAt || new Date().toISOString(),
+          items: [],
+          prateleiraViewerIds: [],
+          proposalViewerIds: [],
         };
         map.set(key, lead);
       } else {
-        // prefere campos não-nulos do registro mais recente
-        if (!lead.name && v.name) lead.name = v.name;
-        if (!lead.phone && v.phone) lead.phone = v.phone;
-        if (!lead.city && v.city) lead.city = v.city;
-        if (!lead.country && v.country) lead.country = v.country;
-        if (!lead.userAgent && v.user_agent) lead.userAgent = v.user_agent;
-        if (!lead.device && v.device_type) lead.device = v.device_type;
-        if (!lead.utmSource && v.utm_source) lead.utmSource = v.utm_source;
-        if (new Date(v.first_viewed_at) < new Date(lead.firstAt)) lead.firstAt = v.first_viewed_at;
-        if (new Date(v.last_active_at) > new Date(lead.lastAt)) lead.lastAt = v.last_active_at;
+        if (!lead.name && seed.name) lead.name = seed.name;
+        if (!lead.phone && seed.phone) lead.phone = seed.phone;
+        if (!lead.city && seed.city) lead.city = seed.city;
+        if (!lead.country && seed.country) lead.country = seed.country;
+        if (!lead.userAgent && seed.userAgent) lead.userAgent = seed.userAgent;
+        if (!lead.device && seed.device) lead.device = seed.device;
+        if (!lead.utmSource && seed.utmSource) lead.utmSource = seed.utmSource;
       }
+      return lead;
+    };
+
+    // Prateleira
+    for (const v of viewers) {
+      const key = (v.email || "").toLowerCase().trim() || `anon-pr:${v.id}`;
+      const lead = ensure(key, {
+        email: v.email, name: v.name, phone: v.phone, city: v.city, region: v.region,
+        country: v.country, device: v.device_type, userAgent: v.user_agent,
+        utmSource: v.utm_source, utmCampaign: v.utm_campaign,
+        firstAt: v.first_viewed_at, lastAt: v.last_active_at,
+      });
+      if (new Date(v.first_viewed_at) < new Date(lead.firstAt)) lead.firstAt = v.first_viewed_at;
+      if (new Date(v.last_active_at) > new Date(lead.lastAt)) lead.lastAt = v.last_active_at;
       lead.productsViewed += 1;
       lead.totalViews += v.total_views || 1;
       lead.totalSeconds += v.active_seconds || 0;
       if (v.cta_clicked) lead.ctaCount += 1;
       if (v.whatsapp_clicked) lead.whatsappCount += 1;
-      lead.products.push({
-        product: products[v.product_id] || null,
-        productId: v.product_id,
+      lead.prateleiraViewerIds.push(v.id);
+      const p = products[v.product_id];
+      lead.items.push({
+        kind: "product",
+        refId: v.product_id,
+        viewerId: v.id,
+        title: p?.title || "Produto",
+        subtitle: p?.destination || null,
+        cover: p?.cover_image_url || null,
+        slug: p?.slug || null,
         views: v.total_views || 1,
         activeSeconds: v.active_seconds || 0,
         cta: v.cta_clicked,
@@ -199,10 +308,46 @@ export default function Leads() {
         lastAt: v.last_active_at,
       });
     }
+
+    // Propostas
+    for (const v of proposalViewers) {
+      const key = (v.email || "").toLowerCase().trim() || `anon-pp:${v.id}`;
+      const lead = ensure(key, {
+        email: v.email, name: v.name, phone: v.phone, city: v.city, region: v.region,
+        country: v.country, device: v.device_type, userAgent: v.user_agent,
+        firstAt: v.first_viewed_at, lastAt: v.last_active_at,
+      });
+      if (new Date(v.first_viewed_at) < new Date(lead.firstAt)) lead.firstAt = v.first_viewed_at;
+      if (new Date(v.last_active_at) > new Date(lead.lastAt)) lead.lastAt = v.last_active_at;
+      lead.proposalsViewed += 1;
+      lead.totalViews += v.total_views || 1;
+      const secs = v.active_seconds || v.total_time_seconds || 0;
+      lead.totalSeconds += secs;
+      if (v.cta_clicked) lead.ctaCount += 1;
+      if (v.whatsapp_clicked) lead.whatsappCount += 1;
+      lead.proposalViewerIds.push(v.id);
+      const pr = proposals[v.proposal_id];
+      lead.items.push({
+        kind: "proposal",
+        refId: v.proposal_id,
+        viewerId: v.id,
+        title: pr?.title || "Proposta personalizada",
+        subtitle: pr?.client_name || (pr?.destinations || []).join(", ") || null,
+        cover: pr?.cover_image_url || null,
+        slug: pr?.slug || null,
+        views: v.total_views || 1,
+        activeSeconds: secs,
+        cta: v.cta_clicked,
+        whatsapp: v.whatsapp_clicked,
+        firstAt: v.first_viewed_at,
+        lastAt: v.last_active_at,
+      });
+    }
+
     return Array.from(map.values())
-      .map((l) => ({ ...l, products: l.products.sort((a, b) => b.activeSeconds - a.activeSeconds) }))
+      .map((l) => ({ ...l, items: l.items.sort((a, b) => b.activeSeconds - a.activeSeconds) }))
       .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime());
-  }, [viewers, products]);
+  }, [viewers, products, proposalViewers, proposals]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -210,34 +355,61 @@ export default function Leads() {
       if (filter === "hot" && l.ctaCount === 0 && l.whatsappCount === 0) return false;
       if (filter === "online" && !isOnline(l.lastAt)) return false;
       if (filter === "whatsapp" && l.whatsappCount === 0) return false;
+      if (origin === "prateleira" && l.productsViewed === 0) return false;
+      if (origin === "proposal" && l.proposalsViewed === 0) return false;
       if (!q) return true;
       return (
         (l.name || "").toLowerCase().includes(q) ||
         (l.email || "").toLowerCase().includes(q) ||
         (l.phone || "").toLowerCase().includes(q) ||
         (l.city || "").toLowerCase().includes(q) ||
-        l.products.some((p) => (p.product?.title || "").toLowerCase().includes(q))
+        l.items.some((p) => (p.title || "").toLowerCase().includes(q))
       );
     });
-  }, [leads, search, filter]);
+  }, [leads, search, filter, origin]);
 
-  // KPIs topo
+  // KPIs
   const totalLeads = leads.length;
   const onlineNow = leads.filter((l) => isOnline(l.lastAt)).length;
   const hotLeads = leads.filter((l) => l.ctaCount > 0 || l.whatsappCount > 0).length;
-  const avgProducts = totalLeads > 0
-    ? (leads.reduce((s, l) => s + l.productsViewed, 0) / totalLeads).toFixed(1)
-    : "0";
+  const propostaLeads = leads.filter((l) => l.proposalsViewed > 0).length;
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    const lead = toDelete;
+    try {
+      const ops: Promise<any>[] = [];
+      if (lead.prateleiraViewerIds.length) {
+        ops.push((supabase as any).from("prateleira_product_viewers").delete().in("id", lead.prateleiraViewerIds));
+        // events também (cleanup por email)
+        if (lead.email) {
+          ops.push((supabase as any).from("prateleira_viewer_events").delete().eq("email", lead.email));
+        }
+      }
+      if (lead.proposalViewerIds.length) {
+        ops.push((supabase as any).from("proposal_viewers").delete().in("id", lead.proposalViewerIds));
+      }
+      const results = await Promise.all(ops);
+      const err = results.find((r) => r?.error)?.error;
+      if (err) throw err;
+      toast({ title: "Lead excluído", description: `${lead.name || lead.email || "Lead"} removido com sucesso.` });
+      setToDelete(null);
+      setSelected(null);
+      await fetchAll();
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e?.message || "Tente novamente.", variant: "destructive" });
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-6 space-y-5 max-w-[1400px]">
       {/* Header */}
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Users className="w-6 h-6 text-primary" /> Leads da Prateleira
+          <Users className="w-6 h-6 text-primary" /> Leads
         </h1>
         <p className="text-sm text-muted-foreground">
-          Rastreio completo de quem visitou as páginas de venda · produtos vistos, tempo, cliques, dispositivo e localização.
+          Rastreio unificado · quem visitou Prateleira ou Propostas Personalizadas, com produtos vistos, tempo, cliques, dispositivo e localização.
         </p>
       </div>
 
@@ -246,7 +418,7 @@ export default function Leads() {
         <Kpi icon={Users} label="Total de leads" value={totalLeads.toLocaleString("pt-BR")} />
         <Kpi icon={Wifi} label="Online agora" value={onlineNow.toLocaleString("pt-BR")} tone={onlineNow > 0 ? "live" : undefined} />
         <Kpi icon={TrendingUp} label="Leads quentes" value={hotLeads.toLocaleString("pt-BR")} hint="clicaram CTA ou WhatsApp" tone={hotLeads > 0 ? "hot" : undefined} />
-        <Kpi icon={PackageOpen} label="Produtos por lead" value={avgProducts} hint="média" />
+        <Kpi icon={FileText} label="Viram proposta" value={propostaLeads.toLocaleString("pt-BR")} hint="propostas personalizadas" />
       </div>
 
       {/* Filtros */}
@@ -266,6 +438,12 @@ export default function Leads() {
           <FilterChip active={filter === "online"} onClick={() => setFilter("online")}>Online</FilterChip>
           <FilterChip active={filter === "whatsapp"} onClick={() => setFilter("whatsapp")}>Abriu WhatsApp</FilterChip>
         </div>
+        <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+        <div className="flex items-center gap-1 flex-wrap">
+          <FilterChip active={origin === "all"} onClick={() => setOrigin("all")}>Toda origem</FilterChip>
+          <FilterChip active={origin === "prateleira"} onClick={() => setOrigin("prateleira")}>Prateleira</FilterChip>
+          <FilterChip active={origin === "proposal"} onClick={() => setOrigin("proposal")}>Proposta</FilterChip>
+        </div>
       </Card>
 
       {/* Tabela */}
@@ -276,10 +454,10 @@ export default function Leads() {
               <tr className="text-[10.5px] uppercase tracking-wider text-muted-foreground">
                 <th className="text-left p-3 font-medium">Lead</th>
                 <th className="text-left p-3 font-medium">Contato</th>
-                <th className="text-left p-3 font-medium">Produtos vistos</th>
+                <th className="text-left p-3 font-medium">Origem</th>
+                <th className="text-left p-3 font-medium">O que viu</th>
                 <th className="text-left p-3 font-medium">Tempo total</th>
                 <th className="text-left p-3 font-medium">Ações</th>
-                <th className="text-left p-3 font-medium">Origem</th>
                 <th className="text-left p-3 font-medium">Última visita</th>
                 <th className="p-3"></th>
               </tr>
@@ -289,11 +467,13 @@ export default function Leads() {
                 <tr><td colSpan={8} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">
-                  {leads.length === 0 ? "Nenhum lead ainda. Compartilhe as páginas de venda da Prateleira para começar." : "Nenhum lead bate com os filtros."}
+                  {leads.length === 0 ? "Nenhum lead ainda. Compartilhe páginas da Prateleira ou envie propostas personalizadas para começar." : "Nenhum lead bate com os filtros."}
                 </td></tr>
               ) : filtered.map((l) => {
                 const online = isOnline(l.lastAt);
                 const ua = parseUA(l.userAgent);
+                const o = originLabel(l);
+                const topItem = l.items[0];
                 return (
                   <tr
                     key={l.key}
@@ -315,17 +495,28 @@ export default function Leads() {
                       </div>
                     </td>
                     <td className="p-3 align-top">
-                      <p className="text-[11px] text-foreground truncate max-w-[200px]" title={l.email}>{l.email}</p>
+                      <p className="text-[11px] text-foreground truncate max-w-[200px]" title={l.email}>{l.email || "·"}</p>
                       {l.phone && <p className="text-[10.5px] text-muted-foreground">{l.phone}</p>}
                     </td>
                     <td className="p-3 align-top">
+                      <OriginBadge tone={o.tone} label={o.label} />
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                        {l.productsViewed > 0 && <span>{l.productsViewed} prat.</span>}
+                        {l.proposalsViewed > 0 && <span>{l.proposalsViewed} prop.</span>}
+                      </div>
+                    </td>
+                    <td className="p-3 align-top">
                       <div className="flex items-center gap-1.5">
-                        <PackageOpen className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className="font-semibold text-foreground tabular-nums">{l.productsViewed}</span>
+                        {topItem?.kind === "proposal" ? (
+                          <FileText className="w-3.5 h-3.5 text-violet-500" />
+                        ) : (
+                          <PackageOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                        )}
+                        <span className="font-semibold text-foreground tabular-nums">{l.items.length}</span>
                         <span className="text-[10px] text-muted-foreground">· {l.totalViews} views</span>
                       </div>
-                      <p className="text-[10px] text-muted-foreground truncate max-w-[180px] mt-0.5" title={l.products[0]?.product?.title || ""}>
-                        {l.products[0]?.product?.title || ""}
+                      <p className="text-[10px] text-muted-foreground truncate max-w-[200px] mt-0.5" title={topItem?.title || ""}>
+                        {topItem?.title || ""}
                       </p>
                     </td>
                     <td className="p-3 align-top">
@@ -351,21 +542,24 @@ export default function Leads() {
                         )}
                       </div>
                     </td>
-                    <td className="p-3 align-top">
-                      <p className="text-[10.5px] text-foreground truncate max-w-[120px]">
-                        {l.utmSource || "direto"}
-                      </p>
-                      {l.utmCampaign && (
-                        <p className="text-[10px] text-muted-foreground truncate max-w-[120px]">{l.utmCampaign}</p>
-                      )}
-                    </td>
                     <td className="p-3 align-top text-[10.5px] text-muted-foreground">
                       {formatDistanceToNow(new Date(l.lastAt), { locale: ptBR, addSuffix: true })}
                     </td>
                     <td className="p-3 align-top">
-                      <Button variant="ghost" size="sm" className="h-7 text-[10.5px]">
-                        Detalhes
-                      </Button>
+                      <div className="flex items-center gap-1 justify-end">
+                        <Button variant="ghost" size="sm" className="h-7 text-[10.5px]">
+                          Detalhes
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                          title="Excluir lead"
+                          onClick={(e) => { e.stopPropagation(); setToDelete(l); }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -379,8 +573,30 @@ export default function Leads() {
       <LeadDetail
         lead={selected}
         events={events}
+        proposalClicks={proposalClicks}
         onClose={() => setSelected(null)}
+        onDelete={(l) => setToDelete(l)}
       />
+
+      {/* Confirm delete */}
+      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir este lead?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todo o rastreio de <strong>{toDelete?.name || toDelete?.email || "este lead"}</strong> será removido
+              ({(toDelete?.prateleiraViewerIds.length || 0) + (toDelete?.proposalViewerIds.length || 0)} registro(s) de visualização).
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -426,71 +642,104 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
   );
 }
 
-function LeadDetail({ lead, events, onClose }: {
+function OriginBadge({ tone, label }: { tone: "prateleira" | "proposal" | "both"; label: string }) {
+  const cls =
+    tone === "proposal" ? "bg-violet-500/15 text-violet-600 dark:text-violet-400" :
+    tone === "both" ? "bg-amber-500/15 text-amber-600 dark:text-amber-400" :
+    "bg-sky-500/15 text-sky-600 dark:text-sky-400";
+  const Icon = tone === "proposal" ? FileText : tone === "both" ? Sparkles : PackageOpen;
+  return (
+    <Badge className={cn("text-[10px] border-0 gap-1", cls)}>
+      <Icon className="w-2.5 h-2.5" /> {label}
+    </Badge>
+  );
+}
+
+function LeadDetail({ lead, events, proposalClicks, onClose, onDelete }: {
   lead: LeadAggregate | null;
   events: EventRow[];
+  proposalClicks: ProposalClickRow[];
   onClose: () => void;
+  onDelete: (l: LeadAggregate) => void;
 }) {
   if (!lead) return null;
 
-  const leadEvents = events.filter((e) => (e.email || "").toLowerCase() === lead.email.toLowerCase());
-  const clicks = leadEvents.filter((e) => e.event_type === "click");
-  const sectionViews = leadEvents.filter((e) => e.event_type === "section_view");
+  const emailLc = (lead.email || "").toLowerCase();
+  const prateleiraEvents = events.filter((e) => (e.email || "").toLowerCase() === emailLc);
+  const proposalViewerIdSet = new Set(lead.proposalViewerIds);
+  const propClicks = proposalClicks.filter((c) => c.viewer_id && proposalViewerIdSet.has(c.viewer_id));
+
+  const prClicks = prateleiraEvents.filter((e) => e.event_type === "click");
+  const sectionViews = prateleiraEvents.filter((e) => e.event_type === "section_view");
   const ua = parseUA(lead.userAgent);
 
   return (
     <Dialog open={!!lead} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-primary" />
-            {lead.name || lead.email}
+          <DialogTitle className="flex items-center justify-between gap-2 pr-6">
+            <span className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              {lead.name || lead.email || "Lead"}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-[11px] text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={() => onDelete(lead)}
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Excluir
+            </Button>
           </DialogTitle>
         </DialogHeader>
         <ScrollArea className="flex-1 pr-3">
           <div className="space-y-4">
-            {/* Contato e contexto */}
             <Card className="p-4 space-y-2">
               <div className="grid grid-cols-2 gap-3 text-[11.5px]">
-                <Info icon={Mail} label="Email" value={lead.email} />
+                <Info icon={Mail} label="Email" value={lead.email || "·"} />
                 <Info icon={Phone} label="Telefone" value={lead.phone || "·"} />
                 <Info icon={MapPin} label="Localização" value={lead.city ? `${lead.city}${lead.country ? `, ${lead.country}` : ""}` : "·"} />
                 <Info icon={Smartphone} label="Dispositivo" value={`${ua.os} · ${ua.browser}${lead.device ? ` (${lead.device})` : ""}`} />
                 <Info icon={Activity} label="Primeira visita" value={format(new Date(lead.firstAt), "dd/MM/yyyy HH:mm", { locale: ptBR })} />
                 <Info icon={Activity} label="Última visita" value={formatDistanceToNow(new Date(lead.lastAt), { locale: ptBR, addSuffix: true })} />
-                {lead.utmSource && <Info icon={Target} label="Origem" value={`${lead.utmSource}${lead.utmCampaign ? ` · ${lead.utmCampaign}` : ""}`} />}
+                {lead.utmSource && <Info icon={Target} label="UTM" value={`${lead.utmSource}${lead.utmCampaign ? ` · ${lead.utmCampaign}` : ""}`} />}
               </div>
             </Card>
 
-            {/* Resumo de ações */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <MiniKpi label="Produtos vistos" value={lead.productsViewed} />
-              <MiniKpi label="Visualizações" value={lead.totalViews} />
+              <MiniKpi label="Prateleira" value={lead.productsViewed} />
+              <MiniKpi label="Propostas" value={lead.proposalsViewed} />
               <MiniKpi label="Tempo ativo" value={formatTime(lead.totalSeconds)} />
-              <MiniKpi label="Cliques no CTA" value={lead.ctaCount} tone={lead.ctaCount > 0 ? "hot" : undefined} />
+              <MiniKpi label="Cliques CTA" value={lead.ctaCount} tone={lead.ctaCount > 0 ? "hot" : undefined} />
             </div>
 
-            {/* Produtos visualizados */}
+            {/* Itens visualizados */}
             <Card className="p-4 space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                <PackageOpen className="w-3.5 h-3.5" /> Produtos visualizados
+                <PackageOpen className="w-3.5 h-3.5" /> Conteúdo visualizado
               </div>
               <div className="space-y-2">
-                {lead.products.map((p) => (
-                  <div key={p.productId} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/40 hover:bg-muted/30">
-                    {p.product?.cover_image_url ? (
-                      <img src={p.product.cover_image_url} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                {lead.items.map((p) => (
+                  <div key={`${p.kind}-${p.viewerId}`} className="flex items-center gap-3 p-2.5 rounded-lg border border-border/40 hover:bg-muted/30">
+                    {p.cover ? (
+                      <img src={p.cover} alt="" className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
                     ) : (
                       <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
-                        <PackageOpen className="w-4 h-4 text-muted-foreground" />
+                        {p.kind === "proposal"
+                          ? <FileText className="w-4 h-4 text-violet-500" />
+                          : <PackageOpen className="w-4 h-4 text-muted-foreground" />}
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="text-[12px] font-semibold text-foreground truncate">
-                        {p.product?.title || "Produto removido"}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <OriginBadge
+                          tone={p.kind === "proposal" ? "proposal" : "prateleira"}
+                          label={p.kind === "proposal" ? "Proposta" : "Prateleira"}
+                        />
+                        <p className="text-[12px] font-semibold text-foreground truncate">{p.title}</p>
+                      </div>
                       <p className="text-[10.5px] text-muted-foreground truncate">
-                        {p.product?.destination || "·"} · {p.views} {p.views === 1 ? "visualização" : "visualizações"} · {formatTime(p.activeSeconds)} ativo
+                        {p.subtitle || "·"} · {p.views} {p.views === 1 ? "visualização" : "visualizações"} · {formatTime(p.activeSeconds)} ativo
                       </p>
                       <p className="text-[10px] text-muted-foreground/70">
                         Última vez {formatDistanceToNow(new Date(p.lastAt), { locale: ptBR, addSuffix: true })}
@@ -503,13 +752,14 @@ function LeadDetail({ lead, events, onClose }: {
                           {p.whatsapp && <Badge className="text-[9px] border-0 bg-emerald-500/15 text-emerald-600">WhatsApp</Badge>}
                         </div>
                       )}
-                      {p.product?.slug && (
+                      {p.slug && (
                         <Link
-                          to={`/produtos/${p.product.slug}/editar`}
+                          to={p.kind === "proposal" ? `/p/${p.slug}` : `/produtos/${p.slug}/editar`}
+                          target={p.kind === "proposal" ? "_blank" : undefined}
                           className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          abrir produto <ExternalLink className="w-2.5 h-2.5" />
+                          abrir {p.kind === "proposal" ? "proposta" : "produto"} <ExternalLink className="w-2.5 h-2.5" />
                         </Link>
                       )}
                     </div>
@@ -518,7 +768,7 @@ function LeadDetail({ lead, events, onClose }: {
               </div>
             </Card>
 
-            {/* Top seções */}
+            {/* Seções visitadas (prateleira) */}
             {sectionViews.length > 0 && (
               <Card className="p-4 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
@@ -534,19 +784,42 @@ function LeadDetail({ lead, events, onClose }: {
               </Card>
             )}
 
-            {/* Timeline de cliques */}
-            {clicks.length > 0 && (
+            {/* Cliques prateleira */}
+            {prClicks.length > 0 && (
               <Card className="p-4 space-y-2">
                 <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-                  <Target className="w-3.5 h-3.5" /> Últimos cliques ({clicks.length})
+                  <Target className="w-3.5 h-3.5" /> Cliques na Prateleira ({prClicks.length})
                 </div>
-                <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
-                  {clicks.slice(0, 50).map((c) => (
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                  {prClicks.slice(0, 50).map((c) => (
                     <div key={c.id} className="flex items-center justify-between gap-2 text-[10.5px] py-1 px-2 rounded-md hover:bg-muted/30">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <MousePointerClick className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <span className="text-foreground truncate">{c.target || "·"}</span>
                         {c.section && <span className="text-muted-foreground">· {c.section}</span>}
+                      </div>
+                      <span className="text-muted-foreground tabular-nums flex-shrink-0">
+                        {format(new Date(c.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Cliques propostas */}
+            {propClicks.length > 0 && (
+              <Card className="p-4 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
+                  <Target className="w-3.5 h-3.5 text-violet-500" /> Cliques nas Propostas ({propClicks.length})
+                </div>
+                <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+                  {propClicks.slice(0, 50).map((c) => (
+                    <div key={c.id} className="flex items-center justify-between gap-2 text-[10.5px] py-1 px-2 rounded-md hover:bg-muted/30">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <MousePointerClick className="w-3 h-3 text-violet-500 flex-shrink-0" />
+                        <span className="text-foreground truncate">{c.target_text || c.target_tag || "·"}</span>
+                        {c.section_name && <span className="text-muted-foreground">· {c.section_name}</span>}
                       </div>
                       <span className="text-muted-foreground tabular-nums flex-shrink-0">
                         {format(new Date(c.created_at), "dd/MM HH:mm", { locale: ptBR })}
