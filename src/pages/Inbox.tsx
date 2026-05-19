@@ -62,6 +62,7 @@ import { cn } from "@/lib/utils";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DOMPurify from "dompurify";
+import { IconPicker, resolveIcon } from "@/components/inbox/IconPicker";
 
 // ---------- Types ----------
 interface ThreadItem {
