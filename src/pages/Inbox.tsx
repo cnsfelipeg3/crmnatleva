@@ -131,7 +131,10 @@ export const LABEL_ICON_OPTIONS: { key: string; icon: typeof InboxIcon; label: s
 ];
 
 function getLabelIcon(iconKey?: string): typeof InboxIcon {
-  return LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder;
+  if (iconKey && iconKey.startsWith("lucide:")) {
+    return resolveIcon(iconKey) as typeof InboxIcon;
+  }
+  return (LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder);
 }
 
 function loadLabelIcons(): Record<string, string> {
