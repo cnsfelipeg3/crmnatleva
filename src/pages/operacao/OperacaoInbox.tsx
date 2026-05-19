@@ -91,6 +91,8 @@ import { useInboxRealtime } from "@/components/inbox/useInboxRealtime";
 import { useMessageQueue } from "@/hooks/useMessageQueue";
 import type { QueuedMessage } from "@/hooks/useMessageQueue";
 import { useMessageRetry } from "@/hooks/useMessageRetry";
+import { useMessageReactions } from "@/components/inbox/useMessageReactions";
+import { ReactionPickerButton, MessageReactionsChip } from "@/components/inbox/MessageReactions";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
