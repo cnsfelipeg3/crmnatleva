@@ -109,6 +109,7 @@ type ProposalMini = {
   cover_image_url: string | null;
   destinations: string[] | null;
   client_name: string | null;
+  total_value: number | null;
 };
 
 type ProposalClickRow = {
