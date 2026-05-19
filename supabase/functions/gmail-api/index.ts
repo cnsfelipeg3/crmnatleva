@@ -324,6 +324,8 @@ Deno.serve(async (req) => {
           subject: params.subject || "",
           body: params.body || "",
           html: !!params.html,
+          readReceipt: !!params.readReceipt,
+          readReceiptTo: params.readReceiptTo,
         });
         result = await gw(`/users/me/messages/send`, {
           method: "POST",
@@ -346,11 +348,15 @@ Deno.serve(async (req) => {
         const to = params.to || from;
         const raw = buildRawEmail({
           to,
+          cc: params.cc,
+          bcc: params.bcc,
           subject: replySubject,
           body: params.body || "",
           html: !!params.html,
           inReplyTo: msgIdHeader,
           references: refsHeader ? `${refsHeader} ${msgIdHeader}` : msgIdHeader,
+          readReceipt: !!params.readReceipt,
+          readReceiptTo: params.readReceiptTo,
         });
         result = await gw(`/users/me/messages/send`, {
           method: "POST",
