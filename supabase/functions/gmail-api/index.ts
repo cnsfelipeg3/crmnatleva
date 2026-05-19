@@ -68,6 +68,8 @@ function buildRawEmail(opts: {
   inReplyTo?: string;
   references?: string;
   threadId?: string;
+  readReceipt?: boolean;
+  readReceiptTo?: string;
 }): string {
   const headers: string[] = [];
   if (opts.from) headers.push(`From: ${cleanHeaderValue(opts.from)}`);
@@ -79,6 +81,14 @@ function buildRawEmail(opts: {
   headers.push("X-Mailer: NatLeva Mail");
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
+  if (opts.readReceipt) {
+    const rcpt = cleanHeaderValue(opts.readReceiptTo || opts.from || "");
+    if (rcpt) {
+      headers.push(`Disposition-Notification-To: ${rcpt}`);
+      headers.push(`Return-Receipt-To: ${rcpt}`);
+      headers.push(`X-Confirm-Reading-To: ${rcpt}`);
+    }
+  }
 
   if (opts.html) {
     const boundary = `natleva_${crypto.randomUUID().replace(/-/g, "")}`;
