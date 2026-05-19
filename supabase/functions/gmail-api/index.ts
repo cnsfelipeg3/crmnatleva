@@ -269,6 +269,71 @@ Deno.serve(async (req) => {
         });
         break;
       }
+      case "archive": {
+        result = await gw(`/users/me/threads/${params.threadId}/modify`, {
+          method: "POST",
+          body: JSON.stringify({ removeLabelIds: ["INBOX"] }),
+        });
+        break;
+      }
+      case "mark_spam": {
+        result = await gw(`/users/me/threads/${params.threadId}/modify`, {
+          method: "POST",
+          body: JSON.stringify({ addLabelIds: ["SPAM"], removeLabelIds: ["INBOX"] }),
+        });
+        break;
+      }
+      case "unmark_spam": {
+        result = await gw(`/users/me/threads/${params.threadId}/modify`, {
+          method: "POST",
+          body: JSON.stringify({ removeLabelIds: ["SPAM"], addLabelIds: ["INBOX"] }),
+        });
+        break;
+      }
+      case "bulk_modify": {
+        const ids: string[] = params.threadIds || [];
+        const addLabelIds: string[] = params.addLabelIds || [];
+        const removeLabelIds: string[] = params.removeLabelIds || [];
+        const results = await Promise.allSettled(
+          ids.map((id) =>
+            gw(`/users/me/threads/${id}/modify`, {
+              method: "POST",
+              body: JSON.stringify({ addLabelIds, removeLabelIds }),
+            })
+          )
+        );
+        result = {
+          ok: results.filter((r) => r.status === "fulfilled").length,
+          failed: results.filter((r) => r.status === "rejected").length,
+        };
+        break;
+      }
+      case "bulk_trash": {
+        const ids: string[] = params.threadIds || [];
+        const results = await Promise.allSettled(
+          ids.map((id) => gw(`/users/me/threads/${id}/trash`, { method: "POST" }))
+        );
+        result = {
+          ok: results.filter((r) => r.status === "fulfilled").length,
+          failed: results.filter((r) => r.status === "rejected").length,
+        };
+        break;
+      }
+      case "counts": {
+        // Returns unread counts for common labels
+        const labels = await gw(`/users/me/labels`);
+        const wanted = new Set(["INBOX", "UNREAD", "STARRED", "SENT", "TRASH", "SPAM"]);
+        const detail = await Promise.all(
+          (labels.labels || [])
+            .filter((l: any) => wanted.has(l.id))
+            .map(async (l: any) => {
+              const d = await gw(`/users/me/labels/${l.id}`);
+              return { id: d.id, unread: d.messagesUnread || 0, total: d.messagesTotal || 0 };
+            })
+        );
+        result = { labels: detail };
+        break;
+      }
       default:
         return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
           status: 400,
