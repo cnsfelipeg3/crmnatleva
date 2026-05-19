@@ -78,7 +78,7 @@ const ICON_CATALOG: { name: keyof typeof LucideIcons; kw: string }[] = [
   { name: "BookOpen", kw: "livro leitura conteudo" },
   { name: "GraduationCap", kw: "educacao formatura curso" },
   { name: "Lightbulb", kw: "ideia inspiracao lampada" },
-  { name: "AlertTriangle", kw: "atencao aviso cuidado" },
+  { name: "TriangleAlert", kw: "atencao aviso cuidado" },
   { name: "ShieldCheck", kw: "seguro protecao verificado" },
   { name: "Lock", kw: "cadeado seguro privado" },
   { name: "Key", kw: "chave acesso" },
