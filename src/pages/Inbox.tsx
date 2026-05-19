@@ -852,24 +852,12 @@ export default function Inbox() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Ícone</div>
-                <div className="grid grid-cols-7 gap-1 px-2 pb-2">
-                  {LABEL_ICON_OPTIONS.map((opt) => {
-                    const OptIcon = opt.icon;
-                    const selected = (labelIcons[l.id] || "folder") === opt.key;
-                    return (
-                      <button
-                        key={opt.key}
-                        onClick={() => setUserLabelIcon(l.id, opt.key)}
-                        className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
-                          selected ? "bg-primary text-primary-foreground" : "hover:bg-accent text-foreground"
-                        )}
-                        title={opt.label}
-                      >
-                        <OptIcon className="h-3.5 w-3.5" />
-                      </button>
-                    );
-                  })}
+                <div className="px-2 pb-2 w-[280px]">
+                  <IconPicker
+                    size="sm"
+                    value={labelIcons[l.id] || "folder"}
+                    onChange={(k) => setUserLabelIcon(l.id, k)}
+                  />
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
