@@ -1421,10 +1421,11 @@ function ComposeDialog({
             autoFocus={state.mode === "reply"}
           />
 
-          {signature && (
-            <div className="text-xs text-muted-foreground border-t pt-2 whitespace-pre-wrap">
-              {signature}
-            </div>
+          {signatureHtml && (
+            <div
+              className="border-t pt-3 mt-2"
+              dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(signatureHtml) }}
+            />
           )}
 
           {state.quoted && (
