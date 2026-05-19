@@ -50,6 +50,7 @@ interface ThreadMessage {
   date: string;
   text: string;
   html: string;
+  snippet?: string;
   labelIds: string[];
 }
 
