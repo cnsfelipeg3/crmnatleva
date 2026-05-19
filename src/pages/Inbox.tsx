@@ -743,6 +743,116 @@ export default function Inbox() {
           </button>
         );
       })}
+
+      <DropdownMenuSeparator className="my-2" />
+      <div className="flex items-center justify-between px-4 pt-1 pb-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pastas</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => { setNewFolderOpen(true); setFoldersOpen(false); }}
+              className="rounded-full p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
+              aria-label="Nova pasta"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Nova pasta</TooltipContent>
+        </Tooltip>
+      </div>
+      {userLabels.length === 0 && (
+        <button
+          onClick={() => { setNewFolderOpen(true); setFoldersOpen(false); }}
+          className="flex w-full items-center gap-3 rounded-full px-4 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Criar primeira pasta
+        </button>
+      )}
+      {userLabels.map((l) => {
+        const Icon = getLabelIcon(labelIcons[l.id]);
+        const key = `label:${l.id}`;
+        const active = folder === key;
+        const display = l.name.split("/").pop() || l.name;
+        return (
+          <div key={l.id} className="group/folder relative">
+            <button
+              onClick={() => {
+                setFolder(key);
+                setSelectedId(null);
+                setSelectedIds(new Set());
+                setFoldersOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+                active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left truncate">{display}</span>
+              {l.unread > 0 && (
+                <span className={cn("text-xs font-semibold mr-6", active ? "text-primary" : "text-muted-foreground")}>
+                  {l.unread > 99 ? "99+" : l.unread}
+                </span>
+              )}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-0 group-hover/folder:opacity-100 hover:bg-background/80 text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Opções da pasta"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const nv = window.prompt("Novo nome da pasta", display);
+                    if (nv && nv.trim() && nv !== display) renameUserLabel(l.id, nv);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" /> Renomear
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Ícone</div>
+                <div className="grid grid-cols-7 gap-1 px-2 pb-2">
+                  {LABEL_ICON_OPTIONS.map((opt) => {
+                    const OptIcon = opt.icon;
+                    const selected = (labelIcons[l.id] || "folder") === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setUserLabelIcon(l.id, opt.key)}
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                          selected ? "bg-primary text-primary-foreground" : "hover:bg-accent text-foreground"
+                        )}
+                        title={opt.label}
+                      >
+                        <OptIcon className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (window.confirm(`Excluir a pasta "${display}"? Os e-mails não serão apagados.`)) {
+                      deleteUserLabel(l.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir pasta
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })}
+
       <DropdownMenuSeparator className="my-2" />
       <button
         onClick={() => {
