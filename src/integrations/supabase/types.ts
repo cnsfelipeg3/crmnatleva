@@ -475,6 +475,48 @@ export type Database = {
           },
         ]
       }
+      affiliates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          notes: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["affiliate_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["affiliate_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          notes?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["affiliate_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       agent_global_rules: {
         Row: {
           content: string
@@ -10419,6 +10461,7 @@ export type Database = {
       watchdog_mark_stuck_media: { Args: { p_table: string }; Returns: number }
     }
     Enums: {
+      affiliate_status: "pending" | "approved" | "rejected"
       app_role:
         | "admin"
         | "gestor"
@@ -10553,6 +10596,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      affiliate_status: ["pending", "approved", "rejected"],
       app_role: [
         "admin",
         "gestor",

@@ -165,6 +165,11 @@ const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
 const PrateleiraVitrine = lazy(() => import("@/pages/prateleira/PrateleiraVitrine"));
 const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraVendaPublica"));
 
+// Vitrine de Afiliados (área logada)
+const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
+const VitrineCadastro = lazy(() => import("@/pages/vitrine/VitrineCadastro"));
+const AffiliateGuard = lazy(() => import("@/components/vitrine/AffiliateGuard"));
+
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
 const OperacaoAtalhos = lazy(() => import("@/pages/operacao/OperacaoAtalhos"));
@@ -429,6 +434,13 @@ function AppRoutes() {
         {/* Prateleira NatLeva pública */}
         <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
         <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
+
+        {/* Vitrine de Afiliados (área logada) */}
+        <Route path="/vitrine/login" element={<Suspense fallback={<MinimalLoader />}><VitrineLogin /></Suspense>} />
+        <Route path="/vitrine/cadastro" element={<Suspense fallback={<MinimalLoader />}><VitrineCadastro /></Suspense>} />
+        <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVitrine /></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/:slug" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVendaPublica /></AffiliateGuard></Suspense>} />
+
 
         {/* Diagnóstico de performance — rota leve fora do layout pesado */}
         <Route path="/diagnostico" element={<Suspense fallback={<MinimalLoader />}><Diagnostico /></Suspense>} />
