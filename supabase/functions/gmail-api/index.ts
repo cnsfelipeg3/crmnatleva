@@ -1,3 +1,5 @@
+import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
+
 // Gmail API proxy via Lovable connector gateway
 // Actions: list_threads, get_thread, get_message, send, reply, mark_read, mark_unread, trash, list_labels, profile
 
@@ -8,6 +10,9 @@ const corsHeaders = {
 };
 
 const GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
+const RELIABLE_SENDER_DOMAIN = "notify.natleva.com";
+const RELIABLE_FROM = "NatLeva <contato@natleva.com>";
+const MICROSOFT_PERSONAL_DOMAINS = new Set(["hotmail.com", "live.com", "outlook.com", "msn.com"]);
 
 function b64urlEncode(str: string): string {
   // UTF-8 safe base64url
@@ -55,6 +60,67 @@ function htmlToPlain(html: string): string {
     .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
+}
+
+function escapeHtml(value: string): string {
+  return (value || "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  }[char] || char));
+}
+
+function extractEmails(value?: string): string[] {
+  return String(value || "")
+    .split(/[;,]/)
+    .map((part) => {
+      const match = part.match(/<([^>]+)>/);
+      return (match?.[1] || part).trim().toLowerCase();
+    })
+    .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email));
+}
+
+function needsReliableDelivery(...values: Array<string | undefined>): boolean {
+  return values
+    .flatMap((value) => extractEmails(value))
+    .some((email) => MICROSOFT_PERSONAL_DOMAINS.has(email.split("@").pop() || ""));
+}
+
+async function sendViaReliableDelivery(opts: {
+  to: string;
+  cc?: string;
+  bcc?: string;
+  subject: string;
+  body: string;
+  html?: boolean;
+}): Promise<{ id: string; deliveryMode: string }> {
+  const apiKey = Deno.env.get("LOVABLE_API_KEY");
+  if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+
+  const messageId = crypto.randomUUID();
+  const html = opts.html
+    ? opts.body || " "
+    : `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#111827">${escapeHtml(opts.body || " ").replace(/\n/g, "<br/>")}</div>`;
+  const text = opts.html ? htmlToPlain(opts.body || " ") : opts.body || " ";
+
+  await sendLovableEmail({
+    to: opts.to,
+    cc: opts.cc || undefined,
+    bcc: opts.bcc || undefined,
+    from: RELIABLE_FROM,
+    sender_domain: RELIABLE_SENDER_DOMAIN,
+    subject: opts.subject || "(sem assunto)",
+    html,
+    text,
+    purpose: "transactional",
+    label: "crm-inbox",
+    idempotency_key: messageId,
+    message_id: messageId,
+  }, { apiKey });
+
+  return { id: messageId, deliveryMode: "reliable-domain" };
 }
 
 function buildRawEmail(opts: {
