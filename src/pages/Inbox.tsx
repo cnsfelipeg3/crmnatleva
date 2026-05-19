@@ -1443,13 +1443,18 @@ function ThreadView({
       </div>
 
       {/* Subject header */}
-      <div className="px-4 pt-4 pb-2 shrink-0">
-        <h2 className="text-lg sm:text-xl font-semibold break-words">{subject}</h2>
+      <div className="px-4 sm:px-6 pt-4 pb-3 shrink-0 border-b">
+        <h2 className="text-xl sm:text-2xl font-semibold break-words leading-tight text-foreground">
+          {subject}
+        </h2>
+        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span>{thread.messages.length} {thread.messages.length === 1 ? "mensagem" : "mensagens"}</span>
+        </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-32">
-        <div className="space-y-3 max-w-4xl mx-auto">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
+        <div className="space-y-3 w-full">
           {thread.messages.map((m, idx) => {
             const { name, email } = parseFromName(m.from);
             const isLast = idx === thread.messages.length - 1;
@@ -1460,14 +1465,21 @@ function ThreadView({
                 className="rounded-xl border bg-card shadow-sm overflow-hidden"
               >
                 <header
-                  className="flex items-start gap-3 p-3 sm:p-4 cursor-pointer"
+                  className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
                   onClick={() => !isLast && toggleExpand(m.id)}
                 >
-                  <Avatar name={name} email={email} size={40} />
+                  <Avatar name={name} email={email} size={44} />
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-baseline gap-x-2">
-                      <span className="text-sm font-semibold text-foreground">{name || email}</span>
-                      <span className="text-xs text-muted-foreground truncate">&lt;{email}&gt;</span>
+                    <div className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm sm:text-base font-semibold text-foreground truncate">
+                        {name || email}
+                      </span>
+                      <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                        {fmtDateFull(m.date)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
+                      &lt;{email}&gt;
                     </div>
                     <div className="text-xs text-muted-foreground truncate mt-0.5">
                       Para: {m.to}
@@ -1477,12 +1489,9 @@ function ThreadView({
                       <div className="text-xs text-muted-foreground truncate mt-1 italic">{m.snippet}</div>
                     )}
                   </div>
-                  <div className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
-                    {fmtDateFull(m.date)}
-                  </div>
                 </header>
                 {isExpanded && (
-                  <div className="px-3 sm:px-4 pb-4 border-t pt-3">
+                  <div className="px-4 sm:px-5 pb-5 border-t pt-4">
                     {m.html ? (
                       <EmailHtmlFrame html={m.html} />
                     ) : (
@@ -1495,20 +1504,20 @@ function ThreadView({
               </article>
             );
           })}
-
-          {/* Reply quick actions */}
-          <div className="flex flex-wrap gap-2 pt-2">
-            <Button variant="outline" onClick={() => onReply("reply")} className="rounded-full">
-              <Reply className="mr-2 h-4 w-4" /> Responder
-            </Button>
-            <Button variant="outline" onClick={() => onReply("replyAll")} className="rounded-full">
-              <ReplyAll className="mr-2 h-4 w-4" /> Responder a todos
-            </Button>
-            <Button variant="outline" onClick={() => onReply("forward")} className="rounded-full">
-              <Forward className="mr-2 h-4 w-4" /> Encaminhar
-            </Button>
-          </div>
         </div>
+      </div>
+
+      {/* Sticky reply actions */}
+      <div className="shrink-0 border-t bg-background/95 backdrop-blur px-3 sm:px-6 py-3 flex flex-wrap gap-2">
+        <Button variant="outline" onClick={() => onReply("reply")} className="rounded-full">
+          <Reply className="mr-2 h-4 w-4" /> Responder
+        </Button>
+        <Button variant="outline" onClick={() => onReply("replyAll")} className="rounded-full">
+          <ReplyAll className="mr-2 h-4 w-4" /> Responder a todos
+        </Button>
+        <Button variant="outline" onClick={() => onReply("forward")} className="rounded-full">
+          <Forward className="mr-2 h-4 w-4" /> Encaminhar
+        </Button>
       </div>
     </div>
   );
