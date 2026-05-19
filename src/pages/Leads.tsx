@@ -75,6 +75,9 @@ type ProductMini = {
   slug: string | null;
   cover_image_url: string | null;
   destination: string | null;
+  price_from: number | null;
+  price_promo: number | null;
+  internal_cost: number | null;
 };
 
 // ─── Propostas Personalizadas ──────────────────────────────────────────
