@@ -169,6 +169,7 @@ const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraV
 const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
 const VitrineCadastro = lazy(() => import("@/pages/vitrine/VitrineCadastro"));
 const AffiliateGuard = lazy(() => import("@/components/vitrine/AffiliateGuard"));
+const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
@@ -440,6 +441,10 @@ function AppRoutes() {
         <Route path="/vitrine/cadastro" element={<Suspense fallback={<MinimalLoader />}><VitrineCadastro /></Suspense>} />
         <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVitrine /></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/:slug" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVendaPublica /></AffiliateGuard></Suspense>} />
+
+        {/* Página pública de cancelamento de inscrição (e-mails) */}
+        <Route path="/unsubscribe" element={<Suspense fallback={<MinimalLoader />}><Unsubscribe /></Suspense>} />
+
 
 
         {/* Diagnóstico de performance — rota leve fora do layout pesado */}
