@@ -110,10 +110,10 @@ export interface SignatureData {
 }
 
 const DEFAULT_SIGNATURE: SignatureData = {
-  name: "",
-  role: "",
-  phone: "",
-  email: "",
+  name: "Nathalia Raslosnek",
+  role: "CEO · NatLeva Wings",
+  phone: "+55 11 96639-6692",
+  email: "contato@natleva.com",
   website: "natleva.com",
   instagram: "natleva",
   logoUrl: "https://adm.natleva.com/logo-natleva.png",
