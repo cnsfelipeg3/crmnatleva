@@ -137,6 +137,8 @@ type LeadItem = {
   whatsapp: boolean;
   firstAt: string;
   lastAt: string;
+  value: number;            // valor unitário do pacote
+  profit: number;           // lucro potencial estimado
 };
 
 type LeadAggregate = {
