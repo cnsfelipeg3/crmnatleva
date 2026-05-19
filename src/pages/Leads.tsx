@@ -408,6 +408,19 @@ export default function Leads() {
   const onlineNow = leads.filter((l) => isOnline(l.lastAt)).length;
   const hotLeads = leads.filter((l) => l.ctaCount > 0 || l.whatsappCount > 0).length;
   const propostaLeads = leads.filter((l) => l.proposalsViewed > 0).length;
+  const pipelineValue = leads.reduce((s, l) => s + l.totalValue, 0);
+  const profitPotential = leads.reduce((s, l) => s + l.profitPotential, 0);
+  const avgTicket = totalLeads > 0 ? pipelineValue / totalLeads : 0;
+
+  // Ranking: score = lucro + bônus de engajamento (CTA/WhatsApp/tempo)
+  const ranked = useMemo(() => {
+    const withScore = leads.map((l) => {
+      const engagement = l.ctaCount * 500 + l.whatsappCount * 800 + Math.min(l.totalSeconds, 600);
+      const score = l.profitPotential + engagement;
+      return { lead: l, score, engagement };
+    });
+    return withScore.sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [leads]);
 
   const handleDelete = async () => {
     if (!toDelete) return;
