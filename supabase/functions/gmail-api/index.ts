@@ -33,6 +33,30 @@ function b64encodeUtf8(str: string): string {
   return btoa(bin);
 }
 
+function cleanHeaderValue(value?: string): string {
+  return (value || "").replace(/[\r\n]+/g, " ").trim();
+}
+
+function wrapBase64(value: string): string {
+  return b64encodeUtf8(value).replace(/(.{76})/g, "$1\r\n");
+}
+
+function htmlToPlain(html: string): string {
+  return (html || "")
+    .replace(/<br\s*\/?\s*>/gi, "\n")
+    .replace(/<\/p\s*>/gi, "\n\n")
+    .replace(/<\/div\s*>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 function buildRawEmail(opts: {
   to: string;
   from?: string;
@@ -46,18 +70,38 @@ function buildRawEmail(opts: {
   threadId?: string;
 }): string {
   const headers: string[] = [];
-  if (opts.from) headers.push(`From: ${opts.from}`);
-  headers.push(`To: ${opts.to}`);
-  if (opts.cc) headers.push(`Cc: ${opts.cc}`);
-  if (opts.bcc) headers.push(`Bcc: ${opts.bcc}`);
-  headers.push(`Subject: =?UTF-8?B?${b64encodeUtf8(opts.subject)}?=`);
+  if (opts.from) headers.push(`From: ${cleanHeaderValue(opts.from)}`);
+  headers.push(`To: ${cleanHeaderValue(opts.to)}`);
+  if (opts.cc) headers.push(`Cc: ${cleanHeaderValue(opts.cc)}`);
+  if (opts.bcc) headers.push(`Bcc: ${cleanHeaderValue(opts.bcc)}`);
+  headers.push(`Subject: =?UTF-8?B?${b64encodeUtf8(cleanHeaderValue(opts.subject))}?=`);
   headers.push("MIME-Version: 1.0");
-  headers.push(`Content-Type: ${opts.html ? "text/html" : "text/plain"}; charset="UTF-8"`);
-  headers.push("Content-Transfer-Encoding: base64");
+  headers.push("X-Mailer: NatLeva Mail");
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
-  // Encode body as base64 with CRLF every 76 chars to comply with RFC
-  const encodedBody = b64encodeUtf8(opts.body).replace(/(.{76})/g, "$1\r\n");
+
+  if (opts.html) {
+    const boundary = `natleva_${crypto.randomUUID().replace(/-/g, "")}`;
+    headers.push(`Content-Type: multipart/alternative; boundary="${boundary}"`);
+    const plain = htmlToPlain(opts.body) || " ";
+    const encodedPlain = wrapBase64(plain);
+    const encodedHtml = wrapBase64(opts.body || " ");
+    const message = `${headers.join("\r\n")}\r\n\r\n` +
+      `--${boundary}\r\n` +
+      `Content-Type: text/plain; charset="UTF-8"\r\n` +
+      `Content-Transfer-Encoding: base64\r\n\r\n` +
+      `${encodedPlain}\r\n` +
+      `--${boundary}\r\n` +
+      `Content-Type: text/html; charset="UTF-8"\r\n` +
+      `Content-Transfer-Encoding: base64\r\n\r\n` +
+      `${encodedHtml}\r\n` +
+      `--${boundary}--`;
+    return b64urlEncode(message);
+  }
+
+  headers.push(`Content-Type: text/plain; charset="UTF-8"`);
+  headers.push("Content-Transfer-Encoding: base64");
+  const encodedBody = wrapBase64(opts.body || " ");
   const message = headers.join("\r\n") + "\r\n\r\n" + encodedBody;
   return b64urlEncode(message);
 }
@@ -262,6 +306,7 @@ Deno.serve(async (req) => {
         break;
       }
       case "send": {
+        if (!params.to || typeof params.to !== "string") throw new Error("Destinatário inválido");
         const raw = buildRawEmail({
           to: params.to,
           cc: params.cc,
@@ -274,6 +319,7 @@ Deno.serve(async (req) => {
           method: "POST",
           body: JSON.stringify({ raw }),
         });
+        console.info(`[gmail-api] sent message ${result?.id || "unknown"} to ${String(params.to).slice(0, 160)}`);
         break;
       }
       case "reply": {
