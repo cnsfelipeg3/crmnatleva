@@ -18,11 +18,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Users, Search, Clock, MousePointerClick, MessageCircle,
   Smartphone, MapPin, ExternalLink, PackageOpen, Phone, Mail,
   TrendingUp, Wifi, Activity, Target, Filter as FilterIcon,
-  FileText, Trash2, Sparkles,
+  FileText, Trash2, Sparkles, X,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
