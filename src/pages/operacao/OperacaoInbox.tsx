@@ -3268,13 +3268,18 @@ function OperacaoInboxInner() {
                                   <Pin className="h-2.5 w-2.5" /> Fixada
                                 </div>
                               )}
-                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[100px]" : "-right-[100px]"}`}>
+                              <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 z-10 ${msg.sender_type === "atendente" ? "-left-[132px]" : "-right-[132px]"}`}>
                                 <button onClick={(e) => { e.stopPropagation(); setReplyingTo(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Responder">
                                   <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground ${msg.sender_type === "atendente" ? "rotate-180" : ""}`} />
                                 </button>
                                 <button onClick={(e) => { e.stopPropagation(); setForwardSeed([msg]); setForwardOpen(true); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Encaminhar">
                                   <Forward className="h-3.5 w-3.5 text-muted-foreground" />
                                 </button>
+                                <ReactionPickerButton
+                                  side="top"
+                                  align={msg.sender_type === "atendente" ? "end" : "start"}
+                                  onPick={(emoji) => handleToggleReaction(msg, emoji)}
+                                />
                                 {msg.sender_type === "atendente" && msg.message_type === "text" && new Date(msg.created_at).getTime() > Date.now() - 3600000 && (
                                   <button onClick={(e) => { e.stopPropagation(); handleStartEdit(msg); }} className="h-7 w-7 rounded-full bg-secondary/80 hover:bg-secondary flex items-center justify-center" title="Editar">
                                     <Pencil className="h-3 w-3 text-muted-foreground" />
