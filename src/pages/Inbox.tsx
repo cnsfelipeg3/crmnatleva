@@ -62,6 +62,7 @@ import { cn } from "@/lib/utils";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
 import { useIsMobile } from "@/hooks/use-mobile";
 import DOMPurify from "dompurify";
+import { IconPicker, resolveIcon } from "@/components/inbox/IconPicker";
 
 // ---------- Types ----------
 interface ThreadItem {
@@ -131,7 +132,10 @@ export const LABEL_ICON_OPTIONS: { key: string; icon: typeof InboxIcon; label: s
 ];
 
 function getLabelIcon(iconKey?: string): typeof InboxIcon {
-  return LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder;
+  if (iconKey && iconKey.startsWith("lucide:")) {
+    return resolveIcon(iconKey) as typeof InboxIcon;
+  }
+  return (LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder);
 }
 
 function loadLabelIcons(): Record<string, string> {
@@ -837,7 +841,7 @@ export default function Inbox() {
                   <MoreVertical className="h-3.5 w-3.5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-[300px]">
                 <DropdownMenuItem
                   onClick={() => {
                     const nv = window.prompt("Novo nome da pasta", display);
@@ -848,24 +852,12 @@ export default function Inbox() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Ícone</div>
-                <div className="grid grid-cols-7 gap-1 px-2 pb-2">
-                  {LABEL_ICON_OPTIONS.map((opt) => {
-                    const OptIcon = opt.icon;
-                    const selected = (labelIcons[l.id] || "folder") === opt.key;
-                    return (
-                      <button
-                        key={opt.key}
-                        onClick={() => setUserLabelIcon(l.id, opt.key)}
-                        className={cn(
-                          "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
-                          selected ? "bg-primary text-primary-foreground" : "hover:bg-accent text-foreground"
-                        )}
-                        title={opt.label}
-                      >
-                        <OptIcon className="h-3.5 w-3.5" />
-                      </button>
-                    );
-                  })}
+                <div className="px-2 pb-2 w-[280px]">
+                  <IconPicker
+                    size="sm"
+                    value={labelIcons[l.id] || "folder"}
+                    onChange={(k) => setUserLabelIcon(l.id, k)}
+                  />
                 </div>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
@@ -2012,27 +2004,8 @@ function NewFolderDialog({
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Ícone</label>
-            <div className="mt-2 grid grid-cols-7 gap-2">
-              {LABEL_ICON_OPTIONS.map((opt) => {
-                const OptIcon = opt.icon;
-                const selected = iconKey === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setIconKey(opt.key)}
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-md border transition-colors",
-                      selected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border hover:bg-accent text-foreground"
-                    )}
-                    title={opt.label}
-                  >
-                    <OptIcon className="h-4 w-4" />
-                  </button>
-                );
-              })}
+            <div className="mt-2">
+              <IconPicker value={iconKey} onChange={setIconKey} />
             </div>
           </div>
         </div>
