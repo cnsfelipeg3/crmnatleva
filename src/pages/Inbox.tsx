@@ -1906,10 +1906,10 @@ function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Configurações</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-all">
             Conta conectada: <strong>{profileEmail || "—"}</strong>
           </DialogDescription>
         </DialogHeader>
@@ -1918,10 +1918,10 @@ function SettingsDialog({
           <div>
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
               <h3 className="text-sm font-semibold">Assinatura por perfil</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <label className="text-xs text-muted-foreground whitespace-nowrap">Editar perfil</label>
                 <Select value={editingRole} onValueChange={(v) => setEditingRole(v as UserRole)}>
-                  <SelectTrigger className="h-9 w-[180px]">
+                  <SelectTrigger className="h-9 flex-1 sm:w-[180px] sm:flex-none">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
