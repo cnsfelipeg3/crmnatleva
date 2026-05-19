@@ -518,6 +518,34 @@ export default function Inbox() {
     }
   };
 
+  // Quick reply/forward from list row — fetches the thread then opens compose
+  const quickReplyFromList = async (threadId: string, mode: "reply" | "forward") => {
+    try {
+      const r = await callGmail("get_thread", { threadId });
+      const messages: ThreadMessage[] = r?.messages || [];
+      const last = messages[messages.length - 1];
+      if (!last) return;
+      const { email: fromEmail, name: fromName } = parseFromName(last.from);
+      if (mode === "reply") {
+        setComposeState({
+          mode: "reply",
+          threadId,
+          to: fromEmail,
+          subject: last.subject?.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject || ""}`,
+          quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+        });
+      } else {
+        setComposeState({
+          mode: "new",
+          subject: last.subject?.toLowerCase().startsWith("fwd:") ? last.subject : `Fwd: ${last.subject || ""}`,
+          quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+        });
+      }
+    } catch (e: any) {
+      toast.error("Não foi possível abrir", { description: e.message });
+    }
+  };
+
   // Bulk ops
   const bulkApply = async (
     op: "archive" | "trash" | "spam" | "read" | "unread"
