@@ -137,19 +137,24 @@ export function useMessageReactions(messageIds: string[], conversationKey: strin
     }
 
     // Send to WhatsApp via Z-API (best effort, never blocks UI)
-    if (externalMessageId && conversationPhone && conversationPhone.trim().length > 0) {
+    const phoneToUse = (conversationPhone || "").trim();
+    console.log("[reactions] add → zapi", { externalMessageId, phoneToUse, emoji });
+    if (externalMessageId && phoneToUse.length > 0) {
       try {
-        await supabase.functions.invoke("zapi-proxy", {
+        const { data: zRes, error: zErr } = await supabase.functions.invoke("zapi-proxy", {
           body: {
             action: "send-message-reaction",
-            phone: conversationPhone,
+            phone: phoneToUse,
             messageId: externalMessageId,
             value: emoji,
           },
         });
+        console.log("[reactions] zapi add response", { zRes, zErr });
       } catch (e) {
         console.warn("[reactions] zapi send failed", e);
       }
+    } else {
+      console.warn("[reactions] skipped zapi send", { hasExt: !!externalMessageId, hasPhone: !!phoneToUse });
     }
   }, []);
 
