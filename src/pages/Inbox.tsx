@@ -1293,6 +1293,7 @@ export default function Inbox() {
         )}
 
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} profileEmail={profileEmail} />
+        <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onCreate={createUserLabel} />
       </div>
     </TooltipProvider>
   );
