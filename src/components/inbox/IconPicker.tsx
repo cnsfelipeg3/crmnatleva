@@ -89,7 +89,7 @@ const ICON_CATALOG: { name: keyof typeof LucideIcons; kw: string }[] = [
   { name: "Eye", kw: "visualizar ver" },
   { name: "ThumbsUp", kw: "curtir gostei aprovado" },
   { name: "Smile", kw: "feliz sorriso" },
-  { name: "Home", kw: "casa inicio" },
+  { name: "House", kw: "casa inicio" },
   { name: "Store", kw: "loja comercio" },
   { name: "Car", kw: "carro transporte" },
   { name: "Bus", kw: "onibus transporte" },
@@ -97,11 +97,11 @@ const ICON_CATALOG: { name: keyof typeof LucideIcons; kw: string }[] = [
   { name: "Anchor", kw: "ancora porto maritimo" },
   { name: "Mountain", kw: "montanha aventura" },
   { name: "Trees", kw: "natureza arvores ecoturismo" },
-  { name: "Palmtree", kw: "praia palmeira tropical" },
+  { name: "TreePalm", kw: "praia palmeira tropical" },
   { name: "Tent", kw: "camping acampamento" },
   { name: "Activity", kw: "atividade pulso" },
-  { name: "BarChart3", kw: "grafico relatorio analise" },
-  { name: "PieChart", kw: "grafico pizza relatorio" },
+  { name: "ChartBar", kw: "grafico relatorio analise" },
+  { name: "ChartPie", kw: "grafico pizza relatorio" },
 ];
 
 export function resolveIcon(iconKey?: string): React.ComponentType<{ className?: string }> {
