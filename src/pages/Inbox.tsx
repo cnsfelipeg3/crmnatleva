@@ -1515,6 +1515,27 @@ function ComposeDialog({
           <Button variant="ghost" size="icon" disabled title="Anexos em breve">
             <Paperclip className="h-4 w-4" />
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={readReceipt ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setReadReceipt((v) => !v)}
+                className={cn("h-9 gap-2 rounded-full px-3", readReceipt && "text-primary")}
+              >
+                <MailCheck className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs">
+                  {readReceipt ? "Confirmação de leitura: on" : "Confirmação de leitura"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {readReceipt
+                ? "Solicitando confirmação · clique para desativar"
+                : "Solicitar confirmação de leitura"}
+            </TooltipContent>
+          </Tooltip>
           <div className="ml-auto" />
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
