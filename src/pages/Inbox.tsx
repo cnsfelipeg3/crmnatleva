@@ -1344,13 +1344,16 @@ function getSignature(): string {
 
 function ComposeDialog({
   state,
+  profileEmail,
   onOpenChange,
   onSent,
 }: {
   state: ComposeState;
+  profileEmail: string;
   onOpenChange: (v: boolean) => void;
   onSent: () => void;
 }) {
+  const READ_RECEIPT_PREF_KEY = "natleva.mail.readReceiptDefault";
   const [to, setTo] = useState(state.to || "");
   const [cc, setCc] = useState(state.cc || "");
   const [bcc, setBcc] = useState(state.bcc || "");
@@ -1359,14 +1362,24 @@ function ComposeDialog({
   const [subject, setSubject] = useState(state.subject || "");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [readReceipt, setReadReceipt] = useState<boolean>(() => {
+    try { return localStorage.getItem(READ_RECEIPT_PREF_KEY) === "1"; } catch { return false; }
+  });
   const signatureData = getSignatureData();
   const signatureHtml = buildSignatureHtml(signatureData);
+
+  useEffect(() => {
+    try { localStorage.setItem(READ_RECEIPT_PREF_KEY, readReceipt ? "1" : "0"); } catch {}
+  }, [readReceipt]);
 
   const send = async () => {
     if (!to.trim()) return toast.error("Informe o destinatário");
     setSending(true);
     try {
       const htmlBody = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">${body.replace(/\n/g, "<br/>")}</div>${signatureHtml}${state.quoted || ""}`;
+      const receiptPayload = readReceipt && profileEmail
+        ? { readReceipt: true, readReceiptTo: profileEmail }
+        : {};
       if (state.mode === "reply" && state.threadId) {
         await callGmail("reply", {
           threadId: state.threadId,
@@ -1375,6 +1388,7 @@ function ComposeDialog({
           bcc: bcc || undefined,
           body: htmlBody,
           html: true,
+          ...receiptPayload,
         });
       } else {
         await callGmail("send", {
@@ -1384,9 +1398,12 @@ function ComposeDialog({
           subject,
           body: htmlBody,
           html: true,
+          ...receiptPayload,
         });
       }
-      toast.success("Email enviado");
+      toast.success("Email enviado", {
+        description: readReceipt ? "Confirmação de leitura solicitada" : undefined,
+      });
       onSent();
     } catch (e: any) {
       toast.error("Erro ao enviar", { description: e.message });
