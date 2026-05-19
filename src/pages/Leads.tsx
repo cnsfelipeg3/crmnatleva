@@ -165,6 +165,10 @@ type LeadAggregate = {
   /** ids para deletar */
   prateleiraViewerIds: string[];
   proposalViewerIds: string[];
+  /** financeiro */
+  totalValue: number;        // soma dos pacotes visualizados
+  profitPotential: number;   // lucro potencial estimado
+  topValue: number;          // maior pacote visto
 };
 
 type OriginFilter = "all" | "prateleira" | "proposal";
