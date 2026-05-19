@@ -23,8 +23,11 @@ import {
   Users, Search, Clock, MousePointerClick, MessageCircle,
   Smartphone, MapPin, ExternalLink, PackageOpen, Phone, Mail,
   TrendingUp, Wifi, Activity, Target, Filter as FilterIcon,
-  FileText, Trash2, Sparkles, X,
+  FileText, Trash2, Sparkles, X, DollarSign, Flame, Crown, Trophy,
 } from "lucide-react";
+
+const BRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const DEFAULT_MARGIN = 0.15; // 15% quando não há custo informado
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -72,6 +75,9 @@ type ProductMini = {
   slug: string | null;
   cover_image_url: string | null;
   destination: string | null;
+  price_from: number | null;
+  price_promo: number | null;
+  internal_cost: number | null;
 };
 
 // ─── Propostas Personalizadas ──────────────────────────────────────────
@@ -103,6 +109,7 @@ type ProposalMini = {
   cover_image_url: string | null;
   destinations: string[] | null;
   client_name: string | null;
+  total_value: number | null;
 };
 
 type ProposalClickRow = {
@@ -130,6 +137,8 @@ type LeadItem = {
   whatsapp: boolean;
   firstAt: string;
   lastAt: string;
+  value: number;            // valor unitário do pacote
+  profit: number;           // lucro potencial estimado
 };
 
 type LeadAggregate = {
@@ -156,6 +165,10 @@ type LeadAggregate = {
   /** ids para deletar */
   prateleiraViewerIds: string[];
   proposalViewerIds: string[];
+  /** financeiro */
+  totalValue: number;        // soma dos pacotes visualizados
+  profitPotential: number;   // lucro potencial estimado
+  topValue: number;          // maior pacote visto
 };
 
 type OriginFilter = "all" | "prateleira" | "proposal";
@@ -210,7 +223,7 @@ export default function Leads() {
     if (pIds.length) {
       const { data: pData } = await (supabase as any)
         .from("experience_products")
-        .select("id, title, slug, cover_image_url, destination")
+        .select("id, title, slug, cover_image_url, destination, price_from, price_promo, internal_cost")
         .in("id", pIds);
       const map: Record<string, ProductMini> = {};
       (pData || []).forEach((p: ProductMini) => { map[p.id] = p; });
@@ -221,7 +234,7 @@ export default function Leads() {
     if (prIds.length) {
       const { data: prData } = await (supabase as any)
         .from("proposals")
-        .select("id, title, slug, cover_image_url, destinations, client_name")
+        .select("id, title, slug, cover_image_url, destinations, client_name, total_value")
         .in("id", prIds);
       const map: Record<string, ProposalMini> = {};
       (prData || []).forEach((p: ProposalMini) => { map[p.id] = p; });
@@ -264,6 +277,9 @@ export default function Leads() {
           items: [],
           prateleiraViewerIds: [],
           proposalViewerIds: [],
+          totalValue: 0,
+          profitPotential: 0,
+          topValue: 0,
         };
         map.set(key, lead);
       } else {
@@ -296,6 +312,12 @@ export default function Leads() {
       if (v.whatsapp_clicked) lead.whatsappCount += 1;
       lead.prateleiraViewerIds.push(v.id);
       const p = products[v.product_id];
+      const pPrice = Number(p?.price_promo || p?.price_from || 0);
+      const pCost = Number(p?.internal_cost || 0);
+      const pProfit = pPrice > 0 ? (pCost > 0 ? Math.max(pPrice - pCost, 0) : pPrice * DEFAULT_MARGIN) : 0;
+      lead.totalValue += pPrice;
+      lead.profitPotential += pProfit;
+      if (pPrice > lead.topValue) lead.topValue = pPrice;
       lead.items.push({
         kind: "product",
         refId: v.product_id,
@@ -310,6 +332,8 @@ export default function Leads() {
         whatsapp: v.whatsapp_clicked,
         firstAt: v.first_viewed_at,
         lastAt: v.last_active_at,
+        value: pPrice,
+        profit: pProfit,
       });
     }
 
@@ -331,6 +355,11 @@ export default function Leads() {
       if (v.whatsapp_clicked) lead.whatsappCount += 1;
       lead.proposalViewerIds.push(v.id);
       const pr = proposals[v.proposal_id];
+      const prValue = Number(pr?.total_value || 0);
+      const prProfit = prValue > 0 ? prValue * DEFAULT_MARGIN : 0;
+      lead.totalValue += prValue;
+      lead.profitPotential += prProfit;
+      if (prValue > lead.topValue) lead.topValue = prValue;
       lead.items.push({
         kind: "proposal",
         refId: v.proposal_id,
@@ -345,6 +374,8 @@ export default function Leads() {
         whatsapp: v.whatsapp_clicked,
         firstAt: v.first_viewed_at,
         lastAt: v.last_active_at,
+        value: prValue,
+        profit: prProfit,
       });
     }
 
@@ -377,6 +408,19 @@ export default function Leads() {
   const onlineNow = leads.filter((l) => isOnline(l.lastAt)).length;
   const hotLeads = leads.filter((l) => l.ctaCount > 0 || l.whatsappCount > 0).length;
   const propostaLeads = leads.filter((l) => l.proposalsViewed > 0).length;
+  const pipelineValue = leads.reduce((s, l) => s + l.totalValue, 0);
+  const profitPotential = leads.reduce((s, l) => s + l.profitPotential, 0);
+  const avgTicket = totalLeads > 0 ? pipelineValue / totalLeads : 0;
+
+  // Ranking: score = lucro + bônus de engajamento (CTA/WhatsApp/tempo)
+  const ranked = useMemo(() => {
+    const withScore = leads.map((l) => {
+      const engagement = l.ctaCount * 500 + l.whatsappCount * 800 + Math.min(l.totalSeconds, 600);
+      const score = l.profitPotential + engagement;
+      return { lead: l, score, engagement };
+    });
+    return withScore.sort((a, b) => b.score - a.score).slice(0, 5);
+  }, [leads]);
 
   const handleDelete = async () => {
     if (!toDelete) return;
@@ -470,12 +514,87 @@ export default function Leads() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
         <Kpi icon={Users} label="Total de leads" value={totalLeads.toLocaleString("pt-BR")} />
         <Kpi icon={Wifi} label="Online agora" value={onlineNow.toLocaleString("pt-BR")} tone={onlineNow > 0 ? "live" : undefined} />
         <Kpi icon={TrendingUp} label="Leads quentes" value={hotLeads.toLocaleString("pt-BR")} hint="clicaram CTA ou WhatsApp" tone={hotLeads > 0 ? "hot" : undefined} />
         <Kpi icon={FileText} label="Viram proposta" value={propostaLeads.toLocaleString("pt-BR")} hint="propostas personalizadas" />
+        <Kpi icon={DollarSign} label="Pipeline" value={BRL(pipelineValue)} hint="valor total visualizado" tone="value" />
+        <Kpi icon={Flame} label="Lucro potencial" value={BRL(profitPotential)} hint="estimativa com margem real" tone="profit" />
+        <Kpi icon={TrendingUp} label="Ticket médio" value={BRL(avgTicket)} hint="por lead" />
       </div>
+
+      {/* Top leads */}
+      {ranked.length > 0 && (
+        <Card className="p-4 space-y-3 border-amber-500/30 bg-gradient-to-br from-amber-500/[0.04] to-transparent">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h2 className="text-sm font-bold text-foreground">Melhores leads agora</h2>
+              <Badge className="text-[9px] border-0 bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                top {ranked.length}
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground hidden sm:block">
+              ranking por lucro potencial + engajamento
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+            {ranked.map((r, idx) => {
+              const l = r.lead;
+              const o = originLabel(l);
+              const top = l.items.find((it) => it.value === l.topValue) || l.items[0];
+              return (
+                <button
+                  key={l.key}
+                  type="button"
+                  onClick={() => setSelected(l)}
+                  className="text-left p-3 rounded-xl border border-border/40 bg-card hover:border-amber-500/40 hover:shadow-sm transition-all space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {idx === 0 ? (
+                        <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground tabular-nums w-3.5 text-center">
+                          {idx + 1}
+                        </span>
+                      )}
+                      <p className="text-[12px] font-semibold text-foreground truncate">
+                        {l.name || l.email || "Sem nome"}
+                      </p>
+                    </div>
+                    <OriginBadge tone={o.tone} label={o.label} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {top?.title || "·"}
+                  </p>
+                  <div className="flex items-end justify-between gap-2 pt-1">
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Lucro potencial</p>
+                      <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {BRL(l.profitPotential)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pacote</p>
+                      <p className="text-[11px] font-semibold text-foreground tabular-nums">
+                        {l.totalValue > 0 ? BRL(l.totalValue) : "·"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-border/30 text-[9.5px] text-muted-foreground">
+                    {l.ctaCount > 0 && <span className="text-accent font-semibold">{l.ctaCount} CTA</span>}
+                    {l.whatsappCount > 0 && <span className="text-emerald-600 font-semibold">{l.whatsappCount} WA</span>}
+                    <span className="ml-auto">{formatTime(l.totalSeconds)}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
 
       {/* Filtros */}
       <Card className="p-3 flex flex-wrap items-center gap-2">
@@ -546,6 +665,7 @@ export default function Leads() {
                 <th className="text-left p-3 font-medium">Origem</th>
                 <th className="text-left p-3 font-medium">O que viu</th>
                 <th className="text-left p-3 font-medium">Tempo total</th>
+                <th className="text-left p-3 font-medium">Valor / Lucro</th>
                 <th className="text-left p-3 font-medium">Ações</th>
                 <th className="text-left p-3 font-medium">Última visita</th>
                 <th className="p-3"></th>
@@ -553,9 +673,9 @@ export default function Leads() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
+                <tr><td colSpan={10} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">
+                <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">
                   {leads.length === 0 ? "Nenhum lead ainda. Compartilhe páginas da Prateleira ou envie propostas personalizadas para começar." : "Nenhum lead bate com os filtros."}
                 </td></tr>
               ) : filtered.map((l) => {
@@ -620,6 +740,18 @@ export default function Leads() {
                         <Clock className="w-3.5 h-3.5 text-muted-foreground" />
                         <span className="font-semibold text-foreground tabular-nums">{formatTime(l.totalSeconds)}</span>
                       </div>
+                    </td>
+                    <td className="p-3 align-top">
+                      {l.totalValue > 0 ? (
+                        <div className="space-y-0.5">
+                          <p className="text-[12px] font-bold text-foreground tabular-nums leading-tight">{BRL(l.totalValue)}</p>
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 tabular-nums leading-tight flex items-center gap-1">
+                            <Flame className="w-2.5 h-2.5" /> {BRL(l.profitPotential)} lucro
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/60">sem valor</span>
+                      )}
                     </td>
                     <td className="p-3 align-top">
                       <div className="flex items-center gap-1 flex-wrap">
@@ -720,18 +852,22 @@ export default function Leads() {
 }
 
 function Kpi({ icon: Icon, label, value, hint, tone }: {
-  icon: any; label: string; value: string; hint?: string; tone?: "hot" | "live";
+  icon: any; label: string; value: string; hint?: string; tone?: "hot" | "live" | "value" | "profit";
 }) {
   return (
     <Card className={cn(
       "p-3 flex items-start gap-2.5 rounded-2xl border-border/40",
       tone === "hot" && "border-accent/40 bg-accent/5",
       tone === "live" && "border-emerald-500/40 bg-emerald-500/5",
+      tone === "value" && "border-sky-500/30 bg-sky-500/5",
+      tone === "profit" && "border-emerald-500/40 bg-emerald-500/5",
     )}>
       <div className={cn(
         "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
         tone === "hot" ? "bg-accent/15 text-accent" :
         tone === "live" ? "bg-emerald-500/15 text-emerald-600" :
+        tone === "value" ? "bg-sky-500/15 text-sky-600" :
+        tone === "profit" ? "bg-emerald-500/15 text-emerald-600" :
         "bg-muted text-muted-foreground",
       )}>
         <Icon className="w-4 h-4" />
@@ -824,12 +960,15 @@ function LeadDetail({ lead, events, proposalClicks, onClose, onDelete }: {
               </div>
             </Card>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <MiniKpi label="Prateleira" value={lead.productsViewed} />
               <MiniKpi label="Propostas" value={lead.proposalsViewed} />
               <MiniKpi label="Tempo ativo" value={formatTime(lead.totalSeconds)} />
               <MiniKpi label="Cliques CTA" value={lead.ctaCount} tone={lead.ctaCount > 0 ? "hot" : undefined} />
+              <MiniKpi label="Pipeline" value={lead.totalValue > 0 ? BRL(lead.totalValue) : "·"} />
+              <MiniKpi label="Lucro potencial" value={lead.profitPotential > 0 ? BRL(lead.profitPotential) : "·"} tone={lead.profitPotential > 0 ? "hot" : undefined} />
             </div>
+
 
             {/* Itens visualizados */}
             <Card className="p-4 space-y-3">
@@ -864,6 +1003,16 @@ function LeadDetail({ lead, events, proposalClicks, onClose, onDelete }: {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {p.value > 0 && (
+                        <div className="text-right">
+                          <p className="text-[11px] font-bold text-foreground tabular-nums leading-tight">{BRL(p.value)}</p>
+                          {p.profit > 0 && (
+                            <p className="text-[9.5px] text-emerald-600 dark:text-emerald-400 tabular-nums leading-tight">
+                              ~{BRL(p.profit)} lucro
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {(p.cta || p.whatsapp) && (
                         <div className="flex gap-1">
                           {p.cta && <Badge className="text-[9px] border-0 bg-accent/15 text-accent">CTA</Badge>}
