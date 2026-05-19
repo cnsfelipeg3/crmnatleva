@@ -2004,27 +2004,8 @@ function NewFolderDialog({
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground">Ícone</label>
-            <div className="mt-2 grid grid-cols-7 gap-2">
-              {LABEL_ICON_OPTIONS.map((opt) => {
-                const OptIcon = opt.icon;
-                const selected = iconKey === opt.key;
-                return (
-                  <button
-                    key={opt.key}
-                    type="button"
-                    onClick={() => setIconKey(opt.key)}
-                    className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-md border transition-colors",
-                      selected
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border hover:bg-accent text-foreground"
-                    )}
-                    title={opt.label}
-                  >
-                    <OptIcon className="h-4 w-4" />
-                  </button>
-                );
-              })}
+            <div className="mt-2">
+              <IconPicker value={iconKey} onChange={setIconKey} />
             </div>
           </div>
         </div>
