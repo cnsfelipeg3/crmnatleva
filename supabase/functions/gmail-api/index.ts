@@ -113,28 +113,37 @@ function headerVal(headers: any[], name: string): string {
   return h?.value || "";
 }
 
-async function gw(path: string, init: RequestInit = {}) {
+async function gw(path: string, init: RequestInit = {}, retries = 2): Promise<any> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GOOGLE_MAIL_API_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!GOOGLE_MAIL_API_KEY) throw new Error("GOOGLE_MAIL_API_KEY not configured");
 
-  const res = await fetch(`${GATEWAY}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-  });
-  const text = await res.text();
-  let json: any = null;
-  try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
-  if (!res.ok) {
-    throw new Error(`Gmail API ${res.status}: ${text.slice(0, 500)}`);
+  let lastErr: any;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(`${GATEWAY}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
+        "Content-Type": "application/json",
+        ...(init.headers || {}),
+      },
+    });
+    const text = await res.text();
+    let json: any = null;
+    try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+    if (res.ok) return json;
+    lastErr = new Error(`Gmail API ${res.status}: ${text.slice(0, 500)}`);
+    // Retry on transient errors
+    if (res.status >= 500 || res.status === 429) {
+      console.warn(`[gmail-api] transient ${res.status} on ${path}, retry ${attempt + 1}/${retries}`);
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
+    }
+    throw lastErr;
   }
-  return json;
+  throw lastErr;
 }
 
 Deno.serve(async (req) => {
