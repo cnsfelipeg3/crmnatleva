@@ -310,6 +310,20 @@ function OperacaoInboxInner() {
 
   useInboxRealtime(setMessages, setConversations, setSelectedId, lastMsgIdsRef, selectedIdRef, conversationsRef);
 
+  // ─── Message reactions (WhatsApp-style) ───
+  const visibleMessageIds = useMemo(() => currentMessages.map(m => m.id).filter(Boolean), [currentMessages]);
+  const { reactions: reactionsByMsg, addReaction, removeReaction } = useMessageReactions(visibleMessageIds, selectedId);
+  const handleToggleReaction = useCallback((msg: any, emoji: string) => {
+    const list = reactionsByMsg[msg.id] || [];
+    const mine = list.find((r: any) => r.reactor_type === "atendente" && r.reactor_id === (user?.id || null));
+    const phone = selected?.phone || null;
+    if (mine && mine.emoji === emoji) {
+      removeReaction({ messageId: msg.id, externalMessageId: msg.external_message_id, reactorId: user?.id || null, conversationPhone: phone });
+    } else {
+      addReaction({ messageId: msg.id, externalMessageId: msg.external_message_id, emoji, reactorId: user?.id || null, reactorName: (user as any)?.email || null, conversationPhone: phone });
+    }
+  }, [reactionsByMsg, addReaction, removeReaction, user, selected?.phone]);
+
   // ──────────────────────────────────────────────────────────────────
   // FALLBACKS DE SINCRONIZAÇÃO (caso realtime falhe silenciosamente)
   // FIX 1: polling de 15s das mensagens da conversa aberta
