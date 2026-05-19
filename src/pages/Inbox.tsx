@@ -382,11 +382,22 @@ export default function Inbox() {
     }
   }, []);
 
+  const loadUserLabels = useCallback(async () => {
+    try {
+      const r = await callGmail("list_user_labels");
+      setUserLabels((r.labels || []).map((l: any) => ({ id: l.id, name: l.name, unread: l.unread || 0 })));
+    } catch {
+      // silent
+    }
+  }, []);
+
   const loadThreads = useCallback(
     async (silent = false) => {
       if (!silent) setLoadingThreads(true);
       try {
-        const r = await callGmail("list_threads", { q: currentQuery, maxResults: 30 });
+        const payload: any = { q: currentQuery, maxResults: 30 };
+        if (activeLabelId) payload.labelIds = [activeLabelId];
+        const r = await callGmail("list_threads", payload);
         setThreads(r.threads || []);
         setNextPageToken(r.nextPageToken || null);
       } catch (e: any) {
@@ -395,18 +406,20 @@ export default function Inbox() {
         if (!silent) setLoadingThreads(false);
       }
     },
-    [currentQuery]
+    [currentQuery, activeLabelId]
   );
 
   const loadMore = useCallback(async () => {
     if (!nextPageToken || loadingMore) return;
     setLoadingMore(true);
     try {
-      const r = await callGmail("list_threads", {
+      const payload: any = {
         q: currentQuery,
         maxResults: 30,
         pageToken: nextPageToken,
-      });
+      };
+      if (activeLabelId) payload.labelIds = [activeLabelId];
+      const r = await callGmail("list_threads", payload);
       setThreads((prev) => [...prev, ...(r.threads || [])]);
       setNextPageToken(r.nextPageToken || null);
     } catch (e: any) {
@@ -414,7 +427,7 @@ export default function Inbox() {
     } finally {
       setLoadingMore(false);
     }
-  }, [nextPageToken, loadingMore, currentQuery]);
+  }, [nextPageToken, loadingMore, currentQuery, activeLabelId]);
 
   const loadThread = useCallback(
     async (id: string) => {
