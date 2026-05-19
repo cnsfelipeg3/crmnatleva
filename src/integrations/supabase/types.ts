@@ -5277,6 +5277,50 @@ export type Database = {
           },
         ]
       }
+      message_reactions: {
+        Row: {
+          conversation_message_id: string | null
+          created_at: string
+          emoji: string
+          external_message_id: string | null
+          id: string
+          reactor_id: string | null
+          reactor_name: string | null
+          reactor_phone: string | null
+          reactor_type: string
+        }
+        Insert: {
+          conversation_message_id?: string | null
+          created_at?: string
+          emoji: string
+          external_message_id?: string | null
+          id?: string
+          reactor_id?: string | null
+          reactor_name?: string | null
+          reactor_phone?: string | null
+          reactor_type?: string
+        }
+        Update: {
+          conversation_message_id?: string | null
+          created_at?: string
+          emoji?: string
+          external_message_id?: string | null
+          id?: string
+          reactor_id?: string | null
+          reactor_name?: string | null
+          reactor_phone?: string | null
+          reactor_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_conversation_message_id_fkey"
+            columns: ["conversation_message_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_recipient_status: {
         Row: {
           conversation_id: string | null
