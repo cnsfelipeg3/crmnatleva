@@ -209,10 +209,31 @@ function buildSignatureHtml(s: SignatureData): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111827;margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb"><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>${logoCell}<td valign="top" style="padding-left:${s.logoUrl ? '14px' : '0'}"><div style="font-size:15px;font-weight:700;color:${color};letter-spacing:.2px">${escHtml(s.name)}</div>${rows.join("")}${s.tagline ? `<div style="font-size:11px;color:#9ca3af;margin-top:8px;font-style:italic">${escHtml(s.tagline)}</div>` : ""}</td></tr></table></div>`;
 }
 
-function getSignatureData(): SignatureData {
+// Per-role signature support. Each role can have its own signature; falls back to the global one.
+export const SIGNATURE_ROLES: { value: UserRole; label: string }[] = [
+  { value: "admin", label: "Admin" },
+  { value: "gestor", label: "Gestor" },
+  { value: "vendedor", label: "Vendedor" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "operacional", label: "Operacional" },
+  { value: "leitura", label: "Leitura" },
+];
+
+function roleSignatureKey(role?: UserRole | null): string {
+  return role ? `${SIGNATURE_V2_KEY}.${role}` : SIGNATURE_V2_KEY;
+}
+
+function getSignatureData(role?: UserRole | null): SignatureData {
   try {
+    // 1. Try the role-specific signature
+    if (role) {
+      const scoped = localStorage.getItem(roleSignatureKey(role));
+      if (scoped) return { ...DEFAULT_SIGNATURE, ...JSON.parse(scoped) };
+    }
+    // 2. Fallback to the global signature
     const v2 = localStorage.getItem(SIGNATURE_V2_KEY);
     if (v2) return { ...DEFAULT_SIGNATURE, ...JSON.parse(v2) };
+    // 3. Legacy plain-text signature
     const legacy = localStorage.getItem(SIGNATURE_KEY) || "";
     if (legacy) {
       const lines = legacy.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -221,6 +242,12 @@ function getSignatureData(): SignatureData {
   } catch {}
   return { ...DEFAULT_SIGNATURE };
 }
+
+function hasRoleSignature(role?: UserRole | null): boolean {
+  if (!role) return false;
+  try { return !!localStorage.getItem(roleSignatureKey(role)); } catch { return false; }
+}
+
 
 // ---------- Helpers ----------
 function parseFromName(raw: string): { name: string; email: string } {
