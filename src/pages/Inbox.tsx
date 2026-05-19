@@ -883,6 +883,26 @@ export default function Inbox() {
                             )}
                             onClick={(e) => e.stopPropagation()}
                           >
+                            {folder !== "trash" && folder !== "spam" && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => quickReplyFromList(t.id, "reply")}>
+                                      <Reply className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Responder</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => quickReplyFromList(t.id, "forward")}>
+                                      <Forward className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Encaminhar</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
                             {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
