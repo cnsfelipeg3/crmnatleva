@@ -528,11 +528,20 @@ export default function Inbox() {
     [loadCounts]
   );
 
+  const { role: currentRole, profile } = useAuth();
+
   useEffect(() => {
     loadProfile();
     loadCounts();
     loadUserLabels();
   }, [loadProfile, loadCounts, loadUserLabels]);
+
+  // Auto-seed a per-role signature for the logged-in user as soon as
+  // their role, profile name and Gmail mailbox are known.
+  useEffect(() => {
+    if (!currentRole) return;
+    seedRoleSignature(currentRole, profile?.full_name, profileEmail);
+  }, [currentRole, profile?.full_name, profileEmail]);
 
   useEffect(() => {
     loadThreads();
