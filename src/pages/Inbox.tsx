@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth, type UserRole } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -207,10 +209,31 @@ function buildSignatureHtml(s: SignatureData): string {
   return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111827;margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb"><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>${logoCell}<td valign="top" style="padding-left:${s.logoUrl ? '14px' : '0'}"><div style="font-size:15px;font-weight:700;color:${color};letter-spacing:.2px">${escHtml(s.name)}</div>${rows.join("")}${s.tagline ? `<div style="font-size:11px;color:#9ca3af;margin-top:8px;font-style:italic">${escHtml(s.tagline)}</div>` : ""}</td></tr></table></div>`;
 }
 
-function getSignatureData(): SignatureData {
+// Per-role signature support. Each role can have its own signature; falls back to the global one.
+export const SIGNATURE_ROLES: { value: UserRole; label: string }[] = [
+  { value: "admin", label: "Admin" },
+  { value: "gestor", label: "Gestor" },
+  { value: "vendedor", label: "Vendedor" },
+  { value: "financeiro", label: "Financeiro" },
+  { value: "operacional", label: "Operacional" },
+  { value: "leitura", label: "Leitura" },
+];
+
+function roleSignatureKey(role?: UserRole | null): string {
+  return role ? `${SIGNATURE_V2_KEY}.${role}` : SIGNATURE_V2_KEY;
+}
+
+function getSignatureData(role?: UserRole | null): SignatureData {
   try {
+    // 1. Try the role-specific signature
+    if (role) {
+      const scoped = localStorage.getItem(roleSignatureKey(role));
+      if (scoped) return { ...DEFAULT_SIGNATURE, ...JSON.parse(scoped) };
+    }
+    // 2. Fallback to the global signature
     const v2 = localStorage.getItem(SIGNATURE_V2_KEY);
     if (v2) return { ...DEFAULT_SIGNATURE, ...JSON.parse(v2) };
+    // 3. Legacy plain-text signature
     const legacy = localStorage.getItem(SIGNATURE_KEY) || "";
     if (legacy) {
       const lines = legacy.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -219,6 +242,12 @@ function getSignatureData(): SignatureData {
   } catch {}
   return { ...DEFAULT_SIGNATURE };
 }
+
+function hasRoleSignature(role?: UserRole | null): boolean {
+  if (!role) return false;
+  try { return !!localStorage.getItem(roleSignatureKey(role)); } catch { return false; }
+}
+
 
 // ---------- Helpers ----------
 function parseFromName(raw: string): { name: string; email: string } {
@@ -1599,8 +1628,10 @@ function ComposeDialog({
   const [readReceipt, setReadReceipt] = useState<boolean>(() => {
     try { return localStorage.getItem(READ_RECEIPT_PREF_KEY) === "1"; } catch { return false; }
   });
-  const signatureData = getSignatureData();
+  const { role: userRole } = useAuth();
+  const signatureData = getSignatureData(userRole);
   const signatureHtml = buildSignatureHtml(signatureData);
+
 
   useEffect(() => {
     try { localStorage.setItem(READ_RECEIPT_PREF_KEY, readReceipt ? "1" : "0"); } catch {}
@@ -1790,22 +1821,32 @@ function SettingsDialog({
   onOpenChange: (v: boolean) => void;
   profileEmail: string;
 }) {
+  const { role: currentUserRole } = useAuth();
+  const [editingRole, setEditingRole] = useState<UserRole>(currentUserRole || "vendedor");
   const [data, setData] = useState<SignatureData>(DEFAULT_SIGNATURE);
 
+  // Reload data when dialog opens OR the selected role changes
   useEffect(() => {
-    if (open) {
-      const d = getSignatureData();
-      if (!d.email && profileEmail) d.email = profileEmail;
-      setData(d);
-    }
-  }, [open, profileEmail]);
+    if (!open) return;
+    const d = getSignatureData(editingRole);
+    if (!d.email && profileEmail) d.email = profileEmail;
+    setData(d);
+  }, [open, profileEmail, editingRole]);
+
+  // When dialog re-opens, default back to the current logged-in user's role
+  useEffect(() => {
+    if (open && currentUserRole) setEditingRole(currentUserRole);
+  }, [open, currentUserRole]);
 
   const update = (k: keyof SignatureData, v: string) => setData((p) => ({ ...p, [k]: v }));
 
   const save = () => {
     try {
+      localStorage.setItem(roleSignatureKey(editingRole), JSON.stringify(data));
+      // Keep the global key in sync with whichever signature was last saved as a sensible default
       localStorage.setItem(SIGNATURE_V2_KEY, JSON.stringify(data));
-      toast.success("Assinatura salva");
+      const label = SIGNATURE_ROLES.find((r) => r.value === editingRole)?.label || editingRole;
+      toast.success(`Assinatura salva para ${label}`);
       onOpenChange(false);
     } catch (e: any) {
       toast.error("Erro ao salvar", { description: e.message });
@@ -1826,8 +1867,31 @@ function SettingsDialog({
 
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-semibold mb-2">Assinatura</h3>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
+              <h3 className="text-sm font-semibold">Assinatura por perfil</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Editar perfil</label>
+                <Select value={editingRole} onValueChange={(v) => setEditingRole(v as UserRole)}>
+                  <SelectTrigger className="h-9 w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIGNATURE_ROLES.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                        {hasRoleSignature(r.value) ? " ·" : ""}
+                        {r.value === currentUserRole ? " (você)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Cada perfil pode ter sua própria assinatura. Ela é aplicada automaticamente conforme o usuário logado ao enviar e-mails.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
               <div>
                 <label className="text-xs text-muted-foreground">Nome</label>
                 <Input value={data.name} onChange={(e) => update("name", e.target.value)} placeholder="Nathalia Raslosnek" />
