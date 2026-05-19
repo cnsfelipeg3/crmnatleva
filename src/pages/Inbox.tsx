@@ -94,6 +94,80 @@ const FOLDERS: FolderDef[] = [
 ];
 
 const SIGNATURE_KEY = "natleva.inbox.signature";
+const SIGNATURE_V2_KEY = "natleva.inbox.signature.v2";
+
+export interface SignatureData {
+  name: string;
+  role: string;
+  phone: string;
+  email: string;
+  website: string;
+  instagram: string;
+  logoUrl: string;
+  brandColor: string;
+  tagline: string;
+}
+
+const DEFAULT_SIGNATURE: SignatureData = {
+  name: "",
+  role: "",
+  phone: "",
+  email: "",
+  website: "natleva.com",
+  instagram: "natleva",
+  logoUrl: "https://adm.natleva.com/logo-natleva.png",
+  brandColor: "#1f5132",
+  tagline: "Experiências de viagem sob medida",
+};
+
+function escHtml(v: string): string {
+  return (v || "").replace(/[<>"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+}
+
+function buildSignatureHtml(s: SignatureData): string {
+  if (!s.name && !s.email && !s.phone && !s.instagram) return "";
+  const color = s.brandColor || "#1f5132";
+  const igHandle = (s.instagram || "").replace(/^@/, "").trim();
+  const igUrl = igHandle ? `https://instagram.com/${encodeURIComponent(igHandle)}` : "";
+  const siteUrl = s.website ? (s.website.startsWith("http") ? s.website : `https://${s.website}`) : "";
+  const telHref = s.phone ? `tel:${s.phone.replace(/[^\d+]/g, "")}` : "";
+  const waHref = s.phone ? `https://wa.me/${s.phone.replace(/[^\d]/g, "")}` : "";
+  const linkStyle = `color:${color};text-decoration:none;font-weight:500`;
+  const iconStyle = `display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;border-radius:50%;background:${color};color:#fff;font-size:11px;margin-right:6px;text-decoration:none;font-family:Arial,sans-serif;font-weight:700`;
+
+  const rows: string[] = [];
+  if (s.role) rows.push(`<div style="font-size:12px;color:#6b7280;margin-top:2px">${escHtml(s.role)}</div>`);
+  const contactBits: string[] = [];
+  if (s.phone) contactBits.push(`<a href="${telHref}" style="${linkStyle}">${escHtml(s.phone)}</a>`);
+  if (s.email) contactBits.push(`<a href="mailto:${escHtml(s.email)}" style="${linkStyle}">${escHtml(s.email)}</a>`);
+  if (siteUrl) contactBits.push(`<a href="${siteUrl}" style="${linkStyle}" target="_blank" rel="noopener">${escHtml(s.website)}</a>`);
+  if (contactBits.length) rows.push(`<div style="font-size:13px;color:#374151;margin-top:6px;line-height:1.6">${contactBits.join(' &nbsp;·&nbsp; ')}</div>`);
+
+  const socials: string[] = [];
+  if (igUrl) socials.push(`<a href="${igUrl}" target="_blank" rel="noopener" style="${iconStyle}" title="Instagram">IG</a>`);
+  if (waHref) socials.push(`<a href="${waHref}" target="_blank" rel="noopener" style="${iconStyle};background:#25D366" title="WhatsApp">WA</a>`);
+  if (siteUrl) socials.push(`<a href="${siteUrl}" target="_blank" rel="noopener" style="${iconStyle}" title="Site">W</a>`);
+  if (socials.length) rows.push(`<div style="margin-top:10px">${socials.join("")}</div>`);
+
+  const logoCell = s.logoUrl
+    ? `<td valign="top" style="padding-right:14px;border-right:3px solid ${color}"><img src="${escHtml(s.logoUrl)}" alt="${escHtml(s.name || 'Logo')}" width="64" height="64" style="display:block;width:64px;height:64px;object-fit:contain"/></td>`
+    : "";
+
+  return `<div style="font-family:Arial,Helvetica,sans-serif;color:#111827;margin-top:18px;padding-top:14px;border-top:1px solid #e5e7eb"><table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse"><tr>${logoCell}<td valign="top" style="padding-left:${s.logoUrl ? '14px' : '0'}"><div style="font-size:15px;font-weight:700;color:${color};letter-spacing:.2px">${escHtml(s.name)}</div>${rows.join("")}${s.tagline ? `<div style="font-size:11px;color:#9ca3af;margin-top:8px;font-style:italic">${escHtml(s.tagline)}</div>` : ""}</td></tr></table></div>`;
+}
+
+function getSignatureData(): SignatureData {
+  try {
+    const v2 = localStorage.getItem(SIGNATURE_V2_KEY);
+    if (v2) return { ...DEFAULT_SIGNATURE, ...JSON.parse(v2) };
+    const legacy = localStorage.getItem(SIGNATURE_KEY) || "";
+    if (legacy) {
+      const lines = legacy.split("\n").map((l) => l.trim()).filter(Boolean);
+      return { ...DEFAULT_SIGNATURE, name: lines[0] || "", role: lines[1] || "", email: lines.find((l) => /@/.test(l)) || "" };
+    }
+  } catch {}
+  return { ...DEFAULT_SIGNATURE };
+}
 
 // ---------- Helpers ----------
 function parseFromName(raw: string): { name: string; email: string } {
@@ -1215,11 +1289,8 @@ interface ComposeState {
 }
 
 function getSignature(): string {
-  try {
-    return localStorage.getItem(SIGNATURE_KEY) || "";
-  } catch {
-    return "";
-  }
+  // Legacy helper kept for backward compat; returns rich HTML built from structured data.
+  return buildSignatureHtml(getSignatureData());
 }
 
 function ComposeDialog({
@@ -1239,16 +1310,14 @@ function ComposeDialog({
   const [subject, setSubject] = useState(state.subject || "");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-  const signature = getSignature();
+  const signatureData = getSignatureData();
+  const signatureHtml = buildSignatureHtml(signatureData);
 
   const send = async () => {
     if (!to.trim()) return toast.error("Informe o destinatário");
     setSending(true);
     try {
-      const sigBlock = signature
-        ? `<br/><br/><div style="color:#666;font-size:13px;border-top:1px solid #eee;padding-top:8px">${signature.replace(/\n/g, "<br/>")}</div>`
-        : "";
-      const htmlBody = `<div>${body.replace(/\n/g, "<br/>")}</div>${sigBlock}${state.quoted || ""}`;
+      const htmlBody = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">${body.replace(/\n/g, "<br/>")}</div>${signatureHtml}${state.quoted || ""}`;
       if (state.mode === "reply" && state.threadId) {
         await callGmail("reply", {
           threadId: state.threadId,
@@ -1352,10 +1421,11 @@ function ComposeDialog({
             autoFocus={state.mode === "reply"}
           />
 
-          {signature && (
-            <div className="text-xs text-muted-foreground border-t pt-2 whitespace-pre-wrap">
-              {signature}
-            </div>
+          {signatureHtml && (
+            <div
+              className="border-t pt-3 mt-2"
+              dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(signatureHtml) }}
+            />
           )}
 
           {state.quoted && (
@@ -1389,7 +1459,7 @@ function ComposeDialog({
   );
 }
 
-// ---------- Settings dialog (signature) ----------
+// ---------- Settings dialog (structured signature builder) ----------
 function SettingsDialog({
   open,
   onOpenChange,
@@ -1399,15 +1469,21 @@ function SettingsDialog({
   onOpenChange: (v: boolean) => void;
   profileEmail: string;
 }) {
-  const [signature, setSignature] = useState("");
+  const [data, setData] = useState<SignatureData>(DEFAULT_SIGNATURE);
 
   useEffect(() => {
-    if (open) setSignature(getSignature());
-  }, [open]);
+    if (open) {
+      const d = getSignatureData();
+      if (!d.email && profileEmail) d.email = profileEmail;
+      setData(d);
+    }
+  }, [open, profileEmail]);
+
+  const update = (k: keyof SignatureData, v: string) => setData((p) => ({ ...p, [k]: v }));
 
   const save = () => {
     try {
-      localStorage.setItem(SIGNATURE_KEY, signature);
+      localStorage.setItem(SIGNATURE_V2_KEY, JSON.stringify(data));
       toast.success("Assinatura salva");
       onOpenChange(false);
     } catch (e: any) {
@@ -1415,30 +1491,79 @@ function SettingsDialog({
     }
   };
 
+  const previewHtml = buildSignatureHtml(data);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Configurações</DialogTitle>
           <DialogDescription>
             Conta conectada: <strong>{profileEmail || "—"}</strong>
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
+
+        <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium mb-1.5 block">Assinatura</label>
-            <Textarea
-              value={signature}
-              onChange={(e) => setSignature(e.target.value)}
-              placeholder={"Ex.:\nNathalia\nNatLeva Wings\ncontato@natleva.com"}
-              rows={8}
-              className="text-sm"
-            />
-            <p className="text-xs text-muted-foreground mt-1.5">
-              Anexada automaticamente em todas as mensagens enviadas daqui.
+            <h3 className="text-sm font-semibold mb-2">Assinatura</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Nome</label>
+                <Input value={data.name} onChange={(e) => update("name", e.target.value)} placeholder="Nathalia Raslosnek" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Cargo</label>
+                <Input value={data.role} onChange={(e) => update("role", e.target.value)} placeholder="CEO · NatLeva Wings" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Telefone / WhatsApp</label>
+                <Input value={data.phone} onChange={(e) => update("phone", e.target.value)} placeholder="+55 41 99999-9999" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">E-mail</label>
+                <Input value={data.email} onChange={(e) => update("email", e.target.value)} placeholder="contato@natleva.com" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Site</label>
+                <Input value={data.website} onChange={(e) => update("website", e.target.value)} placeholder="natleva.com" />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Instagram (@)</label>
+                <Input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} placeholder="natleva" />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="text-xs text-muted-foreground">URL do logotipo</label>
+                <Input value={data.logoUrl} onChange={(e) => update("logoUrl", e.target.value)} placeholder="https://..." />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Cor de destaque</label>
+                <div className="flex items-center gap-2">
+                  <Input type="color" value={data.brandColor} onChange={(e) => update("brandColor", e.target.value)} className="w-14 p-1 h-9" />
+                  <Input value={data.brandColor} onChange={(e) => update("brandColor", e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Tagline</label>
+                <Input value={data.tagline} onChange={(e) => update("tagline", e.target.value)} placeholder="Experiências de viagem sob medida" />
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-2">Pré-visualização</h3>
+            <div className="rounded-md border bg-white p-4 overflow-x-auto">
+              {previewHtml ? (
+                <div dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(previewHtml) }} />
+              ) : (
+                <p className="text-xs text-muted-foreground">Preencha os campos para visualizar.</p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Anexada automaticamente em todas as mensagens enviadas daqui · links de e-mail, telefone, WhatsApp, site e Instagram são clicáveis.
             </p>
           </div>
         </div>
+
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
