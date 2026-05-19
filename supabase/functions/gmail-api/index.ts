@@ -62,21 +62,41 @@ function decodeBody(data?: string): string {
   }
 }
 
-function extractParts(payload: any): { text: string; html: string } {
+interface InlineAtt {
+  cid: string;
+  attachmentId: string;
+  mimeType: string;
+  filename?: string;
+}
+
+function extractParts(payload: any): { text: string; html: string; inline: InlineAtt[] } {
   let text = "";
   let html = "";
+  const inline: InlineAtt[] = [];
   const walk = (part: any) => {
     if (!part) return;
     const mime = part.mimeType || "";
+    const headers = part.headers || [];
+    const cidHeader = headers.find((h: any) => h.name?.toLowerCase() === "content-id")?.value || "";
+    const dispHeader = headers.find((h: any) => h.name?.toLowerCase() === "content-disposition")?.value || "";
+    const cid = cidHeader.replace(/^<|>$/g, "").trim();
     if (mime === "text/plain" && part.body?.data) text += decodeBody(part.body.data);
     else if (mime === "text/html" && part.body?.data) html += decodeBody(part.body.data);
+    else if (mime.startsWith("image/") && part.body?.attachmentId && (cid || /inline/i.test(dispHeader))) {
+      inline.push({
+        cid: cid || part.partId || "",
+        attachmentId: part.body.attachmentId,
+        mimeType: mime,
+        filename: part.filename,
+      });
+    }
     if (Array.isArray(part.parts)) part.parts.forEach(walk);
   };
   walk(payload);
   if (!text && !html && payload?.body?.data) {
     text = decodeBody(payload.body.data);
   }
-  return { text, html };
+  return { text, html, inline };
 }
 
 function headerVal(headers: any[], name: string): string {
@@ -178,26 +198,48 @@ Deno.serve(async (req) => {
       }
       case "get_thread": {
         const full = await gw(`/users/me/threads/${params.threadId}?format=full`);
-        const messages = (full.messages || []).map((m: any) => {
-          const headers = m.payload?.headers || [];
-          const parts = extractParts(m.payload);
-          return {
-            id: m.id,
-            threadId: m.threadId,
-            labelIds: m.labelIds || [],
-            snippet: m.snippet,
-            internalDate: m.internalDate,
-            from: headerVal(headers, "From"),
-            to: headerVal(headers, "To"),
-            cc: headerVal(headers, "Cc"),
-            subject: headerVal(headers, "Subject"),
-            date: headerVal(headers, "Date"),
-            messageIdHeader: headerVal(headers, "Message-ID"),
-            referencesHeader: headerVal(headers, "References"),
-            text: parts.text,
-            html: parts.html,
-          };
-        });
+        const messages = await Promise.all(
+          (full.messages || []).map(async (m: any) => {
+            const headers = m.payload?.headers || [];
+            const parts = extractParts(m.payload);
+            // Inline cid: images -> data URLs
+            let html = parts.html;
+            if (html && parts.inline.length) {
+              const fetched = await Promise.all(
+                parts.inline.map(async (att) => {
+                  try {
+                    const r = await gw(`/users/me/messages/${m.id}/attachments/${att.attachmentId}`);
+                    const data = (r.data || "").replace(/-/g, "+").replace(/_/g, "/");
+                    return { ...att, dataUrl: `data:${att.mimeType};base64,${data}` };
+                  } catch {
+                    return { ...att, dataUrl: "" };
+                  }
+                })
+              );
+              for (const a of fetched) {
+                if (!a.dataUrl || !a.cid) continue;
+                const escaped = a.cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                html = html.replace(new RegExp(`cid:${escaped}`, "gi"), a.dataUrl);
+              }
+            }
+            return {
+              id: m.id,
+              threadId: m.threadId,
+              labelIds: m.labelIds || [],
+              snippet: m.snippet,
+              internalDate: m.internalDate,
+              from: headerVal(headers, "From"),
+              to: headerVal(headers, "To"),
+              cc: headerVal(headers, "Cc"),
+              subject: headerVal(headers, "Subject"),
+              date: headerVal(headers, "Date"),
+              messageIdHeader: headerVal(headers, "Message-ID"),
+              referencesHeader: headerVal(headers, "References"),
+              text: parts.text,
+              html,
+            };
+          })
+        );
         result = { id: full.id, historyId: full.historyId, messages };
         break;
       }

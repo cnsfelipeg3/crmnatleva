@@ -1128,13 +1128,26 @@ function EmailHtmlFrame({ html }: { html: string }) {
       try {
         const body = frame.contentDocument?.body;
         if (body) {
-          // Make all links open in new tab safely
           body.querySelectorAll("a").forEach((a) => {
             a.setAttribute("target", "_blank");
             a.setAttribute("rel", "noopener noreferrer");
           });
-          const h = Math.min(body.scrollHeight + 16, 4000);
-          setHeight(h);
+          body.querySelectorAll("img").forEach((img) => {
+            img.setAttribute("referrerpolicy", "no-referrer");
+            img.setAttribute("loading", "lazy");
+            // Hide broken images on error
+            img.addEventListener("error", () => {
+              (img as HTMLImageElement).style.display = "none";
+            });
+          });
+          // Recompute height after images load
+          const resize = () => {
+            const h = Math.min(body.scrollHeight + 16, 6000);
+            setHeight(h);
+          };
+          resize();
+          frame.contentWindow?.addEventListener("load", resize);
+          body.querySelectorAll("img").forEach((img) => img.addEventListener("load", resize));
         }
       } catch {}
     };
