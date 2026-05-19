@@ -277,6 +277,9 @@ export default function Leads() {
           items: [],
           prateleiraViewerIds: [],
           proposalViewerIds: [],
+          totalValue: 0,
+          profitPotential: 0,
+          topValue: 0,
         };
         map.set(key, lead);
       } else {
