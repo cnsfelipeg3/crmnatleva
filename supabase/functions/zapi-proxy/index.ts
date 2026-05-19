@@ -946,11 +946,14 @@ serve(async (req) => {
       fetchOpts.body = body;
     }
 
-    console.log(`[Z-API] ${action} → ${method} ${url}`);
+    console.log(`[Z-API] ${action} → ${method} ${url}${body ? ` body=${body.slice(0, 300)}` : ""}`);
 
     const response = await fetch(url, fetchOpts);
     const rawText = await response.text();
     let data = parseJsonSafely(rawText);
+    if (action === "send-message-reaction" || action === "send-remove-reaction") {
+      console.log(`[Z-API] ${action} response ${response.status}: ${rawText.slice(0, 500)}`);
+    }
     if (!response.ok) {
       console.error(`[Z-API] ${action} upstream ${response.status}: ${rawText.slice(0, 500)}`);
       const errMsg = String(data?.error || data?.message || rawText || "").toLowerCase();
