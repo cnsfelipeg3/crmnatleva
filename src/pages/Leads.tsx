@@ -1003,6 +1003,16 @@ function LeadDetail({ lead, events, proposalClicks, onClose, onDelete }: {
                       </p>
                     </div>
                     <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {p.value > 0 && (
+                        <div className="text-right">
+                          <p className="text-[11px] font-bold text-foreground tabular-nums leading-tight">{BRL(p.value)}</p>
+                          {p.profit > 0 && (
+                            <p className="text-[9.5px] text-emerald-600 dark:text-emerald-400 tabular-nums leading-tight">
+                              ~{BRL(p.profit)} lucro
+                            </p>
+                          )}
+                        </div>
+                      )}
                       {(p.cta || p.whatsapp) && (
                         <div className="flex gap-1">
                           {p.cta && <Badge className="text-[9px] border-0 bg-accent/15 text-accent">CTA</Badge>}
