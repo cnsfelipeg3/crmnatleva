@@ -227,7 +227,8 @@ function AppRoutes() {
     location.pathname.startsWith("/cadastro-passageiro/") ||
     location.pathname === "/cadastro-fornecedor" ||
     location.pathname === "/p" ||
-    location.pathname.startsWith("/p/");
+    location.pathname.startsWith("/p/") ||
+    location.pathname === "/unsubscribe";
 
   // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
   // Pula em conexão lenta/saveData. Faz navegação entre menus quase instantânea.
