@@ -1,7 +1,5 @@
 /// <reference types="npm:@types/react@18.3.1" />
-
 import * as React from 'npm:react@18.3.1'
-
 import {
   Body,
   Button,
@@ -10,28 +8,24 @@ import {
   Heading,
   Hr,
   Html,
-  Link,
   Preview,
   Section,
   Text,
 } from 'npm:@react-email/components@0.0.22'
+import type { TemplateEntry } from './registry.ts'
 
-interface SignupEmailProps {
-  siteName: string
-  siteUrl: string
-  recipient: string
-  confirmationUrl: string
+interface Props {
+  name?: string
+  portalUrl?: string
 }
 
-export const SignupEmail = ({
-  siteName,
-  siteUrl,
-  recipient,
-  confirmationUrl,
-}: SignupEmailProps) => (
+const AffiliateApprovedEmail = ({
+  name,
+  portalUrl = 'https://adm.natleva.com/vitrine',
+}: Props) => (
   <Html lang="pt-BR" dir="ltr">
     <Head />
-    <Preview>Confirme seu e-mail para acessar a vitrine NatLeva</Preview>
+    <Preview>Seu acesso ao Programa de Bônus NatLeva foi aprovado.</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
@@ -39,40 +33,29 @@ export const SignupEmail = ({
           <Text style={tagline}>Programa de Bônus · Indique &amp; Ganhe</Text>
         </Section>
         <Section style={card}>
-          <Heading style={h1}>Confirme seu e-mail</Heading>
+          <Heading style={h1}>
+            {name ? `Boas-vindas, ${name}!` : 'Boas-vindas!'}
+          </Heading>
           <Text style={lead}>
-            Que bom ter você por aqui! Falta só um passo para liberar seu
-            acesso à vitrine da {' '}
-            <Link href={siteUrl} style={link}>
-              <strong>NatLeva</strong>
-            </Link>
-            .
+            Seu cadastro foi <strong style={accent}>aprovado</strong>. Já liberamos
+            seu acesso completo à vitrine de pacotes exclusivos da NatLeva.
           </Text>
           <Text style={text}>
-            Confirme o e-mail <strong>{recipient}</strong> clicando no botão
-            abaixo:
+            Agora você pode divulgar os pacotes, acompanhar suas indicações e
+            receber seu bônus via PIX no mesmo dia da venda confirmada.
           </Text>
           <Section style={btnWrap}>
-            <Button style={button} href={confirmationUrl}>
-              Confirmar meu e-mail
+            <Button style={button} href={portalUrl}>
+              Acessar a vitrine
             </Button>
           </Section>
-          <Text style={small}>
-            Se o botão não funcionar, copie e cole este link no navegador:
-            <br />
-            <Link href={confirmationUrl} style={linkSubtle}>
-              {confirmationUrl}
-            </Link>
-          </Text>
           <Hr style={hr} />
           <Text style={small}>
-            Após confirmar, seu cadastro segue para uma rápida análise da
-            nossa equipe. Avisamos por e-mail assim que o acesso for liberado.
+            Dica: salve a página no seu celular para compartilhar os pacotes
+            mais rápido com seus contatos.
           </Text>
         </Section>
         <Text style={footer}>
-          Se você não criou uma conta na NatLeva, pode ignorar este e-mail.
-          <br />
           NatLeva · Curadoria de viagens com cuidado humano
         </Text>
       </Container>
@@ -80,7 +63,12 @@ export const SignupEmail = ({
   </Html>
 )
 
-export default SignupEmail
+export const template = {
+  component: AffiliateApprovedEmail,
+  subject: 'Seu acesso ao Programa de Bônus NatLeva foi aprovado',
+  displayName: 'Afiliado · aprovado',
+  previewData: { name: 'Carolina' },
+} satisfies TemplateEntry
 
 const main = {
   backgroundColor: '#ffffff',
@@ -123,13 +111,14 @@ const lead = {
   lineHeight: '1.6',
   margin: '0 0 16px',
 }
+const accent = { color: '#C9A84C' }
 const text = {
   fontSize: '14px',
   color: '#4b5563',
   lineHeight: '1.6',
   margin: '0 0 24px',
 }
-const btnWrap = { textAlign: 'center' as const, margin: '8px 0 24px' }
+const btnWrap = { textAlign: 'center' as const, margin: '8px 0 16px' }
 const button = {
   backgroundColor: '#111827',
   color: '#ffffff',
@@ -140,14 +129,11 @@ const button = {
   textDecoration: 'none',
   display: 'inline-block',
 }
-const link = { color: '#C9A84C', textDecoration: 'none' }
-const linkSubtle = { color: '#6b7280', textDecoration: 'underline', wordBreak: 'break-all' as const }
 const hr = { borderColor: '#EDE7D6', margin: '24px 0' }
-const small = { fontSize: '12px', color: '#6b7280', margin: '0 0 12px', lineHeight: '1.5' }
+const small = { fontSize: '12px', color: '#6b7280', margin: 0, lineHeight: '1.5' }
 const footer = {
   fontSize: '11px',
   color: '#9ca3af',
   textAlign: 'center' as const,
   margin: '24px 0 0',
-  lineHeight: '1.5',
 }
