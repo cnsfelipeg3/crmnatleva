@@ -62,21 +62,41 @@ function decodeBody(data?: string): string {
   }
 }
 
-function extractParts(payload: any): { text: string; html: string } {
+interface InlineAtt {
+  cid: string;
+  attachmentId: string;
+  mimeType: string;
+  filename?: string;
+}
+
+function extractParts(payload: any): { text: string; html: string; inline: InlineAtt[] } {
   let text = "";
   let html = "";
+  const inline: InlineAtt[] = [];
   const walk = (part: any) => {
     if (!part) return;
     const mime = part.mimeType || "";
+    const headers = part.headers || [];
+    const cidHeader = headers.find((h: any) => h.name?.toLowerCase() === "content-id")?.value || "";
+    const dispHeader = headers.find((h: any) => h.name?.toLowerCase() === "content-disposition")?.value || "";
+    const cid = cidHeader.replace(/^<|>$/g, "").trim();
     if (mime === "text/plain" && part.body?.data) text += decodeBody(part.body.data);
     else if (mime === "text/html" && part.body?.data) html += decodeBody(part.body.data);
+    else if (mime.startsWith("image/") && part.body?.attachmentId && (cid || /inline/i.test(dispHeader))) {
+      inline.push({
+        cid: cid || part.partId || "",
+        attachmentId: part.body.attachmentId,
+        mimeType: mime,
+        filename: part.filename,
+      });
+    }
     if (Array.isArray(part.parts)) part.parts.forEach(walk);
   };
   walk(payload);
   if (!text && !html && payload?.body?.data) {
     text = decodeBody(payload.body.data);
   }
-  return { text, html };
+  return { text, html, inline };
 }
 
 function headerVal(headers: any[], name: string): string {
