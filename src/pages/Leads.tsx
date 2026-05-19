@@ -181,6 +181,9 @@ export default function Leads() {
   const [origin, setOrigin] = useState<OriginFilter>("all");
   const [selected, setSelected] = useState<LeadAggregate | null>(null);
   const [toDelete, setToDelete] = useState<LeadAggregate | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
