@@ -436,6 +436,18 @@ Deno.serve(async (req) => {
       }
       case "send": {
         if (!params.to || typeof params.to !== "string") throw new Error("Destinatário inválido");
+        if (needsReliableDelivery(params.to, params.cc, params.bcc)) {
+          result = await sendViaReliableDelivery({
+            to: params.to,
+            cc: params.cc,
+            bcc: params.bcc,
+            subject: params.subject || "",
+            body: params.body || "",
+            html: !!params.html,
+          });
+          console.info(`[gmail-api] reliable send ${result?.id || "unknown"} to ${String(params.to).slice(0, 160)}`);
+          break;
+        }
         const raw = buildRawEmail({
           to: params.to,
           cc: params.cc,
@@ -465,6 +477,18 @@ Deno.serve(async (req) => {
         const from = headerVal(headers, "From");
         const replySubject = subject.toLowerCase().startsWith("re:") ? subject : `Re: ${subject}`;
         const to = params.to || from;
+        if (needsReliableDelivery(to, params.cc, params.bcc)) {
+          result = await sendViaReliableDelivery({
+            to,
+            cc: params.cc,
+            bcc: params.bcc,
+            subject: replySubject,
+            body: params.body || "",
+            html: !!params.html,
+          });
+          console.info(`[gmail-api] reliable reply ${result?.id || "unknown"} to ${String(to).slice(0, 160)}`);
+          break;
+        }
         const raw = buildRawEmail({
           to,
           cc: params.cc,
