@@ -223,6 +223,16 @@ export const SIGNATURE_ROLES: { value: UserRole; label: string }[] = [
   { value: "leitura", label: "Leitura" },
 ];
 
+// Default cargo (job title) shown on the signature for each role.
+export const ROLE_CARGO_DEFAULTS: Record<UserRole, string> = {
+  admin: "Admin · NatLeva Wings",
+  gestor: "Gestor · NatLeva Wings",
+  vendedor: "Consultor de Viagens · NatLeva Wings",
+  financeiro: "Financeiro · NatLeva Wings",
+  operacional: "Operações · NatLeva Wings",
+  leitura: "NatLeva Wings",
+};
+
 function roleSignatureKey(role?: UserRole | null): string {
   return role ? `${SIGNATURE_V2_KEY}.${role}` : SIGNATURE_V2_KEY;
 }
@@ -251,6 +261,30 @@ function hasRoleSignature(role?: UserRole | null): boolean {
   if (!role) return false;
   try { return !!localStorage.getItem(roleSignatureKey(role)); } catch { return false; }
 }
+
+/**
+ * Seeds a default signature for the logged-in user's role if none exists yet.
+ * Uses the user's profile name + the role's default cargo + the connected mailbox.
+ */
+export function seedRoleSignature(
+  role: UserRole | null | undefined,
+  fullName: string | null | undefined,
+  email: string | null | undefined
+) {
+  if (!role) return;
+  try {
+    if (localStorage.getItem(roleSignatureKey(role))) return; // already configured
+    const seeded: SignatureData = {
+      ...DEFAULT_SIGNATURE,
+      name: (fullName || "").trim() || DEFAULT_SIGNATURE.name,
+      role: ROLE_CARGO_DEFAULTS[role] || DEFAULT_SIGNATURE.role,
+      email: (email || "").trim() || DEFAULT_SIGNATURE.email,
+    };
+    localStorage.setItem(roleSignatureKey(role), JSON.stringify(seeded));
+  } catch {}
+}
+
+
 
 
 // ---------- Helpers ----------
