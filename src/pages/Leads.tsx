@@ -960,12 +960,15 @@ function LeadDetail({ lead, events, proposalClicks, onClose, onDelete }: {
               </div>
             </Card>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <MiniKpi label="Prateleira" value={lead.productsViewed} />
               <MiniKpi label="Propostas" value={lead.proposalsViewed} />
               <MiniKpi label="Tempo ativo" value={formatTime(lead.totalSeconds)} />
               <MiniKpi label="Cliques CTA" value={lead.ctaCount} tone={lead.ctaCount > 0 ? "hot" : undefined} />
+              <MiniKpi label="Pipeline" value={lead.totalValue > 0 ? BRL(lead.totalValue) : "·"} />
+              <MiniKpi label="Lucro potencial" value={lead.profitPotential > 0 ? BRL(lead.profitPotential) : "·"} tone={lead.profitPotential > 0 ? "hot" : undefined} />
             </div>
+
 
             {/* Itens visualizados */}
             <Card className="p-4 space-y-3">
