@@ -110,6 +110,38 @@ const FOLDERS: FolderDef[] = [
 
 const SIGNATURE_KEY = "natleva.inbox.signature";
 const SIGNATURE_V2_KEY = "natleva.inbox.signature.v2";
+const LABEL_ICONS_KEY = "natleva.inbox.labelIcons";
+
+export const LABEL_ICON_OPTIONS: { key: string; icon: typeof InboxIcon; label: string }[] = [
+  { key: "folder", icon: Folder, label: "Pasta" },
+  { key: "folderOpen", icon: FolderOpen, label: "Pasta aberta" },
+  { key: "star", icon: Star, label: "Estrela" },
+  { key: "bookmark", icon: Bookmark, label: "Marcador" },
+  { key: "tag", icon: Tag, label: "Etiqueta" },
+  { key: "flag", icon: Flag, label: "Bandeira" },
+  { key: "briefcase", icon: Briefcase, label: "Trabalho" },
+  { key: "building", icon: Building2, label: "Empresa" },
+  { key: "users", icon: Users, label: "Clientes" },
+  { key: "plane", icon: Plane, label: "Viagem" },
+  { key: "heart", icon: Heart, label: "Favoritos" },
+  { key: "bell", icon: Bell, label: "Importante" },
+  { key: "dollar", icon: CircleDollarSign, label: "Financeiro" },
+];
+
+function getLabelIcon(iconKey?: string): typeof InboxIcon {
+  return LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder;
+}
+
+function loadLabelIcons(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LABEL_ICONS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveLabelIcons(map: Record<string, string>) {
+  try { localStorage.setItem(LABEL_ICONS_KEY, JSON.stringify(map)); } catch {}
+}
 
 export interface SignatureData {
   name: string;
