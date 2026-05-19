@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DOMPurify from "dompurify";
 
 // ---------- Types ----------
