@@ -1628,8 +1628,10 @@ function ComposeDialog({
   const [readReceipt, setReadReceipt] = useState<boolean>(() => {
     try { return localStorage.getItem(READ_RECEIPT_PREF_KEY) === "1"; } catch { return false; }
   });
-  const signatureData = getSignatureData();
+  const { role: userRole } = useAuth();
+  const signatureData = getSignatureData(userRole);
   const signatureHtml = buildSignatureHtml(signatureData);
+
 
   useEffect(() => {
     try { localStorage.setItem(READ_RECEIPT_PREF_KEY, readReceipt ? "1" : "0"); } catch {}
