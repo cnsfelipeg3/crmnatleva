@@ -741,6 +741,18 @@ export default function Leads() {
                       </div>
                     </td>
                     <td className="p-3 align-top">
+                      {l.totalValue > 0 ? (
+                        <div className="space-y-0.5">
+                          <p className="text-[12px] font-bold text-foreground tabular-nums leading-tight">{BRL(l.totalValue)}</p>
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400 tabular-nums leading-tight flex items-center gap-1">
+                            <Flame className="w-2.5 h-2.5" /> {BRL(l.profitPotential)} lucro
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/60">sem valor</span>
+                      )}
+                    </td>
+                    <td className="p-3 align-top">
                       <div className="flex items-center gap-1 flex-wrap">
                         {l.ctaCount > 0 && (
                           <Badge className="text-[9px] border-0 bg-accent/15 text-accent">
