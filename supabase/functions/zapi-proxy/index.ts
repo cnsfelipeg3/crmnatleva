@@ -524,7 +524,7 @@ serve(async (req) => {
 
     const reqBody = await req.json().catch(() => ({}));
     const action = reqBody?.action;
-    const payload = reqBody?.payload ?? {};
+    const payload = reqBody?.payload ?? reqBody ?? {};
 
     if (action === "rebuild-history") {
       const result = await rebuildHistory(payload);
@@ -626,15 +626,23 @@ serve(async (req) => {
         });
         break;
 
-      case "send-reaction":
+      case "send-reaction": {
+        const phone = formatPhoneForSending(payload.phone);
+        if (!phone || !payload.messageId || !payload.reaction) {
+          return new Response(
+            JSON.stringify({ success: false, skipped: true, error: "REACTION_PAYLOAD_INCOMPLETE" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: formatPhoneForSending(payload.phone),
+          phone,
           messageId: payload.messageId,
           reaction: payload.reaction,
         });
         break;
+      }
 
       case "edit-message":
         url = `${BASE_URL}/send-text`;
@@ -724,25 +732,42 @@ serve(async (req) => {
       // ═══════════════════════════════════════════════════════════
 
       // Reagir mensagem (atalho on-hover · 6 emojis)
-      case "send-message-reaction":
+      case "send-message-reaction": {
+        const phone = formatPhoneForSending(payload.phone);
+        const reaction = payload.value || payload.reaction;
+        if (!phone || !payload.messageId || !reaction) {
+          return new Response(
+            JSON.stringify({ success: false, skipped: true, error: "REACTION_PAYLOAD_INCOMPLETE" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         url = `${BASE_URL}/send-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: formatPhoneForSending(payload.phone),
+          phone,
           messageId: payload.messageId,
-          reaction: payload.value || payload.reaction,
+          reaction,
         });
         break;
+      }
 
       // Remover reação previamente enviada
-      case "send-remove-reaction":
+      case "send-remove-reaction": {
+        const phone = formatPhoneForSending(payload.phone);
+        if (!phone || !payload.messageId) {
+          return new Response(
+            JSON.stringify({ success: false, skipped: true, error: "REACTION_PAYLOAD_INCOMPLETE" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         url = `${BASE_URL}/send-remove-reaction`;
         method = "POST";
         body = JSON.stringify({
-          phone: formatPhoneForSending(payload.phone),
+          phone,
           messageId: payload.messageId,
         });
         break;
+      }
 
       // Fixar / desafixar mensagem (pinDuration: "24H" | "7D" | "30D")
       case "send-pin-message":
