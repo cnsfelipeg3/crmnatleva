@@ -216,6 +216,59 @@ Deno.serve(async (req) => {
         result = await gw(`/users/me/labels`);
         break;
       }
+      case "list_user_labels": {
+        // User-created labels with unread counts
+        const labels = await gw(`/users/me/labels`);
+        const userLabels = (labels.labels || []).filter((l: any) => l.type === "user");
+        const detail = await Promise.all(
+          userLabels.map(async (l: any) => {
+            try {
+              const d = await gw(`/users/me/labels/${l.id}`);
+              return {
+                id: d.id,
+                name: d.name,
+                unread: d.messagesUnread || 0,
+                total: d.messagesTotal || 0,
+                color: d.color || null,
+              };
+            } catch {
+              return { id: l.id, name: l.name, unread: 0, total: 0, color: null };
+            }
+          })
+        );
+        // Sort alphabetically by display name (Gmail uses "/" for nesting)
+        detail.sort((a: any, b: any) => (a.name || "").localeCompare(b.name || ""));
+        result = { labels: detail };
+        break;
+      }
+      case "create_label": {
+        const name = String(params.name || "").trim();
+        if (!name) throw new Error("Nome da pasta é obrigatório");
+        result = await gw(`/users/me/labels`, {
+          method: "POST",
+          body: JSON.stringify({
+            name,
+            labelListVisibility: "labelShow",
+            messageListVisibility: "show",
+          }),
+        });
+        break;
+      }
+      case "rename_label": {
+        if (!params.labelId) throw new Error("labelId obrigatório");
+        const name = String(params.name || "").trim();
+        if (!name) throw new Error("Novo nome obrigatório");
+        result = await gw(`/users/me/labels/${params.labelId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ name }),
+        });
+        break;
+      }
+      case "delete_label": {
+        if (!params.labelId) throw new Error("labelId obrigatório");
+        result = await gw(`/users/me/labels/${params.labelId}`, { method: "DELETE" });
+        break;
+      }
       case "list_threads": {
         const q = params.q || "in:inbox";
         const max = params.maxResults || 25;

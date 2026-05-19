@@ -40,6 +40,20 @@ import {
   Paperclip,
   X,
   ChevronDown,
+  Plus,
+  Folder,
+  FolderOpen,
+  Briefcase,
+  Tag,
+  Heart,
+  Plane,
+  Building2,
+  Bell,
+  Bookmark,
+  Flag,
+  CircleDollarSign,
+  Users,
+  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -96,6 +110,38 @@ const FOLDERS: FolderDef[] = [
 
 const SIGNATURE_KEY = "natleva.inbox.signature";
 const SIGNATURE_V2_KEY = "natleva.inbox.signature.v2";
+const LABEL_ICONS_KEY = "natleva.inbox.labelIcons";
+
+export const LABEL_ICON_OPTIONS: { key: string; icon: typeof InboxIcon; label: string }[] = [
+  { key: "folder", icon: Folder, label: "Pasta" },
+  { key: "folderOpen", icon: FolderOpen, label: "Pasta aberta" },
+  { key: "star", icon: Star, label: "Estrela" },
+  { key: "bookmark", icon: Bookmark, label: "Marcador" },
+  { key: "tag", icon: Tag, label: "Etiqueta" },
+  { key: "flag", icon: Flag, label: "Bandeira" },
+  { key: "briefcase", icon: Briefcase, label: "Trabalho" },
+  { key: "building", icon: Building2, label: "Empresa" },
+  { key: "users", icon: Users, label: "Clientes" },
+  { key: "plane", icon: Plane, label: "Viagem" },
+  { key: "heart", icon: Heart, label: "Favoritos" },
+  { key: "bell", icon: Bell, label: "Importante" },
+  { key: "dollar", icon: CircleDollarSign, label: "Financeiro" },
+];
+
+function getLabelIcon(iconKey?: string): typeof InboxIcon {
+  return LABEL_ICON_OPTIONS.find((o) => o.key === iconKey)?.icon || Folder;
+}
+
+function loadLabelIcons(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(LABEL_ICONS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveLabelIcons(map: Record<string, string>) {
+  try { localStorage.setItem(LABEL_ICONS_KEY, JSON.stringify(map)); } catch {}
+}
 
 export interface SignatureData {
   name: string;
@@ -301,8 +347,15 @@ export default function Inbox() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [foldersOpen, setFoldersOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [userLabels, setUserLabels] = useState<Array<{ id: string; name: string; unread: number }>>([]);
+  const [labelIcons, setLabelIcons] = useState<Record<string, string>>(() => loadLabelIcons());
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
 
-  const currentFolder = FOLDERS.find((f) => f.key === folder)!;
+  const activeLabelId = folder.startsWith("label:") ? folder.slice(6) : null;
+  const activeUserLabel = activeLabelId ? userLabels.find((l) => l.id === activeLabelId) : null;
+  const currentFolder = activeUserLabel
+    ? { key: folder, label: activeUserLabel.name.split("/").pop() || activeUserLabel.name, q: "-in:trash -in:spam", icon: getLabelIcon(labelIcons[activeUserLabel.id]), labelId: activeUserLabel.id }
+    : (FOLDERS.find((f) => f.key === folder) || FOLDERS[0]);
   const currentQuery = useMemo(() => {
     const base = currentFolder.q;
     return searchQ ? `${searchQ} ${base}` : base;
@@ -329,11 +382,22 @@ export default function Inbox() {
     }
   }, []);
 
+  const loadUserLabels = useCallback(async () => {
+    try {
+      const r = await callGmail("list_user_labels");
+      setUserLabels((r.labels || []).map((l: any) => ({ id: l.id, name: l.name, unread: l.unread || 0 })));
+    } catch {
+      // silent
+    }
+  }, []);
+
   const loadThreads = useCallback(
     async (silent = false) => {
       if (!silent) setLoadingThreads(true);
       try {
-        const r = await callGmail("list_threads", { q: currentQuery, maxResults: 30 });
+        const payload: any = { q: currentQuery, maxResults: 30 };
+        if (activeLabelId) payload.labelIds = [activeLabelId];
+        const r = await callGmail("list_threads", payload);
         setThreads(r.threads || []);
         setNextPageToken(r.nextPageToken || null);
       } catch (e: any) {
@@ -342,18 +406,20 @@ export default function Inbox() {
         if (!silent) setLoadingThreads(false);
       }
     },
-    [currentQuery]
+    [currentQuery, activeLabelId]
   );
 
   const loadMore = useCallback(async () => {
     if (!nextPageToken || loadingMore) return;
     setLoadingMore(true);
     try {
-      const r = await callGmail("list_threads", {
+      const payload: any = {
         q: currentQuery,
         maxResults: 30,
         pageToken: nextPageToken,
-      });
+      };
+      if (activeLabelId) payload.labelIds = [activeLabelId];
+      const r = await callGmail("list_threads", payload);
       setThreads((prev) => [...prev, ...(r.threads || [])]);
       setNextPageToken(r.nextPageToken || null);
     } catch (e: any) {
@@ -361,7 +427,7 @@ export default function Inbox() {
     } finally {
       setLoadingMore(false);
     }
-  }, [nextPageToken, loadingMore, currentQuery]);
+  }, [nextPageToken, loadingMore, currentQuery, activeLabelId]);
 
   const loadThread = useCallback(
     async (id: string) => {
@@ -396,7 +462,8 @@ export default function Inbox() {
   useEffect(() => {
     loadProfile();
     loadCounts();
-  }, [loadProfile, loadCounts]);
+    loadUserLabels();
+  }, [loadProfile, loadCounts, loadUserLabels]);
 
   useEffect(() => {
     loadThreads();
@@ -407,9 +474,60 @@ export default function Inbox() {
     const id = setInterval(() => {
       loadThreads(true);
       loadCounts();
+      loadUserLabels();
     }, 30000);
     return () => clearInterval(id);
-  }, [loadThreads, loadCounts]);
+  }, [loadThreads, loadCounts, loadUserLabels]);
+
+  const createUserLabel = useCallback(async (name: string, iconKey: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    try {
+      const r = await callGmail("create_label", { name: cleanName });
+      if (r?.id) {
+        const next = { ...labelIcons, [r.id]: iconKey };
+        setLabelIcons(next);
+        saveLabelIcons(next);
+      }
+      toast.success("Pasta criada");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Não foi possível criar a pasta", { description: e.message });
+    }
+  }, [labelIcons, loadUserLabels]);
+
+  const renameUserLabel = useCallback(async (labelId: string, name: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    try {
+      await callGmail("rename_label", { labelId, name: cleanName });
+      toast.success("Pasta renomeada");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Erro ao renomear", { description: e.message });
+    }
+  }, [loadUserLabels]);
+
+  const setUserLabelIcon = useCallback((labelId: string, iconKey: string) => {
+    const next = { ...labelIcons, [labelId]: iconKey };
+    setLabelIcons(next);
+    saveLabelIcons(next);
+  }, [labelIcons]);
+
+  const deleteUserLabel = useCallback(async (labelId: string) => {
+    try {
+      await callGmail("delete_label", { labelId });
+      const next = { ...labelIcons };
+      delete next[labelId];
+      setLabelIcons(next);
+      saveLabelIcons(next);
+      if (folder === `label:${labelId}`) setFolder("inbox");
+      toast.success("Pasta excluída");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Erro ao excluir", { description: e.message });
+    }
+  }, [labelIcons, folder, loadUserLabels]);
 
   useEffect(() => {
     if (selectedId) loadThread(selectedId);
@@ -625,6 +743,116 @@ export default function Inbox() {
           </button>
         );
       })}
+
+      <DropdownMenuSeparator className="my-2" />
+      <div className="flex items-center justify-between px-4 pt-1 pb-1">
+        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Pastas</span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => { setNewFolderOpen(true); setFoldersOpen(false); }}
+              className="rounded-full p-1 hover:bg-accent text-muted-foreground hover:text-foreground"
+              aria-label="Nova pasta"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Nova pasta</TooltipContent>
+        </Tooltip>
+      </div>
+      {userLabels.length === 0 && (
+        <button
+          onClick={() => { setNewFolderOpen(true); setFoldersOpen(false); }}
+          className="flex w-full items-center gap-3 rounded-full px-4 py-2 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Criar primeira pasta
+        </button>
+      )}
+      {userLabels.map((l) => {
+        const Icon = getLabelIcon(labelIcons[l.id]);
+        const key = `label:${l.id}`;
+        const active = folder === key;
+        const display = l.name.split("/").pop() || l.name;
+        return (
+          <div key={l.id} className="group/folder relative">
+            <button
+              onClick={() => {
+                setFolder(key);
+                setSelectedId(null);
+                setSelectedIds(new Set());
+                setFoldersOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+                active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="flex-1 text-left truncate">{display}</span>
+              {l.unread > 0 && (
+                <span className={cn("text-xs font-semibold mr-6", active ? "text-primary" : "text-muted-foreground")}>
+                  {l.unread > 99 ? "99+" : l.unread}
+                </span>
+              )}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full p-1 opacity-0 group-hover/folder:opacity-100 hover:bg-background/80 text-muted-foreground"
+                  onClick={(e) => e.stopPropagation()}
+                  aria-label="Opções da pasta"
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => {
+                    const nv = window.prompt("Novo nome da pasta", display);
+                    if (nv && nv.trim() && nv !== display) renameUserLabel(l.id, nv);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" /> Renomear
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">Ícone</div>
+                <div className="grid grid-cols-7 gap-1 px-2 pb-2">
+                  {LABEL_ICON_OPTIONS.map((opt) => {
+                    const OptIcon = opt.icon;
+                    const selected = (labelIcons[l.id] || "folder") === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        onClick={() => setUserLabelIcon(l.id, opt.key)}
+                        className={cn(
+                          "flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+                          selected ? "bg-primary text-primary-foreground" : "hover:bg-accent text-foreground"
+                        )}
+                        title={opt.label}
+                      >
+                        <OptIcon className="h-3.5 w-3.5" />
+                      </button>
+                    );
+                  })}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => {
+                    if (window.confirm(`Excluir a pasta "${display}"? Os e-mails não serão apagados.`)) {
+                      deleteUserLabel(l.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Excluir pasta
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        );
+      })}
+
       <DropdownMenuSeparator className="my-2" />
       <button
         onClick={() => {
@@ -1065,6 +1293,7 @@ export default function Inbox() {
         )}
 
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} profileEmail={profileEmail} />
+        <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} onCreate={createUserLabel} />
       </div>
     </TooltipProvider>
   );
@@ -1659,6 +1888,93 @@ function SettingsDialog({
             Cancelar
           </Button>
           <Button onClick={save}>Salvar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------- New folder dialog ----------
+function NewFolderDialog({
+  open,
+  onOpenChange,
+  onCreate,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreate: (name: string, iconKey: string) => Promise<void> | void;
+}) {
+  const [name, setName] = useState("");
+  const [iconKey, setIconKey] = useState<string>("folder");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setIconKey("folder");
+    }
+  }, [open]);
+
+  const handleCreate = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onCreate(name, iconKey);
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova pasta</DialogTitle>
+          <DialogDescription>Organize seus e-mails com pastas personalizadas.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Nome da pasta</label>
+            <Input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Clientes VIP"
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Ícone</label>
+            <div className="mt-2 grid grid-cols-7 gap-2">
+              {LABEL_ICON_OPTIONS.map((opt) => {
+                const OptIcon = opt.icon;
+                const selected = iconKey === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setIconKey(opt.key)}
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-md border transition-colors",
+                      selected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:bg-accent text-foreground"
+                    )}
+                    title={opt.label}
+                  >
+                    <OptIcon className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleCreate} disabled={!name.trim() || saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar pasta"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
