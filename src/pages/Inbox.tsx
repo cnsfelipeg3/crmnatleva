@@ -347,8 +347,15 @@ export default function Inbox() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [foldersOpen, setFoldersOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [userLabels, setUserLabels] = useState<Array<{ id: string; name: string; unread: number }>>([]);
+  const [labelIcons, setLabelIcons] = useState<Record<string, string>>(() => loadLabelIcons());
+  const [newFolderOpen, setNewFolderOpen] = useState(false);
 
-  const currentFolder = FOLDERS.find((f) => f.key === folder)!;
+  const activeLabelId = folder.startsWith("label:") ? folder.slice(6) : null;
+  const activeUserLabel = activeLabelId ? userLabels.find((l) => l.id === activeLabelId) : null;
+  const currentFolder = activeUserLabel
+    ? { key: folder, label: activeUserLabel.name.split("/").pop() || activeUserLabel.name, q: "-in:trash -in:spam", icon: getLabelIcon(labelIcons[activeUserLabel.id]), labelId: activeUserLabel.id }
+    : (FOLDERS.find((f) => f.key === folder) || FOLDERS[0]);
   const currentQuery = useMemo(() => {
     const base = currentFolder.q;
     return searchQ ? `${searchQ} ${base}` : base;
