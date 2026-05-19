@@ -206,6 +206,7 @@ function Avatar({ name, email, size = 36 }: { name: string; email: string; size?
 
 // ---------- Main ----------
 export default function Inbox() {
+  const isMobile = useIsMobile();
   const [folder, setFolder] = useState<string>("inbox");
   const [search, setSearch] = useState("");
   const [searchQ, setSearchQ] = useState("");
