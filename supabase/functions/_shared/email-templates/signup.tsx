@@ -32,26 +32,26 @@ export const SignupEmail = ({
     <Preview>Confirm your email for {siteName}</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Confirm your email</Heading>
+        <Heading style={h1}>Bem-vindo à NatLeva</Heading>
         <Text style={text}>
-          Thanks for signing up for{' '}
+          Que bom ter você por aqui! Falta só um passo para a gente liberar seu acesso à vitrine de viagens da{' '}
           <Link href={siteUrl} style={link}>
-            <strong>{siteName}</strong>
+            <strong>NatLeva</strong>
           </Link>
-          !
+          .
         </Text>
         <Text style={text}>
-          Please confirm your email address (
+          Confirme seu e-mail (
           <Link href={`mailto:${recipient}`} style={link}>
             {recipient}
           </Link>
-          ) by clicking the button below:
+          ) clicando no botão abaixo:
         </Text>
         <Button style={button} href={confirmationUrl}>
-          Verify Email
+          Confirmar meu e-mail
         </Button>
         <Text style={footer}>
-          If you didn't create an account, you can safely ignore this email.
+          Se você não criou uma conta na NatLeva, pode ignorar este e-mail tranquilamente.
         </Text>
       </Container>
     </Body>
