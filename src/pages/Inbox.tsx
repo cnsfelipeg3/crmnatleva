@@ -910,9 +910,14 @@ export default function Inbox() {
             </SheetContent>
           </Sheet>
 
-          <div className="hidden sm:flex items-center gap-2">
-            <InboxIcon className="h-5 w-5 text-primary" />
-            <h1 className="text-base sm:text-lg font-semibold">Caixa de entrada</h1>
+          <div className="hidden sm:flex items-center gap-2 min-w-0">
+            <InboxIcon className="h-5 w-5 text-primary shrink-0" />
+            <h1 className="text-base sm:text-lg font-semibold shrink-0">Caixa de entrada</h1>
+            {profileEmail && (
+              <span className="ml-2 px-2 py-0.5 rounded-full bg-muted text-xs text-muted-foreground truncate max-w-[240px]">
+                {profileEmail}
+              </span>
+            )}
           </div>
 
           <form onSubmit={handleSearch} className="ml-auto flex flex-1 min-w-0 max-w-2xl items-center gap-2">
