@@ -223,6 +223,16 @@ export const SIGNATURE_ROLES: { value: UserRole; label: string }[] = [
   { value: "leitura", label: "Leitura" },
 ];
 
+// Default cargo (job title) shown on the signature for each role.
+export const ROLE_CARGO_DEFAULTS: Record<UserRole, string> = {
+  admin: "Admin · NatLeva Wings",
+  gestor: "Gestor · NatLeva Wings",
+  vendedor: "Consultor de Viagens · NatLeva Wings",
+  financeiro: "Financeiro · NatLeva Wings",
+  operacional: "Operações · NatLeva Wings",
+  leitura: "NatLeva Wings",
+};
+
 function roleSignatureKey(role?: UserRole | null): string {
   return role ? `${SIGNATURE_V2_KEY}.${role}` : SIGNATURE_V2_KEY;
 }
@@ -251,6 +261,30 @@ function hasRoleSignature(role?: UserRole | null): boolean {
   if (!role) return false;
   try { return !!localStorage.getItem(roleSignatureKey(role)); } catch { return false; }
 }
+
+/**
+ * Seeds a default signature for the logged-in user's role if none exists yet.
+ * Uses the user's profile name + the role's default cargo + the connected mailbox.
+ */
+export function seedRoleSignature(
+  role: UserRole | null | undefined,
+  fullName: string | null | undefined,
+  email: string | null | undefined
+) {
+  if (!role) return;
+  try {
+    if (localStorage.getItem(roleSignatureKey(role))) return; // already configured
+    const seeded: SignatureData = {
+      ...DEFAULT_SIGNATURE,
+      name: (fullName || "").trim() || DEFAULT_SIGNATURE.name,
+      role: ROLE_CARGO_DEFAULTS[role] || DEFAULT_SIGNATURE.role,
+      email: (email || "").trim() || DEFAULT_SIGNATURE.email,
+    };
+    localStorage.setItem(roleSignatureKey(role), JSON.stringify(seeded));
+  } catch {}
+}
+
+
 
 
 // ---------- Helpers ----------
@@ -494,11 +528,20 @@ export default function Inbox() {
     [loadCounts]
   );
 
+  const { role: currentRole, profile } = useAuth();
+
   useEffect(() => {
     loadProfile();
     loadCounts();
     loadUserLabels();
   }, [loadProfile, loadCounts, loadUserLabels]);
+
+  // Auto-seed a per-role signature for the logged-in user as soon as
+  // their role, profile name and Gmail mailbox are known.
+  useEffect(() => {
+    if (!currentRole) return;
+    seedRoleSignature(currentRole, profile?.full_name, profileEmail);
+  }, [currentRole, profile?.full_name, profileEmail]);
 
   useEffect(() => {
     loadThreads();
@@ -1863,10 +1906,10 @@ function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full sm:max-w-2xl max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Configurações</DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="break-all">
             Conta conectada: <strong>{profileEmail || "—"}</strong>
           </DialogDescription>
         </DialogHeader>
@@ -1875,10 +1918,10 @@ function SettingsDialog({
           <div>
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
               <h3 className="text-sm font-semibold">Assinatura por perfil</h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <label className="text-xs text-muted-foreground whitespace-nowrap">Editar perfil</label>
                 <Select value={editingRole} onValueChange={(v) => setEditingRole(v as UserRole)}>
-                  <SelectTrigger className="h-9 w-[180px]">
+                  <SelectTrigger className="h-9 flex-1 sm:w-[180px] sm:flex-none">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
