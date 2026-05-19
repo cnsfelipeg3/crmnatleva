@@ -42,6 +42,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import { useIsMobile } from "@/hooks/use-mobile";
 import DOMPurify from "dompurify";
 
 // ---------- Types ----------
@@ -204,6 +206,7 @@ function Avatar({ name, email, size = 36 }: { name: string; email: string; size?
 
 // ---------- Main ----------
 export default function Inbox() {
+  const isMobile = useIsMobile();
   const [folder, setFolder] = useState<string>("inbox");
   const [search, setSearch] = useState("");
   const [searchQ, setSearchQ] = useState("");
@@ -611,282 +614,316 @@ export default function Inbox() {
           )}
         </header>
 
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Folders sidebar (desktop) */}
-          <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 border-r flex-col overflow-y-auto">
-            {FoldersNav}
-          </aside>
+        {(() => {
+          const foldersNode = (
+            <aside className="flex h-full w-full border-r flex-col overflow-y-auto bg-background">
+              {FoldersNav}
+            </aside>
+          );
 
-          {/* Threads list */}
-          <section
-            className={cn(
-              "flex w-full flex-col border-r min-w-0",
-              "md:w-[380px] lg:w-[420px] md:shrink-0",
-              selectedId && "hidden md:flex"
-            )}
-          >
-            {/* List toolbar */}
-            <div className="flex items-center gap-1 border-b px-2 py-2 sm:px-3 shrink-0">
-              <Checkbox
-                checked={threads.length > 0 && selectedIds.size === threads.length}
-                onCheckedChange={toggleSelectAll}
-                aria-label="Selecionar todas"
-                className="mx-2"
-              />
-              {selectedIds.size > 0 ? (
-                <>
-                  <span className="text-xs text-muted-foreground mr-2">{selectedIds.size} selecionado(s)</span>
-                  {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+          const threadsListNode = (
+            <section className="flex h-full w-full flex-col border-r min-w-0 bg-background">
+              {/* List toolbar */}
+              <div className="flex items-center gap-1 border-b px-2 py-2 sm:px-3 shrink-0">
+                <Checkbox
+                  checked={threads.length > 0 && selectedIds.size === threads.length}
+                  onCheckedChange={toggleSelectAll}
+                  aria-label="Selecionar todas"
+                  className="mx-2"
+                />
+                {selectedIds.size > 0 ? (
+                  <>
+                    <span className="text-xs text-muted-foreground mr-2">{selectedIds.size} selecionado(s)</span>
+                    {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => bulkApply("archive")}>
+                            <Archive className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Arquivar</TooltipContent>
+                      </Tooltip>
+                    )}
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => bulkApply("archive")}>
-                          <Archive className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" onClick={() => bulkApply("trash")}>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent>Arquivar</TooltipContent>
+                      <TooltipContent>Lixeira</TooltipContent>
                     </Tooltip>
-                  )}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button variant="ghost" size="icon" onClick={() => bulkApply("trash")}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Lixeira</TooltipContent>
-                  </Tooltip>
-                  {folder !== "spam" && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button variant="ghost" size="icon" onClick={() => bulkApply("spam")}>
-                          <ShieldAlert className="h-4 w-4" />
+                    {folder !== "spam" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button variant="ghost" size="icon" onClick={() => bulkApply("spam")}>
+                            <ShieldAlert className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Marcar como spam</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Marcar como spam</TooltipContent>
-                    </Tooltip>
-                  )}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => bulkApply("read")}>
-                        <MailOpen className="mr-2 h-4 w-4" /> Marcar como lida
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => bulkApply("unread")}>
-                        <Mail className="mr-2 h-4 w-4" /> Marcar como não lida
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </>
-              ) : (
-                <span className="text-xs text-muted-foreground ml-1 truncate">
-                  {currentFolder.label}
-                  {searchQ && ` · "${searchQ}"`}
-                </span>
-              )}
-            </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onClick={() => bulkApply("read")}>
+                          <MailOpen className="mr-2 h-4 w-4" /> Marcar como lida
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => bulkApply("unread")}>
+                          <Mail className="mr-2 h-4 w-4" /> Marcar como não lida
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground ml-1 truncate">
+                    {currentFolder.label}
+                    {searchQ && ` · "${searchQ}"`}
+                  </span>
+                )}
+              </div>
 
-            {/* List body */}
-            <div className="flex-1 overflow-y-auto">
-              {loadingThreads && threads.length === 0 ? (
-                <div className="flex items-center justify-center p-8 text-muted-foreground">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
-                </div>
-              ) : threads.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center text-sm text-muted-foreground">
-                  <InboxIcon className="mb-3 h-10 w-10 opacity-30" />
-                  <p>Nenhum email por aqui</p>
-                </div>
-              ) : (
-                <ul className="divide-y">
-                  {threads.map((t) => {
-                    const { name, email } = parseFromName(t.from);
-                    const isSelected = selectedIds.has(t.id);
-                    const isOpen = selectedId === t.id;
-                    return (
-                      <li key={t.id} className="group relative">
-                        <div
-                          className={cn(
-                            "flex gap-2 px-2 py-2 sm:px-3 transition-colors cursor-pointer",
-                            "hover:bg-accent/60",
-                            isOpen && "bg-accent",
-                            t.unread && !isOpen && "bg-primary/[0.04]"
-                          )}
-                          onClick={() => setSelectedId(t.id)}
-                        >
-                          <div className="flex flex-col items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(v) => {
-                                setSelectedIds((prev) => {
-                                  const next = new Set(prev);
-                                  if (v) next.add(t.id);
-                                  else next.delete(t.id);
-                                  return next;
-                                });
-                              }}
-                              aria-label="Selecionar"
-                            />
-                            <button
-                              onClick={() => handleStar(t)}
-                              className="text-muted-foreground hover:text-yellow-500 transition-colors"
-                              aria-label={t.starred ? "Remover estrela" : "Adicionar estrela"}
-                            >
-                              <Star className={cn("h-4 w-4", t.starred && "fill-yellow-400 text-yellow-400")} />
-                            </button>
-                          </div>
-
-                          <Avatar name={name} email={email} size={36} />
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <span
-                                className={cn(
-                                  "truncate text-sm flex-1 min-w-0",
-                                  t.unread ? "font-semibold text-foreground" : "text-foreground/90"
-                                )}
+              {/* List body */}
+              <div className="flex-1 overflow-y-auto">
+                {loadingThreads && threads.length === 0 ? (
+                  <div className="flex items-center justify-center p-8 text-muted-foreground">
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+                  </div>
+                ) : threads.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center text-sm text-muted-foreground">
+                    <InboxIcon className="mb-3 h-10 w-10 opacity-30" />
+                    <p>Nenhum email por aqui</p>
+                  </div>
+                ) : (
+                  <ul className="divide-y">
+                    {threads.map((t) => {
+                      const { name, email } = parseFromName(t.from);
+                      const isSelected = selectedIds.has(t.id);
+                      const isOpen = selectedId === t.id;
+                      return (
+                        <li key={t.id} className="group relative">
+                          <div
+                            className={cn(
+                              "flex gap-2 px-2 py-2 sm:px-3 transition-colors cursor-pointer",
+                              "hover:bg-accent/60 md:group-hover:pr-[120px]",
+                              isOpen && "bg-accent",
+                              t.unread && !isOpen && "bg-primary/[0.04]"
+                            )}
+                            onClick={() => setSelectedId(t.id)}
+                          >
+                            <div className="flex flex-col items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(v) => {
+                                  setSelectedIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (v) next.add(t.id);
+                                    else next.delete(t.id);
+                                    return next;
+                                  });
+                                }}
+                                aria-label="Selecionar"
+                              />
+                              <button
+                                onClick={() => handleStar(t)}
+                                className="text-muted-foreground hover:text-yellow-500 transition-colors"
+                                aria-label={t.starred ? "Remover estrela" : "Adicionar estrela"}
                               >
-                                {name || email}
-                                {t.messageCount > 1 && (
-                                  <span className="ml-1 text-xs text-muted-foreground">({t.messageCount})</span>
-                                )}
-                              </span>
-                              <span
+                                <Star className={cn("h-4 w-4", t.starred && "fill-yellow-400 text-yellow-400")} />
+                              </button>
+                            </div>
+
+                            <Avatar name={name} email={email} size={36} />
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-baseline gap-2">
+                                <span
+                                  className={cn(
+                                    "truncate text-sm flex-1 min-w-0",
+                                    t.unread ? "font-semibold text-foreground" : "text-foreground/90"
+                                  )}
+                                >
+                                  {name || email}
+                                  {t.messageCount > 1 && (
+                                    <span className="ml-1 text-xs text-muted-foreground">({t.messageCount})</span>
+                                  )}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "shrink-0 text-xs",
+                                    t.unread ? "text-foreground font-medium" : "text-muted-foreground"
+                                  )}
+                                >
+                                  {fmtDate(t.date, t.internalDate)}
+                                </span>
+                              </div>
+                              <div
                                 className={cn(
-                                  "shrink-0 text-xs",
+                                  "truncate text-sm mt-0.5",
                                   t.unread ? "text-foreground font-medium" : "text-muted-foreground"
                                 )}
                               >
-                                {fmtDate(t.date, t.internalDate)}
-                              </span>
+                                {t.subject || "(sem assunto)"}
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground/80 mt-0.5">{t.snippet}</div>
                             </div>
-                            <div
-                              className={cn(
-                                "truncate text-sm mt-0.5",
-                                t.unread ? "text-foreground font-medium" : "text-muted-foreground"
-                              )}
-                            >
-                              {t.subject || "(sem assunto)"}
-                            </div>
-                            <div className="truncate text-xs text-muted-foreground/80 mt-0.5">{t.snippet}</div>
                           </div>
-                        </div>
 
-                        {/* Hover actions (desktop) */}
-                        <div
-                          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 gap-0.5 opacity-0 group-hover:opacity-100 bg-accent rounded-md shadow-sm border"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+                          {/* Hover actions (desktop) */}
+                          <div
+                            className={cn(
+                              "hidden md:flex absolute right-2 top-1 bottom-1 items-center gap-0.5 px-1.5 rounded-md border shadow-sm",
+                              "opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto",
+                              isOpen ? "bg-accent" : "bg-background"
+                            )}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleArchive(t.id)}>
+                                    <Archive className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Arquivar</TooltipContent>
+                              </Tooltip>
+                            )}
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleArchive(t.id)}>
-                                  <Archive className="h-3.5 w-3.5" />
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTrash(t.id)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </Button>
                               </TooltipTrigger>
-                              <TooltipContent>Arquivar</TooltipContent>
+                              <TooltipContent>Lixeira</TooltipContent>
                             </Tooltip>
-                          )}
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTrash(t.id)}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Lixeira</TooltipContent>
-                          </Tooltip>
-                          {folder !== "spam" && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSpam(t.id)}>
-                                  <ShieldAlert className="h-3.5 w-3.5" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Spam</TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
+                            {folder !== "spam" && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSpam(t.id)}>
+                                    <ShieldAlert className="h-3.5 w-3.5" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Spam</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                    {nextPageToken && (
+                      <li className="p-3 text-center">
+                        <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+                          {loadingMore && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                          Carregar mais
+                        </Button>
                       </li>
-                    );
-                  })}
-                  {nextPageToken && (
-                    <li className="p-3 text-center">
-                      <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
-                        {loadingMore && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-                        Carregar mais
-                      </Button>
-                    </li>
-                  )}
-                </ul>
-              )}
-            </div>
-          </section>
+                    )}
+                  </ul>
+                )}
+              </div>
+            </section>
+          );
 
-          {/* Reading pane */}
-          <section className={cn("flex-1 flex-col min-w-0", selectedId ? "flex" : "hidden md:flex")}>
-            {!selectedId ? (
-              <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground p-8 text-center">
-                <MailOpen className="mb-3 h-14 w-14 opacity-30" />
-                <p className="text-sm">Selecione um email pra visualizar</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">Atalhos: c novo · / buscar · Esc voltar</p>
+          const readingPaneNode = (
+            <section className="flex h-full w-full flex-col min-w-0 bg-background">
+              {!selectedId ? (
+                <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground p-8 text-center">
+                  <MailOpen className="mb-3 h-14 w-14 opacity-30" />
+                  <p className="text-sm">Selecione um email pra visualizar</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Atalhos: c novo · / buscar · Esc voltar</p>
+                </div>
+              ) : loadingThread || !thread ? (
+                <div className="flex flex-1 items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <ThreadView
+                  thread={thread}
+                  folder={folder}
+                  profileEmail={profileEmail}
+                  starred={threads.find((x) => x.id === thread.id)?.starred || false}
+                  onBack={() => setSelectedId(null)}
+                  onReply={(mode) => {
+                    const last = thread.messages[thread.messages.length - 1];
+                    const { email: fromEmail, name: fromName } = parseFromName(last.from);
+                    if (mode === "reply") {
+                      setComposeState({
+                        mode: "reply",
+                        threadId: thread.id,
+                        to: fromEmail,
+                        subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
+                        quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                      });
+                    } else if (mode === "replyAll") {
+                      const toList = [fromEmail, ...(last.to ? last.to.split(",") : [])]
+                        .map((s) => s.trim())
+                        .filter((s) => s && !s.includes(profileEmail));
+                      setComposeState({
+                        mode: "reply",
+                        threadId: thread.id,
+                        to: Array.from(new Set(toList)).join(", "),
+                        cc: last.cc || "",
+                        subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
+                        quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                      });
+                    } else {
+                      setComposeState({
+                        mode: "new",
+                        subject: last.subject.toLowerCase().startsWith("fwd:") ? last.subject : `Fwd: ${last.subject}`,
+                        quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                      });
+                    }
+                  }}
+                  onTrash={() => handleTrash(thread.id)}
+                  onArchive={() => handleArchive(thread.id)}
+                  onSpam={() => handleSpam(thread.id)}
+                  onUnspam={() => handleUnspam(thread.id)}
+                  onMarkUnread={() => handleMarkUnread(thread.id)}
+                  onStar={() => {
+                    const t = threads.find((x) => x.id === thread.id);
+                    if (t) handleStar(t);
+                  }}
+                />
+              )}
+            </section>
+          );
+
+          if (isMobile) {
+            return (
+              <div className="flex flex-1 min-h-0 overflow-hidden">
+                <div className={cn("flex w-full min-w-0", selectedId ? "hidden" : "flex")}>
+                  {threadsListNode}
+                </div>
+                <div className={cn("flex w-full min-w-0", selectedId ? "flex" : "hidden")}>
+                  {readingPaneNode}
+                </div>
               </div>
-            ) : loadingThread || !thread ? (
-              <div className="flex flex-1 items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : (
-              <ThreadView
-                thread={thread}
-                folder={folder}
-                profileEmail={profileEmail}
-                starred={threads.find((x) => x.id === thread.id)?.starred || false}
-                onBack={() => setSelectedId(null)}
-                onReply={(mode) => {
-                  const last = thread.messages[thread.messages.length - 1];
-                  const { email: fromEmail, name: fromName } = parseFromName(last.from);
-                  if (mode === "reply") {
-                    setComposeState({
-                      mode: "reply",
-                      threadId: thread.id,
-                      to: fromEmail,
-                      subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
-                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
-                    });
-                  } else if (mode === "replyAll") {
-                    const toList = [fromEmail, ...(last.to ? last.to.split(",") : [])]
-                      .map((s) => s.trim())
-                      .filter((s) => s && !s.includes(profileEmail));
-                    setComposeState({
-                      mode: "reply",
-                      threadId: thread.id,
-                      to: Array.from(new Set(toList)).join(", "),
-                      cc: last.cc || "",
-                      subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
-                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
-                    });
-                  } else {
-                    setComposeState({
-                      mode: "new",
-                      subject: last.subject.toLowerCase().startsWith("fwd:") ? last.subject : `Fwd: ${last.subject}`,
-                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
-                    });
-                  }
-                }}
-                onTrash={() => handleTrash(thread.id)}
-                onArchive={() => handleArchive(thread.id)}
-                onSpam={() => handleSpam(thread.id)}
-                onUnspam={() => handleUnspam(thread.id)}
-                onMarkUnread={() => handleMarkUnread(thread.id)}
-                onStar={() => {
-                  const t = threads.find((x) => x.id === thread.id);
-                  if (t) handleStar(t);
-                }}
-              />
-            )}
-          </section>
-        </div>
+            );
+          }
+
+          return (
+            <ResizablePanelGroup
+              direction="horizontal"
+              autoSaveId="inbox-layout-v1"
+              className="flex flex-1 min-h-0 overflow-hidden"
+            >
+              <ResizablePanel defaultSize={16} minSize={11} maxSize={28} collapsible collapsedSize={4}>
+                {foldersNode}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={28} minSize={18} maxSize={50}>
+                {threadsListNode}
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={56} minSize={30}>
+                {readingPaneNode}
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          );
+        })()}
 
         {composeState && (
           <ComposeDialog
