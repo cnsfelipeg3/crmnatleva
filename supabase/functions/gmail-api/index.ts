@@ -26,6 +26,13 @@ function b64urlDecode(str: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+function b64encodeUtf8(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
+}
+
 function buildRawEmail(opts: {
   to: string;
   from?: string;
@@ -43,13 +50,15 @@ function buildRawEmail(opts: {
   headers.push(`To: ${opts.to}`);
   if (opts.cc) headers.push(`Cc: ${opts.cc}`);
   if (opts.bcc) headers.push(`Bcc: ${opts.bcc}`);
-  headers.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(opts.subject)))}?=`);
+  headers.push(`Subject: =?UTF-8?B?${b64encodeUtf8(opts.subject)}?=`);
   headers.push("MIME-Version: 1.0");
   headers.push(`Content-Type: ${opts.html ? "text/html" : "text/plain"}; charset="UTF-8"`);
-  headers.push("Content-Transfer-Encoding: 7bit");
+  headers.push("Content-Transfer-Encoding: base64");
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
-  const message = headers.join("\r\n") + "\r\n\r\n" + opts.body;
+  // Encode body as base64 with CRLF every 76 chars to comply with RFC
+  const encodedBody = b64encodeUtf8(opts.body).replace(/(.{76})/g, "$1\r\n");
+  const message = headers.join("\r\n") + "\r\n\r\n" + encodedBody;
   return b64urlEncode(message);
 }
 
@@ -104,28 +113,37 @@ function headerVal(headers: any[], name: string): string {
   return h?.value || "";
 }
 
-async function gw(path: string, init: RequestInit = {}) {
+async function gw(path: string, init: RequestInit = {}, retries = 2): Promise<any> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   const GOOGLE_MAIL_API_KEY = Deno.env.get("GOOGLE_MAIL_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
   if (!GOOGLE_MAIL_API_KEY) throw new Error("GOOGLE_MAIL_API_KEY not configured");
 
-  const res = await fetch(`${GATEWAY}${path}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
-      "Content-Type": "application/json",
-      ...(init.headers || {}),
-    },
-  });
-  const text = await res.text();
-  let json: any = null;
-  try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
-  if (!res.ok) {
-    throw new Error(`Gmail API ${res.status}: ${text.slice(0, 500)}`);
+  let lastErr: any;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(`${GATEWAY}${path}`, {
+      ...init,
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "X-Connection-Api-Key": GOOGLE_MAIL_API_KEY,
+        "Content-Type": "application/json",
+        ...(init.headers || {}),
+      },
+    });
+    const text = await res.text();
+    let json: any = null;
+    try { json = text ? JSON.parse(text) : null; } catch { json = { raw: text }; }
+    if (res.ok) return json;
+    lastErr = new Error(`Gmail API ${res.status}: ${text.slice(0, 500)}`);
+    // Retry on transient errors
+    if (res.status >= 500 || res.status === 429) {
+      console.warn(`[gmail-api] transient ${res.status} on ${path}, retry ${attempt + 1}/${retries}`);
+      await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      continue;
+    }
+    throw lastErr;
   }
-  return json;
+  throw lastErr;
 }
 
 Deno.serve(async (req) => {
