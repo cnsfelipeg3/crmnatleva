@@ -306,6 +306,7 @@ Deno.serve(async (req) => {
         break;
       }
       case "send": {
+        if (!params.to || typeof params.to !== "string") throw new Error("Destinatário inválido");
         const raw = buildRawEmail({
           to: params.to,
           cc: params.cc,
@@ -318,6 +319,7 @@ Deno.serve(async (req) => {
           method: "POST",
           body: JSON.stringify({ raw }),
         });
+        console.info(`[gmail-api] sent message ${result?.id || "unknown"} to ${String(params.to).slice(0, 160)}`);
         break;
       }
       case "reply": {
