@@ -144,9 +144,11 @@ export function useMessageReactions(messageIds: string[], conversationKey: strin
         const { data: zRes, error: zErr } = await supabase.functions.invoke("zapi-proxy", {
           body: {
             action: "send-message-reaction",
-            phone: phoneToUse,
-            messageId: externalMessageId,
-            value: emoji,
+            payload: {
+              phone: phoneToUse,
+              messageId: externalMessageId,
+              reaction: emoji,
+            },
           },
         });
         console.log("[reactions] zapi add response", { zRes, zErr });
@@ -183,8 +185,10 @@ export function useMessageReactions(messageIds: string[], conversationKey: strin
         await supabase.functions.invoke("zapi-proxy", {
           body: {
             action: "send-remove-reaction",
-            phone: conversationPhone,
-            messageId: externalMessageId,
+            payload: {
+              phone: conversationPhone.trim(),
+              messageId: externalMessageId,
+            },
           },
         });
       } catch (e) {
