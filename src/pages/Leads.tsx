@@ -569,6 +569,13 @@ export default function Leads() {
                     className="border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors"
                     onClick={() => setSelected(l)}
                   >
+                    <td className="p-3 align-top w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedKeys.has(l.key)}
+                        onCheckedChange={(c) => toggleOne(l.key, c === true)}
+                        aria-label={`Selecionar ${l.name || l.email || "lead"}`}
+                      />
+                    </td>
                     <td className="p-3 align-top">
                       <div className="flex items-start gap-2">
                         <div className={cn(
