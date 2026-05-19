@@ -28,6 +28,7 @@ import {
   PenSquare,
   Loader2,
   Mail,
+  MailCheck,
   MailOpen,
   ArrowLeft,
   Archive,
