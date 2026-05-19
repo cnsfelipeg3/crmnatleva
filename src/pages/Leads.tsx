@@ -665,6 +665,7 @@ export default function Leads() {
                 <th className="text-left p-3 font-medium">Origem</th>
                 <th className="text-left p-3 font-medium">O que viu</th>
                 <th className="text-left p-3 font-medium">Tempo total</th>
+                <th className="text-left p-3 font-medium">Valor / Lucro</th>
                 <th className="text-left p-3 font-medium">Ações</th>
                 <th className="text-left p-3 font-medium">Última visita</th>
                 <th className="p-3"></th>
@@ -672,9 +673,9 @@ export default function Leads() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
+                <tr><td colSpan={10} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">
+                <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">
                   {leads.length === 0 ? "Nenhum lead ainda. Compartilhe páginas da Prateleira ou envie propostas personalizadas para começar." : "Nenhum lead bate com os filtros."}
                 </td></tr>
               ) : filtered.map((l) => {
