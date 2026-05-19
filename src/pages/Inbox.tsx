@@ -167,7 +167,7 @@ const DEFAULT_SIGNATURE: SignatureData = {
   phone: "+55 11 96639-6692",
   email: "contato@natleva.com",
   website: "natleva.com",
-  instagram: "natleva",
+  instagram: "natlevaviagens",
   logoUrl: "https://adm.natleva.com/logo-natleva.png",
   brandColor: "#1f5132",
   tagline: "Experiências de viagem sob medida",
@@ -1963,7 +1963,7 @@ function SettingsDialog({
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Instagram (@)</label>
-                <Input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} placeholder="natleva" />
+                <Input value={data.instagram} onChange={(e) => update("instagram", e.target.value)} placeholder="natlevaviagens" />
               </div>
               <div className="sm:col-span-2">
                 <label className="text-xs text-muted-foreground">URL do logotipo</label>
