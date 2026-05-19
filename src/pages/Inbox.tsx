@@ -1050,6 +1050,7 @@ export default function Inbox() {
         {composeState && (
           <ComposeDialog
             state={composeState}
+            profileEmail={profileEmail}
             onOpenChange={(open) => !open && setComposeState(null)}
             onSent={() => {
               setComposeState(null);
