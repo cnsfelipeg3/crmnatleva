@@ -13,6 +13,8 @@ project_id = "mexlhkqcmiaktjxsyvod"
     verify_jwt = true
   [functions.auth-email-hook]
     verify_jwt = false
+  [functions.gmail-api]
+    verify_jwt = true
   [functions.send-transactional-email]
     verify_jwt = true
   [functions.preview-transactional-email]

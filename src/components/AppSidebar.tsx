@@ -24,6 +24,7 @@ import { MENU_BY_PATH } from "@/lib/systemMenus";
 
 const navItems = [
   { to: "/dashboard", icon: Home, label: "Início", alwaysVisible: true },
+  { to: "/inbox", icon: Inbox, label: "Caixa de Entrada", alwaysVisible: true },
   { to: "/sales/new", icon: Plus, label: "Incluir" },
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },

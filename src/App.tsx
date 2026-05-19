@@ -63,6 +63,7 @@ const TripAlterations = lazy(() => import("@/pages/TripAlterations"));
 const Itinerary = lazy(() => import("@/pages/Itinerary"));
 const SupplierRegistration = lazy(() => import("@/pages/SupplierRegistration"));
 const Diagnostico = lazy(() => import("@/pages/Diagnostico"));
+const Inbox = lazy(() => import("@/pages/Inbox"));
 
 // Booking RapidAPI (BETA) — módulo experimental isolado
 const BookingSearchPage = lazy(() => import("@/pages/booking-rapidapi/BookingSearchPage"));
@@ -286,6 +287,7 @@ function AppRoutes() {
           <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
           <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
           <Route path="/birthdays" element={<Birthdays />} />
+          <Route path="/inbox" element={<Inbox />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/import" element={<ImportData />} />
           <Route path="/pendencias" element={<Pendencias />} />
