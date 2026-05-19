@@ -1289,11 +1289,8 @@ interface ComposeState {
 }
 
 function getSignature(): string {
-  try {
-    return localStorage.getItem(SIGNATURE_KEY) || "";
-  } catch {
-    return "";
-  }
+  // Legacy helper kept for backward compat; returns rich HTML built from structured data.
+  return buildSignatureHtml(getSignatureData());
 }
 
 function ComposeDialog({
@@ -1313,16 +1310,14 @@ function ComposeDialog({
   const [subject, setSubject] = useState(state.subject || "");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-  const signature = getSignature();
+  const signatureData = getSignatureData();
+  const signatureHtml = buildSignatureHtml(signatureData);
 
   const send = async () => {
     if (!to.trim()) return toast.error("Informe o destinatário");
     setSending(true);
     try {
-      const sigBlock = signature
-        ? `<br/><br/><div style="color:#666;font-size:13px;border-top:1px solid #eee;padding-top:8px">${signature.replace(/\n/g, "<br/>")}</div>`
-        : "";
-      const htmlBody = `<div>${body.replace(/\n/g, "<br/>")}</div>${sigBlock}${state.quoted || ""}`;
+      const htmlBody = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">${body.replace(/\n/g, "<br/>")}</div>${signatureHtml}${state.quoted || ""}`;
       if (state.mode === "reply" && state.threadId) {
         await callGmail("reply", {
           threadId: state.threadId,
