@@ -462,7 +462,8 @@ export default function Inbox() {
   useEffect(() => {
     loadProfile();
     loadCounts();
-  }, [loadProfile, loadCounts]);
+    loadUserLabels();
+  }, [loadProfile, loadCounts, loadUserLabels]);
 
   useEffect(() => {
     loadThreads();
@@ -473,9 +474,60 @@ export default function Inbox() {
     const id = setInterval(() => {
       loadThreads(true);
       loadCounts();
+      loadUserLabels();
     }, 30000);
     return () => clearInterval(id);
-  }, [loadThreads, loadCounts]);
+  }, [loadThreads, loadCounts, loadUserLabels]);
+
+  const createUserLabel = useCallback(async (name: string, iconKey: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    try {
+      const r = await callGmail("create_label", { name: cleanName });
+      if (r?.id) {
+        const next = { ...labelIcons, [r.id]: iconKey };
+        setLabelIcons(next);
+        saveLabelIcons(next);
+      }
+      toast.success("Pasta criada");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Não foi possível criar a pasta", { description: e.message });
+    }
+  }, [labelIcons, loadUserLabels]);
+
+  const renameUserLabel = useCallback(async (labelId: string, name: string) => {
+    const cleanName = name.trim();
+    if (!cleanName) return;
+    try {
+      await callGmail("rename_label", { labelId, name: cleanName });
+      toast.success("Pasta renomeada");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Erro ao renomear", { description: e.message });
+    }
+  }, [loadUserLabels]);
+
+  const setUserLabelIcon = useCallback((labelId: string, iconKey: string) => {
+    const next = { ...labelIcons, [labelId]: iconKey };
+    setLabelIcons(next);
+    saveLabelIcons(next);
+  }, [labelIcons]);
+
+  const deleteUserLabel = useCallback(async (labelId: string) => {
+    try {
+      await callGmail("delete_label", { labelId });
+      const next = { ...labelIcons };
+      delete next[labelId];
+      setLabelIcons(next);
+      saveLabelIcons(next);
+      if (folder === `label:${labelId}`) setFolder("inbox");
+      toast.success("Pasta excluída");
+      await loadUserLabels();
+    } catch (e: any) {
+      toast.error("Erro ao excluir", { description: e.message });
+    }
+  }, [labelIcons, folder, loadUserLabels]);
 
   useEffect(() => {
     if (selectedId) loadThread(selectedId);
