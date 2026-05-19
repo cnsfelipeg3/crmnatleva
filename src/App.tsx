@@ -165,6 +165,11 @@ const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
 const PrateleiraVitrine = lazy(() => import("@/pages/prateleira/PrateleiraVitrine"));
 const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraVendaPublica"));
 
+// Vitrine de Afiliados (área logada)
+const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
+const VitrineCadastro = lazy(() => import("@/pages/vitrine/VitrineCadastro"));
+const AffiliateGuard = lazy(() => import("@/components/vitrine/AffiliateGuard"));
+
 // Operação Diária
 const OperacaoInbox = lazy(() => import("@/pages/operacao/OperacaoInbox"));
 const OperacaoAtalhos = lazy(() => import("@/pages/operacao/OperacaoAtalhos"));
