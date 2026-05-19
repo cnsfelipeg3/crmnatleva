@@ -839,18 +839,22 @@ export default function Leads() {
 }
 
 function Kpi({ icon: Icon, label, value, hint, tone }: {
-  icon: any; label: string; value: string; hint?: string; tone?: "hot" | "live";
+  icon: any; label: string; value: string; hint?: string; tone?: "hot" | "live" | "value" | "profit";
 }) {
   return (
     <Card className={cn(
       "p-3 flex items-start gap-2.5 rounded-2xl border-border/40",
       tone === "hot" && "border-accent/40 bg-accent/5",
       tone === "live" && "border-emerald-500/40 bg-emerald-500/5",
+      tone === "value" && "border-sky-500/30 bg-sky-500/5",
+      tone === "profit" && "border-emerald-500/40 bg-emerald-500/5",
     )}>
       <div className={cn(
         "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
         tone === "hot" ? "bg-accent/15 text-accent" :
         tone === "live" ? "bg-emerald-500/15 text-emerald-600" :
+        tone === "value" ? "bg-sky-500/15 text-sky-600" :
+        tone === "profit" ? "bg-emerald-500/15 text-emerald-600" :
         "bg-muted text-muted-foreground",
       )}>
         <Icon className="w-4 h-4" />
