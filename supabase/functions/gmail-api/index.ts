@@ -118,6 +118,7 @@ async function sendViaReliableDelivery(opts: {
     label: "crm-inbox",
     idempotency_key: messageId,
     message_id: messageId,
+    unsubscribe_token: messageId,
   }, { apiKey });
 
   return { id: messageId, deliveryMode: "reliable-domain" };
