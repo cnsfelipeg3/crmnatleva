@@ -1821,22 +1821,32 @@ function SettingsDialog({
   onOpenChange: (v: boolean) => void;
   profileEmail: string;
 }) {
+  const { role: currentUserRole } = useAuth();
+  const [editingRole, setEditingRole] = useState<UserRole>(currentUserRole || "vendedor");
   const [data, setData] = useState<SignatureData>(DEFAULT_SIGNATURE);
 
+  // Reload data when dialog opens OR the selected role changes
   useEffect(() => {
-    if (open) {
-      const d = getSignatureData();
-      if (!d.email && profileEmail) d.email = profileEmail;
-      setData(d);
-    }
-  }, [open, profileEmail]);
+    if (!open) return;
+    const d = getSignatureData(editingRole);
+    if (!d.email && profileEmail) d.email = profileEmail;
+    setData(d);
+  }, [open, profileEmail, editingRole]);
+
+  // When dialog re-opens, default back to the current logged-in user's role
+  useEffect(() => {
+    if (open && currentUserRole) setEditingRole(currentUserRole);
+  }, [open, currentUserRole]);
 
   const update = (k: keyof SignatureData, v: string) => setData((p) => ({ ...p, [k]: v }));
 
   const save = () => {
     try {
+      localStorage.setItem(roleSignatureKey(editingRole), JSON.stringify(data));
+      // Keep the global key in sync with whichever signature was last saved as a sensible default
       localStorage.setItem(SIGNATURE_V2_KEY, JSON.stringify(data));
-      toast.success("Assinatura salva");
+      const label = SIGNATURE_ROLES.find((r) => r.value === editingRole)?.label || editingRole;
+      toast.success(`Assinatura salva para ${label}`);
       onOpenChange(false);
     } catch (e: any) {
       toast.error("Erro ao salvar", { description: e.message });
@@ -1857,8 +1867,31 @@ function SettingsDialog({
 
         <div className="space-y-4">
           <div>
-            <h3 className="text-sm font-semibold mb-2">Assinatura</h3>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-2">
+              <h3 className="text-sm font-semibold">Assinatura por perfil</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground whitespace-nowrap">Editar perfil</label>
+                <Select value={editingRole} onValueChange={(v) => setEditingRole(v as UserRole)}>
+                  <SelectTrigger className="h-9 w-[180px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SIGNATURE_ROLES.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>
+                        {r.label}
+                        {hasRoleSignature(r.value) ? " ·" : ""}
+                        {r.value === currentUserRole ? " (você)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Cada perfil pode ter sua própria assinatura. Ela é aplicada automaticamente conforme o usuário logado ao enviar e-mails.
+            </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
               <div>
                 <label className="text-xs text-muted-foreground">Nome</label>
                 <Input value={data.name} onChange={(e) => update("name", e.target.value)} placeholder="Nathalia Raslosnek" />
