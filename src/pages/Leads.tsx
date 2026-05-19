@@ -355,6 +355,11 @@ export default function Leads() {
       if (v.whatsapp_clicked) lead.whatsappCount += 1;
       lead.proposalViewerIds.push(v.id);
       const pr = proposals[v.proposal_id];
+      const prValue = Number(pr?.total_value || 0);
+      const prProfit = prValue > 0 ? prValue * DEFAULT_MARGIN : 0;
+      lead.totalValue += prValue;
+      lead.profitPotential += prProfit;
+      if (prValue > lead.topValue) lead.topValue = prValue;
       lead.items.push({
         kind: "proposal",
         refId: v.proposal_id,
@@ -369,6 +374,8 @@ export default function Leads() {
         whatsapp: v.whatsapp_clicked,
         firstAt: v.first_viewed_at,
         lastAt: v.last_active_at,
+        value: prValue,
+        profit: prProfit,
       });
     }
 
