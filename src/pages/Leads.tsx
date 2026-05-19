@@ -405,6 +405,58 @@ export default function Leads() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      const targets = leads.filter((l) => selectedKeys.has(l.key));
+      const prateleiraIds = targets.flatMap((l) => l.prateleiraViewerIds);
+      const proposalIds = targets.flatMap((l) => l.proposalViewerIds);
+      const emails = Array.from(new Set(targets.map((l) => l.email).filter(Boolean)));
+      const ops: Promise<any>[] = [];
+      if (prateleiraIds.length) {
+        ops.push((supabase as any).from("prateleira_product_viewers").delete().in("id", prateleiraIds));
+      }
+      if (emails.length) {
+        ops.push((supabase as any).from("prateleira_viewer_events").delete().in("email", emails));
+      }
+      if (proposalIds.length) {
+        ops.push((supabase as any).from("proposal_viewers").delete().in("id", proposalIds));
+      }
+      const results = await Promise.all(ops);
+      const err = results.find((r) => r?.error)?.error;
+      if (err) throw err;
+      toast({ title: "Leads excluídos", description: `${targets.length} lead(s) removido(s) com sucesso.` });
+      setSelectedKeys(new Set());
+      setBulkConfirm(false);
+      await fetchAll();
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleOne = (key: string, checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key); else next.delete(key);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = (checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) filtered.forEach((l) => next.add(l.key));
+      else filtered.forEach((l) => next.delete(l.key));
+      return next;
+    });
+  };
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((l) => selectedKeys.has(l.key));
+  const someFilteredSelected = filtered.some((l) => selectedKeys.has(l.key)) && !allFilteredSelected;
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-5 max-w-[1400px]">
       {/* Header */}
