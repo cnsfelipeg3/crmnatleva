@@ -26,6 +26,13 @@ function b64urlDecode(str: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+function b64encodeUtf8(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let bin = "";
+  bytes.forEach((b) => (bin += String.fromCharCode(b)));
+  return btoa(bin);
+}
+
 function buildRawEmail(opts: {
   to: string;
   from?: string;
@@ -43,13 +50,15 @@ function buildRawEmail(opts: {
   headers.push(`To: ${opts.to}`);
   if (opts.cc) headers.push(`Cc: ${opts.cc}`);
   if (opts.bcc) headers.push(`Bcc: ${opts.bcc}`);
-  headers.push(`Subject: =?UTF-8?B?${btoa(unescape(encodeURIComponent(opts.subject)))}?=`);
+  headers.push(`Subject: =?UTF-8?B?${b64encodeUtf8(opts.subject)}?=`);
   headers.push("MIME-Version: 1.0");
   headers.push(`Content-Type: ${opts.html ? "text/html" : "text/plain"}; charset="UTF-8"`);
-  headers.push("Content-Transfer-Encoding: 7bit");
+  headers.push("Content-Transfer-Encoding: base64");
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
-  const message = headers.join("\r\n") + "\r\n\r\n" + opts.body;
+  // Encode body as base64 with CRLF every 76 chars to comply with RFC
+  const encodedBody = b64encodeUtf8(opts.body).replace(/(.{76})/g, "$1\r\n");
+  const message = headers.join("\r\n") + "\r\n\r\n" + encodedBody;
   return b64urlEncode(message);
 }
 
