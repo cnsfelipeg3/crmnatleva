@@ -68,6 +68,8 @@ function buildRawEmail(opts: {
   inReplyTo?: string;
   references?: string;
   threadId?: string;
+  readReceipt?: boolean;
+  readReceiptTo?: string;
 }): string {
   const headers: string[] = [];
   if (opts.from) headers.push(`From: ${cleanHeaderValue(opts.from)}`);
@@ -79,6 +81,14 @@ function buildRawEmail(opts: {
   headers.push("X-Mailer: NatLeva Mail");
   if (opts.inReplyTo) headers.push(`In-Reply-To: ${opts.inReplyTo}`);
   if (opts.references) headers.push(`References: ${opts.references}`);
+  if (opts.readReceipt) {
+    const rcpt = cleanHeaderValue(opts.readReceiptTo || opts.from || "");
+    if (rcpt) {
+      headers.push(`Disposition-Notification-To: ${rcpt}`);
+      headers.push(`Return-Receipt-To: ${rcpt}`);
+      headers.push(`X-Confirm-Reading-To: ${rcpt}`);
+    }
+  }
 
   if (opts.html) {
     const boundary = `natleva_${crypto.randomUUID().replace(/-/g, "")}`;
@@ -314,6 +324,8 @@ Deno.serve(async (req) => {
           subject: params.subject || "",
           body: params.body || "",
           html: !!params.html,
+          readReceipt: !!params.readReceipt,
+          readReceiptTo: params.readReceiptTo,
         });
         result = await gw(`/users/me/messages/send`, {
           method: "POST",
@@ -336,11 +348,15 @@ Deno.serve(async (req) => {
         const to = params.to || from;
         const raw = buildRawEmail({
           to,
+          cc: params.cc,
+          bcc: params.bcc,
           subject: replySubject,
           body: params.body || "",
           html: !!params.html,
           inReplyTo: msgIdHeader,
           references: refsHeader ? `${refsHeader} ${msgIdHeader}` : msgIdHeader,
+          readReceipt: !!params.readReceipt,
+          readReceiptTo: params.readReceiptTo,
         });
         result = await gw(`/users/me/messages/send`, {
           method: "POST",

@@ -28,6 +28,7 @@ import {
   PenSquare,
   Loader2,
   Mail,
+  MailCheck,
   MailOpen,
   ArrowLeft,
   Archive,
@@ -518,6 +519,34 @@ export default function Inbox() {
     }
   };
 
+  // Quick reply/forward from list row — fetches the thread then opens compose
+  const quickReplyFromList = async (threadId: string, mode: "reply" | "forward") => {
+    try {
+      const r = await callGmail("get_thread", { threadId });
+      const messages: ThreadMessage[] = r?.messages || [];
+      const last = messages[messages.length - 1];
+      if (!last) return;
+      const { email: fromEmail, name: fromName } = parseFromName(last.from);
+      if (mode === "reply") {
+        setComposeState({
+          mode: "reply",
+          threadId,
+          to: fromEmail,
+          subject: last.subject?.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject || ""}`,
+          quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+        });
+      } else {
+        setComposeState({
+          mode: "new",
+          subject: last.subject?.toLowerCase().startsWith("fwd:") ? last.subject : `Fwd: ${last.subject || ""}`,
+          quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+        });
+      }
+    } catch (e: any) {
+      toast.error("Não foi possível abrir", { description: e.message });
+    }
+  };
+
   // Bulk ops
   const bulkApply = async (
     op: "archive" | "trash" | "spam" | "read" | "unread"
@@ -855,6 +884,26 @@ export default function Inbox() {
                             )}
                             onClick={(e) => e.stopPropagation()}
                           >
+                            {folder !== "trash" && folder !== "spam" && (
+                              <>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => quickReplyFromList(t.id, "reply")}>
+                                      <Reply className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Responder</TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => quickReplyFromList(t.id, "forward")}>
+                                      <Forward className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Encaminhar</TooltipContent>
+                                </Tooltip>
+                              </>
+                            )}
                             {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1002,6 +1051,7 @@ export default function Inbox() {
         {composeState && (
           <ComposeDialog
             state={composeState}
+            profileEmail={profileEmail}
             onOpenChange={(open) => !open && setComposeState(null)}
             onSent={() => {
               setComposeState(null);
@@ -1295,13 +1345,16 @@ function getSignature(): string {
 
 function ComposeDialog({
   state,
+  profileEmail,
   onOpenChange,
   onSent,
 }: {
   state: ComposeState;
+  profileEmail: string;
   onOpenChange: (v: boolean) => void;
   onSent: () => void;
 }) {
+  const READ_RECEIPT_PREF_KEY = "natleva.mail.readReceiptDefault";
   const [to, setTo] = useState(state.to || "");
   const [cc, setCc] = useState(state.cc || "");
   const [bcc, setBcc] = useState(state.bcc || "");
@@ -1310,14 +1363,24 @@ function ComposeDialog({
   const [subject, setSubject] = useState(state.subject || "");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [readReceipt, setReadReceipt] = useState<boolean>(() => {
+    try { return localStorage.getItem(READ_RECEIPT_PREF_KEY) === "1"; } catch { return false; }
+  });
   const signatureData = getSignatureData();
   const signatureHtml = buildSignatureHtml(signatureData);
+
+  useEffect(() => {
+    try { localStorage.setItem(READ_RECEIPT_PREF_KEY, readReceipt ? "1" : "0"); } catch {}
+  }, [readReceipt]);
 
   const send = async () => {
     if (!to.trim()) return toast.error("Informe o destinatário");
     setSending(true);
     try {
       const htmlBody = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111827;line-height:1.6">${body.replace(/\n/g, "<br/>")}</div>${signatureHtml}${state.quoted || ""}`;
+      const receiptPayload = readReceipt && profileEmail
+        ? { readReceipt: true, readReceiptTo: profileEmail }
+        : {};
       if (state.mode === "reply" && state.threadId) {
         await callGmail("reply", {
           threadId: state.threadId,
@@ -1326,6 +1389,7 @@ function ComposeDialog({
           bcc: bcc || undefined,
           body: htmlBody,
           html: true,
+          ...receiptPayload,
         });
       } else {
         await callGmail("send", {
@@ -1335,9 +1399,12 @@ function ComposeDialog({
           subject,
           body: htmlBody,
           html: true,
+          ...receiptPayload,
         });
       }
-      toast.success("Email enviado");
+      toast.success("Email enviado", {
+        description: readReceipt ? "Confirmação de leitura solicitada" : undefined,
+      });
       onSent();
     } catch (e: any) {
       toast.error("Erro ao enviar", { description: e.message });
@@ -1449,6 +1516,27 @@ function ComposeDialog({
           <Button variant="ghost" size="icon" disabled title="Anexos em breve">
             <Paperclip className="h-4 w-4" />
           </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                type="button"
+                variant={readReceipt ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setReadReceipt((v) => !v)}
+                className={cn("h-9 gap-2 rounded-full px-3", readReceipt && "text-primary")}
+              >
+                <MailCheck className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs">
+                  {readReceipt ? "Confirmação de leitura: on" : "Confirmação de leitura"}
+                </span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {readReceipt
+                ? "Solicitando confirmação · clique para desativar"
+                : "Solicitar confirmação de leitura"}
+            </TooltipContent>
+          </Tooltip>
           <div className="ml-auto" />
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancelar
