@@ -246,3 +246,6 @@ verify_jwt = false  # Chamada por pg_cron interno; protegida por X-Scheduled-Tok
 
 [functions.marketing-image-gen]
 verify_jwt = true  # Geração de artes pelo admin logado
+
+[functions.process-email-queue]
+verify_jwt = true
