@@ -1,13 +1,20 @@
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   Inbox as InboxIcon,
   Send,
@@ -16,15 +23,28 @@ import {
   RefreshCw,
   Search,
   Reply,
+  ReplyAll,
+  Forward,
   PenSquare,
   Loader2,
   Mail,
   MailOpen,
   ArrowLeft,
+  Archive,
+  ShieldAlert,
+  MoreVertical,
+  Settings,
+  Menu,
+  AlertOctagon,
+  Paperclip,
+  X,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import DOMPurify from "dompurify";
 
+// ---------- Types ----------
 interface ThreadItem {
   id: string;
   snippet: string;
@@ -54,14 +74,26 @@ interface ThreadMessage {
   labelIds: string[];
 }
 
-const FOLDERS = [
-  { key: "inbox", label: "Caixa de entrada", q: "in:inbox -in:trash", icon: InboxIcon },
-  { key: "unread", label: "Não lidas", q: "is:unread in:inbox", icon: Mail },
-  { key: "starred", label: "Com estrela", q: "is:starred", icon: Star },
-  { key: "sent", label: "Enviadas", q: "in:sent", icon: Send },
-  { key: "trash", label: "Lixeira", q: "in:trash", icon: Trash2 },
+interface FolderDef {
+  key: string;
+  label: string;
+  q: string;
+  icon: typeof InboxIcon;
+  labelId?: string;
+}
+
+const FOLDERS: FolderDef[] = [
+  { key: "inbox", label: "Caixa de entrada", q: "in:inbox -in:trash -in:spam", icon: InboxIcon, labelId: "INBOX" },
+  { key: "unread", label: "Não lidas", q: "is:unread in:inbox", icon: Mail, labelId: "UNREAD" },
+  { key: "starred", label: "Com estrela", q: "is:starred", icon: Star, labelId: "STARRED" },
+  { key: "sent", label: "Enviadas", q: "in:sent", icon: Send, labelId: "SENT" },
+  { key: "spam", label: "Spam", q: "in:spam", icon: AlertOctagon, labelId: "SPAM" },
+  { key: "trash", label: "Lixeira", q: "in:trash", icon: Trash2, labelId: "TRASH" },
 ];
 
+const SIGNATURE_KEY = "natleva.inbox.signature";
+
+// ---------- Helpers ----------
 function parseFromName(raw: string): { name: string; email: string } {
   if (!raw) return { name: "", email: "" };
   const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
@@ -70,8 +102,17 @@ function parseFromName(raw: string): { name: string; email: string } {
 }
 
 function initials(name: string): string {
-  const parts = name.replace(/[<>"]/g, "").trim().split(/\s+/);
-  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+  const clean = name.replace(/[<>"]/g, "").trim();
+  if (!clean) return "?";
+  const parts = clean.split(/\s+/);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || clean[0].toUpperCase();
+}
+
+// Stable hashed pastel for avatars (works in both themes via tokens for ring; background uses HSL)
+function avatarHue(seed: string): number {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
+  return h % 360;
 }
 
 function fmtDate(iso: string, internal?: string): string {
@@ -83,11 +124,28 @@ function fmtDate(iso: string, internal?: string): string {
   const now = new Date();
   const sameDay = d.toDateString() === now.toDateString();
   if (sameDay) return d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+  const diffDays = (now.getTime() - d.getTime()) / 86400000;
+  if (diffDays < 7) return d.toLocaleDateString("pt-BR", { weekday: "short" });
   const sameYear = d.getFullYear() === now.getFullYear();
   return d.toLocaleDateString("pt-BR", {
     day: "2-digit",
     month: "short",
     ...(sameYear ? {} : { year: "numeric" }),
+  });
+}
+
+function fmtDateFull(iso: string, internal?: string): string {
+  let d: Date;
+  if (internal && /^\d+$/.test(internal)) d = new Date(Number(internal));
+  else if (iso) d = new Date(iso);
+  else return iso || "";
+  if (isNaN(d.getTime())) return iso || "";
+  return d.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -100,25 +158,77 @@ async function callGmail(action: string, params: Record<string, any> = {}) {
   return data.data;
 }
 
+function sanitizeEmailHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    USE_PROFILES: { html: true },
+    FORBID_TAGS: ["script", "style", "iframe", "object", "embed", "form", "input", "button", "meta", "link"],
+    FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "srcdoc"],
+    ADD_ATTR: ["target", "rel"],
+  });
+}
+
+function htmlToQuoted(html: string, text: string, from: string, date: string): string {
+  const header = `Em ${fmtDateFull(date)}, ${from} escreveu:`;
+  if (html) {
+    return `<br/><br/><blockquote style="margin:0 0 0 .8ex;border-left:2px solid #ccc;padding-left:1ex;color:#555">
+      <div style="font-size:12px;color:#777;margin-bottom:8px">${header}</div>
+      ${html}
+    </blockquote>`;
+  }
+  const quoted = (text || "")
+    .split("\n")
+    .map((l) => `> ${l}`)
+    .join("\n");
+  return `\n\n${header}\n${quoted}`;
+}
+
+// ---------- Avatar ----------
+function Avatar({ name, email, size = 36 }: { name: string; email: string; size?: number }) {
+  const seed = email || name || "?";
+  const hue = avatarHue(seed);
+  return (
+    <div
+      className="shrink-0 rounded-full flex items-center justify-center font-semibold text-white select-none"
+      style={{
+        width: size,
+        height: size,
+        fontSize: size * 0.4,
+        background: `linear-gradient(135deg, hsl(${hue} 70% 55%), hsl(${(hue + 40) % 360} 70% 45%))`,
+      }}
+      aria-hidden
+    >
+      {initials(name || email)}
+    </div>
+  );
+}
+
+// ---------- Main ----------
 export default function Inbox() {
   const [folder, setFolder] = useState<string>("inbox");
   const [search, setSearch] = useState("");
   const [searchQ, setSearchQ] = useState("");
   const [threads, setThreads] = useState<ThreadItem[]>([]);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const [loadingThreads, setLoadingThreads] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [thread, setThread] = useState<{ id: string; messages: ThreadMessage[] } | null>(null);
   const [loadingThread, setLoadingThread] = useState(false);
   const [profileEmail, setProfileEmail] = useState<string>("");
-  const [composeOpen, setComposeOpen] = useState(false);
-  const [replyOpen, setReplyOpen] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [composeState, setComposeState] = useState<ComposeState | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [foldersOpen, setFoldersOpen] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
+  const currentFolder = FOLDERS.find((f) => f.key === folder)!;
   const currentQuery = useMemo(() => {
-    const base = FOLDERS.find((f) => f.key === folder)?.q || "in:inbox";
+    const base = currentFolder.q;
     return searchQ ? `${searchQ} ${base}` : base;
-  }, [folder, searchQ]);
+  }, [currentFolder, searchQ]);
 
+  // ---- API loaders ----
   const loadProfile = useCallback(async () => {
     try {
       const p = await callGmail("profile");
@@ -128,12 +238,24 @@ export default function Inbox() {
     }
   }, []);
 
+  const loadCounts = useCallback(async () => {
+    try {
+      const r = await callGmail("counts");
+      const map: Record<string, number> = {};
+      (r.labels || []).forEach((l: any) => (map[l.id] = l.unread || 0));
+      setCounts(map);
+    } catch {
+      // silent
+    }
+  }, []);
+
   const loadThreads = useCallback(
     async (silent = false) => {
       if (!silent) setLoadingThreads(true);
       try {
         const r = await callGmail("list_threads", { q: currentQuery, maxResults: 30 });
         setThreads(r.threads || []);
+        setNextPageToken(r.nextPageToken || null);
       } catch (e: any) {
         if (!silent) toast.error("Erro ao carregar emails", { description: e.message });
       } finally {
@@ -143,405 +265,959 @@ export default function Inbox() {
     [currentQuery]
   );
 
-  const loadThread = useCallback(async (id: string) => {
-    setLoadingThread(true);
+  const loadMore = useCallback(async () => {
+    if (!nextPageToken || loadingMore) return;
+    setLoadingMore(true);
     try {
-      const r = await callGmail("get_thread", { threadId: id });
-      setThread(r);
-      // Mark as read if unread
-      const anyUnread = (r.messages || []).some((m: ThreadMessage) =>
-        (m.labelIds || []).includes("UNREAD")
-      );
-      if (anyUnread) {
-        callGmail("mark_read", { threadId: id }).then(() => {
-          setThreads((prev) =>
-            prev.map((t) =>
-              t.id === id
-                ? { ...t, unread: false, labels: t.labels.filter((l) => l !== "UNREAD") }
-                : t
-            )
-          );
-        });
-      }
+      const r = await callGmail("list_threads", {
+        q: currentQuery,
+        maxResults: 30,
+        pageToken: nextPageToken,
+      });
+      setThreads((prev) => [...prev, ...(r.threads || [])]);
+      setNextPageToken(r.nextPageToken || null);
     } catch (e: any) {
-      toast.error("Erro ao abrir conversa", { description: e.message });
+      toast.error("Erro ao carregar mais", { description: e.message });
     } finally {
-      setLoadingThread(false);
+      setLoadingMore(false);
     }
-  }, []);
+  }, [nextPageToken, loadingMore, currentQuery]);
+
+  const loadThread = useCallback(
+    async (id: string) => {
+      setLoadingThread(true);
+      try {
+        const r = await callGmail("get_thread", { threadId: id });
+        setThread(r);
+        const anyUnread = (r.messages || []).some((m: ThreadMessage) =>
+          (m.labelIds || []).includes("UNREAD")
+        );
+        if (anyUnread) {
+          callGmail("mark_read", { threadId: id })
+            .then(() => {
+              setThreads((prev) =>
+                prev.map((t) =>
+                  t.id === id ? { ...t, unread: false, labels: t.labels.filter((l) => l !== "UNREAD") } : t
+                )
+              );
+              loadCounts();
+            })
+            .catch(() => {});
+        }
+      } catch (e: any) {
+        toast.error("Erro ao abrir conversa", { description: e.message });
+      } finally {
+        setLoadingThread(false);
+      }
+    },
+    [loadCounts]
+  );
 
   useEffect(() => {
     loadProfile();
-  }, [loadProfile]);
+    loadCounts();
+  }, [loadProfile, loadCounts]);
 
   useEffect(() => {
     loadThreads();
+    setSelectedIds(new Set());
   }, [loadThreads, refreshTick]);
 
-  // Auto-refresh a cada 30s
   useEffect(() => {
-    const id = setInterval(() => loadThreads(true), 30000);
+    const id = setInterval(() => {
+      loadThreads(true);
+      loadCounts();
+    }, 30000);
     return () => clearInterval(id);
-  }, [loadThreads]);
+  }, [loadThreads, loadCounts]);
 
   useEffect(() => {
     if (selectedId) loadThread(selectedId);
     else setThread(null);
   }, [selectedId, loadThread]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+      if (e.key === "c") {
+        e.preventDefault();
+        setComposeState({ mode: "new" });
+      } else if (e.key === "/") {
+        e.preventDefault();
+        document.getElementById("inbox-search")?.focus();
+      } else if (e.key === "Escape" && selectedId) {
+        setSelectedId(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId]);
+
+  // ---- Actions ----
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     setSearchQ(search.trim());
     setSelectedId(null);
   };
 
+  const updateThreadLocal = (id: string, patch: Partial<ThreadItem>) => {
+    setThreads((prev) => prev.map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  };
+
+  const removeThreadLocal = (id: string) => {
+    setThreads((prev) => prev.filter((x) => x.id !== id));
+    if (selectedId === id) setSelectedId(null);
+  };
+
   const handleStar = async (t: ThreadItem) => {
     const next = !t.starred;
-    setThreads((prev) =>
-      prev.map((x) => (x.id === t.id ? { ...x, starred: next } : x))
-    );
+    updateThreadLocal(t.id, { starred: next });
     try {
       await callGmail("star", { threadId: t.id, starred: next });
     } catch (e: any) {
       toast.error("Não foi possível atualizar", { description: e.message });
-      setThreads((prev) =>
-        prev.map((x) => (x.id === t.id ? { ...x, starred: !next } : x))
-      );
+      updateThreadLocal(t.id, { starred: !next });
     }
   };
 
   const handleTrash = async (id: string) => {
+    removeThreadLocal(id);
     try {
       await callGmail("trash", { threadId: id });
-      setThreads((prev) => prev.filter((t) => t.id !== id));
-      if (selectedId === id) setSelectedId(null);
-      toast.success("Conversa movida pra lixeira");
+      toast.success("Movido pra lixeira");
+      loadCounts();
     } catch (e: any) {
       toast.error("Erro ao excluir", { description: e.message });
+      loadThreads();
     }
   };
 
+  const handleArchive = async (id: string) => {
+    removeThreadLocal(id);
+    try {
+      await callGmail("archive", { threadId: id });
+      toast.success("Arquivado");
+      loadCounts();
+    } catch (e: any) {
+      toast.error("Erro ao arquivar", { description: e.message });
+      loadThreads();
+    }
+  };
+
+  const handleSpam = async (id: string) => {
+    removeThreadLocal(id);
+    try {
+      await callGmail("mark_spam", { threadId: id });
+      toast.success("Marcado como spam");
+      loadCounts();
+    } catch (e: any) {
+      toast.error("Erro ao marcar spam", { description: e.message });
+      loadThreads();
+    }
+  };
+
+  const handleUnspam = async (id: string) => {
+    removeThreadLocal(id);
+    try {
+      await callGmail("unmark_spam", { threadId: id });
+      toast.success("Não é spam");
+      loadCounts();
+    } catch (e: any) {
+      toast.error("Erro", { description: e.message });
+      loadThreads();
+    }
+  };
+
+  const handleMarkUnread = async (id: string) => {
+    updateThreadLocal(id, { unread: true });
+    try {
+      await callGmail("mark_unread", { threadId: id });
+      setSelectedId(null);
+      loadCounts();
+    } catch (e: any) {
+      toast.error("Erro", { description: e.message });
+    }
+  };
+
+  // Bulk ops
+  const bulkApply = async (
+    op: "archive" | "trash" | "spam" | "read" | "unread"
+  ) => {
+    const ids = Array.from(selectedIds);
+    if (!ids.length) return;
+    const optimisticRemove = op === "archive" || op === "trash" || op === "spam";
+    if (optimisticRemove) setThreads((prev) => prev.filter((t) => !selectedIds.has(t.id)));
+    setSelectedIds(new Set());
+    try {
+      if (op === "trash") await callGmail("bulk_trash", { threadIds: ids });
+      else if (op === "archive")
+        await callGmail("bulk_modify", { threadIds: ids, removeLabelIds: ["INBOX"] });
+      else if (op === "spam")
+        await callGmail("bulk_modify", { threadIds: ids, addLabelIds: ["SPAM"], removeLabelIds: ["INBOX"] });
+      else if (op === "read") {
+        await callGmail("bulk_modify", { threadIds: ids, removeLabelIds: ["UNREAD"] });
+        setThreads((prev) => prev.map((t) => (ids.includes(t.id) ? { ...t, unread: false } : t)));
+      } else if (op === "unread") {
+        await callGmail("bulk_modify", { threadIds: ids, addLabelIds: ["UNREAD"] });
+        setThreads((prev) => prev.map((t) => (ids.includes(t.id) ? { ...t, unread: true } : t)));
+      }
+      loadCounts();
+      toast.success(`${ids.length} conversa(s) atualizada(s)`);
+    } catch (e: any) {
+      toast.error("Falha na operação em lote", { description: e.message });
+      loadThreads();
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === threads.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(threads.map((t) => t.id)));
+  };
+
+  // ---------- Render ----------
+  const FoldersNav = (
+    <nav className="space-y-1 p-2">
+      <Button
+        className="mb-2 w-full justify-start gap-2"
+        onClick={() => {
+          setComposeState({ mode: "new" });
+          setFoldersOpen(false);
+        }}
+      >
+        <PenSquare className="h-4 w-4" />
+        Novo email
+      </Button>
+      {FOLDERS.map((f) => {
+        const Icon = f.icon;
+        const unread = f.labelId ? counts[f.labelId] || 0 : 0;
+        const active = folder === f.key;
+        return (
+          <button
+            key={f.key}
+            onClick={() => {
+              setFolder(f.key);
+              setSelectedId(null);
+              setSelectedIds(new Set());
+              setFoldersOpen(false);
+            }}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+              active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
+            )}
+          >
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left truncate">{f.label}</span>
+            {unread > 0 && f.key !== "sent" && f.key !== "trash" && (
+              <span className={cn("text-xs font-semibold", active ? "text-primary" : "text-muted-foreground")}>
+                {unread > 99 ? "99+" : unread}
+              </span>
+            )}
+          </button>
+        );
+      })}
+      <DropdownMenuSeparator className="my-2" />
+      <button
+        onClick={() => {
+          setSettingsOpen(true);
+          setFoldersOpen(false);
+        }}
+        className="flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm hover:bg-accent"
+      >
+        <Settings className="h-4 w-4" />
+        Configurações
+      </button>
+    </nav>
+  );
+
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-background">
-      {/* Top bar */}
-      <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
-        <div className="flex items-center gap-2">
-          <InboxIcon className="h-5 w-5 text-primary" />
-          <h1 className="text-lg font-semibold">Caixa de entrada</h1>
-          {profileEmail && (
-            <Badge variant="secondary" className="ml-2 hidden sm:inline-flex">
-              {profileEmail}
-            </Badge>
-          )}
-        </div>
-        <form onSubmit={handleSearch} className="ml-auto flex flex-1 min-w-[200px] max-w-md items-center gap-2">
-          <div className="relative w-full">
-            <Search className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Pesquisar nos emails..."
-              className="pl-8"
-            />
-          </div>
-          <Button type="submit" variant="secondary" size="sm">
-            Buscar
-          </Button>
-        </form>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setRefreshTick((t) => t + 1)}
-          disabled={loadingThreads}
-        >
-          <RefreshCw className={cn("h-4 w-4", loadingThreads && "animate-spin")} />
-        </Button>
-        <Button size="sm" onClick={() => setComposeOpen(true)}>
-          <PenSquare className="mr-2 h-4 w-4" />
-          Novo email
-        </Button>
-      </div>
+    <TooltipProvider delayDuration={400}>
+      <div className="flex h-[calc(100dvh-4rem)] flex-col bg-background overflow-hidden">
+        {/* Top bar */}
+        <header className="flex items-center gap-2 border-b px-3 py-2 sm:px-4 sm:py-3 shrink-0">
+          <Sheet open={foldersOpen} onOpenChange={setFoldersOpen}>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 p-0">
+              <div className="px-4 py-3 border-b flex items-center gap-2">
+                <InboxIcon className="h-5 w-5 text-primary" />
+                <span className="font-semibold">Caixa de entrada</span>
+              </div>
+              {FoldersNav}
+            </SheetContent>
+          </Sheet>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Folders */}
-        <aside className="hidden w-48 shrink-0 border-r bg-muted/30 p-2 md:block">
-          <nav className="space-y-1">
-            {FOLDERS.map((f) => {
-              const Icon = f.icon;
-              return (
+          <div className="hidden sm:flex items-center gap-2">
+            <InboxIcon className="h-5 w-5 text-primary" />
+            <h1 className="text-base sm:text-lg font-semibold">Caixa de entrada</h1>
+          </div>
+
+          <form onSubmit={handleSearch} className="ml-auto flex flex-1 min-w-0 max-w-2xl items-center gap-2">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="inbox-search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Pesquisar emails"
+                className="pl-9 rounded-full bg-muted/40 border-transparent focus-visible:bg-background"
+              />
+              {searchQ && (
                 <button
-                  key={f.key}
+                  type="button"
                   onClick={() => {
-                    setFolder(f.key);
-                    setSelectedId(null);
+                    setSearch("");
+                    setSearchQ("");
                   }}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
-                    folder === f.key
-                      ? "bg-primary text-primary-foreground"
-                      : "hover:bg-accent text-foreground"
-                  )}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
                 >
-                  <Icon className="h-4 w-4" />
-                  {f.label}
+                  <X className="h-4 w-4" />
                 </button>
-              );
-            })}
-          </nav>
-        </aside>
+              )}
+            </div>
+          </form>
 
-        {/* Mobile folder tabs */}
-        <div className="border-b p-2 md:hidden w-full absolute" style={{ display: "none" }} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setRefreshTick((t) => t + 1);
+                  loadCounts();
+                }}
+                disabled={loadingThreads}
+              >
+                <RefreshCw className={cn("h-4 w-4", loadingThreads && "animate-spin")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Atualizar</TooltipContent>
+          </Tooltip>
 
-        {/* Threads list */}
-        <div
-          className={cn(
-            "flex w-full flex-col border-r md:w-96",
-            selectedId && "hidden md:flex"
+          {profileEmail && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="hidden sm:flex h-9 w-9 items-center justify-center rounded-full bg-primary/15 text-primary text-xs font-semibold cursor-default">
+                  {initials(profileEmail)}
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>{profileEmail}</TooltipContent>
+            </Tooltip>
           )}
-        >
-          <div className="md:hidden border-b p-2">
-            <Tabs value={folder} onValueChange={(v) => { setFolder(v); setSelectedId(null); }}>
-              <TabsList className="w-full overflow-x-auto">
-                {FOLDERS.map((f) => (
-                  <TabsTrigger key={f.key} value={f.key} className="text-xs">
-                    {f.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </div>
+        </header>
 
-          <ScrollArea className="flex-1">
-            {loadingThreads && threads.length === 0 ? (
-              <div className="flex items-center justify-center p-8 text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
-              </div>
-            ) : threads.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">
-                Nenhum email encontrado.
-              </div>
-            ) : (
-              <ul className="divide-y">
-                {threads.map((t) => {
-                  const { name } = parseFromName(t.from);
-                  return (
-                    <li key={t.id}>
-                      <button
-                        onClick={() => setSelectedId(t.id)}
-                        className={cn(
-                          "flex w-full gap-3 px-3 py-3 text-left transition-colors hover:bg-accent",
-                          selectedId === t.id && "bg-accent",
-                          t.unread && "bg-primary/5"
-                        )}
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                          {initials(name)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span
+        <div className="flex flex-1 min-h-0 overflow-hidden">
+          {/* Folders sidebar (desktop) */}
+          <aside className="hidden md:flex md:w-60 lg:w-64 shrink-0 border-r flex-col overflow-y-auto">
+            {FoldersNav}
+          </aside>
+
+          {/* Threads list */}
+          <section
+            className={cn(
+              "flex w-full flex-col border-r min-w-0",
+              "md:w-[380px] lg:w-[420px] md:shrink-0",
+              selectedId && "hidden md:flex"
+            )}
+          >
+            {/* List toolbar */}
+            <div className="flex items-center gap-1 border-b px-2 py-2 sm:px-3 shrink-0">
+              <Checkbox
+                checked={threads.length > 0 && selectedIds.size === threads.length}
+                onCheckedChange={toggleSelectAll}
+                aria-label="Selecionar todas"
+                className="mx-2"
+              />
+              {selectedIds.size > 0 ? (
+                <>
+                  <span className="text-xs text-muted-foreground mr-2">{selectedIds.size} selecionado(s)</span>
+                  {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => bulkApply("archive")}>
+                          <Archive className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Arquivar</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button variant="ghost" size="icon" onClick={() => bulkApply("trash")}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Lixeira</TooltipContent>
+                  </Tooltip>
+                  {folder !== "spam" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" onClick={() => bulkApply("spam")}>
+                          <ShieldAlert className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Marcar como spam</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onClick={() => bulkApply("read")}>
+                        <MailOpen className="mr-2 h-4 w-4" /> Marcar como lida
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => bulkApply("unread")}>
+                        <Mail className="mr-2 h-4 w-4" /> Marcar como não lida
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </>
+              ) : (
+                <span className="text-xs text-muted-foreground ml-1 truncate">
+                  {currentFolder.label}
+                  {searchQ && ` · "${searchQ}"`}
+                </span>
+              )}
+            </div>
+
+            {/* List body */}
+            <div className="flex-1 overflow-y-auto">
+              {loadingThreads && threads.length === 0 ? (
+                <div className="flex items-center justify-center p-8 text-muted-foreground">
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Carregando...
+                </div>
+              ) : threads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center text-sm text-muted-foreground">
+                  <InboxIcon className="mb-3 h-10 w-10 opacity-30" />
+                  <p>Nenhum email por aqui</p>
+                </div>
+              ) : (
+                <ul className="divide-y">
+                  {threads.map((t) => {
+                    const { name, email } = parseFromName(t.from);
+                    const isSelected = selectedIds.has(t.id);
+                    const isOpen = selectedId === t.id;
+                    return (
+                      <li key={t.id} className="group relative">
+                        <div
+                          className={cn(
+                            "flex gap-2 px-2 py-2 sm:px-3 transition-colors cursor-pointer",
+                            "hover:bg-accent/60",
+                            isOpen && "bg-accent",
+                            t.unread && !isOpen && "bg-primary/[0.04]"
+                          )}
+                          onClick={() => setSelectedId(t.id)}
+                        >
+                          <div className="flex flex-col items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(v) => {
+                                setSelectedIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (v) next.add(t.id);
+                                  else next.delete(t.id);
+                                  return next;
+                                });
+                              }}
+                              aria-label="Selecionar"
+                            />
+                            <button
+                              onClick={() => handleStar(t)}
+                              className="text-muted-foreground hover:text-yellow-500 transition-colors"
+                              aria-label={t.starred ? "Remover estrela" : "Adicionar estrela"}
+                            >
+                              <Star className={cn("h-4 w-4", t.starred && "fill-yellow-400 text-yellow-400")} />
+                            </button>
+                          </div>
+
+                          <Avatar name={name} email={email} size={36} />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <span
+                                className={cn(
+                                  "truncate text-sm flex-1 min-w-0",
+                                  t.unread ? "font-semibold text-foreground" : "text-foreground/90"
+                                )}
+                              >
+                                {name || email}
+                                {t.messageCount > 1 && (
+                                  <span className="ml-1 text-xs text-muted-foreground">({t.messageCount})</span>
+                                )}
+                              </span>
+                              <span
+                                className={cn(
+                                  "shrink-0 text-xs",
+                                  t.unread ? "text-foreground font-medium" : "text-muted-foreground"
+                                )}
+                              >
+                                {fmtDate(t.date, t.internalDate)}
+                              </span>
+                            </div>
+                            <div
                               className={cn(
-                                "truncate text-sm",
-                                t.unread ? "font-semibold" : "font-medium"
+                                "truncate text-sm mt-0.5",
+                                t.unread ? "text-foreground font-medium" : "text-muted-foreground"
                               )}
                             >
-                              {name}
-                            </span>
-                            {t.messageCount > 1 && (
-                              <span className="text-xs text-muted-foreground">
-                                ({t.messageCount})
-                              </span>
-                            )}
-                            <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                              {fmtDate(t.date, t.internalDate)}
-                            </span>
-                          </div>
-                          <div
-                            className={cn(
-                              "truncate text-sm",
-                              t.unread ? "font-medium text-foreground" : "text-muted-foreground"
-                            )}
-                          >
-                            {t.subject || "(sem assunto)"}
-                          </div>
-                          <div className="mt-0.5 truncate text-xs text-muted-foreground">
-                            {t.snippet}
+                              {t.subject || "(sem assunto)"}
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground/80 mt-0.5">{t.snippet}</div>
                           </div>
                         </div>
-                      </button>
+
+                        {/* Hover actions (desktop) */}
+                        <div
+                          className="hidden md:flex absolute right-2 top-1/2 -translate-y-1/2 gap-0.5 opacity-0 group-hover:opacity-100 bg-accent rounded-md shadow-sm border"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleArchive(t.id)}>
+                                  <Archive className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Arquivar</TooltipContent>
+                            </Tooltip>
+                          )}
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleTrash(t.id)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Lixeira</TooltipContent>
+                          </Tooltip>
+                          {folder !== "spam" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleSpam(t.id)}>
+                                  <ShieldAlert className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Spam</TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      </li>
+                    );
+                  })}
+                  {nextPageToken && (
+                    <li className="p-3 text-center">
+                      <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+                        {loadingMore && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                        Carregar mais
+                      </Button>
                     </li>
-                  );
-                })}
-              </ul>
+                  )}
+                </ul>
+              )}
+            </div>
+          </section>
+
+          {/* Reading pane */}
+          <section className={cn("flex-1 flex-col min-w-0", selectedId ? "flex" : "hidden md:flex")}>
+            {!selectedId ? (
+              <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground p-8 text-center">
+                <MailOpen className="mb-3 h-14 w-14 opacity-30" />
+                <p className="text-sm">Selecione um email pra visualizar</p>
+                <p className="text-xs text-muted-foreground/70 mt-1">Atalhos: c novo · / buscar · Esc voltar</p>
+              </div>
+            ) : loadingThread || !thread ? (
+              <div className="flex flex-1 items-center justify-center">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <ThreadView
+                thread={thread}
+                folder={folder}
+                profileEmail={profileEmail}
+                starred={threads.find((x) => x.id === thread.id)?.starred || false}
+                onBack={() => setSelectedId(null)}
+                onReply={(mode) => {
+                  const last = thread.messages[thread.messages.length - 1];
+                  const { email: fromEmail, name: fromName } = parseFromName(last.from);
+                  if (mode === "reply") {
+                    setComposeState({
+                      mode: "reply",
+                      threadId: thread.id,
+                      to: fromEmail,
+                      subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
+                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                    });
+                  } else if (mode === "replyAll") {
+                    const toList = [fromEmail, ...(last.to ? last.to.split(",") : [])]
+                      .map((s) => s.trim())
+                      .filter((s) => s && !s.includes(profileEmail));
+                    setComposeState({
+                      mode: "reply",
+                      threadId: thread.id,
+                      to: Array.from(new Set(toList)).join(", "),
+                      cc: last.cc || "",
+                      subject: last.subject.toLowerCase().startsWith("re:") ? last.subject : `Re: ${last.subject}`,
+                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                    });
+                  } else {
+                    setComposeState({
+                      mode: "new",
+                      subject: last.subject.toLowerCase().startsWith("fwd:") ? last.subject : `Fwd: ${last.subject}`,
+                      quoted: htmlToQuoted(last.html, last.text, fromName || fromEmail, last.date),
+                    });
+                  }
+                }}
+                onTrash={() => handleTrash(thread.id)}
+                onArchive={() => handleArchive(thread.id)}
+                onSpam={() => handleSpam(thread.id)}
+                onUnspam={() => handleUnspam(thread.id)}
+                onMarkUnread={() => handleMarkUnread(thread.id)}
+                onStar={() => {
+                  const t = threads.find((x) => x.id === thread.id);
+                  if (t) handleStar(t);
+                }}
+              />
             )}
-          </ScrollArea>
+          </section>
         </div>
 
-        {/* Reading pane */}
-        <div className={cn("flex-1 flex flex-col", !selectedId && "hidden md:flex")}>
-          {!selectedId ? (
-            <div className="flex flex-1 flex-col items-center justify-center text-muted-foreground">
-              <MailOpen className="mb-3 h-12 w-12 opacity-40" />
-              <p>Selecione um email pra visualizar</p>
-            </div>
-          ) : loadingThread || !thread ? (
-            <div className="flex flex-1 items-center justify-center">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <ThreadView
-              thread={thread}
-              onBack={() => setSelectedId(null)}
-              onReply={() => setReplyOpen(true)}
-              onTrash={() => handleTrash(thread.id)}
-              onStar={() => {
-                const t = threads.find((x) => x.id === thread.id);
-                if (t) handleStar(t);
-              }}
-              starred={threads.find((x) => x.id === thread.id)?.starred || false}
-            />
-          )}
-        </div>
+        {composeState && (
+          <ComposeDialog
+            state={composeState}
+            onOpenChange={(open) => !open && setComposeState(null)}
+            onSent={() => {
+              setComposeState(null);
+              if (selectedId) loadThread(selectedId);
+              setRefreshTick((t) => t + 1);
+              loadCounts();
+            }}
+          />
+        )}
+
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} profileEmail={profileEmail} />
       </div>
-
-      <ComposeDialog
-        open={composeOpen}
-        onOpenChange={setComposeOpen}
-        onSent={() => {
-          setComposeOpen(false);
-          setRefreshTick((t) => t + 1);
-        }}
-      />
-
-      {thread && (
-        <ReplyDialog
-          open={replyOpen}
-          onOpenChange={setReplyOpen}
-          thread={thread}
-          onSent={() => {
-            setReplyOpen(false);
-            loadThread(thread.id);
-            setRefreshTick((t) => t + 1);
-          }}
-        />
-      )}
-    </div>
+    </TooltipProvider>
   );
 }
 
+// ---------- Thread view ----------
 function ThreadView({
   thread,
+  folder,
+  profileEmail,
+  starred,
   onBack,
   onReply,
   onTrash,
+  onArchive,
+  onSpam,
+  onUnspam,
+  onMarkUnread,
   onStar,
-  starred,
 }: {
   thread: { id: string; messages: ThreadMessage[] };
-  onBack: () => void;
-  onReply: () => void;
-  onTrash: () => void;
-  onStar: () => void;
+  folder: string;
+  profileEmail: string;
   starred: boolean;
+  onBack: () => void;
+  onReply: (mode: "reply" | "replyAll" | "forward") => void;
+  onTrash: () => void;
+  onArchive: () => void;
+  onSpam: () => void;
+  onUnspam: () => void;
+  onMarkUnread: () => void;
+  onStar: () => void;
 }) {
   const subject = thread.messages[0]?.subject || "(sem assunto)";
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set([thread.messages[thread.messages.length - 1]?.id].filter(Boolean))
+  );
+
+  const toggleExpand = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b p-3">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack}>
+    <div className="flex h-full flex-col min-h-0">
+      {/* Reader toolbar */}
+      <div className="flex items-center gap-1 border-b px-2 py-2 sm:px-3 shrink-0">
+        <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack} aria-label="Voltar">
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h2 className="flex-1 truncate text-base font-semibold">{subject}</h2>
-        <Button variant="ghost" size="icon" onClick={onStar} title="Estrela">
-          <Star className={cn("h-4 w-4", starred && "fill-yellow-400 text-yellow-400")} />
-        </Button>
-        <Button variant="ghost" size="icon" onClick={onTrash} title="Mover pra lixeira">
-          <Trash2 className="h-4 w-4" />
-        </Button>
-        <Button size="sm" onClick={onReply}>
-          <Reply className="mr-2 h-4 w-4" /> Responder
-        </Button>
+        {folder !== "trash" && folder !== "sent" && folder !== "spam" && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onArchive}>
+                <Archive className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Arquivar</TooltipContent>
+          </Tooltip>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onTrash}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Lixeira</TooltipContent>
+        </Tooltip>
+        {folder === "spam" ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onUnspam}>
+                <ShieldAlert className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Não é spam</TooltipContent>
+          </Tooltip>
+        ) : (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={onSpam}>
+                <ShieldAlert className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Spam</TooltipContent>
+          </Tooltip>
+        )}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onMarkUnread}>
+              <Mail className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Marcar não lida</TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button variant="ghost" size="icon" onClick={onStar}>
+              <Star className={cn("h-4 w-4", starred && "fill-yellow-400 text-yellow-400")} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Estrela</TooltipContent>
+        </Tooltip>
+        <div className="ml-auto" />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onReply("forward")}>
+              <Forward className="mr-2 h-4 w-4" /> Encaminhar
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => onReply("replyAll")}>
+              <ReplyAll className="mr-2 h-4 w-4" /> Responder a todos
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="space-y-4 p-4">
-          {thread.messages.map((m) => {
+
+      {/* Subject header */}
+      <div className="px-4 pt-4 pb-2 shrink-0">
+        <h2 className="text-lg sm:text-xl font-semibold break-words">{subject}</h2>
+      </div>
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-2 sm:px-4 pb-32">
+        <div className="space-y-3 max-w-4xl mx-auto">
+          {thread.messages.map((m, idx) => {
             const { name, email } = parseFromName(m.from);
+            const isLast = idx === thread.messages.length - 1;
+            const isExpanded = expanded.has(m.id) || isLast;
             return (
-              <Card key={m.id} className="p-4">
-                <div className="mb-3 flex flex-wrap items-start gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                    {initials(name)}
-                  </div>
+              <article
+                key={m.id}
+                className="rounded-xl border bg-card shadow-sm overflow-hidden"
+              >
+                <header
+                  className="flex items-start gap-3 p-3 sm:p-4 cursor-pointer"
+                  onClick={() => !isLast && toggleExpand(m.id)}
+                >
+                  <Avatar name={name} email={email} size={40} />
                   <div className="min-w-0 flex-1">
-                    <div className="text-sm font-semibold">{name}</div>
-                    <div className="truncate text-xs text-muted-foreground">{email}</div>
-                    <div className="truncate text-xs text-muted-foreground">
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      <span className="text-sm font-semibold text-foreground">{name || email}</span>
+                      <span className="text-xs text-muted-foreground truncate">&lt;{email}&gt;</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground truncate mt-0.5">
                       Para: {m.to}
                       {m.cc && ` · Cc: ${m.cc}`}
                     </div>
+                    {!isExpanded && (
+                      <div className="text-xs text-muted-foreground truncate mt-1 italic">{m.snippet}</div>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">{fmtDate(m.date)}</div>
-                </div>
-                {m.html ? (
-                  <div
-                    className="prose prose-sm max-w-none dark:prose-invert [&_a]:text-primary"
-                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(m.html) }}
-                  />
-                ) : (
-                  <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground">
-                    {m.text || m.snippet || ""}
-                  </pre>
+                  <div className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                    {fmtDateFull(m.date)}
+                  </div>
+                </header>
+                {isExpanded && (
+                  <div className="px-3 sm:px-4 pb-4 border-t pt-3">
+                    {m.html ? (
+                      <EmailHtmlFrame html={m.html} />
+                    ) : (
+                      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground leading-relaxed">
+                        {m.text || m.snippet || ""}
+                      </pre>
+                    )}
+                  </div>
                 )}
-              </Card>
+              </article>
             );
           })}
+
+          {/* Reply quick actions */}
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button variant="outline" onClick={() => onReply("reply")} className="rounded-full">
+              <Reply className="mr-2 h-4 w-4" /> Responder
+            </Button>
+            <Button variant="outline" onClick={() => onReply("replyAll")} className="rounded-full">
+              <ReplyAll className="mr-2 h-4 w-4" /> Responder a todos
+            </Button>
+            <Button variant="outline" onClick={() => onReply("forward")} className="rounded-full">
+              <Forward className="mr-2 h-4 w-4" /> Encaminhar
+            </Button>
+          </div>
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }
 
-function sanitizeHtml(html: string): string {
-  // Strip script/style tags and inline event handlers
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/ on\w+="[^"]*"/gi, "")
-    .replace(/ on\w+='[^']*'/gi, "");
+// ---------- Sandbox iframe for HTML emails ----------
+function EmailHtmlFrame({ html }: { html: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const [height, setHeight] = useState(200);
+
+  useEffect(() => {
+    const clean = sanitizeEmailHtml(html);
+    const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank">
+      <style>
+        html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.6;color:#111;word-wrap:break-word;overflow-wrap:break-word}
+        a{color:#2563eb;text-decoration:underline}
+        img{max-width:100%;height:auto;border-radius:6px}
+        blockquote{border-left:3px solid #e5e7eb;margin:8px 0;padding:4px 12px;color:#555}
+        table{max-width:100%}
+        pre{white-space:pre-wrap;word-wrap:break-word}
+        @media (prefers-color-scheme: dark){
+          html,body{color:#e5e7eb;background:transparent}
+          a{color:#60a5fa}
+          blockquote{border-color:#374151;color:#9ca3af}
+        }
+      </style>
+    </head><body>${clean}</body></html>`;
+    const frame = ref.current;
+    if (!frame) return;
+    frame.srcdoc = doc;
+    const onLoad = () => {
+      try {
+        const body = frame.contentDocument?.body;
+        if (body) {
+          // Make all links open in new tab safely
+          body.querySelectorAll("a").forEach((a) => {
+            a.setAttribute("target", "_blank");
+            a.setAttribute("rel", "noopener noreferrer");
+          });
+          const h = Math.min(body.scrollHeight + 16, 4000);
+          setHeight(h);
+        }
+      } catch {}
+    };
+    frame.addEventListener("load", onLoad);
+    return () => frame.removeEventListener("load", onLoad);
+  }, [html]);
+
+  return (
+    <iframe
+      ref={ref}
+      sandbox="allow-popups allow-popups-to-escape-sandbox"
+      className="w-full bg-transparent"
+      style={{ height, border: 0 }}
+      title="Email content"
+    />
+  );
+}
+
+// ---------- Compose dialog ----------
+interface ComposeState {
+  mode: "new" | "reply";
+  threadId?: string;
+  to?: string;
+  cc?: string;
+  bcc?: string;
+  subject?: string;
+  quoted?: string;
+}
+
+function getSignature(): string {
+  try {
+    return localStorage.getItem(SIGNATURE_KEY) || "";
+  } catch {
+    return "";
+  }
 }
 
 function ComposeDialog({
-  open,
+  state,
   onOpenChange,
   onSent,
 }: {
-  open: boolean;
+  state: ComposeState;
   onOpenChange: (v: boolean) => void;
   onSent: () => void;
 }) {
-  const [to, setTo] = useState("");
-  const [cc, setCc] = useState("");
-  const [subject, setSubject] = useState("");
+  const [to, setTo] = useState(state.to || "");
+  const [cc, setCc] = useState(state.cc || "");
+  const [bcc, setBcc] = useState(state.bcc || "");
+  const [showCc, setShowCc] = useState(!!state.cc);
+  const [showBcc, setShowBcc] = useState(!!state.bcc);
+  const [subject, setSubject] = useState(state.subject || "");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
-
-  const reset = () => {
-    setTo("");
-    setCc("");
-    setSubject("");
-    setBody("");
-  };
-
-  useEffect(() => {
-    if (!open) reset();
-  }, [open]);
+  const signature = getSignature();
 
   const send = async () => {
     if (!to.trim()) return toast.error("Informe o destinatário");
     setSending(true);
     try {
-      await callGmail("send", { to, cc: cc || undefined, subject, body });
+      const sigBlock = signature
+        ? `<br/><br/><div style="color:#666;font-size:13px;border-top:1px solid #eee;padding-top:8px">${signature.replace(/\n/g, "<br/>")}</div>`
+        : "";
+      const htmlBody = `<div>${body.replace(/\n/g, "<br/>")}</div>${sigBlock}${state.quoted || ""}`;
+      if (state.mode === "reply" && state.threadId) {
+        await callGmail("reply", {
+          threadId: state.threadId,
+          to,
+          cc: cc || undefined,
+          bcc: bcc || undefined,
+          body: htmlBody,
+          html: true,
+        });
+      } else {
+        await callGmail("send", {
+          to,
+          cc: cc || undefined,
+          bcc: bcc || undefined,
+          subject,
+          body: htmlBody,
+          html: true,
+        });
+      }
       toast.success("Email enviado");
       onSent();
     } catch (e: any) {
@@ -552,29 +1228,110 @@ function ComposeDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Novo email</DialogTitle>
+    <Dialog open onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl p-0 gap-0 h-[90dvh] sm:h-auto sm:max-h-[85dvh] flex flex-col">
+        <DialogHeader className="px-4 py-3 border-b shrink-0">
+          <DialogTitle className="text-base">
+            {state.mode === "reply" ? "Responder" : "Nova mensagem"}
+          </DialogTitle>
+          <DialogDescription className="sr-only">Compositor de email</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3">
-          <Input placeholder="Para" value={to} onChange={(e) => setTo(e.target.value)} />
-          <Input placeholder="Cc (opcional)" value={cc} onChange={(e) => setCc(e.target.value)} />
-          <Input placeholder="Assunto" value={subject} onChange={(e) => setSubject(e.target.value)} />
+
+        <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2 min-h-0">
+          <div className="flex items-center gap-2 border-b pb-2">
+            <label className="text-xs text-muted-foreground w-12 shrink-0">Para</label>
+            <Input
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              placeholder="email@destinatario.com"
+              className="border-0 shadow-none focus-visible:ring-0 px-0 h-8"
+              autoFocus={state.mode !== "reply"}
+            />
+            <div className="flex gap-1">
+              {!showCc && (
+                <button type="button" onClick={() => setShowCc(true)} className="text-xs text-muted-foreground hover:text-foreground">
+                  Cc
+                </button>
+              )}
+              {!showBcc && (
+                <button type="button" onClick={() => setShowBcc(true)} className="text-xs text-muted-foreground hover:text-foreground">
+                  Cco
+                </button>
+              )}
+            </div>
+          </div>
+
+          {showCc && (
+            <div className="flex items-center gap-2 border-b pb-2">
+              <label className="text-xs text-muted-foreground w-12 shrink-0">Cc</label>
+              <Input
+                value={cc}
+                onChange={(e) => setCc(e.target.value)}
+                className="border-0 shadow-none focus-visible:ring-0 px-0 h-8"
+              />
+            </div>
+          )}
+
+          {showBcc && (
+            <div className="flex items-center gap-2 border-b pb-2">
+              <label className="text-xs text-muted-foreground w-12 shrink-0">Cco</label>
+              <Input
+                value={bcc}
+                onChange={(e) => setBcc(e.target.value)}
+                className="border-0 shadow-none focus-visible:ring-0 px-0 h-8"
+              />
+            </div>
+          )}
+
+          {state.mode !== "reply" && (
+            <div className="flex items-center gap-2 border-b pb-2">
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Assunto"
+                className="border-0 shadow-none focus-visible:ring-0 px-0 h-8 font-medium"
+              />
+            </div>
+          )}
+
           <Textarea
-            placeholder="Escreva sua mensagem..."
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            rows={12}
+            placeholder="Escreva sua mensagem..."
+            className="min-h-[280px] border-0 shadow-none focus-visible:ring-0 px-0 resize-none text-sm leading-relaxed"
+            autoFocus={state.mode === "reply"}
           />
+
+          {signature && (
+            <div className="text-xs text-muted-foreground border-t pt-2 whitespace-pre-wrap">
+              {signature}
+            </div>
+          )}
+
+          {state.quoted && (
+            <details className="text-xs text-muted-foreground">
+              <summary className="cursor-pointer flex items-center gap-1 hover:text-foreground">
+                <ChevronDown className="h-3 w-3" /> Mostrar conversa anterior
+              </summary>
+              <div
+                className="mt-2 pl-3 border-l-2 border-border text-xs"
+                dangerouslySetInnerHTML={{ __html: sanitizeEmailHtml(state.quoted) }}
+              />
+            </details>
+          )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={send} disabled={sending}>
+
+        <DialogFooter className="px-4 py-3 border-t shrink-0 sm:justify-start gap-2">
+          <Button onClick={send} disabled={sending} className="rounded-full px-6">
             {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
             Enviar
+          </Button>
+          <Button variant="ghost" size="icon" disabled title="Anexos em breve">
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <div className="ml-auto" />
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancelar
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -582,71 +1339,61 @@ function ComposeDialog({
   );
 }
 
-function ReplyDialog({
+// ---------- Settings dialog (signature) ----------
+function SettingsDialog({
   open,
   onOpenChange,
-  thread,
-  onSent,
+  profileEmail,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  thread: { id: string; messages: ThreadMessage[] };
-  onSent: () => void;
+  profileEmail: string;
 }) {
-  const lastMsg = thread.messages[thread.messages.length - 1];
-  const { email: replyTo } = parseFromName(lastMsg?.from || "");
-  const [to, setTo] = useState(replyTo);
-  const [body, setBody] = useState("");
-  const [sending, setSending] = useState(false);
+  const [signature, setSignature] = useState("");
 
   useEffect(() => {
-    if (open) {
-      setTo(replyTo);
-      setBody("");
-    }
-  }, [open, replyTo]);
+    if (open) setSignature(getSignature());
+  }, [open]);
 
-  const send = async () => {
-    if (!to.trim()) return toast.error("Informe o destinatário");
-    setSending(true);
+  const save = () => {
     try {
-      await callGmail("reply", { threadId: thread.id, to, body });
-      toast.success("Resposta enviada");
-      onSent();
+      localStorage.setItem(SIGNATURE_KEY, signature);
+      toast.success("Assinatura salva");
+      onOpenChange(false);
     } catch (e: any) {
-      toast.error("Erro ao enviar", { description: e.message });
-    } finally {
-      setSending(false);
+      toast.error("Erro ao salvar", { description: e.message });
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Responder</DialogTitle>
+          <DialogTitle>Configurações</DialogTitle>
+          <DialogDescription>
+            Conta conectada: <strong>{profileEmail || "—"}</strong>
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <Input placeholder="Para" value={to} onChange={(e) => setTo(e.target.value)} />
-          <div className="text-xs text-muted-foreground">
-            Assunto: Re: {lastMsg?.subject || ""}
+          <div>
+            <label className="text-sm font-medium mb-1.5 block">Assinatura</label>
+            <Textarea
+              value={signature}
+              onChange={(e) => setSignature(e.target.value)}
+              placeholder={"Ex.:\nNathalia\nNatLeva Wings\ncontato@natleva.com"}
+              rows={8}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-1.5">
+              Anexada automaticamente em todas as mensagens enviadas daqui.
+            </p>
           </div>
-          <Textarea
-            placeholder="Escreva sua resposta..."
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={10}
-            autoFocus
-          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={send} disabled={sending}>
-            {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-            Enviar
-          </Button>
+          <Button onClick={save}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
