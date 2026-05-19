@@ -514,12 +514,87 @@ export default function Leads() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5">
         <Kpi icon={Users} label="Total de leads" value={totalLeads.toLocaleString("pt-BR")} />
         <Kpi icon={Wifi} label="Online agora" value={onlineNow.toLocaleString("pt-BR")} tone={onlineNow > 0 ? "live" : undefined} />
         <Kpi icon={TrendingUp} label="Leads quentes" value={hotLeads.toLocaleString("pt-BR")} hint="clicaram CTA ou WhatsApp" tone={hotLeads > 0 ? "hot" : undefined} />
         <Kpi icon={FileText} label="Viram proposta" value={propostaLeads.toLocaleString("pt-BR")} hint="propostas personalizadas" />
+        <Kpi icon={DollarSign} label="Pipeline" value={BRL(pipelineValue)} hint="valor total visualizado" tone="value" />
+        <Kpi icon={Flame} label="Lucro potencial" value={BRL(profitPotential)} hint="estimativa com margem real" tone="profit" />
+        <Kpi icon={TrendingUp} label="Ticket médio" value={BRL(avgTicket)} hint="por lead" />
       </div>
+
+      {/* Top leads */}
+      {ranked.length > 0 && (
+        <Card className="p-4 space-y-3 border-amber-500/30 bg-gradient-to-br from-amber-500/[0.04] to-transparent">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <h2 className="text-sm font-bold text-foreground">Melhores leads agora</h2>
+              <Badge className="text-[9px] border-0 bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                top {ranked.length}
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground hidden sm:block">
+              ranking por lucro potencial + engajamento
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-2">
+            {ranked.map((r, idx) => {
+              const l = r.lead;
+              const o = originLabel(l);
+              const top = l.items.find((it) => it.value === l.topValue) || l.items[0];
+              return (
+                <button
+                  key={l.key}
+                  type="button"
+                  onClick={() => setSelected(l)}
+                  className="text-left p-3 rounded-xl border border-border/40 bg-card hover:border-amber-500/40 hover:shadow-sm transition-all space-y-1.5"
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      {idx === 0 ? (
+                        <Crown className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                      ) : (
+                        <span className="text-[10px] font-bold text-muted-foreground tabular-nums w-3.5 text-center">
+                          {idx + 1}
+                        </span>
+                      )}
+                      <p className="text-[12px] font-semibold text-foreground truncate">
+                        {l.name || l.email || "Sem nome"}
+                      </p>
+                    </div>
+                    <OriginBadge tone={o.tone} label={o.label} />
+                  </div>
+                  <p className="text-[10px] text-muted-foreground truncate">
+                    {top?.title || "·"}
+                  </p>
+                  <div className="flex items-end justify-between gap-2 pt-1">
+                    <div className="min-w-0">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Lucro potencial</p>
+                      <p className="text-[13px] font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                        {BRL(l.profitPotential)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] text-muted-foreground uppercase tracking-wider">Pacote</p>
+                      <p className="text-[11px] font-semibold text-foreground tabular-nums">
+                        {l.totalValue > 0 ? BRL(l.totalValue) : "·"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-border/30 text-[9.5px] text-muted-foreground">
+                    {l.ctaCount > 0 && <span className="text-accent font-semibold">{l.ctaCount} CTA</span>}
+                    {l.whatsappCount > 0 && <span className="text-emerald-600 font-semibold">{l.whatsappCount} WA</span>}
+                    <span className="ml-auto">{formatTime(l.totalSeconds)}</span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
 
       {/* Filtros */}
       <Card className="p-3 flex flex-wrap items-center gap-2">
