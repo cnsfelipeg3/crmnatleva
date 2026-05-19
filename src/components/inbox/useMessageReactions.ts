@@ -137,7 +137,7 @@ export function useMessageReactions(messageIds: string[], conversationKey: strin
     }
 
     // Send to WhatsApp via Z-API (best effort, never blocks UI)
-    if (externalMessageId && conversationPhone) {
+    if (externalMessageId && conversationPhone && conversationPhone.trim().length > 0) {
       try {
         await supabase.functions.invoke("zapi-proxy", {
           body: {
