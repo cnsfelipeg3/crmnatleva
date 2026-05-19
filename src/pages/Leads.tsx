@@ -223,7 +223,7 @@ export default function Leads() {
     if (pIds.length) {
       const { data: pData } = await (supabase as any)
         .from("experience_products")
-        .select("id, title, slug, cover_image_url, destination")
+        .select("id, title, slug, cover_image_url, destination, price_from, price_promo, internal_cost")
         .in("id", pIds);
       const map: Record<string, ProductMini> = {};
       (pData || []).forEach((p: ProductMini) => { map[p.id] = p; });
@@ -234,7 +234,7 @@ export default function Leads() {
     if (prIds.length) {
       const { data: prData } = await (supabase as any)
         .from("proposals")
-        .select("id, title, slug, cover_image_url, destinations, client_name")
+        .select("id, title, slug, cover_image_url, destinations, client_name, total_value")
         .in("id", prIds);
       const map: Record<string, ProposalMini> = {};
       (prData || []).forEach((p: ProposalMini) => { map[p.id] = p; });
