@@ -1893,3 +1893,90 @@ function SettingsDialog({
     </Dialog>
   );
 }
+
+// ---------- New folder dialog ----------
+function NewFolderDialog({
+  open,
+  onOpenChange,
+  onCreate,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCreate: (name: string, iconKey: string) => Promise<void> | void;
+}) {
+  const [name, setName] = useState("");
+  const [iconKey, setIconKey] = useState<string>("folder");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setName("");
+      setIconKey("folder");
+    }
+  }, [open]);
+
+  const handleCreate = async () => {
+    if (!name.trim() || saving) return;
+    setSaving(true);
+    try {
+      await onCreate(name, iconKey);
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Nova pasta</DialogTitle>
+          <DialogDescription>Organize seus e-mails com pastas personalizadas.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Nome da pasta</label>
+            <Input
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex.: Clientes VIP"
+              onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Ícone</label>
+            <div className="mt-2 grid grid-cols-7 gap-2">
+              {LABEL_ICON_OPTIONS.map((opt) => {
+                const OptIcon = opt.icon;
+                const selected = iconKey === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setIconKey(opt.key)}
+                    className={cn(
+                      "flex h-10 w-10 items-center justify-center rounded-md border transition-colors",
+                      selected
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "border-border hover:bg-accent text-foreground"
+                    )}
+                    title={opt.label}
+                  >
+                    <OptIcon className="h-4 w-4" />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Cancelar</Button>
+          <Button onClick={handleCreate} disabled={!name.trim() || saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Criar pasta"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
