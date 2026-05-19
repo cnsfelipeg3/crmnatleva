@@ -23,8 +23,11 @@ import {
   Users, Search, Clock, MousePointerClick, MessageCircle,
   Smartphone, MapPin, ExternalLink, PackageOpen, Phone, Mail,
   TrendingUp, Wifi, Activity, Target, Filter as FilterIcon,
-  FileText, Trash2, Sparkles, X,
+  FileText, Trash2, Sparkles, X, DollarSign, Flame, Crown, Trophy,
 } from "lucide-react";
+
+const BRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+const DEFAULT_MARGIN = 0.15; // 15% quando não há custo informado
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
