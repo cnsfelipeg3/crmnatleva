@@ -3495,6 +3495,14 @@ function OperacaoInboxInner() {
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>
                               </div>
+                              {(reactionsByMsg[msg.id]?.length ?? 0) > 0 && (
+                                <MessageReactionsChip
+                                  reactions={reactionsByMsg[msg.id] || []}
+                                  myReactorId={user?.id || null}
+                                  align={msg.sender_type === "atendente" ? "end" : "start"}
+                                  onToggle={(emoji) => handleToggleReaction(msg, emoji)}
+                                />
+                              )}
                             </div>
                           )}
                         </div>
