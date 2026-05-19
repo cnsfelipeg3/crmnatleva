@@ -841,7 +841,7 @@ export default function Inbox() {
                   <MoreVertical className="h-3.5 w-3.5" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-[300px]">
                 <DropdownMenuItem
                   onClick={() => {
                     const nv = window.prompt("Novo nome da pasta", display);
