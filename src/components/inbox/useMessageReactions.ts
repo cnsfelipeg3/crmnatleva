@@ -173,7 +173,7 @@ export function useMessageReactions(messageIds: string[], conversationKey: strin
       .eq("reactor_type", "atendente")
       .eq("reactor_id", reactorId || null as any);
 
-    if (externalMessageId && conversationPhone) {
+    if (externalMessageId && conversationPhone && conversationPhone.trim().length > 0) {
       try {
         await supabase.functions.invoke("zapi-proxy", {
           body: {
