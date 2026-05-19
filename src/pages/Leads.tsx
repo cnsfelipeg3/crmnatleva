@@ -18,11 +18,12 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Users, Search, Clock, MousePointerClick, MessageCircle,
   Smartphone, MapPin, ExternalLink, PackageOpen, Phone, Mail,
   TrendingUp, Wifi, Activity, Target, Filter as FilterIcon,
-  FileText, Trash2, Sparkles,
+  FileText, Trash2, Sparkles, X,
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -180,6 +181,9 @@ export default function Leads() {
   const [origin, setOrigin] = useState<OriginFilter>("all");
   const [selected, setSelected] = useState<LeadAggregate | null>(null);
   const [toDelete, setToDelete] = useState<LeadAggregate | null>(null);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [bulkConfirm, setBulkConfirm] = useState(false);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -401,6 +405,58 @@ export default function Leads() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedKeys.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      const targets = leads.filter((l) => selectedKeys.has(l.key));
+      const prateleiraIds = targets.flatMap((l) => l.prateleiraViewerIds);
+      const proposalIds = targets.flatMap((l) => l.proposalViewerIds);
+      const emails = Array.from(new Set(targets.map((l) => l.email).filter(Boolean)));
+      const ops: Promise<any>[] = [];
+      if (prateleiraIds.length) {
+        ops.push((supabase as any).from("prateleira_product_viewers").delete().in("id", prateleiraIds));
+      }
+      if (emails.length) {
+        ops.push((supabase as any).from("prateleira_viewer_events").delete().in("email", emails));
+      }
+      if (proposalIds.length) {
+        ops.push((supabase as any).from("proposal_viewers").delete().in("id", proposalIds));
+      }
+      const results = await Promise.all(ops);
+      const err = results.find((r) => r?.error)?.error;
+      if (err) throw err;
+      toast({ title: "Leads excluídos", description: `${targets.length} lead(s) removido(s) com sucesso.` });
+      setSelectedKeys(new Set());
+      setBulkConfirm(false);
+      await fetchAll();
+    } catch (e: any) {
+      toast({ title: "Erro ao excluir", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleOne = (key: string, checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(key); else next.delete(key);
+      return next;
+    });
+  };
+
+  const toggleAllFiltered = (checked: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev);
+      if (checked) filtered.forEach((l) => next.add(l.key));
+      else filtered.forEach((l) => next.delete(l.key));
+      return next;
+    });
+  };
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((l) => selectedKeys.has(l.key));
+  const someFilteredSelected = filtered.some((l) => selectedKeys.has(l.key)) && !allFilteredSelected;
+
   return (
     <div className="container mx-auto px-4 py-6 space-y-5 max-w-[1400px]">
       {/* Header */}
@@ -446,12 +502,45 @@ export default function Leads() {
         </div>
       </Card>
 
+      {/* Barra de ações em massa */}
+      {selectedKeys.size > 0 && (
+        <Card className="p-2.5 flex items-center justify-between gap-2 bg-accent/5 border-accent/40">
+          <div className="flex items-center gap-2 text-[12px] text-foreground">
+            <Badge className="text-[10px] border-0 bg-accent/15 text-accent">
+              {selectedKeys.size} selecionado{selectedKeys.size > 1 ? "s" : ""}
+            </Badge>
+            <button
+              type="button"
+              className="text-[10.5px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+              onClick={() => setSelectedKeys(new Set())}
+            >
+              <X className="w-3 h-3" /> Limpar seleção
+            </button>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 text-[11.5px]"
+            onClick={() => setBulkConfirm(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Excluir selecionados
+          </Button>
+        </Card>
+      )}
+
       {/* Tabela */}
       <Card className="overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-muted/30 border-b border-border/40">
               <tr className="text-[10.5px] uppercase tracking-wider text-muted-foreground">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false}
+                    onCheckedChange={(c) => toggleAllFiltered(c === true)}
+                    aria-label="Selecionar todos"
+                  />
+                </th>
                 <th className="text-left p-3 font-medium">Lead</th>
                 <th className="text-left p-3 font-medium">Contato</th>
                 <th className="text-left p-3 font-medium">Origem</th>
@@ -464,9 +553,9 @@ export default function Leads() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
+                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground animate-pulse">Carregando leads...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">
+                <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">
                   {leads.length === 0 ? "Nenhum lead ainda. Compartilhe páginas da Prateleira ou envie propostas personalizadas para começar." : "Nenhum lead bate com os filtros."}
                 </td></tr>
               ) : filtered.map((l) => {
@@ -480,6 +569,13 @@ export default function Leads() {
                     className="border-b border-border/30 hover:bg-muted/30 cursor-pointer transition-colors"
                     onClick={() => setSelected(l)}
                   >
+                    <td className="p-3 align-top w-10" onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedKeys.has(l.key)}
+                        onCheckedChange={(c) => toggleOne(l.key, c === true)}
+                        aria-label={`Selecionar ${l.name || l.email || "lead"}`}
+                      />
+                    </td>
                     <td className="p-3 align-top">
                       <div className="flex items-start gap-2">
                         <div className={cn(
@@ -593,6 +689,28 @@ export default function Leads() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm bulk delete */}
+      <AlertDialog open={bulkConfirm} onOpenChange={(o) => !o && !bulkDeleting && setBulkConfirm(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir {selectedKeys.size} lead{selectedKeys.size > 1 ? "s" : ""}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Todo o rastreio dos leads selecionados será removido permanentemente, incluindo visualizações, cliques e eventos. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleBulkDelete(); }}
+              disabled={bulkDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleting ? "Excluindo..." : `Excluir ${selectedKeys.size}`}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
