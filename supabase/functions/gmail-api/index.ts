@@ -198,26 +198,48 @@ Deno.serve(async (req) => {
       }
       case "get_thread": {
         const full = await gw(`/users/me/threads/${params.threadId}?format=full`);
-        const messages = (full.messages || []).map((m: any) => {
-          const headers = m.payload?.headers || [];
-          const parts = extractParts(m.payload);
-          return {
-            id: m.id,
-            threadId: m.threadId,
-            labelIds: m.labelIds || [],
-            snippet: m.snippet,
-            internalDate: m.internalDate,
-            from: headerVal(headers, "From"),
-            to: headerVal(headers, "To"),
-            cc: headerVal(headers, "Cc"),
-            subject: headerVal(headers, "Subject"),
-            date: headerVal(headers, "Date"),
-            messageIdHeader: headerVal(headers, "Message-ID"),
-            referencesHeader: headerVal(headers, "References"),
-            text: parts.text,
-            html: parts.html,
-          };
-        });
+        const messages = await Promise.all(
+          (full.messages || []).map(async (m: any) => {
+            const headers = m.payload?.headers || [];
+            const parts = extractParts(m.payload);
+            // Inline cid: images -> data URLs
+            let html = parts.html;
+            if (html && parts.inline.length) {
+              const fetched = await Promise.all(
+                parts.inline.map(async (att) => {
+                  try {
+                    const r = await gw(`/users/me/messages/${m.id}/attachments/${att.attachmentId}`);
+                    const data = (r.data || "").replace(/-/g, "+").replace(/_/g, "/");
+                    return { ...att, dataUrl: `data:${att.mimeType};base64,${data}` };
+                  } catch {
+                    return { ...att, dataUrl: "" };
+                  }
+                })
+              );
+              for (const a of fetched) {
+                if (!a.dataUrl || !a.cid) continue;
+                const escaped = a.cid.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                html = html.replace(new RegExp(`cid:${escaped}`, "gi"), a.dataUrl);
+              }
+            }
+            return {
+              id: m.id,
+              threadId: m.threadId,
+              labelIds: m.labelIds || [],
+              snippet: m.snippet,
+              internalDate: m.internalDate,
+              from: headerVal(headers, "From"),
+              to: headerVal(headers, "To"),
+              cc: headerVal(headers, "Cc"),
+              subject: headerVal(headers, "Subject"),
+              date: headerVal(headers, "Date"),
+              messageIdHeader: headerVal(headers, "Message-ID"),
+              referencesHeader: headerVal(headers, "References"),
+              text: parts.text,
+              html,
+            };
+          })
+        );
         result = { id: full.id, historyId: full.historyId, messages };
         break;
       }
