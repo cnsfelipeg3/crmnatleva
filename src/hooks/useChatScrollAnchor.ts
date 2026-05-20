@@ -8,12 +8,16 @@ interface UseChatScrollAnchorOptions {
 }
 
 /**
- * WhatsApp-like chat scroll controller:
- * 1) Hides thread (ready=false) until first scroll-to-bottom paints (no flash).
+ * WhatsApp-like chat scroll controller.
+ *
+ * Design rules (fixed bugs):
+ * 1) Hide thread (ready=false) until first scroll-to-bottom paints (no flash).
  * 2) Auto-scrolls INSTANT on boot, with multi-pass to absorb late image/video reflow.
- * 3) Keeps pinned to bottom via ResizeObserver while user is at bottom.
- * 4) Auto-scrolls SMOOTH on new messages while user is at bottom.
- * 5) Tracks unreadCount when user is reading older messages.
+ * 3) Auto-pin to bottom (ResizeObserver) ONLY while the user has NOT taken control.
+ *    User intent is detected by wheel/touchmove/keydown — once detected the
+ *    container will NEVER be programmatically scrolled until the user explicitly
+ *    returns to bottom (clicks the "↓ N new" badge) or switches conversations.
+ * 4) New messages auto-snap (smooth) only if user is still at bottom.
  */
 export function useChatScrollAnchor({
   conversationId,
@@ -29,20 +33,23 @@ export function useChatScrollAnchor({
   const lastSeenIdRef = useRef<string | null | undefined>(null);
   const isAtBottomRef = useRef(true);
   const readyRef = useRef(false);
-  const suppressScrollRef = useRef(false);
-  const suppressTimerRef = useRef<number | null>(null);
+  // True once the user has actively scrolled the thread (wheel/touch/keys).
+  // While true we never auto-pin or auto-snap. Reset on conversation change
+  // or when user explicitly clicks "go to bottom".
+  const userTookControlRef = useRef(false);
 
   useEffect(() => { isAtBottomRef.current = isAtBottom; }, [isAtBottom]);
   useEffect(() => { readyRef.current = ready; }, [ready]);
 
+  const pinNow = useCallback(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    c.scrollTop = c.scrollHeight;
+  }, []);
+
   const snapToBottom = useCallback((behavior: ScrollBehavior = "auto") => {
     const c = containerRef.current;
     if (!c) return;
-    suppressScrollRef.current = true;
-    if (suppressTimerRef.current) window.clearTimeout(suppressTimerRef.current);
-    suppressTimerRef.current = window.setTimeout(() => {
-      suppressScrollRef.current = false;
-    }, behavior === "smooth" ? 600 : 160);
     c.scrollTo({ top: c.scrollHeight, behavior });
   }, []);
 
@@ -54,9 +61,12 @@ export function useChatScrollAnchor({
     isAtBottomRef.current = true;
     setUnreadCount(0);
     lastSeenIdRef.current = null;
+    userTookControlRef.current = false;
   }, [conversationId]);
 
-  // Initial scroll: instant, before paint, with multi-pass to handle late media reflow
+  // Initial scroll: instant, before paint, with multi-pass to handle late media reflow.
+  // Each pass is GATED by userTookControlRef so a user who starts scrolling
+  // during the first second is never yanked back.
   useLayoutEffect(() => {
     if (loading || !conversationId || messageCount === 0) return;
     const c = containerRef.current;
@@ -65,31 +75,22 @@ export function useChatScrollAnchor({
     const rafs: number[] = [];
     const timeouts: number[] = [];
 
-    const pin = () => {
-      suppressScrollRef.current = true;
+    const safePin = () => {
+      if (userTookControlRef.current) return;
       c.scrollTop = c.scrollHeight;
     };
 
-    // Immediate sync pin (before browser paints layout shift)
-    pin();
-    // Two RAFs to land after first paint
+    safePin();
     rafs.push(requestAnimationFrame(() => {
-      pin();
+      safePin();
       rafs.push(requestAnimationFrame(() => {
-        pin();
+        safePin();
         lastSeenIdRef.current = lastMessageId;
         setReady(true);
         readyRef.current = true;
-        // Late passes: catches images/videos/stickers that resolve after initial layout
         [80, 200, 450, 900].forEach((delay) => {
-          timeouts.push(window.setTimeout(() => {
-            if (isAtBottomRef.current) pin();
-          }, delay));
+          timeouts.push(window.setTimeout(safePin, delay));
         });
-        if (suppressTimerRef.current) window.clearTimeout(suppressTimerRef.current);
-        suppressTimerRef.current = window.setTimeout(() => {
-          suppressScrollRef.current = false;
-        }, 1000);
       }));
     }));
 
@@ -100,28 +101,23 @@ export function useChatScrollAnchor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversationId, loading, messageCount > 0]);
 
-  // Stay pinned while at bottom: ResizeObserver + image load listeners
+  // Stay pinned while at bottom AND user has not taken control.
+  // Triggered by content size changes (media loading, new message append).
   useEffect(() => {
     const c = containerRef.current;
     if (!c) return;
 
     const keepPinned = () => {
       if (!readyRef.current) return;
+      if (userTookControlRef.current) return;
       if (!isAtBottomRef.current) return;
-      suppressScrollRef.current = true;
       c.scrollTop = c.scrollHeight;
-      if (suppressTimerRef.current) window.clearTimeout(suppressTimerRef.current);
-      suppressTimerRef.current = window.setTimeout(() => {
-        suppressScrollRef.current = false;
-      }, 120);
     };
 
     const ro = new ResizeObserver(() => keepPinned());
-    // Observe direct children (the messages content)
     Array.from(c.children).forEach((child) => ro.observe(child as Element));
     ro.observe(c);
 
-    // Re-pin when any media inside finishes loading
     const onMediaLoad = (e: Event) => {
       const t = e.target as HTMLElement | null;
       if (!t) return;
@@ -137,6 +133,26 @@ export function useChatScrollAnchor({
     };
   }, [conversationId]);
 
+  // Detect real user intent — once detected, user is in control until they
+  // explicitly hit the "go to bottom" badge.
+  useEffect(() => {
+    const c = containerRef.current;
+    if (!c) return;
+    const markUserControl = () => {
+      userTookControlRef.current = true;
+    };
+    // Passive listeners on the scroll container only — won't fire from
+    // programmatic scrollTop writes.
+    c.addEventListener("wheel", markUserControl, { passive: true });
+    c.addEventListener("touchmove", markUserControl, { passive: true });
+    c.addEventListener("keydown", markUserControl, { passive: true } as any);
+    return () => {
+      c.removeEventListener("wheel", markUserControl);
+      c.removeEventListener("touchmove", markUserControl);
+      c.removeEventListener("keydown", markUserControl as any);
+    };
+  }, [conversationId]);
+
   // New message arrival
   useEffect(() => {
     if (!ready || !lastMessageId) return;
@@ -145,7 +161,7 @@ export function useChatScrollAnchor({
     const c = containerRef.current;
     if (!c) return;
 
-    if (isAtBottom) {
+    if (isAtBottom && !userTookControlRef.current) {
       requestAnimationFrame(() => snapToBottom("smooth"));
       lastSeenIdRef.current = lastMessageId;
       setUnreadCount(0);
@@ -154,17 +170,18 @@ export function useChatScrollAnchor({
     }
   }, [lastMessageId, ready, isAtBottom, snapToBottom]);
 
-  // Track scroll position (ignored during programmatic scrolls)
+  // Track real scroll position (always — no suppression).
+  // A truly-at-bottom user gets userTookControlRef cleared so auto-pin resumes.
   useEffect(() => {
     const c = containerRef.current;
     if (!c) return;
     const onScroll = () => {
-      if (suppressScrollRef.current) return;
       const distance = c.scrollHeight - c.scrollTop - c.clientHeight;
-      const atBottom = distance < 80;
+      const atBottom = distance < 40;
       setIsAtBottom(atBottom);
       isAtBottomRef.current = atBottom;
       if (atBottom) {
+        userTookControlRef.current = false;
         setUnreadCount(0);
         lastSeenIdRef.current = lastMessageId;
       }
@@ -174,6 +191,7 @@ export function useChatScrollAnchor({
   }, [lastMessageId, ready]);
 
   const goToBottom = useCallback(() => {
+    userTookControlRef.current = false;
     snapToBottom("smooth");
     setUnreadCount(0);
   }, [snapToBottom]);
