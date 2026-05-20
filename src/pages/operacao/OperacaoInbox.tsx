@@ -623,19 +623,9 @@ function OperacaoInboxInner() {
   // NÃO bloqueia body, NÃO força scroll. Só atualiza CSS var.
   useMobileViewportHeight(isMobile);
 
-  // Trava scroll do body APENAS no mobile, com técnica leve
-  // (overflow hidden, sem position fixed que causa layout shift).
-  useEffect(() => {
-    if (!isMobile) return;
-    const previousOverflow = document.body.style.overflow;
-    const previousOverscroll = (document.body.style as any).overscrollBehavior;
-    document.body.style.overflow = "hidden";
-    (document.body.style as any).overscrollBehavior = "none";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      (document.body.style as any).overscrollBehavior = previousOverscroll;
-    };
-  }, [isMobile]);
+  // Body/html lock no mobile é feito por useMobileViewportHeight (acima),
+  // que também trava o scroll do documento para impedir que o teclado virtual
+  // empurre o conteúdo para cima no iOS PWA.
 
   // WhatsApp state
   const whatsappPollRef = useRef<ReturnType<typeof setInterval>>();
@@ -3758,7 +3748,27 @@ function OperacaoInboxInner() {
                         <>
                           <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover compact phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
-                          <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
+                          <Button
+                            size="icon"
+                            type="button"
+                            aria-label="Enviar mensagem"
+                            className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform touch-manipulation"
+                            disabled={isSending}
+                            // iOS/Android: usar pointerdown impede que o blur do textarea
+                            // dispense o teclado ANTES do clique chegar — evita o bug do
+                            // "clico em enviar mas a mensagem não envia".
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (isSending) return;
+                              handleSend();
+                            }}
+                            onClick={(e) => {
+                              // Fallback para ambientes sem pointer events
+                              e.preventDefault();
+                              if ((e as any).nativeEvent?.pointerType) return;
+                              handleSend();
+                            }}
+                          >
                             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                           </Button>
                         </>
