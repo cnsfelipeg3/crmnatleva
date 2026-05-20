@@ -2837,7 +2837,7 @@ function OperacaoInboxInner() {
 
           {/* ─── Column 2: Chat ─── */}
           <div
-            className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
+            className={`@container/chatcol flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
             style={{ maxHeight: '100%' }}
             onDragEnter={handleChatDragEnter}
             onDragOver={handleChatDragOver}
