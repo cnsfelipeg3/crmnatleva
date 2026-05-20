@@ -68,6 +68,7 @@ export interface Message {
   is_deleted?: boolean;
   deleted_at?: string | null;
   metadata?: Record<string, any> | null;
+  sent_by_agent?: string | null;
 }
 
 export const STAGES: { key: Stage; label: string; color: string }[] = [

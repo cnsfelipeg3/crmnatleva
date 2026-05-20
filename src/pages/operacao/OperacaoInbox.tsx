@@ -452,6 +452,7 @@ function OperacaoInboxInner() {
         status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
+        sent_by_agent: user?.id || null,
       };
       if (payload.originalPayload !== undefined) unifiedRow.original_payload = payload.originalPayload;
       if (payload.failureReason !== undefined) unifiedRow.failure_reason = payload.failureReason;
@@ -518,7 +519,7 @@ function OperacaoInboxInner() {
     }).eq("id", dbConvId).then(() => {});
 
     return persistedId;
-  }, [resolveDbConversationId]);
+  }, [resolveDbConversationId, user?.id]);
 
   // ─── Update message status after Z-API response (sent / failed) ───
   const finalizeMessageStatus = useCallback(async (
@@ -3491,6 +3492,23 @@ function OperacaoInboxInner() {
                                   )}
                                   {msg.status === "queued" && <span className="text-[8px] text-primary-foreground/50 italic mr-1">na fila</span>}
                                   {msg.status === "retrying" && <span className="text-[8px] opacity-70 italic mr-1">reenviando…</span>}
+                                  {msg.sender_type === "atendente" && msg.sent_by_agent && (() => {
+                                    const agent = profileMap.get(msg.sent_by_agent);
+                                    if (!agent) return null;
+                                    const first = (agent.full_name?.split(" ")[0] || agent.email?.split("@")[0] || "").trim();
+                                    if (!first) return null;
+                                    return (
+                                      <span
+                                        className="text-[9px] opacity-60 italic mr-1 inline-flex items-center gap-1"
+                                        title={`Enviada por ${agent.full_name || agent.email || first}`}
+                                      >
+                                        {agent.avatar_url ? (
+                                          <img src={agent.avatar_url} alt="" className="h-3 w-3 rounded-full object-cover" />
+                                        ) : null}
+                                        por {first}
+                                      </span>
+                                    );
+                                  })()}
                                   <span className="text-[9px] opacity-60">{formatMsgTime(msg.created_at)}</span>
                                   {msg.sender_type === "atendente" && getStatusIcon(msg.status)}
                                 </div>
