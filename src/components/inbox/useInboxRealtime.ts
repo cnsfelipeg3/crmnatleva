@@ -83,6 +83,7 @@ export function useInboxRealtime(
           sender_phone: n.sender_phone || null,
           sender_photo: n.sender_photo || null,
           metadata: n.metadata || null,
+          sent_by_agent: n.sent_by_agent || null,
         };
 
         // Fix 2: dual-write em ambas as keys (waKey calculada e UUID raw) pra blindar contra mismatch.
