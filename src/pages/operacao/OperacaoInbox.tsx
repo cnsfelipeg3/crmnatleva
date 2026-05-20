@@ -3658,7 +3658,7 @@ function OperacaoInboxInner() {
                   open={attachmentDialogOpen}
                   files={dropAttachments}
                   onClose={() => { setAttachmentDialogOpen(false); setDropAttachments([]); }}
-                  onAddMore={(more) => setDropAttachments((prev) => [...prev, ...more])}
+                  onAddMore={(more) => openAttachmentPreview(more)}
                   onSend={handleAttachmentDialogSend}
                   isSending={attachmentSending}
                 />
