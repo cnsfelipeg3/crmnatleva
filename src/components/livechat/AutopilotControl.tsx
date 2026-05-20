@@ -175,29 +175,30 @@ export default function AutopilotControl({ conversationId, conversationPhone, cl
           size="sm"
           disabled={loading}
           className={cn(
-            "h-7 px-2.5 gap-1.5 text-[11px] font-medium",
+            "h-7 px-2.5 gap-1.5 text-[11px] font-medium shrink-0",
             active && "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25 border border-emerald-500/30",
             isPaused && "bg-amber-500/15 text-amber-700 hover:bg-amber-500/25 border border-amber-500/30",
             className,
           )}
+          title={active ? (state.agent === "maya" ? "Maya respondendo" : "Atlas respondendo") : isPaused ? "Piloto IA pausado" : "Piloto IA desligado"}
         >
           {active ? (
             <>
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-2 w-2 shrink-0">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
-              {state.agent === "maya" ? "Maya respondendo" : "Atlas respondendo"}
+              <span className="hidden @[560px]/chatcol:inline">{state.agent === "maya" ? "Maya respondendo" : "Atlas respondendo"}</span>
             </>
           ) : isPaused ? (
             <>
-              <Pause className="h-3.5 w-3.5" />
-              Piloto IA · pausado
+              <Pause className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden @[560px]/chatcol:inline">Piloto IA · pausado</span>
             </>
           ) : (
             <>
-              <Sparkles className="h-3.5 w-3.5" />
-              Piloto IA · desligado
+              <Sparkles className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden @[560px]/chatcol:inline">Piloto IA · desligado</span>
             </>
           )}
         </Button>
