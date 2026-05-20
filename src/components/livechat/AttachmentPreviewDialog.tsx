@@ -56,18 +56,26 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
   const [activeIdx, setActiveIdx] = useState(0);
   const [captions, setCaptions] = useState<Record<number, string>>({});
   const [sharedCaption, setSharedCaption] = useState("");
+  const [isDropActive, setIsDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastFilesSignatureRef = useRef("");
 
   useEffect(() => {
     if (open) {
+      const signature = files.map((file) => `${file.name}:${file.size}:${file.lastModified}`).join("|");
+      if (signature === lastFilesSignatureRef.current) return;
       const next = buildAttachmentItems(files);
       setItems(next);
-      setActiveIdx(0);
-      setCaptions({});
-      setSharedCaption("");
+      setActiveIdx((current) => Math.min(current, Math.max(next.length - 1, 0)));
+      setCaptions((current) => Object.fromEntries(Object.entries(current).filter(([idx]) => Number(idx) < next.length)));
+      lastFilesSignatureRef.current = signature;
     } else {
       // revoke object urls
       items.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl));
+      lastFilesSignatureRef.current = "";
+      setCaptions({});
+      setSharedCaption("");
+      setIsDropActive(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, files]);
@@ -81,8 +89,15 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
   const handleAddFiles = (newFiles: File[]) => {
     if (!newFiles.length) return;
     onAddMore(newFiles);
-    const merged = buildAttachmentItems([...items.map((i) => i.file), ...newFiles]);
-    setItems(merged);
+    setActiveIdx(items.length);
+  };
+
+  const handleDialogDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropActive(false);
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    handleAddFiles(droppedFiles);
   };
 
   const handleRemove = (idx: number) => {
@@ -117,9 +132,39 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-0 gap-0">
+      <DialogContent
+        className="max-w-4xl p-0 overflow-hidden border-0 gap-0"
+        onDragEnter={(e) => {
+          if (!e.dataTransfer?.types?.includes("Files")) return;
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDropActive(true);
+        }}
+        onDragOver={(e) => {
+          if (!e.dataTransfer?.types?.includes("Files")) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = "copy";
+          setIsDropActive(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setIsDropActive(false);
+        }}
+        onDrop={handleDialogDrop}
+      >
         <div className="h-1 bg-gradient-to-r from-amber-300 via-amber-500 to-amber-300" />
-        <div className="grid grid-cols-[1fr_220px] min-h-[520px] bg-card">
+        <div className="relative grid grid-cols-[1fr_220px] min-h-[520px] bg-card">
+          {isDropActive && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/80 backdrop-blur-sm pointer-events-none">
+              <div className="rounded-xl border border-dashed border-primary bg-card px-6 py-5 text-center shadow-lg">
+                <Plus className="mx-auto mb-2 h-6 w-6 text-primary" />
+                <div className="text-sm font-semibold text-foreground">Solte para adicionar à fila</div>
+                <div className="mt-1 text-xs text-muted-foreground">As fotos entram junto com os anexos já selecionados</div>
+              </div>
+            </div>
+          )}
           {/* preview */}
           <div className="flex flex-col">
             <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
@@ -222,6 +267,7 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
           ref={fileInputRef}
           type="file"
           multiple
+          accept="image/*,video/*,application/pdf,*/*"
           className="hidden"
           onChange={(e) => {
             const fl = Array.from(e.target.files || []);
