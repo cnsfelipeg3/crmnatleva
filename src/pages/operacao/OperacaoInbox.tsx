@@ -3024,7 +3024,7 @@ function OperacaoInboxInner() {
                   </div>
                   {/* Row 2 · Desktop: tudo numa linha (atribuição + participantes + ações) · Mobile: nada (vai pro menu de 3 pontinhos) */}
                   {!isMobile && (
-                    <div className="flex items-center gap-3 px-3 md:px-4 pb-2 text-[11px] flex-wrap">
+                    <div className="flex items-center gap-x-3 gap-y-1.5 px-3 md:px-4 pb-2 text-[11px] flex-wrap min-w-0 overflow-hidden">
                       {selectedDbId && (() => {
                         const ownerId = selected.assigned_to || null;
                         const owner = ownerId ? profileMap.get(ownerId) : null;
