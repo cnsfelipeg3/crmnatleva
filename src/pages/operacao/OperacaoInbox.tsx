@@ -3748,7 +3748,27 @@ function OperacaoInboxInner() {
                         <>
                           <ScheduledForConversationButton inline conversationId={selected?.id || null} />
                           <ScheduleMessagePopover compact phone={selected?.phone || ""} conversationId={selected?.id || null} text={inputText} onScheduled={() => setInputText("")} />
-                          <Button size="icon" aria-label="Enviar mensagem" className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform" onClick={handleSend} disabled={isSending}>
+                          <Button
+                            size="icon"
+                            type="button"
+                            aria-label="Enviar mensagem"
+                            className="h-11 w-11 shrink-0 rounded-full shadow-sm active:scale-95 transition-transform touch-manipulation"
+                            disabled={isSending}
+                            // iOS/Android: usar pointerdown impede que o blur do textarea
+                            // dispense o teclado ANTES do clique chegar — evita o bug do
+                            // "clico em enviar mas a mensagem não envia".
+                            onPointerDown={(e) => {
+                              e.preventDefault();
+                              if (isSending) return;
+                              handleSend();
+                            }}
+                            onClick={(e) => {
+                              // Fallback para ambientes sem pointer events
+                              e.preventDefault();
+                              if ((e as any).nativeEvent?.pointerType) return;
+                              handleSend();
+                            }}
+                          >
                             {isSending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
                           </Button>
                         </>
