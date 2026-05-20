@@ -3096,7 +3096,7 @@ function OperacaoInboxInner() {
                       )}
 
                       {/* Separator + Ações inline · alinhado à direita */}
-                      <div className="ml-auto flex items-center gap-0.5">
+                      <div className="ml-auto flex items-center gap-0.5 flex-wrap justify-end min-w-0">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
