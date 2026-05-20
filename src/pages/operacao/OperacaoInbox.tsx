@@ -723,6 +723,11 @@ function OperacaoInboxInner() {
   const [attachmentDialogOpen, setAttachmentDialogOpen] = useState(false);
   const [attachmentSending, setAttachmentSending] = useState(false);
   const dragCounterRef = useRef(0);
+  const openAttachmentPreview = useCallback((files: File[], mode: "replace" | "append" = "append") => {
+    if (!files.length) return;
+    setDropAttachments((prev) => (mode === "replace" || !attachmentDialogOpen ? files : [...prev, ...files]));
+    setAttachmentDialogOpen(true);
+  }, [attachmentDialogOpen]);
   
   const [showContactProfile, setShowContactProfile] = useState(false);
   const [showProfileViewer, setShowProfileViewer] = useState(false);
