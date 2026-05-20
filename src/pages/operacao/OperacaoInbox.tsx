@@ -452,6 +452,7 @@ function OperacaoInboxInner() {
         status: initialStatus,
         timestamp: createdAt,
         created_at: createdAt,
+        sent_by_agent: user?.id || null,
       };
       if (payload.originalPayload !== undefined) unifiedRow.original_payload = payload.originalPayload;
       if (payload.failureReason !== undefined) unifiedRow.failure_reason = payload.failureReason;
