@@ -3043,8 +3043,8 @@ function OperacaoInboxInner() {
                           </span>
                         );
                         return (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground">Atribuída:</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-muted-foreground hidden @[520px]/chatcol:inline">Atribuída:</span>
                             {isGestao ? (
                               <button type="button" onClick={() => setDelegateDialogOpen(true)} className="hover:opacity-80 transition">
                                 {inner}
