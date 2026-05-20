@@ -2837,7 +2837,7 @@ function OperacaoInboxInner() {
 
           {/* ─── Column 2: Chat ─── */}
           <div
-            className={`flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
+            className={`@container/chatcol flex-1 flex flex-col min-w-0 min-h-0 h-full overflow-hidden relative ${isMobile && !selectedId ? "hidden" : ""}`}
             style={{ maxHeight: '100%' }}
             onDragEnter={handleChatDragEnter}
             onDragOver={handleChatDragOver}
@@ -3024,7 +3024,7 @@ function OperacaoInboxInner() {
                   </div>
                   {/* Row 2 · Desktop: tudo numa linha (atribuição + participantes + ações) · Mobile: nada (vai pro menu de 3 pontinhos) */}
                   {!isMobile && (
-                    <div className="flex items-center gap-3 px-3 md:px-4 pb-2 text-[11px] flex-wrap">
+                    <div className="flex items-center gap-x-3 gap-y-1.5 px-3 md:px-4 pb-2 text-[11px] flex-wrap min-w-0 overflow-hidden">
                       {selectedDbId && (() => {
                         const ownerId = selected.assigned_to || null;
                         const owner = ownerId ? profileMap.get(ownerId) : null;
@@ -3043,8 +3043,8 @@ function OperacaoInboxInner() {
                           </span>
                         );
                         return (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground">Atribuída:</span>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="text-muted-foreground hidden @[520px]/chatcol:inline">Atribuída:</span>
                             {isGestao ? (
                               <button type="button" onClick={() => setDelegateDialogOpen(true)} className="hover:opacity-80 transition">
                                 {inner}
@@ -3055,8 +3055,8 @@ function OperacaoInboxInner() {
                       })()}
 
                       {selectedDbId && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Participantes:</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-muted-foreground hidden @[520px]/chatcol:inline">Participantes:</span>
                           <div className="flex items-center -space-x-1.5">
                             {participants.slice(0, 5).map(p => {
                               const profile = profileMap.get(p.user_id);
@@ -3096,7 +3096,7 @@ function OperacaoInboxInner() {
                       )}
 
                       {/* Separator + Ações inline · alinhado à direita */}
-                      <div className="ml-auto flex items-center gap-0.5">
+                      <div className="ml-auto flex items-center gap-0.5 flex-wrap justify-end min-w-0">
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowSummaryDialog(true)}>
