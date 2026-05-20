@@ -589,7 +589,8 @@ Retorne SOMENTE o JSON, sem markdown.`,
     </button>
   ) : variant === "inline" ? (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 hover:scale-[1.03]"
+      title="Opinião da Nath"
+      className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl text-[11px] font-bold transition-all duration-300 hover:scale-[1.03] shrink-0"
       style={{
         background: "linear-gradient(135deg, rgba(168,85,247,0.9), rgba(236,72,153,0.8))",
         border: "1px solid rgba(168,85,247,0.55)",
@@ -597,8 +598,8 @@ Retorne SOMENTE o JSON, sem markdown.`,
         boxShadow: "0 2px 10px rgba(168,85,247,0.3)",
         opacity: disabled || messages.length < 2 ? 0.5 : 1,
       }}>
-      <Crown className="w-3.5 h-3.5" />
-      Opinião da Nath
+      <Crown className="w-3.5 h-3.5 shrink-0" />
+      <span className="hidden @[560px]/chatcol:inline">Opinião da Nath</span>
     </button>
   ) : (
     <button onClick={askNath} disabled={disabled || messages.length < 2}
