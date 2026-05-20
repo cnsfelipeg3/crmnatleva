@@ -53,6 +53,7 @@ export function useInboxMessages(
       edited: !!m.is_edited,
       edited_at: m.edited_at || null,
       metadata: m.metadata || null,
+      sent_by_agent: m.sent_by_agent || null,
     }))
   ), []);
 
