@@ -519,7 +519,7 @@ function OperacaoInboxInner() {
     }).eq("id", dbConvId).then(() => {});
 
     return persistedId;
-  }, [resolveDbConversationId]);
+  }, [resolveDbConversationId, user?.id]);
 
   // ─── Update message status after Z-API response (sent / failed) ───
   const finalizeMessageStatus = useCallback(async (
