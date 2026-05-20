@@ -56,18 +56,26 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
   const [activeIdx, setActiveIdx] = useState(0);
   const [captions, setCaptions] = useState<Record<number, string>>({});
   const [sharedCaption, setSharedCaption] = useState("");
+  const [isDropActive, setIsDropActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastFilesSignatureRef = useRef("");
 
   useEffect(() => {
     if (open) {
+      const signature = files.map((file) => `${file.name}:${file.size}:${file.lastModified}`).join("|");
+      if (signature === lastFilesSignatureRef.current) return;
       const next = buildAttachmentItems(files);
       setItems(next);
-      setActiveIdx(0);
-      setCaptions({});
-      setSharedCaption("");
+      setActiveIdx((current) => Math.min(current, Math.max(next.length - 1, 0)));
+      setCaptions((current) => Object.fromEntries(Object.entries(current).filter(([idx]) => Number(idx) < next.length)));
+      lastFilesSignatureRef.current = signature;
     } else {
       // revoke object urls
       items.forEach((i) => i.previewUrl && URL.revokeObjectURL(i.previewUrl));
+      lastFilesSignatureRef.current = "";
+      setCaptions({});
+      setSharedCaption("");
+      setIsDropActive(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, files]);
@@ -81,8 +89,15 @@ export function AttachmentPreviewDialog({ open, files, onClose, onAddMore, onSen
   const handleAddFiles = (newFiles: File[]) => {
     if (!newFiles.length) return;
     onAddMore(newFiles);
-    const merged = buildAttachmentItems([...items.map((i) => i.file), ...newFiles]);
-    setItems(merged);
+    setActiveIdx(items.length);
+  };
+
+  const handleDialogDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDropActive(false);
+    const droppedFiles = Array.from(e.dataTransfer?.files || []);
+    handleAddFiles(droppedFiles);
   };
 
   const handleRemove = (idx: number) => {
