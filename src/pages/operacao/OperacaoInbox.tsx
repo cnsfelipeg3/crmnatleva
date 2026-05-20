@@ -1896,18 +1896,16 @@ function OperacaoInboxInner() {
     }
     if (files.length) {
       e.preventDefault();
-      setDropAttachments(files);
-      setAttachmentDialogOpen(true);
+      openAttachmentPreview(files);
     }
-  }, [selectedId]);
+  }, [selectedId, openAttachmentPreview]);
 
   // File upload
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileList = Array.from(e.target.files || []);
     if (!fileList.length || !selectedId) return;
     // Route ALL picks through the multi-attachment dialog (supports 1..N files w/ caption per item)
-    setDropAttachments(fileList);
-    setAttachmentDialogOpen(true);
+    openAttachmentPreview(fileList);
     e.target.value = "";
     setShowMediaMenu(false);
     setShowMobilePlusMenu(false);
@@ -1983,7 +1981,7 @@ function OperacaoInboxInner() {
       }
     } catch (err) { toast({ title: "Erro ao enviar mídia", description: String(err), variant: "destructive" }); }
     e.target.value = ""; setShowMediaMenu(false);
-  }, [selectedId, fileInputMediaType, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
+  }, [selectedId, openAttachmentPreview, fileInputMediaType, uploadToStorage, persistOutgoingMessage, finalizeMessageStatus]);
 
   // ─── Stickers ───
   const handleSendSticker = useCallback(async (sticker: SavedSticker) => {
@@ -2337,9 +2335,8 @@ function OperacaoInboxInner() {
     setIsDraggingFiles(false);
     const files = Array.from(e.dataTransfer?.files || []);
     if (!files.length) return;
-    setDropAttachments(files);
-    setAttachmentDialogOpen(true);
-  }, [selectedId]);
+    openAttachmentPreview(files);
+  }, [selectedId, openAttachmentPreview]);
 
   const handleTogglePin = useCallback(async (convId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
