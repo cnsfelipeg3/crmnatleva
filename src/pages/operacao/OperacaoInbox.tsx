@@ -986,7 +986,7 @@ function OperacaoInboxInner() {
           const kept = prev.filter(c => !freshIds.has(c.id));
           return [...kept, ...out].sort((a, b) => {
             if (a.is_pinned && !b.is_pinned) return -1;
-            if (!a.is_pinned && b.is_pinna) return 1;
+            if (!a.is_pinned && b.is_pinned) return 1;
             const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
             const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
             return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
