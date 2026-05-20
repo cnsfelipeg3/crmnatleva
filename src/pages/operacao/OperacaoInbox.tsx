@@ -623,19 +623,9 @@ function OperacaoInboxInner() {
   // NÃO bloqueia body, NÃO força scroll. Só atualiza CSS var.
   useMobileViewportHeight(isMobile);
 
-  // Trava scroll do body APENAS no mobile, com técnica leve
-  // (overflow hidden, sem position fixed que causa layout shift).
-  useEffect(() => {
-    if (!isMobile) return;
-    const previousOverflow = document.body.style.overflow;
-    const previousOverscroll = (document.body.style as any).overscrollBehavior;
-    document.body.style.overflow = "hidden";
-    (document.body.style as any).overscrollBehavior = "none";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      (document.body.style as any).overscrollBehavior = previousOverscroll;
-    };
-  }, [isMobile]);
+  // Body/html lock no mobile é feito por useMobileViewportHeight (acima),
+  // que também trava o scroll do documento para impedir que o teclado virtual
+  // empurre o conteúdo para cima no iOS PWA.
 
   // WhatsApp state
   const whatsappPollRef = useRef<ReturnType<typeof setInterval>>();
