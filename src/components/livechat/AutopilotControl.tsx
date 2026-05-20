@@ -158,11 +158,11 @@ export default function AutopilotControl({ conversationId, conversationPhone, cl
         variant="ghost"
         size="sm"
         disabled
-        className={cn("h-7 px-2 gap-1.5 text-[11px] text-muted-foreground", className)}
+        className={cn("h-7 px-2 gap-1.5 text-[11px] text-muted-foreground shrink-0", className)}
         title="Conversa fora da allowlist do Piloto IA"
       >
-        <Bot className="h-3.5 w-3.5" />
-        Piloto IA · indisponível
+        <Bot className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden @[560px]/chatcol:inline">Piloto IA · indisponível</span>
       </Button>
     );
   }
