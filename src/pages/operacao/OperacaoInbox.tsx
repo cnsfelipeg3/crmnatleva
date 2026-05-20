@@ -3055,8 +3055,8 @@ function OperacaoInboxInner() {
                       })()}
 
                       {selectedDbId && (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-muted-foreground">Participantes:</span>
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-muted-foreground hidden @[520px]/chatcol:inline">Participantes:</span>
                           <div className="flex items-center -space-x-1.5">
                             {participants.slice(0, 5).map(p => {
                               const profile = profileMap.get(p.user_id);
