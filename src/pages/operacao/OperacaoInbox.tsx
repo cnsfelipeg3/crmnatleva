@@ -3750,7 +3750,7 @@ function OperacaoInboxInner() {
 
                       </div>
 
-                      <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
+                      <input ref={fileInputRef} type="file" multiple accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
@@ -3830,7 +3830,7 @@ function OperacaoInboxInner() {
                           </button>
                         </PopoverContent>
                       </Popover>
-                      <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
+                      <input ref={fileInputRef} type="file" multiple accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
                       <div className="flex-1">
                         <Textarea
