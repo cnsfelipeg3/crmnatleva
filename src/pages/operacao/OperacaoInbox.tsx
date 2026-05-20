@@ -1898,8 +1898,17 @@ function OperacaoInboxInner() {
 
   // File upload
   const handleFileSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !selectedId) return;
+    const fileList = Array.from(e.target.files || []);
+    if (!fileList.length || !selectedId) return;
+    // Route ALL picks through the multi-attachment dialog (supports 1..N files w/ caption per item)
+    setDropAttachments(fileList);
+    setAttachmentDialogOpen(true);
+    e.target.value = "";
+    setShowMediaMenu(false);
+    setShowMobilePlusMenu(false);
+    return;
+    // eslint-disable-next-line no-unreachable
+    const file = fileList[0];
     if (fileInputMediaType === "image") {
       setMediaPendingFile({ file, previewUrl: URL.createObjectURL(file), mediaType: "image" });
       setMediaCaption(""); e.target.value = ""; setShowMediaMenu(false); return;
@@ -3741,7 +3750,7 @@ function OperacaoInboxInner() {
 
                       </div>
 
-                      <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
+                      <input ref={fileInputRef} type="file" multiple accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
                       {/* Standalone send / mic button (WhatsApp green circle) */}
                       {inputText.trim() ? (
@@ -3821,7 +3830,7 @@ function OperacaoInboxInner() {
                           </button>
                         </PopoverContent>
                       </Popover>
-                      <input ref={fileInputRef} type="file" accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
+                      <input ref={fileInputRef} type="file" multiple accept={fileInputAccept} onChange={handleFileSelect} className="hidden" />
 
                       <div className="flex-1">
                         <Textarea
