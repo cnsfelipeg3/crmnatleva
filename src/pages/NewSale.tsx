@@ -190,6 +190,7 @@ export default function NewSale() {
   const [airTariff, setAirTariff] = useState<TariffCondition>(() => initialDraft?.airTariff || { ...EMPTY_TARIFF });
   const [hotelTariff, setHotelTariff] = useState<TariffCondition>(() => initialDraft?.hotelTariff || { ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
+  const [sourceProposal, setSourceProposal] = useState<{ id: string; title: string | null; slug: string | null } | null>(null);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
     const state = location.state as any;
     const preSelected = state?.preSelectedPassengers || [];
