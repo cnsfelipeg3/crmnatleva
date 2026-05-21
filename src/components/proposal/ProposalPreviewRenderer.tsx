@@ -1499,8 +1499,9 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
 
       {/* Infos principais (quarto, refeições, datas) */}
       {(() => {
-        const checkIn = d.check_in || d.checkin || d.checkIn || d.start_date || d.startDate || d.from;
-        const checkOut = d.check_out || d.checkout || d.checkOut || d.end_date || d.endDate || d.to;
+        const checkIn = d.check_in || d.checkin || d.checkIn || d.checkin_date || d.start_date || d.startDate || d.from;
+        const checkOut = d.check_out || d.checkout || d.checkOut || d.checkout_date || d.end_date || d.endDate || d.to;
+
         return (
           <div className="px-6 py-5 flex flex-wrap justify-center gap-3">
             {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
