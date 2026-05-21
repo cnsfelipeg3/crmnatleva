@@ -76,6 +76,28 @@ interface RoomRegistryEntry {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Internal soft timeout to avoid hitting the 150s runtime idle limit (504)
+  const SOFT_TIMEOUT_MS = 140_000;
+  const timeoutPromise = new Promise<Response>((resolve) =>
+    setTimeout(() => {
+      console.warn(`⏱️ Soft timeout (${SOFT_TIMEOUT_MS}ms) reached, returning graceful response`);
+      resolve(new Response(
+        JSON.stringify({
+          success: false,
+          timeout: true,
+          error: "Busca de fotos demorou demais. Tente novamente em alguns segundos ou informe a URL do hotel manualmente.",
+          photos: [],
+          room_names: [],
+          section_details: {},
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      ));
+    }, SOFT_TIMEOUT_MS)
+  );
+
+  const workPromise = (async (): Promise<Response> => {
+
+
   try {
     const { hotel_name, hotel_city, hotel_country, force_refresh } = await req.json();
 
