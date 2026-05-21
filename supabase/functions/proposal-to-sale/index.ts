@@ -194,7 +194,7 @@ Deno.serve(async (req) => {
     for (const o of otherItems) {
       costRows.push({
         sale_id: saleId,
-        category: o.item_type, // transfer/insurance/experience/cruise
+        category: "outro",
         product_type: o.item_type,
         description: o.title || o.description || o.item_type,
         cash_value: 0,
