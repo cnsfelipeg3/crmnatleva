@@ -1928,6 +1928,15 @@ export default function ProposalEditor() {
           }, 0);
         }}
       />
+      {existing?.id && (
+        <ConvertToSaleDialog
+          open={convertOpen}
+          onClose={() => setConvertOpen(false)}
+          proposalId={existing.id}
+          proposalTitle={existing.title}
+          existingSaleId={existing.sale_id}
+        />
+      )}
     </div>
   );
 }
