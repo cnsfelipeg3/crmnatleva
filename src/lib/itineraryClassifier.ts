@@ -94,14 +94,22 @@ function getCityCode(iata: string): string {
 function groupIntoLegs(segments: FlightSegmentInput[]): ItineraryLeg[] {
   if (segments.length === 0) return [];
 
-  const sorted = [...segments].sort((a, b) => {
-    const dateA = a.departure_date || "";
-    const dateB = b.departure_date || "";
-    if (dateA !== dateB) return dateA.localeCompare(dateB);
-    const timeA = a.departure_time || "";
-    const timeB = b.departure_time || "";
-    return timeA.localeCompare(timeB);
-  });
+  // Se houver marcador explícito de início de perna em qualquer segmento,
+  // respeitamos a ordem de entrada e os marcadores (sem reordenar por data).
+  // Isso garante que trechos adicionados pelo usuário como pernas separadas
+  // jamais sejam fundidos como "conexão gigante" por causa de datas confusas.
+  const hasExplicitLegBreaks = segments.some((s) => s.is_leg_start === true);
+
+  const sorted = hasExplicitLegBreaks
+    ? [...segments]
+    : [...segments].sort((a, b) => {
+        const dateA = a.departure_date || "";
+        const dateB = b.departure_date || "";
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        const timeA = a.departure_time || "";
+        const timeB = b.departure_time || "";
+        return timeA.localeCompare(timeB);
+      });
 
   const legs: ItineraryLeg[] = [];
   let currentLeg: FlightSegmentInput[] = [sorted[0]];
@@ -109,6 +117,19 @@ function groupIntoLegs(segments: FlightSegmentInput[]): ItineraryLeg[] {
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1];
     const curr = sorted[i];
+
+    // Marcador explícito sempre quebra a perna.
+    if (curr.is_leg_start === true) {
+      legs.push({
+        legNumber: legs.length + 1,
+        originIata: currentLeg[0].origin_iata?.toUpperCase() || "",
+        destinationIata: currentLeg[currentLeg.length - 1].destination_iata?.toUpperCase() || "",
+        departureDate: currentLeg[0].departure_date || null,
+        segments: currentLeg,
+      });
+      currentLeg = [curr];
+      continue;
+    }
 
     const sameAirport = prev.destination_iata?.toUpperCase() === curr.origin_iata?.toUpperCase();
     const layoverMinutes = sameAirport ? calcLayoverMinutes(prev, curr) : null;
