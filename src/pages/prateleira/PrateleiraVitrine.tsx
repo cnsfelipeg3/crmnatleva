@@ -44,6 +44,7 @@ function toRowItem(p: Product): RowItem {
     paxChildren: p.pax_children,
     paymentTerms: p.payment_terms,
     installmentsMax: p.installments_max,
+    priceLabel: p.price_label,
   };
 }
 
