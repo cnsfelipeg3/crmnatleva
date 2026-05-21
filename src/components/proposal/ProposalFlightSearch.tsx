@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
+import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane, PlaneTakeoff, PlaneLanding, Scissors, Link2 } from "lucide-react";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
@@ -34,6 +34,12 @@ export interface FlightSegmentData {
   notes: string;
   direction?: "ida" | "volta" | "trecho";
   is_connection?: boolean;
+  /**
+   * Quando true, este segmento inicia uma nova perna no agrupamento.
+   * Marcado automaticamente ao usar "Adicionar trecho" (diferente de "Adicionar conexão").
+   * Garante que voos separados nunca sejam fundidos em uma única perna com conexão gigante.
+   */
+  is_leg_start?: boolean;
   // Baggage fields
   personal_item_included?: boolean;
   personal_item_weight_kg?: number;
@@ -93,6 +99,11 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       newSeg.departure_date = prev.departure_date;
       newSeg.origin_iata = prev.destination_iata;
     }
+    // Trecho novo (não conexão) sempre marca início de nova perna,
+    // impedindo o agrupamento automático de fundir com a perna anterior.
+    if (!isConnection && segments.length > 0) {
+      newSeg.is_leg_start = true;
+    }
     onSegmentsChange([...segments, newSeg]);
     // Auto-open manual mode for new segments
     setManualIdx((prev) => new Set(prev).add(segments.length));
@@ -105,6 +116,8 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       newSeg.departure_date = prev.departure_date;
       newSeg.origin_iata = prev.destination_iata;
     }
+    // Conexão NUNCA é início de perna.
+    newSeg.is_leg_start = false;
     const updated = [...segments];
     updated.splice(idx + 1, 0, newSeg);
     onSegmentsChange(updated);
@@ -403,6 +416,32 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                           <span className="text-[10px] text-muted-foreground mr-auto pl-1">
                             Segmento {segInLeg + 1}
                           </span>
+                        )}
+                        {/* Quebrar / unir trecho — só faz sentido a partir do 2º segmento da proposta */}
+                        {idx > 0 && (
+                          seg.is_leg_start ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateSegment(idx, "is_leg_start", false)}
+                              className="gap-1 text-xs h-6 text-muted-foreground hover:text-primary"
+                              title="Unir ao trecho anterior como conexão"
+                            >
+                              <Link2 className="w-3 h-3" /> Unir como conexão
+                            </Button>
+                          ) : (
+                            segInLeg > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => updateSegment(idx, "is_leg_start", true)}
+                                className="gap-1 text-xs h-6 text-muted-foreground hover:text-primary"
+                                title="Separar daqui como novo trecho independente"
+                              >
+                                <Scissors className="w-3 h-3" /> Separar trecho
+                              </Button>
+                            )
+                          )
                         )}
                         {hasFilled && !isManual && (
                           <Button variant="ghost" size="sm" onClick={() => setEditingIdx(isEditing ? null : idx)} className="gap-1 text-xs h-6">
