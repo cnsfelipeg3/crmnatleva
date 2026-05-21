@@ -34,6 +34,12 @@ export interface FlightSegmentData {
   notes: string;
   direction?: "ida" | "volta" | "trecho";
   is_connection?: boolean;
+  /**
+   * Quando true, este segmento inicia uma nova perna no agrupamento.
+   * Marcado automaticamente ao usar "Adicionar trecho" (diferente de "Adicionar conexão").
+   * Garante que voos separados nunca sejam fundidos em uma única perna com conexão gigante.
+   */
+  is_leg_start?: boolean;
   // Baggage fields
   personal_item_included?: boolean;
   personal_item_weight_kg?: number;
