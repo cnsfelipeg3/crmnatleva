@@ -417,6 +417,32 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
                             Segmento {segInLeg + 1}
                           </span>
                         )}
+                        {/* Quebrar / unir trecho — só faz sentido a partir do 2º segmento da proposta */}
+                        {idx > 0 && (
+                          seg.is_leg_start ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => updateSegment(idx, "is_leg_start", false)}
+                              className="gap-1 text-xs h-6 text-muted-foreground hover:text-primary"
+                              title="Unir ao trecho anterior como conexão"
+                            >
+                              <Link2 className="w-3 h-3" /> Unir como conexão
+                            </Button>
+                          ) : (
+                            segInLeg > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => updateSegment(idx, "is_leg_start", true)}
+                                className="gap-1 text-xs h-6 text-muted-foreground hover:text-primary"
+                                title="Separar daqui como novo trecho independente"
+                              >
+                                <Scissors className="w-3 h-3" /> Separar trecho
+                              </Button>
+                            )
+                          )
+                        )}
                         {hasFilled && !isManual && (
                           <Button variant="ghost" size="sm" onClick={() => setEditingIdx(isEditing ? null : idx)} className="gap-1 text-xs h-6">
                             {isEditing ? <Check className="w-3 h-3" /> : <Edit2 className="w-3 h-3" />}
