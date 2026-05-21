@@ -51,10 +51,27 @@ Deno.serve(async (req) => {
     if (proposal.status === "lost" || proposal.proposal_outcome === "rejected") {
       return json({ error: "Proposta marcada como perdida · não pode virar venda" }, 400);
     }
-    const destination = (proposal.destinations || [])[0] || null;
-    if (!destination || !proposal.travel_start_date) {
+    // Try to derive destination from multiple sources (destinations array, flight items, title)
+    let destination: string | null = (proposal.destinations || [])[0] || null;
+    if (!destination) {
+      const { data: preItems } = await admin
+        .from("proposal_items")
+        .select("item_type, title, data")
+        .eq("proposal_id", proposalId);
+      const flight = (preItems || []).find((i: any) => i.item_type === "flight");
+      const segs = flight?.data?.flight_segments || [];
+      const lastSeg = segs[segs.length - 1];
+      destination =
+        flight?.data?.destination_city ||
+        lastSeg?.destination_city ||
+        lastSeg?.destination_iata ||
+        (preItems || []).find((i: any) => i.item_type === "hotel")?.data?.city ||
+        proposal.title ||
+        "A definir";
+    }
+    if (!proposal.travel_start_date) {
       return json({
-        error: "Proposta sem destino ou data de ida · complete antes de converter",
+        error: "Proposta sem data de ida · preencha a data antes de converter",
       }, 400);
     }
 
