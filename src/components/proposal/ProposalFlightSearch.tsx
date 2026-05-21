@@ -99,6 +99,11 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       newSeg.departure_date = prev.departure_date;
       newSeg.origin_iata = prev.destination_iata;
     }
+    // Trecho novo (não conexão) sempre marca início de nova perna,
+    // impedindo o agrupamento automático de fundir com a perna anterior.
+    if (!isConnection && segments.length > 0) {
+      newSeg.is_leg_start = true;
+    }
     onSegmentsChange([...segments, newSeg]);
     // Auto-open manual mode for new segments
     setManualIdx((prev) => new Set(prev).add(segments.length));
@@ -111,6 +116,8 @@ export default function ProposalFlightSearch({ segments, onSegmentsChange }: Pro
       newSeg.departure_date = prev.departure_date;
       newSeg.origin_iata = prev.destination_iata;
     }
+    // Conexão NUNCA é início de perna.
+    newSeg.is_leg_start = false;
     const updated = [...segments];
     updated.splice(idx + 1, 0, newSeg);
     onSegmentsChange(updated);
