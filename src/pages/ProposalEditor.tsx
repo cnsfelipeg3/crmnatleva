@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package, ShoppingCart } from "lucide-react";
+import { ConvertToSaleDialog } from "@/components/proposal/ConvertToSaleDialog";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import { getPublicProposalUrl } from "@/lib/publicUrl";
 import {
@@ -1000,6 +1001,7 @@ export default function ProposalEditor() {
   };
 
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   const handleShare = async () => {
     const slug = existing?.slug;
@@ -1087,6 +1089,18 @@ export default function ProposalEditor() {
                 </DropdownMenuContent>
               </DropdownMenu>
             </>
+          )}
+          {!isNew && existing?.id && (
+            <Button
+              variant={existing.sale_id ? "outline" : "default"}
+              size="sm"
+              onClick={() => setConvertOpen(true)}
+              className="gap-1.5"
+              title={existing.sale_id ? "Abrir venda vinculada" : "Converter esta proposta em rascunho de venda"}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              {existing.sale_id ? "Venda vinculada" : "Converter em Venda"}
+            </Button>
           )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="gap-1.5">
             <Save className="w-4 h-4" /> Salvar
@@ -1914,6 +1928,15 @@ export default function ProposalEditor() {
           }, 0);
         }}
       />
+      {existing?.id && (
+        <ConvertToSaleDialog
+          open={convertOpen}
+          onClose={() => setConvertOpen(false)}
+          proposalId={existing.id}
+          proposalTitle={existing.title}
+          existingSaleId={existing.sale_id}
+        />
+      )}
     </div>
   );
 }

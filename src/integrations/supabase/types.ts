@@ -8386,6 +8386,7 @@ export type Database = {
           return_date: string | null
           score: number | null
           seller_id: string | null
+          source_proposal_id: string | null
           status: string
           tag_chatguru: string | null
           total_cost: number | null
@@ -8444,6 +8445,7 @@ export type Database = {
           return_date?: string | null
           score?: number | null
           seller_id?: string | null
+          source_proposal_id?: string | null
           status?: string
           tag_chatguru?: string | null
           total_cost?: number | null
@@ -8502,6 +8504,7 @@ export type Database = {
           return_date?: string | null
           score?: number | null
           seller_id?: string | null
+          source_proposal_id?: string | null
           status?: string
           tag_chatguru?: string | null
           total_cost?: number | null
@@ -8527,6 +8530,13 @@ export type Database = {
             columns: ["payer_passenger_id"]
             isOneToOne: false
             referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_source_proposal_id_fkey"
+            columns: ["source_proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
             referencedColumns: ["id"]
           },
         ]

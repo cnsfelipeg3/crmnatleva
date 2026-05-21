@@ -190,6 +190,7 @@ export default function NewSale() {
   const [airTariff, setAirTariff] = useState<TariffCondition>(() => initialDraft?.airTariff || { ...EMPTY_TARIFF });
   const [hotelTariff, setHotelTariff] = useState<TariffCondition>(() => initialDraft?.hotelTariff || { ...EMPTY_TARIFF });
   const [saving, setSaving] = useState(false);
+  const [sourceProposal, setSourceProposal] = useState<{ id: string; title: string | null; slug: string | null } | null>(null);
   const [selectedPassengers, setSelectedPassengers] = useState<SelectedPassenger[]>(() => {
     const state = location.state as any;
     const preSelected = state?.preSelectedPassengers || [];
@@ -230,6 +231,14 @@ export default function NewSale() {
       try {
         const { data: sale } = await supabase.from("sales").select("*").eq("id", editId).single();
         if (!sale) { toast({ title: "Venda não encontrada", variant: "destructive" }); navigate("/sales"); return; }
+
+        // Banner: source proposal (best-effort, non-blocking)
+        const srcId = (sale as any).source_proposal_id as string | null | undefined;
+        if (srcId) {
+          supabase.from("proposals").select("id,title,slug").eq("id", srcId).single()
+            .then(({ data }) => { if (data) setSourceProposal(data as any); });
+        }
+
 
         setForm({
           name: sale.name || "", close_date: sale.close_date || "", payment_method: sale.payment_method || "",
@@ -1210,6 +1219,28 @@ export default function NewSale() {
           </div>
         )}
       </div>
+
+      {sourceProposal && (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs">
+          <div className="flex items-center gap-2 min-w-0 text-foreground">
+            <Sparkles className="w-3.5 h-3.5 text-accent shrink-0" />
+            <span className="truncate">
+              Rascunho gerado a partir da proposta
+              <span className="font-medium ml-1">{sourceProposal.title || "(sem título)"}</span>
+              <span className="text-muted-foreground ml-1">· complete fornecedor, localizadores, custo real e forma de pagamento</span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate(`/propostas/${sourceProposal.id}`)}
+            className="shrink-0 text-accent hover:underline font-medium"
+          >
+            Abrir proposta
+          </button>
+        </div>
+      )}
+
+
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1.5 rounded-xl">
