@@ -232,6 +232,14 @@ export default function NewSale() {
         const { data: sale } = await supabase.from("sales").select("*").eq("id", editId).single();
         if (!sale) { toast({ title: "Venda não encontrada", variant: "destructive" }); navigate("/sales"); return; }
 
+        // Banner: source proposal (best-effort, non-blocking)
+        const srcId = (sale as any).source_proposal_id as string | null | undefined;
+        if (srcId) {
+          supabase.from("proposals").select("id,title,slug").eq("id", srcId).single()
+            .then(({ data }) => { if (data) setSourceProposal(data as any); });
+        }
+
+
         setForm({
           name: sale.name || "", close_date: sale.close_date || "", payment_method: sale.payment_method || "",
           observations: sale.observations || "", link_chat: sale.link_chat || "",
