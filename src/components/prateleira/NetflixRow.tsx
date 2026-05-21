@@ -32,6 +32,7 @@ export type RowItem = {
   paxChildren?: number | null;
   paymentTerms?: Record<string, unknown> | null;
   installmentsMax?: number | null;
+  priceLabel?: string | null;
 };
 
 function money(v?: number | null, currency = "BRL") {
