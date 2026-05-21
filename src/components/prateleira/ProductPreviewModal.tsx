@@ -218,6 +218,20 @@ export default function ProductPreviewModal({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <div className="t-eyebrow text-white/45">Entrada</div>
+                  {(() => {
+                    const adults = Number(item.paxAdults || 0);
+                    const kids = Number(item.paxChildren || 0);
+                    const isPerPerson = (item.priceLabel || "").toLowerCase().includes("pessoa");
+                    let paxLabel: string | null = null;
+                    if (isPerPerson) {
+                      paxLabel = "Valor por pessoa";
+                    } else if (adults > 0 || kids > 0) {
+                      paxLabel = `Valor para ${adults} ${adults === 1 ? "adulto" : "adultos"}${kids > 0 ? ` + ${kids} ${kids === 1 ? "criança" : "crianças"}` : ""}`;
+                    }
+                    return paxLabel ? (
+                      <div className="text-[11px] text-amber-300/90 mt-0.5">{paxLabel}</div>
+                    ) : null;
+                  })()}
                   {promo && full && (
                     <div className="t-numeric text-[11px] text-white/45 line-through leading-none">{full}</div>
                   )}
