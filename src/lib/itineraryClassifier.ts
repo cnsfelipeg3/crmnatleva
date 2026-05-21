@@ -73,6 +73,12 @@ export interface FlightSegmentInput {
   departure_time?: string | null;
   direction?: string;
   segment_order?: number;
+  /**
+   * Quando true, este segmento força o início de uma nova perna no agrupamento.
+   * Usado quando o usuário adiciona explicitamente um "trecho" (não uma conexão),
+   * evitando que voos de datas/horários ambíguos sejam fundidos como conexão gigante.
+   */
+  is_leg_start?: boolean;
   [key: string]: any;
 }
 
