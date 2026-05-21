@@ -40,8 +40,9 @@ export function buildFlightLegGroups<T extends FlightLegLike>(inputSegments: T[]
   const hasExplicitLegStarts = inputSegments.some((seg, index) => index > 0 && seg.is_leg_start === true);
 
   const fallbackLegs = inputSegments.reduce<FlightLegGroup<T>[]>((acc, seg, index) => {
-    const direction = String(seg.direction || (index === 0 ? "ida" : "trecho")).toLowerCase();
-    const label = direction === "volta" && !hasExplicitLegStarts ? "Volta" : direction === "ida" && acc.length === 0 ? "Ida" : `Trecho ${acc.length + 1}`;
+    const rawDirection = String(seg.direction || (index === 0 ? "ida" : "trecho")).toLowerCase();
+    const direction = hasExplicitLegStarts && index > 0 && rawDirection !== "volta" ? "trecho" : rawDirection;
+    const label = direction === "volta" ? "Volta" : direction === "ida" && acc.length === 0 ? "Ida" : `Trecho ${acc.length + 1}`;
     const last = acc[acc.length - 1];
 
     if (last && last.direction === direction && seg.is_leg_start !== true) {
@@ -109,7 +110,9 @@ export function buildFlightLegGroups<T extends FlightLegLike>(inputSegments: T[]
 
   const classification = classifyItinerary(normalizedSegments);
 
-  const directedSegments = assignDirections(normalizedSegments, classification) as T[];
+  const directedSegments = (hasExplicitLegStarts
+    ? normalizedSegments
+    : assignDirections(normalizedSegments, classification)) as T[];
   const usedIndices = new Set<number>();
 
   const resolvedLegs = classification.legs
@@ -132,11 +135,14 @@ export function buildFlightLegGroups<T extends FlightLegLike>(inputSegments: T[]
 
       if (segments.length === 0) return null;
 
-      const direction = String(
-        (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
-          ? (legIndex === 0 ? "ida" : "volta")
-          : (segments[0]?.direction || (classification.type === "ONE_WAY" ? "ida" : "trecho")),
-      ).toLowerCase();
+      const rawDirection = String(segments[0]?.direction || "").toLowerCase();
+      const direction = hasExplicitLegStarts
+        ? (rawDirection === "volta" ? "volta" : legIndex === 0 ? "ida" : "trecho")
+        : String(
+            (classification.type === "ROUND_TRIP" || classification.type === "OPEN_JAW")
+              ? (legIndex === 0 ? "ida" : "volta")
+              : (segments[0]?.direction || (classification.type === "ONE_WAY" ? "ida" : "trecho")),
+          ).toLowerCase();
 
       const label = direction === "volta"
         ? "Volta"
