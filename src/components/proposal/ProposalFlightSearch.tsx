@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane, PlaneTakeoff, PlaneLanding } from "lucide-react";
+import { Search, Loader2, Plus, Trash2, Edit2, Check, Pen, ArrowDownUp, Plane, PlaneTakeoff, PlaneLanding, Scissors, Link2 } from "lucide-react";
 import AirlineAutocomplete from "@/components/AirlineAutocomplete";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
 import FlightSegmentCard from "./FlightSegmentCard";
