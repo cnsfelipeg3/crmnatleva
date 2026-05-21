@@ -1001,6 +1001,7 @@ export default function ProposalEditor() {
   };
 
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [convertOpen, setConvertOpen] = useState(false);
 
   const handleShare = async () => {
     const slug = existing?.slug;
