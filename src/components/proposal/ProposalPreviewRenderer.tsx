@@ -1501,12 +1501,14 @@ function HotelCard({ hotel, idx }: { hotel: any; idx: number }) {
         const checkOut = d.check_out || d.checkout || d.checkOut || d.checkout_date || d.end_date || d.endDate || d.to;
 
         return (
-          <div className="px-6 py-5 flex flex-wrap justify-center gap-3">
-            {d.room_type && <DetailPill icon={<BedDouble className="w-3.5 h-3.5" />} label="Quarto" value={d.room_type} />}
-            {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-3.5 h-3.5" />} label="Refeições" value={d.meal_plan} />}
-            {checkIn && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-in" value={formatHotelDateBR(checkIn) || checkIn} />}
-            {checkOut && <DetailPill icon={<Calendar className="w-3.5 h-3.5" />} label="Check-out" value={formatHotelDateBR(checkOut) || checkOut} />}
-            {d.nights && <DetailPill icon={<Clock className="w-3.5 h-3.5" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
+          <div className="px-6 py-5 mx-6 mb-2 border-y border-accent/15">
+            <div className="flex flex-wrap items-stretch justify-center divide-x divide-accent/15">
+              {d.room_type && <DetailPill icon={<BedDouble className="w-4 h-4" />} label="Quarto" value={d.room_type} />}
+              {d.meal_plan && <DetailPill icon={<UtensilsCrossed className="w-4 h-4" />} label="Refeições" value={d.meal_plan} />}
+              {checkIn && <DetailPill icon={<Calendar className="w-4 h-4" />} label="Check-in" value={formatHotelDateBR(checkIn) || checkIn} />}
+              {checkOut && <DetailPill icon={<Calendar className="w-4 h-4" />} label="Check-out" value={formatHotelDateBR(checkOut) || checkOut} />}
+              {d.nights && <DetailPill icon={<Clock className="w-4 h-4" />} label="Diárias" value={`${d.nights} noite${d.nights > 1 ? "s" : ""}`} />}
+            </div>
           </div>
         );
       })()}
