@@ -255,12 +255,10 @@ function PhotoGallery({ photos, name, captions }: { photos: string[]; name: stri
 /* ═══ Detail Pill ═══ */
 function DetailPill({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl bg-accent/5 border border-accent/10 px-3 py-2.5">
-      <span className="text-accent">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-[9px] uppercase tracking-wider text-muted-foreground/50 font-medium">{label}</p>
-        <p className="text-xs font-medium text-foreground truncate">{value}</p>
-      </div>
+    <div className="flex flex-col items-center text-center px-4 py-3 min-w-0">
+      <span className="text-accent/70 mb-1.5">{icon}</span>
+      <p className="text-[9px] uppercase tracking-[0.14em] text-muted-foreground/60 font-medium mb-0.5">{label}</p>
+      <p className="text-sm font-medium text-foreground truncate max-w-full">{value}</p>
     </div>
   );
 }
