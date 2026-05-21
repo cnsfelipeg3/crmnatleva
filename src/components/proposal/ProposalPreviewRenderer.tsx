@@ -1985,6 +1985,29 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
               {dateRange}
             </p>
           )}
+          {(() => {
+            const adults = Number((proposal as any).passengers_adults ?? 0);
+            const children = Number((proposal as any).passengers_children ?? 0);
+            const ages: number[] = Array.isArray((proposal as any).children_ages) ? (proposal as any).children_ages : [];
+            const total = adults + children;
+            if (total <= 0 && !proposal.passenger_count) return null;
+            const parts: string[] = [];
+            if (adults > 0) parts.push(`${adults} ${adults === 1 ? "adulto" : "adultos"}`);
+            if (children > 0) {
+              const agesStr = ages.filter((a) => a > 0).join(", ");
+              parts.push(`${children} ${children === 1 ? "criança" : "crianças"}${agesStr ? ` (${agesStr} ${ages.length === 1 ? "ano" : "anos"})` : ""}`);
+            }
+            const label = parts.length > 0
+              ? `Viagem para ${parts.join(" e ")}`
+              : `Viagem para ${proposal.passenger_count} ${proposal.passenger_count === 1 ? "viajante" : "viajantes"}`;
+            return (
+              <p className="mt-1.5 sm:mt-2 inline-flex items-center gap-1.5 text-[11px] sm:text-xs md:text-sm text-muted-foreground/90 font-medium">
+                <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-accent/70" />
+                {label}
+              </p>
+            );
+          })()}
+
           <div className="flex items-center justify-center gap-2 sm:gap-3 mt-4 sm:mt-5">
             <div className="h-px w-6 sm:w-8 bg-accent/40" />
             <span
