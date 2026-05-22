@@ -42,9 +42,19 @@ Deno.serve(async (req) => {
       .single();
     if (pErr || !proposal) return json({ error: "Proposta não encontrada" }, 404);
 
-    // 2) Idempotent: already converted
+    // 2) Idempotent: already converted (but ignore if the linked sale was deleted)
     if (proposal.sale_id) {
-      return json({ sale_id: proposal.sale_id, already_existed: true });
+      const { data: existingSale } = await admin
+        .from("sales")
+        .select("id, deleted_at")
+        .eq("id", proposal.sale_id)
+        .maybeSingle();
+      if (existingSale && !existingSale.deleted_at) {
+        return json({ sale_id: proposal.sale_id, already_existed: true });
+      }
+      // Sale was deleted (soft or hard) → unlink and allow new conversion
+      await admin.from("proposals").update({ sale_id: null }).eq("id", proposalId);
+      proposal.sale_id = null;
     }
 
     // 3) Guard rails
