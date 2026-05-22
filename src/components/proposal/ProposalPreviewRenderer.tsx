@@ -23,6 +23,7 @@ import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
 import SmartImage from "./SmartImage";
 import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
+import { cn } from "@/lib/utils";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
@@ -2204,8 +2205,21 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
       {showExperiences && experiences.length > 0 && (
         <section data-track-section="experiences" className="py-10 sm:py-14 px-5 sm:px-6 bg-accent/[0.03]">
           <SectionTitle subtitle="Momentos que farão sua viagem inesquecível">Experiências</SectionTitle>
-          <div className="max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {experiences.map((exp, idx) => <ExperienceCard key={exp.id || idx} exp={exp} idx={idx} />)}
+          <div
+            className={cn(
+              "max-w-5xl mx-auto gap-6",
+              experiences.length === 1
+                ? "flex justify-center"
+                : experiences.length === 2
+                ? "grid grid-cols-1 sm:grid-cols-2 justify-items-center"
+                : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 justify-items-center"
+            )}
+          >
+            {experiences.map((exp, idx) => (
+              <div key={exp.id || idx} className="w-full max-w-sm">
+                <ExperienceCard exp={exp} idx={idx} />
+              </div>
+            ))}
           </div>
         </section>
       )}
