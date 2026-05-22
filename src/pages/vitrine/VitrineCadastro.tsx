@@ -31,25 +31,16 @@ export default function VitrineCadastro() {
     setLoading(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const { data, error } = await supabase.auth.signUp({
-        email: cleanEmail,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/vitrine/login`,
-          data: { full_name: fullName.trim() },
+      const { data, error } = await supabase.functions.invoke("affiliate-self-signup", {
+        body: {
+          full_name: fullName.trim(),
+          email: cleanEmail,
+          password,
+          phone,
         },
       });
-      if (error) throw error;
-      if (!data.user) throw new Error("Não foi possível criar a conta");
-
-      const { error: insertError } = await supabase.from("affiliates").insert({
-        user_id: data.user.id,
-        full_name: fullName.trim(),
-        email: cleanEmail,
-        phone,
-        status: "pending",
-      });
-      if (insertError && insertError.code !== "23505") throw insertError;
+      if (error) throw new Error((data as any)?.error || error.message);
+      if ((data as any)?.error) throw new Error((data as any).error);
 
       setDone(true);
     } catch (err: any) {

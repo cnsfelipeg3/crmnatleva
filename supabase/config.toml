@@ -117,6 +117,8 @@ project_id = "mexlhkqcmiaktjxsyvod"
     verify_jwt = true
   [functions.passenger-self-signup]
     verify_jwt = false
+  [functions.affiliate-self-signup]
+    verify_jwt = false
   [functions.pipeline-reprocess]
     verify_jwt = true
   [functions.places-search]
