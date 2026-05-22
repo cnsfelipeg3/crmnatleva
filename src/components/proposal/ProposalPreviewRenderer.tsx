@@ -23,6 +23,7 @@ import { iataToCityName } from "@/lib/iataUtils";
 import { buildFlightLegGroups } from "@/lib/flightLegGrouping";
 import SmartImage from "./SmartImage";
 import { sanitizeProposalCoverUrl } from "@/lib/proposalCoverImage";
+import { cn } from "@/lib/utils";
 
 const fallbackCover = "https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop&q=80";
 
