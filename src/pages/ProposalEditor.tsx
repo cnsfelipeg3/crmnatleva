@@ -261,6 +261,24 @@ export default function ProposalEditor() {
     enabled: !isNew,
   });
 
+  const linkedSaleId = existing?.sale_id ?? null;
+  const { data: linkedSale } = useQuery({
+    queryKey: ["proposal-linked-sale", linkedSaleId],
+    queryFn: async () => {
+      if (!linkedSaleId) return null;
+      const { data, error } = await supabase
+        .from("sales")
+        .select("id, deleted_at")
+        .eq("id", linkedSaleId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!linkedSaleId,
+  });
+
+  const activeExistingSaleId = linkedSaleId && linkedSale && !linkedSale.deleted_at ? linkedSaleId : null;
+
   const { data: existingItems } = useQuery({
     queryKey: ["proposal-items", id],
     queryFn: async () => {
