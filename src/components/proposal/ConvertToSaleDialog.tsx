@@ -26,11 +26,6 @@ export function ConvertToSaleDialog({
   const alreadyLinked = !!existingSaleId;
 
   const handleConvert = async () => {
-    if (alreadyLinked && existingSaleId) {
-      navigate(`/sales/${existingSaleId}/edit`);
-      onClose();
-      return;
-    }
     setLoading(true);
     try {
       const result = await convertProposalToSale(proposalId);

@@ -261,6 +261,24 @@ export default function ProposalEditor() {
     enabled: !isNew,
   });
 
+  const linkedSaleId = existing?.sale_id ?? null;
+  const { data: linkedSale } = useQuery({
+    queryKey: ["proposal-linked-sale", linkedSaleId],
+    queryFn: async () => {
+      if (!linkedSaleId) return null;
+      const { data, error } = await supabase
+        .from("sales")
+        .select("id, deleted_at")
+        .eq("id", linkedSaleId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!linkedSaleId,
+  });
+
+  const activeExistingSaleId = linkedSaleId && linkedSale && !linkedSale.deleted_at ? linkedSaleId : null;
+
   const { data: existingItems } = useQuery({
     queryKey: ["proposal-items", id],
     queryFn: async () => {
@@ -1092,14 +1110,14 @@ export default function ProposalEditor() {
           )}
           {!isNew && existing?.id && (
             <Button
-              variant={existing.sale_id ? "outline" : "default"}
+              variant={activeExistingSaleId ? "outline" : "default"}
               size="sm"
               onClick={() => setConvertOpen(true)}
               className="gap-1.5"
-              title={existing.sale_id ? "Abrir venda vinculada" : "Converter esta proposta em rascunho de venda"}
+              title={activeExistingSaleId ? "Abrir venda vinculada" : "Converter esta proposta em rascunho de venda"}
             >
               <ShoppingCart className="w-3.5 h-3.5" />
-              {existing.sale_id ? "Venda vinculada" : "Converter em Venda"}
+              {activeExistingSaleId ? "Venda vinculada" : "Converter em Venda"}
             </Button>
           )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending || !form.title} className="gap-1.5">
@@ -1934,7 +1952,7 @@ export default function ProposalEditor() {
           onClose={() => setConvertOpen(false)}
           proposalId={existing.id}
           proposalTitle={existing.title}
-          existingSaleId={existing.sale_id}
+          existingSaleId={activeExistingSaleId}
         />
       )}
     </div>
