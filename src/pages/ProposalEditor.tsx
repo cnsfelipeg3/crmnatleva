@@ -1952,7 +1952,7 @@ export default function ProposalEditor() {
           onClose={() => setConvertOpen(false)}
           proposalId={existing.id}
           proposalTitle={existing.title}
-          existingSaleId={existing.sale_id}
+          existingSaleId={activeExistingSaleId}
         />
       )}
     </div>
