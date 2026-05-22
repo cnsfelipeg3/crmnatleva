@@ -1996,7 +1996,9 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
             if (adults > 0) parts.push(`${adults} ${adults === 1 ? "adulto" : "adultos"}`);
             if (children > 0) {
               const agesStr = ages.filter((a) => a > 0).join(", ");
-              parts.push(`${children} ${children === 1 ? "criança" : "crianças"}${agesStr ? ` (${agesStr} ${ages.length === 1 ? "ano" : "anos"})` : ""}`);
+              const filteredAges = ages.filter((a) => a > 0);
+              const ageUnit = filteredAges.length === 1 && filteredAges[0] === 1 ? "ano" : "anos";
+              parts.push(`${children} ${children === 1 ? "criança" : "crianças"}${agesStr ? ` (${agesStr} ${ageUnit})` : ""}`);
             }
             const label = parts.length > 0
               ? `Viagem para ${parts.join(" e ")}`
