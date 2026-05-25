@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
       const msg = signErr?.message || "";
       if (msg.toLowerCase().includes("already") || msg.toLowerCase().includes("registered")) {
         const { data: list } = await admin.auth.admin.listUsers();
-        const found = list?.users?.find((u: any) => u.email?.toLowerCase() === cleanEmail);
+        const found = list?.users?.find((u) => u.email?.toLowerCase() === cleanEmail);
         if (found) userId = found.id;
       }
       if (!userId) {
