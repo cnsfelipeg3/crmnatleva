@@ -107,7 +107,13 @@ export function usePermissions(): UsePermissionsReturn {
     }
   }, [user, isAdmin]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!authReady) {
+      setLoading(true);
+      return;
+    }
+    load();
+  }, [authReady, load]);
 
   const can = useCallback((menuKey: string, action: MenuAction) => {
     if (isAdmin) return true;
@@ -120,5 +126,6 @@ export function usePermissions(): UsePermissionsReturn {
     return false;
   }, [isAdmin, permissions]);
 
-  return { loading, isAdmin, permissions, can, reload: () => load(true) };
+  return { loading: loading || !authReady, isAdmin, permissions, can, reload: () => load(true) };
 }
+
