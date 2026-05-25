@@ -40,11 +40,16 @@ if (typeof window !== "undefined") {
  * Admin sempre tem acesso a tudo (bypass · sem query).
  */
 export function usePermissions(): UsePermissionsReturn {
-  const { user, role } = useAuth();
+  const { user, profile, role, isLoading: authLoading } = useAuth();
   const [permissions, setPermissions] = useState<Record<string, PermissionRow>>({});
   const [loading, setLoading] = useState(true);
   const isAdmin = role === "admin";
   const inFlightRef = useRef<Promise<void> | null>(null);
+
+  // Aguarda o AuthContext terminar de hidratar (profile + role) antes de decidir permissões.
+  // Sem isso, há uma race em que role=DEFAULT (vendedor) renderiza "Sem atalhos" para admins.
+  const authReady = !authLoading && (!user || !!profile);
+
 
   const load = useCallback(async (force = false) => {
     if (!user) {
@@ -102,7 +107,13 @@ export function usePermissions(): UsePermissionsReturn {
     }
   }, [user, isAdmin]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!authReady) {
+      setLoading(true);
+      return;
+    }
+    load();
+  }, [authReady, load]);
 
   const can = useCallback((menuKey: string, action: MenuAction) => {
     if (isAdmin) return true;
@@ -115,5 +126,6 @@ export function usePermissions(): UsePermissionsReturn {
     return false;
   }, [isAdmin, permissions]);
 
-  return { loading, isAdmin, permissions, can, reload: () => load(true) };
+  return { loading: loading || !authReady, isAdmin, permissions, can, reload: () => load(true) };
 }
+
