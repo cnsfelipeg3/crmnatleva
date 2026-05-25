@@ -42,23 +42,36 @@ export default function VitrineCadastro() {
     if (phoneDigits.length < 8) return toast.error("WhatsApp inválido");
 
     setLoading(true);
-    try {
-      const cleanEmail = email.trim().toLowerCase();
-      const { data, error } = await supabase.functions.invoke<AffiliateSignupResponse>("affiliate-self-signup", {
-        body: {
-          full_name: fullName.trim(),
-          email: cleanEmail,
-          password,
-          phone,
-        },
-      });
-      if (error) throw new Error(data?.error || error.message);
-      if (data?.error) throw new Error(data.error);
+    const cleanEmail = email.trim().toLowerCase();
 
-      setDoneMessage(data?.message || "Enviamos o e-mail de confirmação para ativar sua conta.");
+    // Garante que nenhuma sessão admin pré-existente atrapalhe o signup
+    try { await supabase.auth.signOut(); } catch { /* ignore */ }
+
+    // Timeout duro de 20s pra evitar "carregando infinito"
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const invokePromise = supabase.functions.invoke<AffiliateSignupResponse>("affiliate-self-signup", {
+        body: { full_name: fullName.trim(), email: cleanEmail, password, phone },
+      });
+      const abortPromise = new Promise<never>((_, reject) => {
+        controller.signal.addEventListener("abort", () => reject(new Error("Tempo esgotado. Tente novamente em instantes.")));
+      });
+
+      const { data, error } = await Promise.race([invokePromise, abortPromise]) as Awaited<typeof invokePromise>;
+      window.clearTimeout(timeoutId);
+
+      if (error) throw new Error(data?.error || error.message || "Erro ao criar cadastro");
+      if (data?.error) throw new Error(data.error);
+      if (!data?.ok) throw new Error("Resposta inesperada do servidor. Tente novamente.");
+
+      setDoneMessage(data.message || "Enviamos o e-mail de confirmação pra ativar sua conta.");
       setDone(true);
     } catch (err: unknown) {
-      toast.error(getErrorMessage(err));
+      window.clearTimeout(timeoutId);
+      const msg = getErrorMessage(err);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
