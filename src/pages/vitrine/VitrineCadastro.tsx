@@ -10,6 +10,17 @@ import { Loader2, Sparkles, Mail, Lock, User, MailCheck } from "lucide-react";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 import { toast } from "sonner";
 
+type AffiliateSignupResponse = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  existing?: boolean;
+};
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Erro ao criar cadastro";
+}
+
 export default function VitrineCadastro() {
   const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
@@ -20,9 +31,11 @@ export default function VitrineCadastro() {
   const [phoneDigits, setPhoneDigits] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneMessage, setDoneMessage] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     if (!fullName.trim()) return toast.error("Informe seu nome completo");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return toast.error("E-mail inválido");
     if (password.length < 6) return toast.error("Senha precisa ter ao menos 6 caracteres");
@@ -31,7 +44,7 @@ export default function VitrineCadastro() {
     setLoading(true);
     try {
       const cleanEmail = email.trim().toLowerCase();
-      const { data, error } = await supabase.functions.invoke("affiliate-self-signup", {
+      const { data, error } = await supabase.functions.invoke<AffiliateSignupResponse>("affiliate-self-signup", {
         body: {
           full_name: fullName.trim(),
           email: cleanEmail,
@@ -39,12 +52,13 @@ export default function VitrineCadastro() {
           phone,
         },
       });
-      if (error) throw new Error((data as any)?.error || error.message);
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if (error) throw new Error(data?.error || error.message);
+      if (data?.error) throw new Error(data.error);
 
+      setDoneMessage(data?.message || "Enviamos o e-mail de confirmação para ativar sua conta.");
       setDone(true);
-    } catch (err: any) {
-      toast.error(err?.message || "Erro ao criar cadastro");
+    } catch (err: unknown) {
+      toast.error(getErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -58,7 +72,10 @@ export default function VitrineCadastro() {
           <div className="flex justify-center"><MailCheck className="w-14 h-14 text-emerald-500" /></div>
           <h1 className="font-serif text-2xl text-foreground">Quase lá!</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Enviamos um e-mail de confirmação para <strong className="text-foreground">{email}</strong>. Clique no link pra ativar sua conta.
+            {doneMessage || "Enviamos o e-mail de confirmação para ativar sua conta."}
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Confira a caixa de entrada e o spam de <strong className="text-foreground">{email}</strong>.
           </p>
           <p className="text-xs text-muted-foreground/80">
             Depois da confirmação, nosso time analisa seu cadastro de afiliado · você recebe um aviso quando o acesso for liberado.
