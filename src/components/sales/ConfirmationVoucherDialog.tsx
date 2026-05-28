@@ -16,7 +16,35 @@ import {
   type HotelVoucherData, type AereoVoucherData,
 } from "./ConfirmationVoucher";
 import { iataToLabel } from "@/lib/iataUtils";
+import { ALL_AIRLINES } from "@/lib/airlinesData";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+// IATA → city short label (e.g. "São Paulo / CGH") to keep one-line layout in the PDF
+function shortAirportLabel(iata?: string | null): string {
+  if (!iata) return "—";
+  const full = iataToLabel(iata) || iata;
+  // iataToLabel returns "São Paulo (Congonhas) (CGH)" → keep only city + IATA
+  const city = full.replace(/\s*\(.*\)\s*/g, "").trim();
+  return `${city} / ${iata.toUpperCase()}`;
+}
+
+function prettyAirline(code?: string | null): string {
+  if (!code) return "—";
+  const c = code.trim().toUpperCase();
+  const found = ALL_AIRLINES.find((a) => a.iata === c || a.icao === c);
+  if (!found) return c;
+  // Short marketing name: "GOL Linhas Aéreas" → "GOL"
+  return found.name.split(/\s+/)[0];
+}
+
+function cleanFlightNumber(airline?: string | null, flightNumber?: string | null): string {
+  const air = (airline || "").trim().toUpperCase();
+  const fn = (flightNumber || "").trim().toUpperCase();
+  if (!fn) return air || "—";
+  // Strip any leading airline prefix (one or repeated) from flight_number
+  const stripped = fn.replace(new RegExp(`^(?:${air}\\s*)+`, "i"), "").trim();
+  return air ? `${air} ${stripped || fn}` : fn;
+}
 
 interface Props {
   open: boolean;
