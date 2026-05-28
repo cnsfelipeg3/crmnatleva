@@ -122,7 +122,7 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
       ["Código pin:", data.pin_code || "—"],
     ];
     return (
-      <div ref={ref} style={page}>
+      <div ref={ref} data-voucher-page="true" style={page}>
         {logoBlock}
         <h1 style={h1}>Confirmação de Reserva</h1>
         <div style={sub}>Voucher de Hospedagem</div>
@@ -138,8 +138,8 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
                 borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
               }}
             >
-              <div style={{ ...labelCell, borderBottom: "none" }}>{k}</div>
-              <div style={{ ...cell, borderBottom: "none", fontWeight: 600 }}>{v}</div>
+              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
             </div>
           ))}
         </div>
@@ -164,8 +164,8 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
                   borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{g.name}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{g.doc || "—"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
               </div>
             ))
           )}
@@ -174,14 +174,14 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
         <h2 style={h2}>Detalhes da Hospedagem</h2>
         <div style={card}>
           <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, flex: 2 }}>Endereço:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Data de Chegada:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Data de Saída:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
           </div>
           <div style={{ display: "flex" }}>
-            <div style={{ ...cell, flex: 2, borderBottom: "none" }}>{data.address || "—"}</div>
-            <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
-            <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
+            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
+            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
           </div>
         </div>
 
