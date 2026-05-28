@@ -77,7 +77,10 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
         const aereoData: AereoVoucherData = {
           flight_class: prettyClass(sale?.flight_class),
           emission_date: sale?.emission_date || sale?.close_date,
-          reservation_code: aereoCost?.reservation_code || sale?.locators || null,
+          reservation_code:
+            aereoCost?.reservation_code ||
+            (Array.isArray(sale?.locators) ? sale.locators[0] : sale?.locators) ||
+            null,
           passengers,
           segments: segments.map((s: any) => ({
             flight_number: [s.airline, s.flight_number].filter(Boolean).join(" "),
