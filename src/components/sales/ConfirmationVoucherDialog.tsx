@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -363,10 +364,13 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
                 </div>
               </div>
             </ScrollArea>
-            <div aria-hidden="true" className="fixed left-0 top-0 -z-50 pointer-events-none">
-              {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
-              {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
-            </div>
+            {typeof document !== "undefined" && createPortal(
+              <div aria-hidden="true" style={{ position: "fixed", left: 0, top: 0, zIndex: -9999, pointerEvents: "none" }}>
+                {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
+                {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
+              </div>,
+              document.body,
+            )}
           </div>
         )}
       </DialogContent>
