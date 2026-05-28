@@ -30,7 +30,7 @@ const baseFont = {
 const page: CSSProperties = {
   ...baseFont,
   width: 794, // ~ A4 @ 96dpi · conteúdo já no tamanho útil (margem é aplicada no PDF)
-  padding: "8px 0",
+  padding: "20px 28px 28px",
   background: SOFT_BG,
   boxSizing: "border-box",
 };
