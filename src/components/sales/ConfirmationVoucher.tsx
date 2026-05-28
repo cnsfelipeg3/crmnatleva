@@ -129,83 +129,93 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
     ];
     return (
       <div ref={ref} data-voucher-page="true" style={page}>
-        {logoBlock}
-        <h1 style={h1}>Confirmação de Reserva</h1>
-        <div style={sub}>Voucher de Hospedagem</div>
-
-        <h2 style={h2}>Informações Básicas</h2>
-        <div style={card}>
-          {rows.map(([k, v], i) => (
-            <div
-              key={k}
-              style={{
-                display: "flex",
-                background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
-              }}
-            >
-              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
-              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
-            </div>
-          ))}
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          {logoBlock}
+          <h1 style={h1}>Confirmação de Reserva</h1>
+          <div style={sub}>Voucher de Hospedagem</div>
         </div>
 
-        <h2 style={h2}>Informações do Hóspede</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, flex: 1 }}>Nome completo:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
-          </div>
-          {data.guests.length === 0 ? (
-            <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
-              Nenhum hóspede cadastrado.
-            </div>
-          ) : (
-            data.guests.map((g, i) => (
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações Básicas</h2>
+          <div style={card}>
+            {rows.map(([k, v], i) => (
               <div
-                key={i}
+                key={k}
                 style={{
                   display: "flex",
                   background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                  borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
+                  borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
+                <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+                <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
               </div>
-            ))
-          )}
-        </div>
-
-        <h2 style={h2}>Detalhes da Hospedagem</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
-            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
-            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
-          </div>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
-            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
-            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            ))}
           </div>
         </div>
 
-        <h2 style={h2}>Informações importantes</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
-          <InfoLine
-            icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Horários"
-            lines={[
-              `Check-in: a partir das ${data.checkin_time || "15:00"}`,
-              `Check-out: até às ${data.checkout_time || "12:00"}`,
-            ]}
-          />
-          <InfoLine
-            icon={<ShieldCheck size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Documentação"
-            lines={[data.doc_note || "Apresente seu passaporte no momento do check-in."]}
-          />
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações do Hóspede</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cellHead, flex: 1 }}>Nome completo:</div>
+              <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
+            </div>
+            {data.guests.length === 0 ? (
+              <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
+                Nenhum hóspede cadastrado.
+              </div>
+            ) : (
+              data.guests.map((g, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    background: i % 2 === 0 ? "transparent" : ROW_ALT,
+                    borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
+                  }}
+                >
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Detalhes da Hospedagem</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
+              <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
+              <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
+            </div>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
+              <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
+              <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações importantes</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
+            <InfoLine
+              icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Horários"
+              lines={[
+                `Check-in: a partir das ${data.checkin_time || "15:00"}`,
+                `Check-out: até às ${data.checkout_time || "12:00"}`,
+              ]}
+            />
+            <InfoLine
+              icon={<ShieldCheck size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Documentação"
+              lines={[data.doc_note || "Apresente seu passaporte no momento do check-in."]}
+            />
+          </div>
         </div>
       </div>
     );
