@@ -129,83 +129,93 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
     ];
     return (
       <div ref={ref} data-voucher-page="true" style={page}>
-        {logoBlock}
-        <h1 style={h1}>Confirmação de Reserva</h1>
-        <div style={sub}>Voucher de Hospedagem</div>
-
-        <h2 style={h2}>Informações Básicas</h2>
-        <div style={card}>
-          {rows.map(([k, v], i) => (
-            <div
-              key={k}
-              style={{
-                display: "flex",
-                background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
-              }}
-            >
-              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
-              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
-            </div>
-          ))}
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          {logoBlock}
+          <h1 style={h1}>Confirmação de Reserva</h1>
+          <div style={sub}>Voucher de Hospedagem</div>
         </div>
 
-        <h2 style={h2}>Informações do Hóspede</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, flex: 1 }}>Nome completo:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
-          </div>
-          {data.guests.length === 0 ? (
-            <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
-              Nenhum hóspede cadastrado.
-            </div>
-          ) : (
-            data.guests.map((g, i) => (
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações Básicas</h2>
+          <div style={card}>
+            {rows.map(([k, v], i) => (
               <div
-                key={i}
+                key={k}
                 style={{
                   display: "flex",
                   background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                  borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
+                  borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
+                <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+                <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
               </div>
-            ))
-          )}
-        </div>
-
-        <h2 style={h2}>Detalhes da Hospedagem</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
-            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
-            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
-          </div>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
-            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
-            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            ))}
           </div>
         </div>
 
-        <h2 style={h2}>Informações importantes</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
-          <InfoLine
-            icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Horários"
-            lines={[
-              `Check-in: a partir das ${data.checkin_time || "15:00"}`,
-              `Check-out: até às ${data.checkout_time || "12:00"}`,
-            ]}
-          />
-          <InfoLine
-            icon={<ShieldCheck size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Documentação"
-            lines={[data.doc_note || "Apresente seu passaporte no momento do check-in."]}
-          />
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações do Hóspede</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cellHead, flex: 1 }}>Nome completo:</div>
+              <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
+            </div>
+            {data.guests.length === 0 ? (
+              <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
+                Nenhum hóspede cadastrado.
+              </div>
+            ) : (
+              data.guests.map((g, i) => (
+                <div
+                  key={i}
+                  style={{
+                    display: "flex",
+                    background: i % 2 === 0 ? "transparent" : ROW_ALT,
+                    borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
+                  }}
+                >
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Detalhes da Hospedagem</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
+              <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
+              <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
+            </div>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
+              <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
+              <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            </div>
+          </div>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações importantes</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
+            <InfoLine
+              icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Horários"
+              lines={[
+                `Check-in: a partir das ${data.checkin_time || "15:00"}`,
+                `Check-out: até às ${data.checkout_time || "12:00"}`,
+              ]}
+            />
+            <InfoLine
+              icon={<ShieldCheck size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Documentação"
+              lines={[data.doc_note || "Apresente seu passaporte no momento do check-in."]}
+            />
+          </div>
         </div>
       </div>
     );
@@ -243,219 +253,237 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
     ];
     return (
       <div ref={ref} data-voucher-page="true" style={page}>
-        {logoBlock}
-        <h1 style={h1}>Confirmação de Reserva</h1>
-        <div style={sub}>Voucher de viagem</div>
-
-        <h2 style={h2}>Informações Básicas</h2>
-        <div style={card}>
-          {basics.map(([k, v], i) => (
-            <div
-              key={k}
-              style={{
-                display: "flex",
-                background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                borderBottom: i === basics.length - 1 ? "none" : `1px solid ${BORDER}`,
-              }}
-            >
-              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
-              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
-            </div>
-          ))}
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          {logoBlock}
+          <h1 style={h1}>Confirmação de Reserva</h1>
+          <div style={sub}>Voucher de viagem</div>
         </div>
 
-        <h2 style={h2}>Informações dos Passageiros</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, flex: 2 }}>Nome completo:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Tipo de passageiro:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
-          </div>
-          {data.passengers.length === 0 ? (
-            <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
-              Nenhum passageiro cadastrado.
-            </div>
-          ) : (
-            data.passengers.map((p, i) => (
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações Básicas</h2>
+          <div style={card}>
+            {basics.map(([k, v], i) => (
               <div
-                key={i}
+                key={k}
                 style={{
                   display: "flex",
                   background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                  borderBottom: i === data.passengers.length - 1 ? "none" : `1px solid ${BORDER}`,
+                  borderBottom: i === basics.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, ...oneLine, flex: 2, borderBottom: "none" }} title={p.name}>{p.name}</div>
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
-                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={p.doc || "—"}>{p.doc || "—"}</div>
-              </div>
-            ))
-          )}
-        </div>
-
-        <h2 style={h2}>Detalhes da Viagem</h2>
-        <div style={card}>
-          <div style={{ display: "flex" }}>
-            {["Voo:", "De:", "Para:", "Cia:", "Data:", "Partida:", "Chegada:"].map((t, i) => (
-              <div
-                key={t}
-                style={{
-                  ...cellHead,
-                  flex: i === 1 || i === 2 ? 2 : 1,
-                  textAlign: i === 0 ? "left" : "center",
-                  whiteSpace: "nowrap",
-                  fontSize: 12,
-                }}
-              >
-                {t}
+                <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+                <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
               </div>
             ))}
           </div>
-          {data.segments.length === 0 ? (
-            <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
-              Nenhum trecho cadastrado.
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Informações dos Passageiros</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              <div style={{ ...cellHead, flex: 2 }}>Nome completo:</div>
+              <div style={{ ...cellHead, flex: 1 }}>Tipo de passageiro:</div>
+              <div style={{ ...cellHead, flex: 1 }}>Documento:</div>
             </div>
-          ) : (
-            data.segments.map((s, i) => {
-              const cells = [
-                s.flight_number || "—",
-                s.origin_label || s.origin_iata || "—",
-                s.destination_label || s.destination_iata || "—",
-                s.airline || "—",
-                fmtDateBR(s.date),
-                fmtTime(s.departure_time),
-                fmtTime(s.arrival_time),
-              ];
-              return (
+            {data.passengers.length === 0 ? (
+              <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
+                Nenhum passageiro cadastrado.
+              </div>
+            ) : (
+              data.passengers.map((p, i) => (
                 <div
                   key={i}
                   style={{
                     display: "flex",
                     background: i % 2 === 0 ? "transparent" : ROW_ALT,
-                    borderBottom: i === data.segments.length - 1 ? "none" : `1px solid ${BORDER}`,
+                    borderBottom: i === data.passengers.length - 1 ? "none" : `1px solid ${BORDER}`,
                   }}
                 >
-                  {cells.map((c, j) => (
-                    <div
-                      key={j}
-                      style={{
-                        ...cell,
-                        flex: j === 1 || j === 2 ? 2 : 1,
-                        borderBottom: "none",
-                        textAlign: j === 0 ? "left" : "center",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontSize: 11.5,
-                        padding: "12px 8px",
-                      }}
-                      title={String(c)}
-                    >
-                      {c}
-                    </div>
-                  ))}
+                  <div style={{ ...cell, ...oneLine, flex: 2, borderBottom: "none" }} title={p.name}>{p.name}</div>
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
+                  <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={p.doc || "—"}>{p.doc || "—"}</div>
                 </div>
-              );
-            })
-          )}
-        </div>
-
-        <h2 style={h2}>Bagagens Incluídas (por passageiro)</h2>
-        <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
-          <Bag
-            icon={<Backpack size={28} color={GREEN} strokeWidth={1.6} />}
-            title="1 item pessoal (10kg)"
-            desc="Deve ser acomodado sob o assento"
-          />
-          <Bag
-            icon={<Briefcase size={28} color={GREEN} strokeWidth={1.6} />}
-            title="1 bagagem de mão (12kg)"
-            desc="Levado na cabine do avião"
-          />
-          <Bag
-            icon={<Luggage size={28} color={GREEN} strokeWidth={1.6} />}
-            title="1 bagagem despachada (23kg)"
-            desc="Entregue no check-in"
-          />
-        </div>
-
-        <div style={{ marginTop: 18, fontSize: 14, fontWeight: 800, color: GREEN_DARK }}>Medidas:</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 10 }}>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Item pessoal:</div>
-            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
-              Altura: 45 cm x Comprimento: 35 cm x Largura: 20 cm, incluindo os bolsos, as rodas, a alça, etc. (17,8 x 13,8 x 7,9 in).
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem de mão:</div>
-            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
-              Altura: 55 cm x Comprimento: 35 cm x Largura: 25 cm, incluindo os bolsos, as rodas, a alça, etc. (21,6 x 13,8 x 9,8 in).
-            </div>
-          </div>
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem despachada:</div>
-            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
-              Soma das três dimensões (altura + largura + comprimento) até 158 cm lineares e peso máximo de 23 kg por volume.
-            </div>
+              ))
+            )}
           </div>
         </div>
 
-        <h2 style={h2}>Check-in Automático</h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
-          <InfoLine
-            icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
-            title="24 Horas Antes"
-            lines={["Realizamos o check-in automaticamente um dia antes da sua partida."]}
-          />
-          <InfoLine
-            icon={<MessageCircle size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Cartão de Embarque"
-            lines={["Enviamos seus cartões de embarque diretamente pelo WhatsApp."]}
-          />
-          <InfoLine
-            icon={<AlertCircle size={18} color={GREEN} strokeWidth={1.8} />}
-            title="Exceções"
-            lines={[
-              "Eventualmente a companhia aérea pode exigir check-in presencial para verificação de documentos.",
-            ]}
-          />
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Detalhes da Viagem</h2>
+          <div style={card}>
+            <div style={{ display: "flex" }}>
+              {["Voo:", "De:", "Para:", "Cia:", "Data:", "Partida:", "Chegada:"].map((t, i) => (
+                <div
+                  key={t}
+                  style={{
+                    ...cellHead,
+                    flex: i === 1 || i === 2 ? 2 : 1,
+                    textAlign: i === 0 ? "left" : "center",
+                    whiteSpace: "nowrap",
+                    fontSize: 12,
+                  }}
+                >
+                  {t}
+                </div>
+              ))}
+            </div>
+            {data.segments.length === 0 ? (
+              <div style={{ ...cell, borderBottom: "none", color: "#6b7280" }}>
+                Nenhum trecho cadastrado.
+              </div>
+            ) : (
+              data.segments.map((s, i) => {
+                const cells = [
+                  s.flight_number || "—",
+                  s.origin_label || s.origin_iata || "—",
+                  s.destination_label || s.destination_iata || "—",
+                  s.airline || "—",
+                  fmtDateBR(s.date),
+                  fmtTime(s.departure_time),
+                  fmtTime(s.arrival_time),
+                ];
+                return (
+                  <div
+                    key={i}
+                    style={{
+                      display: "flex",
+                      background: i % 2 === 0 ? "transparent" : ROW_ALT,
+                      borderBottom: i === data.segments.length - 1 ? "none" : `1px solid ${BORDER}`,
+                    }}
+                  >
+                    {cells.map((c, j) => (
+                      <div
+                        key={j}
+                        style={{
+                          ...cell,
+                          flex: j === 1 || j === 2 ? 2 : 1,
+                          borderBottom: "none",
+                          textAlign: j === 0 ? "left" : "center",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          fontSize: 11.5,
+                          padding: "12px 8px",
+                        }}
+                        title={String(c)}
+                      >
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
         </div>
 
-        <h2 style={h2}>Alterações</h2>
-        <p style={paragraph}>
-          O Cliente pode solicitar alterações no itinerário sujeitas à disponibilidade e às políticas
-          de cancelamento dos prestadores de serviços. O cliente é responsável por quaisquer custos
-          adicionais associados a tais alterações.
-        </p>
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Bagagens Incluídas (por passageiro)</h2>
+          <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
+            <Bag
+              icon={<Backpack size={28} color={GREEN} strokeWidth={1.6} />}
+              title="1 item pessoal (10kg)"
+              desc="Deve ser acomodado sob o assento"
+            />
+            <Bag
+              icon={<Briefcase size={28} color={GREEN} strokeWidth={1.6} />}
+              title="1 bagagem de mão (12kg)"
+              desc="Levado na cabine do avião"
+            />
+            <Bag
+              icon={<Luggage size={28} color={GREEN} strokeWidth={1.6} />}
+              title="1 bagagem despachada (23kg)"
+              desc="Entregue no check-in"
+            />
+          </div>
 
-        <h2 style={h2}>Cancelamento</h2>
-        <p style={paragraph}>
-          Em caso de cancelamento por parte do Cliente, a Agência não efetuará reembolsos, exceto
-          quando permitido pelas políticas dos prestadores de serviços envolvidos. O cliente será
-          responsável por todas as despesas de cancelamento, taxas ou penalidades aplicáveis.
-        </p>
+          <div style={{ marginTop: 18, fontSize: 14, fontWeight: 800, color: GREEN_DARK }}>Medidas:</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Item pessoal:</div>
+              <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+                Altura: 45 cm x Comprimento: 35 cm x Largura: 20 cm, incluindo os bolsos, as rodas, a alça, etc. (17,8 x 13,8 x 7,9 in).
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem de mão:</div>
+              <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+                Altura: 55 cm x Comprimento: 35 cm x Largura: 25 cm, incluindo os bolsos, as rodas, a alça, etc. (21,6 x 13,8 x 9,8 in).
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem despachada:</div>
+              <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+                Soma das três dimensões (altura + largura + comprimento) até 158 cm lineares e peso máximo de 23 kg por volume.
+              </div>
+            </div>
+          </div>
+        </div>
 
-        <div
-          style={{
-            marginTop: 16,
-            background: "#eaf3ec",
-            border: `1px solid ${BORDER}`,
-            borderRadius: 10,
-            padding: "18px 22px",
-          }}
-        >
-          <div style={{ ...h2, marginTop: 0 }}>Política de No-Show</div>
-          <p style={{ ...paragraph, marginTop: 6 }}>
-            Em caso de não comparecimento (no-show), a Agência não efetuará reembolsos e não será
-            responsável por quaisquer custos ou despesas adicionais incorridas pelo cliente devido a
-            esse não comparecimento. Em caso de não comparecimento, as incidências são:
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Check-in Automático</h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
+            <InfoLine
+              icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
+              title="24 Horas Antes"
+              lines={["Realizamos o check-in automaticamente um dia antes da sua partida."]}
+            />
+            <InfoLine
+              icon={<MessageCircle size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Cartão de Embarque"
+              lines={["Enviamos seus cartões de embarque diretamente pelo WhatsApp."]}
+            />
+            <InfoLine
+              icon={<AlertCircle size={18} color={GREEN} strokeWidth={1.8} />}
+              title="Exceções"
+              lines={[
+                "Eventualmente a companhia aérea pode exigir check-in presencial para verificação de documentos.",
+              ]}
+            />
+          </div>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Alterações</h2>
+          <p style={paragraph}>
+            O Cliente pode solicitar alterações no itinerário sujeitas à disponibilidade e às políticas
+            de cancelamento dos prestadores de serviços. O cliente é responsável por quaisquer custos
+            adicionais associados a tais alterações.
           </p>
-          <ul style={{ margin: "8px 0 0 20px", padding: 0, color: "#1f2937", fontSize: 13, lineHeight: 1.7 }}>
-            <li>Perda total do valor pago</li>
-            <li>Cancelamento automático da reserva</li>
-            <li>Impossibilidade de remarcação</li>
-          </ul>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <h2 style={h2}>Cancelamento</h2>
+          <p style={paragraph}>
+            Em caso de cancelamento por parte do Cliente, a Agência não efetuará reembolsos, exceto
+            quando permitido pelas políticas dos prestadores de serviços envolvidos. O cliente será
+            responsável por todas as despesas de cancelamento, taxas ou penalidades aplicáveis.
+          </p>
+        </div>
+
+        <div data-pdf-section style={{ breakInside: "avoid" }}>
+          <div
+            style={{
+              marginTop: 16,
+              background: "#eaf3ec",
+              border: `1px solid ${BORDER}`,
+              borderRadius: 10,
+              padding: "18px 22px",
+            }}
+          >
+            <div style={{ ...h2, marginTop: 0 }}>Política de No-Show</div>
+            <p style={{ ...paragraph, marginTop: 6 }}>
+              Em caso de não comparecimento (no-show), a Agência não efetuará reembolsos e não será
+              responsável por quaisquer custos ou despesas adicionais incorridas pelo cliente devido a
+              esse não comparecimento. Em caso de não comparecimento, as incidências são:
+            </p>
+            <ul style={{ margin: "8px 0 0 20px", padding: 0, color: "#1f2937", fontSize: 13, lineHeight: 1.7 }}>
+              <li>Perda total do valor pago</li>
+              <li>Cancelamento automático da reserva</li>
+              <li>Impossibilidade de remarcação</li>
+            </ul>
+          </div>
         </div>
       </div>
     );

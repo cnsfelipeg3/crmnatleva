@@ -265,36 +265,76 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
       await document.fonts?.ready;
-      const source = exportRef.current;
-      const sourceHeight = Math.max(source.scrollHeight, A4_HEIGHT_PX);
-      const canvas = await html2canvas(source, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: "#ffffff",
-        width: A4_WIDTH_PX,
-        height: sourceHeight,
-        windowWidth: A4_WIDTH_PX,
-        windowHeight: sourceHeight,
-        scrollX: 0,
-        scrollY: 0,
-        logging: false,
-      });
+      // Pequeno delay para garantir layout completo dos ícones SVG
+      await new Promise((r) => setTimeout(r, 100));
+
+      // A4 em mm
+      const A4_W = 210;
+      const A4_H = 297;
+      const MARGIN = 12; // margem uniforme · garante centralização visual
+      const CONTENT_W = A4_W - MARGIN * 2;
+      const CONTENT_H = A4_H - MARGIN * 2;
+      const GAP = 3; // espaçamento entre seções na mesma página
+
+      const sections = Array.from(
+        exportRef.current.querySelectorAll<HTMLElement>("[data-pdf-section]"),
+      );
+      if (sections.length === 0) throw new Error("Nenhuma seção encontrada para exportar.");
+
       const pdf = new jsPDF("p", "mm", "a4", true);
-      const imgData = canvas.toDataURL("image/png");
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-      pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
-      heightLeft -= pageHeight;
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgWidth, imgHeight, undefined, "FAST");
-        heightLeft -= pageHeight;
+      let cursorY = MARGIN;
+      let firstOnPage = true;
+
+      for (const section of sections) {
+        const canvas = await html2canvas(section, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: false,
+          backgroundColor: "#ffffff",
+          logging: false,
+          windowWidth: A4_WIDTH_PX,
+        });
+        const imgData = canvas.toDataURL("image/png");
+        const heightMM = (canvas.height * CONTENT_W) / canvas.width;
+
+        // Se a seção sozinha não cabe em uma página inteira, divide em fatias
+        if (heightMM > CONTENT_H) {
+          // Quebra em pedaços do tamanho da página
+          const slicesNeeded = Math.ceil(heightMM / CONTENT_H);
+          const sliceCanvasHeight = Math.ceil(canvas.height / slicesNeeded);
+          for (let i = 0; i < slicesNeeded; i++) {
+            const sliceCanvas = document.createElement("canvas");
+            sliceCanvas.width = canvas.width;
+            const thisSliceH = Math.min(sliceCanvasHeight, canvas.height - i * sliceCanvasHeight);
+            sliceCanvas.height = thisSliceH;
+            const ctx = sliceCanvas.getContext("2d")!;
+            ctx.fillStyle = "#ffffff";
+            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+            ctx.drawImage(
+              canvas,
+              0, i * sliceCanvasHeight, canvas.width, thisSliceH,
+              0, 0, canvas.width, thisSliceH,
+            );
+            const sliceData = sliceCanvas.toDataURL("image/png");
+            const sliceHeightMM = (thisSliceH * CONTENT_W) / canvas.width;
+            if (!firstOnPage) { pdf.addPage(); }
+            pdf.addImage(sliceData, "PNG", MARGIN, MARGIN, CONTENT_W, sliceHeightMM, undefined, "FAST");
+            firstOnPage = false;
+          }
+          cursorY = MARGIN + (heightMM % CONTENT_H || CONTENT_H);
+          continue;
+        }
+
+        const needsNewPage = !firstOnPage && (cursorY + heightMM > MARGIN + CONTENT_H);
+        if (needsNewPage) {
+          pdf.addPage();
+          cursorY = MARGIN;
+        }
+        pdf.addImage(imgData, "PNG", MARGIN, cursorY, CONTENT_W, heightMM, undefined, "FAST");
+        cursorY += heightMM + GAP;
+        firstOnPage = false;
       }
+
       const fileName = `${current.type === "aereo" ? "Voucher-Aereo" : "Voucher-Hotel"}_${testMode ? "Teste-A4" : clientFileName}.pdf`;
       pdf.save(fileName);
       toast({ title: "PDF gerado", description: fileName });
