@@ -363,7 +363,7 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
                 </div>
               </div>
             </ScrollArea>
-            <div aria-hidden="true" className="fixed -left-[10000px] top-0 pointer-events-none">
+            <div aria-hidden="true" className="fixed left-0 top-0 -z-50 pointer-events-none">
               {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
               {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
             </div>
