@@ -195,14 +195,27 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
       const html2pdfMod = await import("html2pdf.js");
       const html2pdf = (html2pdfMod as any).default || html2pdfMod;
       const fileName = `${current.type === "aereo" ? "Voucher-Aereo" : "Voucher-Hotel"}_${clientFileName}.pdf`;
+      // Force capture at exact A4 width (794px @ 96dpi = 210mm) so the PDF is
+      // perfectly centered regardless of the on-screen preview scale/scrollbars.
       await html2pdf()
         .set({
           margin: 0,
           filename: fileName,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff" },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794,
+            windowWidth: 794,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0,
+          },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
-          pagebreak: { mode: ["css", "legacy"] },
+          pagebreak: { mode: ["css", "legacy", "avoid-all"] },
         })
         .from(previewRef.current)
         .save();
