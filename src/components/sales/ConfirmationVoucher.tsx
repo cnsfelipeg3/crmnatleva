@@ -7,7 +7,7 @@
  *  - <HotelVoucher />   — one per hotel/lodging entry
  *  - <AereoVoucher />   — one consolidated air voucher with all flight segments
  */
-import { forwardRef } from "react";
+import { forwardRef, type CSSProperties, type ReactNode } from "react";
 import { Backpack, Briefcase, Luggage, Clock, MessageCircle, AlertCircle, ShieldCheck } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva.png";
 
@@ -25,7 +25,7 @@ const baseFont = {
   WebkitFontSmoothing: "antialiased" as const,
 };
 
-const page: React.CSSProperties = {
+const page: CSSProperties = {
   ...baseFont,
   width: 794, // ~ A4 @ 96dpi
   minHeight: 1123,
@@ -34,27 +34,33 @@ const page: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-const h1: React.CSSProperties = {
+const h1: CSSProperties = {
   fontSize: 38,
   fontWeight: 800,
   margin: 0,
   color: GREEN_DARK,
-  letterSpacing: "-0.5px",
+  letterSpacing: 0,
 };
-const sub: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: GREEN, marginTop: 4 };
-const h2: React.CSSProperties = {
+const sub: CSSProperties = { fontSize: 14, fontWeight: 700, color: GREEN, marginTop: 4 };
+const h2: CSSProperties = {
   fontSize: 22,
   fontWeight: 800,
   color: GREEN_DARK,
   marginTop: 28,
   marginBottom: 10,
 };
-const card: React.CSSProperties = {
+const card: CSSProperties = {
   border: `1px solid ${BORDER}`,
   borderRadius: 10,
   overflow: "hidden",
 };
-const cellHead: React.CSSProperties = {
+const oneLine: CSSProperties = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+const cellHead: CSSProperties = {
   padding: "12px 16px",
   fontSize: 13,
   fontWeight: 700,
@@ -62,14 +68,16 @@ const cellHead: React.CSSProperties = {
   background: ROW_ALT,
   textAlign: "left",
   borderBottom: `1px solid ${BORDER}`,
+  boxSizing: "border-box",
 };
-const cell: React.CSSProperties = {
+const cell: CSSProperties = {
   padding: "12px 16px",
   fontSize: 13,
   color: "#1f2937",
   borderBottom: `1px solid ${BORDER}`,
+  boxSizing: "border-box",
 };
-const labelCell: React.CSSProperties = { ...cell, fontWeight: 700, color: GREEN_DARK, width: "38%" };
+const labelCell: CSSProperties = { ...cell, ...oneLine, fontWeight: 700, color: GREEN_DARK, width: "38%" };
 
 const logoBlock = (
   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 28 }}>
