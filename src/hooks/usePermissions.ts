@@ -115,16 +115,11 @@ export function usePermissions(): UsePermissionsReturn {
     load();
   }, [authReady, load]);
 
-  const can = useCallback((menuKey: string, action: MenuAction) => {
-    if (isAdmin) return true;
-    const row = permissions[menuKey];
-    if (!row) return false;
-    if (action === "view") return row.can_view;
-    if (action === "create") return row.can_create;
-    if (action === "edit") return row.can_edit;
-    if (action === "delete") return row.can_delete;
-    return false;
-  }, [isAdmin, permissions]);
+  // ACESSO TOTAL LIBERADO: todos os usuários autenticados têm permissão completa.
+  // Ajustes finos voltam removendo este bypass e restaurando a checagem por menu.
+  const can = useCallback((_menuKey: string, _action: MenuAction) => {
+    return true;
+  }, []);
 
   return { loading: loading || !authReady, isAdmin, permissions, can, reload: () => load(true) };
 }
