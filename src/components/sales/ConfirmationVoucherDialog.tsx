@@ -366,38 +366,135 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
   );
 }
 
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function SectionTitle({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between pt-2 pb-1 border-b border-border/60">
+      <h4 className="text-xs font-bold uppercase tracking-wider text-foreground">{children}</h4>
+      {action}
+    </div>
+  );
+}
+
 function EditPanel({ voucher, onChange, onReset }: { voucher: VoucherKind; onChange: (updater: (voucher: VoucherKind) => VoucherKind) => void; onReset: () => void }) {
   if (voucher.type === "aereo") {
     const data = voucher.data;
+
+    const setAereo = (patch: Partial<AereoVoucherData>) =>
+      onChange((v) => (v.type === "aereo" ? { ...v, data: { ...v.data, ...patch } } : v));
+
+    const updatePax = (i: number, patch: Partial<AereoVoucherData["passengers"][number]>) =>
+      setAereo({ passengers: data.passengers.map((p, idx) => (idx === i ? { ...p, ...patch } : p)) });
+
+    const addPax = () => setAereo({ passengers: [...data.passengers, { name: "", type: "Adulto", doc: "" }] });
+    const removePax = (i: number) => setAereo({ passengers: data.passengers.filter((_, idx) => idx !== i) });
+
+    const updateSeg = (i: number, patch: Partial<AereoVoucherData["segments"][number]>) =>
+      setAereo({ segments: data.segments.map((s, idx) => (idx === i ? { ...s, ...patch } : s)) });
+
+    const addSeg = () => setAereo({ segments: [...data.segments, { flight_number: "", origin_label: "", destination_label: "", airline: "", date: "", departure_time: "", arrival_time: "" }] });
+    const removeSeg = (i: number) => setAereo({ segments: data.segments.filter((_, idx) => idx !== i) });
+
     return (
-      <ScrollArea className="border rounded-lg p-3 max-h-[42vh] bg-muted/20">
-        <div className="space-y-3 pr-2">
-          <Input value={data.flight_class || ""} placeholder="Classe" onChange={(e) => onChange((v) => v.type === "aereo" ? { ...v, data: { ...v.data, flight_class: e.target.value } } : v)} />
-          <Input value={data.reservation_code || ""} placeholder="Código reserva" onChange={(e) => onChange((v) => v.type === "aereo" ? { ...v, data: { ...v.data, reservation_code: e.target.value } } : v)} />
-          <Input value={data.emission_date || ""} placeholder="Data de emissão" onChange={(e) => onChange((v) => v.type === "aereo" ? { ...v, data: { ...v.data, emission_date: e.target.value } } : v)} />
-          {data.segments.map((segment, index) => (
-            <div key={`${segment.flight_number}-${index}`} className="rounded-lg border border-border/50 p-3 space-y-2">
-              <p className="text-xs font-semibold text-foreground">Trecho {index + 1}</p>
-              {(["flight_number", "origin_label", "destination_label", "airline", "date", "departure_time", "arrival_time"] as const).map((field) => (
-                <Input key={field} value={segment[field] || ""} placeholder={field} onChange={(e) => onChange((v) => v.type === "aereo" ? { ...v, data: { ...v.data, segments: v.data.segments.map((s, i) => i === index ? { ...s, [field]: e.target.value } : s) } } : v)} />
-              ))}
+      <ScrollArea className="border rounded-lg p-3 max-h-[52vh] bg-muted/20">
+        <div className="space-y-4 pr-2">
+          <SectionTitle>Informações Básicas</SectionTitle>
+          <Field label="Classe"><Input value={data.flight_class || ""} onChange={(e) => setAereo({ flight_class: e.target.value })} /></Field>
+          <Field label="Data da emissão"><Input value={data.emission_date || ""} placeholder="AAAA-MM-DD" onChange={(e) => setAereo({ emission_date: e.target.value })} /></Field>
+          <Field label="Código de reserva"><Input value={data.reservation_code || ""} onChange={(e) => setAereo({ reservation_code: e.target.value })} /></Field>
+
+          <SectionTitle action={<Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={addPax}>+ Adicionar</Button>}>Passageiros</SectionTitle>
+          {data.passengers.map((p, i) => (
+            <div key={i} className="rounded-lg border border-border/50 p-3 space-y-2 bg-background/40">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-foreground">Passageiro {i + 1}</p>
+                <Button type="button" size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => removePax(i)}>Remover</Button>
+              </div>
+              <Field label="Nome completo"><Input value={p.name || ""} onChange={(e) => updatePax(i, { name: e.target.value })} /></Field>
+              <Field label="Tipo de passageiro"><Input value={p.type || ""} placeholder="Adulto / Criança / Bebê" onChange={(e) => updatePax(i, { type: e.target.value })} /></Field>
+              <Field label="Documento"><Input value={p.doc || ""} onChange={(e) => updatePax(i, { doc: e.target.value })} /></Field>
             </div>
           ))}
-          <Button type="button" variant="outline" size="sm" onClick={onReset}>Restaurar dados</Button>
+
+          <SectionTitle action={<Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={addSeg}>+ Adicionar</Button>}>Trechos da Viagem</SectionTitle>
+          {data.segments.map((s, i) => (
+            <div key={i} className="rounded-lg border border-border/50 p-3 space-y-2 bg-background/40">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-foreground">Trecho {i + 1}</p>
+                <Button type="button" size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => removeSeg(i)}>Remover</Button>
+              </div>
+              <Field label="Número do voo"><Input value={s.flight_number || ""} onChange={(e) => updateSeg(i, { flight_number: e.target.value })} /></Field>
+              <Field label="Companhia aérea"><Input value={s.airline || ""} onChange={(e) => updateSeg(i, { airline: e.target.value })} /></Field>
+              <Field label="Origem (cidade / IATA)"><Input value={s.origin_label || ""} onChange={(e) => updateSeg(i, { origin_label: e.target.value })} /></Field>
+              <Field label="Destino (cidade / IATA)"><Input value={s.destination_label || ""} onChange={(e) => updateSeg(i, { destination_label: e.target.value })} /></Field>
+              <Field label="Data"><Input value={s.date || ""} placeholder="AAAA-MM-DD" onChange={(e) => updateSeg(i, { date: e.target.value })} /></Field>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Partida"><Input value={s.departure_time || ""} placeholder="HH:MM" onChange={(e) => updateSeg(i, { departure_time: e.target.value })} /></Field>
+                <Field label="Chegada"><Input value={s.arrival_time || ""} placeholder="HH:MM" onChange={(e) => updateSeg(i, { arrival_time: e.target.value })} /></Field>
+              </div>
+            </div>
+          ))}
+
+          <Button type="button" variant="outline" size="sm" onClick={onReset} className="w-full">Restaurar dados originais</Button>
         </div>
       </ScrollArea>
     );
   }
 
   const data = voucher.data;
+  const setHotel = (patch: Partial<HotelVoucherData>) =>
+    onChange((v) => (v.type === "hotel" ? { ...v, data: { ...v.data, ...patch } } : v));
+
+  const updateGuest = (i: number, patch: Partial<HotelVoucherData["guests"][number]>) =>
+    setHotel({ guests: data.guests.map((g, idx) => (idx === i ? { ...g, ...patch } : g)) });
+  const addGuest = () => setHotel({ guests: [...data.guests, { name: "", doc: "" }] });
+  const removeGuest = (i: number) => setHotel({ guests: data.guests.filter((_, idx) => idx !== i) });
+
   return (
-    <ScrollArea className="border rounded-lg p-3 max-h-[42vh] bg-muted/20">
-      <div className="space-y-3 pr-2">
-        {(["hotel_name", "meal_plan", "room_type", "reservation_code", "pin_code", "checkin_date", "checkout_date", "checkin_time", "checkout_time"] as const).map((field) => (
-          <Input key={field} value={data[field] || ""} placeholder={field} onChange={(e) => onChange((v) => v.type === "hotel" ? { ...v, data: { ...v.data, [field]: e.target.value } } : v)} />
+    <ScrollArea className="border rounded-lg p-3 max-h-[52vh] bg-muted/20">
+      <div className="space-y-4 pr-2">
+        <SectionTitle>Informações Básicas</SectionTitle>
+        <Field label="Hotel"><Input value={data.hotel_name || ""} onChange={(e) => setHotel({ hotel_name: e.target.value })} /></Field>
+        <Field label="Alimentação"><Input value={data.meal_plan || ""} onChange={(e) => setHotel({ meal_plan: e.target.value })} /></Field>
+        <Field label="Tipo de quarto"><Input value={data.room_type || ""} onChange={(e) => setHotel({ room_type: e.target.value })} /></Field>
+        <Field label="Número de reserva"><Input value={data.reservation_code || ""} onChange={(e) => setHotel({ reservation_code: e.target.value })} /></Field>
+        <Field label="Código PIN"><Input value={data.pin_code || ""} onChange={(e) => setHotel({ pin_code: e.target.value })} /></Field>
+
+        <SectionTitle action={<Button type="button" size="sm" variant="ghost" className="h-7 text-xs" onClick={addGuest}>+ Adicionar</Button>}>Hóspedes</SectionTitle>
+        {data.guests.map((g, i) => (
+          <div key={i} className="rounded-lg border border-border/50 p-3 space-y-2 bg-background/40">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-foreground">Hóspede {i + 1}</p>
+              <Button type="button" size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => removeGuest(i)}>Remover</Button>
+            </div>
+            <Field label="Nome completo"><Input value={g.name || ""} onChange={(e) => updateGuest(i, { name: e.target.value })} /></Field>
+            <Field label="Documento"><Input value={g.doc || ""} onChange={(e) => updateGuest(i, { doc: e.target.value })} /></Field>
+          </div>
         ))}
-        <Textarea value={data.address || ""} placeholder="Endereço" onChange={(e) => onChange((v) => v.type === "hotel" ? { ...v, data: { ...v.data, address: e.target.value } } : v)} />
-        <Button type="button" variant="outline" size="sm" onClick={onReset}>Restaurar dados</Button>
+
+        <SectionTitle>Detalhes da Hospedagem</SectionTitle>
+        <Field label="Endereço"><Textarea rows={2} value={data.address || ""} onChange={(e) => setHotel({ address: e.target.value })} /></Field>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Data de chegada"><Input value={data.checkin_date || ""} placeholder="AAAA-MM-DD" onChange={(e) => setHotel({ checkin_date: e.target.value })} /></Field>
+          <Field label="Data de saída"><Input value={data.checkout_date || ""} placeholder="AAAA-MM-DD" onChange={(e) => setHotel({ checkout_date: e.target.value })} /></Field>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Field label="Horário check-in"><Input value={data.checkin_time || ""} placeholder="15:00" onChange={(e) => setHotel({ checkin_time: e.target.value })} /></Field>
+          <Field label="Horário check-out"><Input value={data.checkout_time || ""} placeholder="12:00" onChange={(e) => setHotel({ checkout_time: e.target.value })} /></Field>
+        </div>
+
+        <SectionTitle>Informações Importantes</SectionTitle>
+        <Field label="Observação sobre documentação"><Textarea rows={2} value={data.doc_note || ""} placeholder="Apresente seu passaporte no momento do check-in." onChange={(e) => setHotel({ doc_note: e.target.value })} /></Field>
+
+        <Button type="button" variant="outline" size="sm" onClick={onReset} className="w-full">Restaurar dados originais</Button>
       </div>
     </ScrollArea>
   );
