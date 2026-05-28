@@ -16,7 +16,35 @@ import {
   type HotelVoucherData, type AereoVoucherData,
 } from "./ConfirmationVoucher";
 import { iataToLabel } from "@/lib/iataUtils";
+import { ALL_AIRLINES } from "@/lib/airlinesData";
 import { ScrollArea } from "@/components/ui/scroll-area";
+
+// IATA → city short label (e.g. "São Paulo / CGH") to keep one-line layout in the PDF
+function shortAirportLabel(iata?: string | null): string {
+  if (!iata) return "—";
+  const full = iataToLabel(iata) || iata;
+  // iataToLabel returns "São Paulo (Congonhas) (CGH)" → keep only city + IATA
+  const city = full.replace(/\s*\(.*\)\s*/g, "").trim();
+  return `${city} / ${iata.toUpperCase()}`;
+}
+
+function prettyAirline(code?: string | null): string {
+  if (!code) return "—";
+  const c = code.trim().toUpperCase();
+  const found = ALL_AIRLINES.find((a) => a.iata === c || a.icao === c);
+  if (!found) return c;
+  // Short marketing name: "GOL Linhas Aéreas" → "GOL"
+  return found.name.split(/\s+/)[0];
+}
+
+function cleanFlightNumber(airline?: string | null, flightNumber?: string | null): string {
+  const air = (airline || "").trim().toUpperCase();
+  const fn = (flightNumber || "").trim().toUpperCase();
+  if (!fn) return air || "—";
+  // Strip any leading airline prefix (one or repeated) from flight_number
+  const stripped = fn.replace(new RegExp(`^(?:${air}\\s*)+`, "i"), "").trim();
+  return air ? `${air} ${stripped || fn}` : fn;
+}
 
 interface Props {
   open: boolean;
@@ -83,12 +111,12 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
             null,
           passengers,
           segments: segments.map((s: any) => ({
-            flight_number: [s.airline, s.flight_number].filter(Boolean).join(" "),
-            origin_label: iataToLabel(s.origin_iata) || s.origin_iata,
+            flight_number: cleanFlightNumber(s.airline, s.flight_number),
+            origin_label: shortAirportLabel(s.origin_iata),
             origin_iata: s.origin_iata,
-            destination_label: iataToLabel(s.destination_iata) || s.destination_iata,
+            destination_label: shortAirportLabel(s.destination_iata),
             destination_iata: s.destination_iata,
-            airline: s.airline,
+            airline: prettyAirline(s.airline),
             date: s.departure_date,
             departure_time: s.departure_time,
             arrival_time: s.arrival_time,
@@ -167,14 +195,27 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
       const html2pdfMod = await import("html2pdf.js");
       const html2pdf = (html2pdfMod as any).default || html2pdfMod;
       const fileName = `${current.type === "aereo" ? "Voucher-Aereo" : "Voucher-Hotel"}_${clientFileName}.pdf`;
+      // Force capture at exact A4 width (794px @ 96dpi = 210mm) so the PDF is
+      // perfectly centered regardless of the on-screen preview scale/scrollbars.
       await html2pdf()
         .set({
           margin: 0,
           filename: fileName,
           image: { type: "jpeg", quality: 0.95 },
-          html2canvas: { scale: 2, useCORS: true, allowTaint: true, backgroundColor: "#ffffff" },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            backgroundColor: "#ffffff",
+            width: 794,
+            windowWidth: 794,
+            x: 0,
+            y: 0,
+            scrollX: 0,
+            scrollY: 0,
+          },
           jsPDF: { unit: "mm", format: "a4", orientation: "portrait", compress: true },
-          pagebreak: { mode: ["css", "legacy"] },
+          pagebreak: { mode: ["css", "legacy", "avoid-all"] },
         })
         .from(previewRef.current)
         .save();

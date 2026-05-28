@@ -286,8 +286,10 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                 key={t}
                 style={{
                   ...cellHead,
-                  flex: i === 1 || i === 2 ? 1.4 : 1,
+                  flex: i === 1 || i === 2 ? 2 : 1,
                   textAlign: i === 0 ? "left" : "center",
+                  whiteSpace: "nowrap",
+                  fontSize: 12,
                 }}
               >
                 {t}
@@ -323,10 +325,16 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                       key={j}
                       style={{
                         ...cell,
-                        flex: j === 1 || j === 2 ? 1.4 : 1,
+                        flex: j === 1 || j === 2 ? 2 : 1,
                         borderBottom: "none",
                         textAlign: j === 0 ? "left" : "center",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        fontSize: 11.5,
+                        padding: "12px 8px",
                       }}
+                      title={String(c)}
                     >
                       {c}
                     </div>
@@ -339,9 +347,9 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
 
         <h2 style={h2}>Bagagens Incluídas (por passageiro)</h2>
         <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
-          <Bag icon="🎒" title="1 item pessoal (10kg)" desc="Deve ser acomodado sob o assento" />
-          <Bag icon="👜" title="1 bagagem de mão (12kg)" desc="Levado na cabine do avião" />
-          <Bag icon="🧳" title="1 bagagem despachada (23kg)" desc="Entregue no check-in" />
+          <Bag icon="🎒" title="1 item pessoal (10kg)" desc="Deve ser acomodado sob o assento" dims="45 x 35 x 20 cm" />
+          <Bag icon="👜" title="1 bagagem de mão (12kg)" desc="Levado na cabine do avião" dims="55 x 35 x 25 cm" />
+          <Bag icon="🧳" title="1 bagagem despachada (23kg)" desc="Entregue no check-in" dims="Até 158 cm lineares" />
         </div>
 
         <h2 style={h2}>Check-in Automático</h2>
@@ -446,12 +454,13 @@ function InfoLine({ icon, title, lines }: { icon: string; title: string; lines: 
   );
 }
 
-function Bag({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function Bag({ icon, title, desc, dims }: { icon: string; title: string; desc: string; dims?: string }) {
   return (
     <div style={{ flex: 1 }}>
       <div style={{ fontSize: 26 }}>{icon}</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK, marginTop: 4 }}>{title}</div>
       <div style={{ fontSize: 12, color: "#1f2937", marginTop: 2 }}>{desc}</div>
+      {dims && <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2, fontStyle: "italic" }}>{dims}</div>}
     </div>
   );
 }
