@@ -356,13 +356,17 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
             <ScrollArea className="min-h-0 border rounded-lg bg-muted/30 overflow-hidden">
               <div className="min-w-full flex justify-center px-4 py-6">
                 <div style={{ width: A4_WIDTH_PX * PREVIEW_SCALE, minHeight: A4_HEIGHT_PX * PREVIEW_SCALE, position: "relative", flex: "0 0 auto" }}>
-                  <div style={{ width: A4_WIDTH_PX, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left" }}>
+                  <div style={{ width: A4_WIDTH_PX, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", pointerEvents: "none" }}>
                     {current?.type === "aereo" && <AereoVoucher ref={previewRef} data={current.data} />}
                     {current?.type === "hotel" && <HotelVoucher ref={previewRef} data={current.data} />}
                   </div>
                 </div>
               </div>
             </ScrollArea>
+            <div aria-hidden="true" className="fixed -left-[10000px] top-0 pointer-events-none opacity-0">
+              {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
+              {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
+            </div>
           </div>
         )}
       </DialogContent>
