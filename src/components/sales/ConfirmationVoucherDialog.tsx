@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 const A4_WIDTH_PX = 794;
 const A4_HEIGHT_PX = 1123;
 const PREVIEW_SCALE = 0.78;
+const PDF_CONTINUATION_MARGIN_PX = 56;
 
 type DbRecord = Record<string, unknown>;
 
@@ -273,44 +274,56 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
 
       const root = exportRef.current;
 
-      // A4 em mm (com margem uniforme garantindo centralização visual)
-      const A4_W = 210;
-      const A4_H = 297;
-      const MARGIN = 14;
-      const CONTENT_W = A4_W - MARGIN * 2; // 182mm
-      const CONTENT_H = A4_H - MARGIN * 2; // 269mm
-      const MIN_SECTION_RATIO = 0.18; // só quebra por seção se sobrar >= 18% da página
+      const rootWidth = Math.round(root.getBoundingClientRect().width || A4_WIDTH_PX);
+      const rootHeight = Math.ceil(root.scrollHeight || root.getBoundingClientRect().height || A4_HEIGHT_PX);
+      const captureScale = 2;
+      const minSlicePx = Math.round(160 * captureScale);
 
-      // 1) Captura única do voucher inteiro · garante alinhamento perfeito entre páginas
+      // 1) Captura única do voucher inteiro no mesmo grid de pixels do preview.
       const canvas = await html2canvas(root, {
-        scale: 2,
+        scale: captureScale,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
-        windowWidth: A4_WIDTH_PX,
-        width: A4_WIDTH_PX,
+        windowWidth: rootWidth,
+        windowHeight: Math.max(rootHeight, A4_HEIGHT_PX),
+        width: rootWidth,
+        height: rootHeight,
+        scrollX: 0,
+        scrollY: 0,
       });
 
-      const pxPerMM = canvas.width / CONTENT_W;
-      const pageHeightPx = CONTENT_H * pxPerMM;
+      const canvasScaleY = canvas.height / rootHeight;
+      const pdfPageHeightPx = Math.round(A4_HEIGHT_PX * canvasScaleY);
+      const continuationMarginPx = Math.round(PDF_CONTINUATION_MARGIN_PX * canvasScaleY);
 
       // 2) Mapeia pontos de quebra naturais = topo de cada [data-pdf-section]
       const rootRect = root.getBoundingClientRect();
-      const scaleY = canvas.height / rootRect.height;
       const sectionTops = Array.from(
         root.querySelectorAll<HTMLElement>("[data-pdf-section]"),
       )
-        .map((el) => Math.round((el.getBoundingClientRect().top - rootRect.top) * scaleY))
+        .map((el) => Math.round((el.getBoundingClientRect().top - rootRect.top) * canvasScaleY))
         .filter((y) => y > 0);
       const breaks = Array.from(new Set([0, ...sectionTops, canvas.height])).sort((a, b) => a - b);
 
-      // 3) Quebra em páginas respeitando as seções
-      const pdf = new jsPDF("p", "mm", "a4", true);
+      // 3) Cada página do PDF é um canvas A4 completo. Isso elimina margem dupla,
+      // reescala variável e qualquer desalinhamento entre preview e arquivo final.
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "px",
+        format: [A4_WIDTH_PX, A4_HEIGHT_PX],
+        hotfixes: ["px_scaling"],
+        compress: true,
+      });
       let pageStart = 0;
       let firstPage = true;
+      let pageIndex = 0;
 
       while (pageStart < canvas.height - 1) {
-        const idealEnd = pageStart + pageHeightPx;
+        const topPad = pageIndex === 0 ? 0 : continuationMarginPx;
+        const bottomPad = continuationMarginPx;
+        const pageCapacityPx = pdfPageHeightPx - topPad - bottomPad;
+        const idealEnd = pageStart + pageCapacityPx;
         let pageEnd: number;
 
         if (idealEnd >= canvas.height) {
@@ -319,8 +332,8 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
           // Maior ponto de quebra que cabe na página atual
           const candidate = [...breaks]
             .reverse()
-            .find((bp) => bp > pageStart && bp <= idealEnd);
-          if (candidate && candidate - pageStart >= pageHeightPx * MIN_SECTION_RATIO) {
+            .find((bp) => bp > pageStart + minSlicePx && bp <= idealEnd);
+          if (candidate) {
             pageEnd = candidate;
           } else {
             // Fallback duro: corta no ideal (seção é maior que página inteira)
@@ -329,20 +342,20 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
         }
 
         const sliceH = pageEnd - pageStart;
-        const sliceCanvas = document.createElement("canvas");
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = sliceH;
-        const ctx = sliceCanvas.getContext("2d")!;
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = pdfPageHeightPx;
+        const ctx = pageCanvas.getContext("2d")!;
         ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-        ctx.drawImage(canvas, 0, pageStart, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
-        const sliceData = sliceCanvas.toDataURL("image/png");
-        const sliceHeightMM = sliceH / pxPerMM;
+        ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        ctx.drawImage(canvas, 0, pageStart, canvas.width, sliceH, 0, topPad, canvas.width, sliceH);
+        const pageData = pageCanvas.toDataURL("image/png");
 
         if (!firstPage) pdf.addPage();
-        pdf.addImage(sliceData, "PNG", MARGIN, MARGIN, CONTENT_W, sliceHeightMM, undefined, "FAST");
+        pdf.addImage(pageData, "PNG", 0, 0, A4_WIDTH_PX, A4_HEIGHT_PX, undefined, "SLOW");
         firstPage = false;
         pageStart = pageEnd;
+        pageIndex += 1;
       }
 
       const fileName = `${current.type === "aereo" ? "Voucher-Aereo" : "Voucher-Hotel"}_${testMode ? "Teste-A4" : clientFileName}.pdf`;
@@ -415,7 +428,7 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
               </div>
             </ScrollArea>
             {typeof document !== "undefined" && createPortal(
-              <div aria-hidden="true" style={{ position: "fixed", left: 0, top: 0, zIndex: -9999, pointerEvents: "none" }}>
+              <div aria-hidden="true" style={{ position: "absolute", left: -10000, top: 0, width: A4_WIDTH_PX, background: "#ffffff", overflow: "visible", pointerEvents: "none" }}>
                 {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
                 {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
               </div>,
