@@ -263,76 +263,86 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
     if (!current || !exportRef.current) return;
     setExporting(true);
     try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
       await document.fonts?.ready;
-      // Pequeno delay para garantir layout completo dos ícones SVG
-      await new Promise((r) => setTimeout(r, 100));
+      // Aguarda layout (ícones SVG, fontes) estabilizar
+      await new Promise((r) => setTimeout(r, 180));
 
-      // A4 em mm
+      const root = exportRef.current;
+
+      // A4 em mm (com margem uniforme garantindo centralização visual)
       const A4_W = 210;
       const A4_H = 297;
-      const MARGIN = 12; // margem uniforme · garante centralização visual
-      const CONTENT_W = A4_W - MARGIN * 2;
-      const CONTENT_H = A4_H - MARGIN * 2;
-      const GAP = 3; // espaçamento entre seções na mesma página
+      const MARGIN = 14;
+      const CONTENT_W = A4_W - MARGIN * 2; // 182mm
+      const CONTENT_H = A4_H - MARGIN * 2; // 269mm
+      const MIN_SECTION_RATIO = 0.18; // só quebra por seção se sobrar >= 18% da página
 
-      const sections = Array.from(
-        exportRef.current.querySelectorAll<HTMLElement>("[data-pdf-section]"),
-      );
-      if (sections.length === 0) throw new Error("Nenhuma seção encontrada para exportar.");
+      // 1) Captura única do voucher inteiro · garante alinhamento perfeito entre páginas
+      const canvas = await html2canvas(root, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        windowWidth: A4_WIDTH_PX,
+        width: A4_WIDTH_PX,
+      });
 
+      const pxPerMM = canvas.width / CONTENT_W;
+      const pageHeightPx = CONTENT_H * pxPerMM;
+
+      // 2) Mapeia pontos de quebra naturais = topo de cada [data-pdf-section]
+      const rootRect = root.getBoundingClientRect();
+      const scaleY = canvas.height / rootRect.height;
+      const sectionTops = Array.from(
+        root.querySelectorAll<HTMLElement>("[data-pdf-section]"),
+      )
+        .map((el) => Math.round((el.getBoundingClientRect().top - rootRect.top) * scaleY))
+        .filter((y) => y > 0);
+      const breaks = Array.from(new Set([0, ...sectionTops, canvas.height])).sort((a, b) => a - b);
+
+      // 3) Quebra em páginas respeitando as seções
       const pdf = new jsPDF("p", "mm", "a4", true);
-      let cursorY = MARGIN;
-      let firstOnPage = true;
+      let pageStart = 0;
+      let firstPage = true;
 
-      for (const section of sections) {
-        const canvas = await html2canvas(section, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: false,
-          backgroundColor: "#ffffff",
-          logging: false,
-          windowWidth: A4_WIDTH_PX,
-        });
-        const imgData = canvas.toDataURL("image/png");
-        const heightMM = (canvas.height * CONTENT_W) / canvas.width;
+      while (pageStart < canvas.height - 1) {
+        const idealEnd = pageStart + pageHeightPx;
+        let pageEnd: number;
 
-        // Se a seção sozinha não cabe em uma página inteira, divide em fatias
-        if (heightMM > CONTENT_H) {
-          // Quebra em pedaços do tamanho da página
-          const slicesNeeded = Math.ceil(heightMM / CONTENT_H);
-          const sliceCanvasHeight = Math.ceil(canvas.height / slicesNeeded);
-          for (let i = 0; i < slicesNeeded; i++) {
-            const sliceCanvas = document.createElement("canvas");
-            sliceCanvas.width = canvas.width;
-            const thisSliceH = Math.min(sliceCanvasHeight, canvas.height - i * sliceCanvasHeight);
-            sliceCanvas.height = thisSliceH;
-            const ctx = sliceCanvas.getContext("2d")!;
-            ctx.fillStyle = "#ffffff";
-            ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
-            ctx.drawImage(
-              canvas,
-              0, i * sliceCanvasHeight, canvas.width, thisSliceH,
-              0, 0, canvas.width, thisSliceH,
-            );
-            const sliceData = sliceCanvas.toDataURL("image/png");
-            const sliceHeightMM = (thisSliceH * CONTENT_W) / canvas.width;
-            if (!firstOnPage) { pdf.addPage(); }
-            pdf.addImage(sliceData, "PNG", MARGIN, MARGIN, CONTENT_W, sliceHeightMM, undefined, "FAST");
-            firstOnPage = false;
+        if (idealEnd >= canvas.height) {
+          pageEnd = canvas.height;
+        } else {
+          // Maior ponto de quebra que cabe na página atual
+          const candidate = [...breaks]
+            .reverse()
+            .find((bp) => bp > pageStart && bp <= idealEnd);
+          if (candidate && candidate - pageStart >= pageHeightPx * MIN_SECTION_RATIO) {
+            pageEnd = candidate;
+          } else {
+            // Fallback duro: corta no ideal (seção é maior que página inteira)
+            pageEnd = Math.floor(idealEnd);
           }
-          cursorY = MARGIN + (heightMM % CONTENT_H || CONTENT_H);
-          continue;
         }
 
-        const needsNewPage = !firstOnPage && (cursorY + heightMM > MARGIN + CONTENT_H);
-        if (needsNewPage) {
-          pdf.addPage();
-          cursorY = MARGIN;
-        }
-        pdf.addImage(imgData, "PNG", MARGIN, cursorY, CONTENT_W, heightMM, undefined, "FAST");
-        cursorY += heightMM + GAP;
-        firstOnPage = false;
+        const sliceH = pageEnd - pageStart;
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceH;
+        const ctx = sliceCanvas.getContext("2d")!;
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+        ctx.drawImage(canvas, 0, pageStart, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+        const sliceData = sliceCanvas.toDataURL("image/png");
+        const sliceHeightMM = sliceH / pxPerMM;
+
+        if (!firstPage) pdf.addPage();
+        pdf.addImage(sliceData, "PNG", MARGIN, MARGIN, CONTENT_W, sliceHeightMM, undefined, "FAST");
+        firstPage = false;
+        pageStart = pageEnd;
       }
 
       const fileName = `${current.type === "aereo" ? "Voucher-Aereo" : "Voucher-Hotel"}_${testMode ? "Teste-A4" : clientFileName}.pdf`;
