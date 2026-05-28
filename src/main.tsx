@@ -2,6 +2,12 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { initPWAVersionCheck } from "./lib/pwaVersionCheck";
+import { initChunkErrorRecovery } from "./lib/chunkErrorRecovery";
+
+// Auto-recovery de bundles desatualizados (PWA com cache velho · clique
+// que "não faz nada" porque o chunk JS pedido não existe mais no servidor).
+// Tem que ser a PRIMEIRA coisa pra capturar erros de import durante o boot.
+initChunkErrorRecovery();
 
 // Marca <html> como standalone PWA assim que possível (esconde elementos browser-only via CSS)
 if (typeof window !== "undefined") {
