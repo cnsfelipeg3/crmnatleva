@@ -18,6 +18,7 @@ import {
 import { ArrowLeft, Plane, Hotel, Users, DollarSign, Copy, FileText, Loader2, Pencil, Save, X, MapPin, Calendar, CreditCard, TrendingUp, Clock, Tag, Briefcase, Globe, BookOpen, Paperclip, Download, ExternalLink, Image as ImageIcon, File, Hash, KeyRound, Building2, UserCheck, RefreshCw } from "lucide-react";
 import { inferProductSlugsFromSale, normalizeProductsToSlugs } from "@/lib/productTypes";
 import PublishToPortalDialog from "@/components/portal/PublishToPortalDialog";
+import ConfirmationVoucherDialog from "@/components/sales/ConfirmationVoucherDialog";
 import FlightTimeline, { type FlightSegment } from "@/components/FlightTimeline";
 import { useToast } from "@/hooks/use-toast";
 import AirportAutocomplete from "@/components/AirportAutocomplete";
@@ -60,6 +61,7 @@ export default function SaleDetail() {
   const [saving, setSaving] = useState(false);
   const [enrichmentOpen, setEnrichmentOpen] = useState(false);
   const [portalOpen, setPortalOpen] = useState(false);
+  const [voucherOpen, setVoucherOpen] = useState(false);
   const [clientEmail, setClientEmail] = useState<string | null>(null);
 
   useEffect(() => {
@@ -415,6 +417,9 @@ export default function SaleDetail() {
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate(`/itinerario?sale_id=${id}`)}>
                 <BookOpen className="w-4 h-4 mr-1" /> Itinerário
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => setVoucherOpen(true)} className="text-primary border-primary/30 hover:bg-primary/10">
+                <FileText className="w-4 h-4 mr-1" /> Gerar PDF de Confirmação
               </Button>
               <Button size="sm" onClick={handleGenerateSummary}>
                 <FileText className="w-4 h-4 mr-1" /> Resumo NatLeva
@@ -947,6 +952,11 @@ export default function SaleDetail() {
         clientId={sale?.client_id}
         clientEmail={clientEmail}
         saleName={sale?.name}
+      />
+      <ConfirmationVoucherDialog
+        open={voucherOpen}
+        onOpenChange={setVoucherOpen}
+        saleId={id!}
       />
     </div>
     </>
