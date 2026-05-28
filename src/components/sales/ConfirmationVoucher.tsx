@@ -454,12 +454,13 @@ function InfoLine({ icon, title, lines }: { icon: string; title: string; lines: 
   );
 }
 
-function Bag({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function Bag({ icon, title, desc, dims }: { icon: string; title: string; desc: string; dims?: string }) {
   return (
     <div style={{ flex: 1 }}>
       <div style={{ fontSize: 26 }}>{icon}</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK, marginTop: 4 }}>{title}</div>
       <div style={{ fontSize: 12, color: "#1f2937", marginTop: 2 }}>{desc}</div>
+      {dims && <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2, fontStyle: "italic" }}>{dims}</div>}
     </div>
   );
 }
