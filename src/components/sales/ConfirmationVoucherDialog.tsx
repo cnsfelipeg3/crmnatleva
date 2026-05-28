@@ -308,13 +308,7 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
 
       // 3) Cada página do PDF é um canvas A4 completo. Isso elimina margem dupla,
       // reescala variável e qualquer desalinhamento entre preview e arquivo final.
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [A4_WIDTH_PX, A4_HEIGHT_PX],
-        hotfixes: ["px_scaling"],
-        compress: true,
-      });
+      const pdf = new jsPDF("p", "mm", "a4", true);
       let pageStart = 0;
       let firstPage = true;
       let pageIndex = 0;
@@ -352,7 +346,7 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
         const pageData = pageCanvas.toDataURL("image/png");
 
         if (!firstPage) pdf.addPage();
-        pdf.addImage(pageData, "PNG", 0, 0, A4_WIDTH_PX, A4_HEIGHT_PX, undefined, "SLOW");
+        pdf.addImage(pageData, "PNG", 0, 0, 210, 297, undefined, "SLOW");
         firstPage = false;
         pageStart = pageEnd;
         pageIndex += 1;
