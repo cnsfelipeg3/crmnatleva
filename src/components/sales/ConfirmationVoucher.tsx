@@ -22,6 +22,8 @@ const SOFT_BG = "#ffffff";
 const baseFont = {
   fontFamily: '"Inter", "Helvetica Neue", Arial, sans-serif',
   color: TEXT,
+  letterSpacing: 0,
+  fontFeatureSettings: "normal",
   WebkitFontSmoothing: "antialiased" as const,
 };
 
@@ -35,16 +37,20 @@ const page: CSSProperties = {
 };
 
 const h1: CSSProperties = {
+  fontFamily: baseFont.fontFamily,
   fontSize: 38,
   fontWeight: 800,
+  lineHeight: 1.08,
   margin: 0,
   color: GREEN_DARK,
   letterSpacing: 0,
 };
 const sub: CSSProperties = { fontSize: 14, fontWeight: 700, color: GREEN, marginTop: 4 };
 const h2: CSSProperties = {
+  fontFamily: baseFont.fontFamily,
   fontSize: 22,
   fontWeight: 800,
+  lineHeight: 1.2,
   color: GREEN_DARK,
   marginTop: 28,
   marginBottom: 10,
