@@ -7,7 +7,7 @@
  *  - <HotelVoucher />   — one per hotel/lodging entry
  *  - <AereoVoucher />   — one consolidated air voucher with all flight segments
  */
-import { forwardRef } from "react";
+import { forwardRef, type CSSProperties, type ReactNode } from "react";
 import { Backpack, Briefcase, Luggage, Clock, MessageCircle, AlertCircle, ShieldCheck } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva.png";
 
@@ -25,7 +25,7 @@ const baseFont = {
   WebkitFontSmoothing: "antialiased" as const,
 };
 
-const page: React.CSSProperties = {
+const page: CSSProperties = {
   ...baseFont,
   width: 794, // ~ A4 @ 96dpi
   minHeight: 1123,
@@ -34,27 +34,33 @@ const page: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
-const h1: React.CSSProperties = {
+const h1: CSSProperties = {
   fontSize: 38,
   fontWeight: 800,
   margin: 0,
   color: GREEN_DARK,
-  letterSpacing: "-0.5px",
+  letterSpacing: 0,
 };
-const sub: React.CSSProperties = { fontSize: 14, fontWeight: 700, color: GREEN, marginTop: 4 };
-const h2: React.CSSProperties = {
+const sub: CSSProperties = { fontSize: 14, fontWeight: 700, color: GREEN, marginTop: 4 };
+const h2: CSSProperties = {
   fontSize: 22,
   fontWeight: 800,
   color: GREEN_DARK,
   marginTop: 28,
   marginBottom: 10,
 };
-const card: React.CSSProperties = {
+const card: CSSProperties = {
   border: `1px solid ${BORDER}`,
   borderRadius: 10,
   overflow: "hidden",
 };
-const cellHead: React.CSSProperties = {
+const oneLine: CSSProperties = {
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+const cellHead: CSSProperties = {
   padding: "12px 16px",
   fontSize: 13,
   fontWeight: 700,
@@ -62,14 +68,16 @@ const cellHead: React.CSSProperties = {
   background: ROW_ALT,
   textAlign: "left",
   borderBottom: `1px solid ${BORDER}`,
+  boxSizing: "border-box",
 };
-const cell: React.CSSProperties = {
+const cell: CSSProperties = {
   padding: "12px 16px",
   fontSize: 13,
   color: "#1f2937",
   borderBottom: `1px solid ${BORDER}`,
+  boxSizing: "border-box",
 };
-const labelCell: React.CSSProperties = { ...cell, fontWeight: 700, color: GREEN_DARK, width: "38%" };
+const labelCell: CSSProperties = { ...cell, ...oneLine, fontWeight: 700, color: GREEN_DARK, width: "38%" };
 
 const logoBlock = (
   <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 28 }}>
@@ -114,7 +122,7 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
       ["Código pin:", data.pin_code || "—"],
     ];
     return (
-      <div ref={ref} style={page}>
+      <div ref={ref} data-voucher-page="true" style={page}>
         {logoBlock}
         <h1 style={h1}>Confirmação de Reserva</h1>
         <div style={sub}>Voucher de Hospedagem</div>
@@ -130,8 +138,8 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
                 borderBottom: i === rows.length - 1 ? "none" : `1px solid ${BORDER}`,
               }}
             >
-              <div style={{ ...labelCell, borderBottom: "none" }}>{k}</div>
-              <div style={{ ...cell, borderBottom: "none", fontWeight: 600 }}>{v}</div>
+              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
             </div>
           ))}
         </div>
@@ -156,8 +164,8 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
                   borderBottom: i === data.guests.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{g.name}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{g.doc || "—"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.name}>{g.name}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={g.doc || "—"}>{g.doc || "—"}</div>
               </div>
             ))
           )}
@@ -166,14 +174,14 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
         <h2 style={h2}>Detalhes da Hospedagem</h2>
         <div style={card}>
           <div style={{ display: "flex" }}>
-            <div style={{ ...cellHead, flex: 2 }}>Endereço:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Data de Chegada:</div>
-            <div style={{ ...cellHead, flex: 1 }}>Data de Saída:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 2.4 }}>Endereço:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Chegada:</div>
+            <div style={{ ...cellHead, ...oneLine, flex: 1 }}>Data de Saída:</div>
           </div>
           <div style={{ display: "flex" }}>
-            <div style={{ ...cell, flex: 2, borderBottom: "none" }}>{data.address || "—"}</div>
-            <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
-            <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
+            <div style={{ ...cell, ...oneLine, flex: 2.4, borderBottom: "none" }} title={data.address || "—"}>{data.address || "—"}</div>
+            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkin_date)}</div>
+            <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{fmtDateBR(data.checkout_date)}</div>
           </div>
         </div>
 
@@ -228,7 +236,7 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
       ["Código Reserva :", data.reservation_code || "—"],
     ];
     return (
-      <div ref={ref} style={page}>
+      <div ref={ref} data-voucher-page="true" style={page}>
         {logoBlock}
         <h1 style={h1}>Confirmação de Reserva</h1>
         <div style={sub}>Voucher de viagem</div>
@@ -244,8 +252,8 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                 borderBottom: i === basics.length - 1 ? "none" : `1px solid ${BORDER}`,
               }}
             >
-              <div style={{ ...labelCell, borderBottom: "none" }}>{k}</div>
-              <div style={{ ...cell, borderBottom: "none", fontWeight: 600 }}>{v}</div>
+              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
             </div>
           ))}
         </div>
@@ -271,9 +279,9 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                   borderBottom: i === data.passengers.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, flex: 2, borderBottom: "none" }}>{p.name}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{p.doc || "—"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 2, borderBottom: "none" }} title={p.name}>{p.name}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={p.doc || "—"}>{p.doc || "—"}</div>
               </div>
             ))
           )}
