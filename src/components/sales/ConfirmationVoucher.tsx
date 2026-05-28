@@ -425,7 +425,7 @@ const paragraph: React.CSSProperties = {
   margin: "4px 0 0",
 };
 
-function InfoLine({ icon, title, lines }: { icon: string; title: string; lines: string[] }) {
+function InfoLine({ icon, title, lines }: { icon: React.ReactNode; title: string; lines: string[] }) {
   return (
     <div style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
       <div
@@ -438,7 +438,7 @@ function InfoLine({ icon, title, lines }: { icon: string; title: string; lines: 
           alignItems: "center",
           justifyContent: "center",
           flexShrink: 0,
-          fontSize: 16,
+          color: GREEN,
         }}
       >
         {icon}
@@ -455,10 +455,10 @@ function InfoLine({ icon, title, lines }: { icon: string; title: string; lines: 
   );
 }
 
-function Bag({ icon, title, desc, dims }: { icon: string; title: string; desc: string; dims?: string }) {
+function Bag({ icon, title, desc, dims }: { icon: React.ReactNode; title: string; desc: string; dims?: string }) {
   return (
     <div style={{ flex: 1 }}>
-      <div style={{ fontSize: 26 }}>{icon}</div>
+      <div style={{ color: GREEN, marginBottom: 4 }}>{icon}</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK, marginTop: 4 }}>{title}</div>
       <div style={{ fontSize: 12, color: "#1f2937", marginTop: 2 }}>{desc}</div>
       {dims && <div style={{ fontSize: 11, color: "#4b5563", marginTop: 2, fontStyle: "italic" }}>{dims}</div>}
