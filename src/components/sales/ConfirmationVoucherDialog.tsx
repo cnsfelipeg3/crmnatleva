@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -139,6 +140,7 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
   const [testMode, setTestMode] = useState(false);
   const [clientFileName, setClientFileName] = useState("voucher");
   const previewRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open || !saleId) return;
@@ -258,19 +260,22 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
   };
 
   const handleExport = async () => {
-    if (!current || !previewRef.current) return;
+    if (!current || !exportRef.current) return;
     setExporting(true);
     try {
       const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
-      const canvas = await html2canvas(previewRef.current, {
+      await document.fonts?.ready;
+      const source = exportRef.current;
+      const sourceHeight = Math.max(source.scrollHeight, A4_HEIGHT_PX);
+      const canvas = await html2canvas(source, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         backgroundColor: "#ffffff",
         width: A4_WIDTH_PX,
-        height: Math.max(previewRef.current.scrollHeight, A4_HEIGHT_PX),
+        height: sourceHeight,
         windowWidth: A4_WIDTH_PX,
-        windowHeight: Math.max(previewRef.current.scrollHeight, A4_HEIGHT_PX),
+        windowHeight: sourceHeight,
         scrollX: 0,
         scrollY: 0,
         logging: false,
@@ -352,13 +357,20 @@ export default function ConfirmationVoucherDialog({ open, onOpenChange, saleId }
             <ScrollArea className="min-h-0 border rounded-lg bg-muted/30 overflow-hidden">
               <div className="min-w-full flex justify-center px-4 py-6">
                 <div style={{ width: A4_WIDTH_PX * PREVIEW_SCALE, minHeight: A4_HEIGHT_PX * PREVIEW_SCALE, position: "relative", flex: "0 0 auto" }}>
-                  <div style={{ width: A4_WIDTH_PX, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left" }}>
+                  <div style={{ width: A4_WIDTH_PX, transform: `scale(${PREVIEW_SCALE})`, transformOrigin: "top left", pointerEvents: "none" }}>
                     {current?.type === "aereo" && <AereoVoucher ref={previewRef} data={current.data} />}
                     {current?.type === "hotel" && <HotelVoucher ref={previewRef} data={current.data} />}
                   </div>
                 </div>
               </div>
             </ScrollArea>
+            {typeof document !== "undefined" && createPortal(
+              <div aria-hidden="true" style={{ position: "fixed", left: 0, top: 0, zIndex: -9999, pointerEvents: "none" }}>
+                {current?.type === "aereo" && <AereoVoucher ref={exportRef} data={current.data} />}
+                {current?.type === "hotel" && <HotelVoucher ref={exportRef} data={current.data} />}
+              </div>,
+              document.body,
+            )}
           </div>
         )}
       </DialogContent>
