@@ -953,6 +953,11 @@ export default function SaleDetail() {
         clientEmail={clientEmail}
         saleName={sale?.name}
       />
+      <ConfirmationVoucherDialog
+        open={voucherOpen}
+        onOpenChange={setVoucherOpen}
+        saleId={id!}
+      />
     </div>
     </>
   );
