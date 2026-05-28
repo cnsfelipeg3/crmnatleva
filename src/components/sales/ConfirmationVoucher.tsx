@@ -348,25 +348,59 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
 
         <h2 style={h2}>Bagagens Incluídas (por passageiro)</h2>
         <div style={{ display: "flex", gap: 24, marginTop: 4 }}>
-          <Bag icon="🎒" title="1 item pessoal (10kg)" desc="Deve ser acomodado sob o assento" dims="45 x 35 x 20 cm" />
-          <Bag icon="👜" title="1 bagagem de mão (12kg)" desc="Levado na cabine do avião" dims="55 x 35 x 25 cm" />
-          <Bag icon="🧳" title="1 bagagem despachada (23kg)" desc="Entregue no check-in" dims="Até 158 cm lineares" />
+          <Bag
+            icon={<Backpack size={28} color={GREEN} strokeWidth={1.6} />}
+            title="1 item pessoal (10kg)"
+            desc="Deve ser acomodado sob o assento"
+          />
+          <Bag
+            icon={<Briefcase size={28} color={GREEN} strokeWidth={1.6} />}
+            title="1 bagagem de mão (12kg)"
+            desc="Levado na cabine do avião"
+          />
+          <Bag
+            icon={<Luggage size={28} color={GREEN} strokeWidth={1.6} />}
+            title="1 bagagem despachada (23kg)"
+            desc="Entregue no check-in"
+          />
+        </div>
+
+        <div style={{ marginTop: 18, fontSize: 14, fontWeight: 800, color: GREEN_DARK }}>Medidas:</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 10 }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Item pessoal:</div>
+            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+              Altura: 45 cm x Comprimento: 35 cm x Largura: 20 cm, incluindo os bolsos, as rodas, a alça, etc. (17,8 x 13,8 x 7,9 in).
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem de mão:</div>
+            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+              Altura: 55 cm x Comprimento: 35 cm x Largura: 25 cm, incluindo os bolsos, as rodas, a alça, etc. (21,6 x 13,8 x 9,8 in).
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: GREEN_DARK }}>Bagagem despachada:</div>
+            <div style={{ fontSize: 12, color: "#1f2937", marginTop: 4, lineHeight: 1.6 }}>
+              Soma das três dimensões (altura + largura + comprimento) até 158 cm lineares e peso máximo de 23 kg por volume.
+            </div>
+          </div>
         </div>
 
         <h2 style={h2}>Check-in Automático</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 16, marginTop: 8 }}>
           <InfoLine
-            icon="🕒"
+            icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
             title="24 Horas Antes"
             lines={["Realizamos o check-in automaticamente um dia antes da sua partida."]}
           />
           <InfoLine
-            icon="💬"
+            icon={<MessageCircle size={18} color={GREEN} strokeWidth={1.8} />}
             title="Cartão de Embarque"
             lines={["Enviamos seus cartões de embarque diretamente pelo WhatsApp."]}
           />
           <InfoLine
-            icon="❗"
+            icon={<AlertCircle size={18} color={GREEN} strokeWidth={1.8} />}
             title="Exceções"
             lines={[
               "Eventualmente a companhia aérea pode exigir check-in presencial para verificação de documentos.",
