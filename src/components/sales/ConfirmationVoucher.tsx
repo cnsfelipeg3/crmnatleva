@@ -236,7 +236,7 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
       ["Código Reserva :", data.reservation_code || "—"],
     ];
     return (
-      <div ref={ref} style={page}>
+      <div ref={ref} data-voucher-page="true" style={page}>
         {logoBlock}
         <h1 style={h1}>Confirmação de Reserva</h1>
         <div style={sub}>Voucher de viagem</div>
@@ -252,8 +252,8 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                 borderBottom: i === basics.length - 1 ? "none" : `1px solid ${BORDER}`,
               }}
             >
-              <div style={{ ...labelCell, borderBottom: "none" }}>{k}</div>
-              <div style={{ ...cell, borderBottom: "none", fontWeight: 600 }}>{v}</div>
+              <div style={{ ...labelCell, borderBottom: "none" }} title={k}>{k}</div>
+              <div style={{ ...cell, ...oneLine, borderBottom: "none", fontWeight: 600 }} title={v}>{v}</div>
             </div>
           ))}
         </div>
@@ -279,9 +279,9 @@ export const AereoVoucher = forwardRef<HTMLDivElement, { data: AereoVoucherData 
                   borderBottom: i === data.passengers.length - 1 ? "none" : `1px solid ${BORDER}`,
                 }}
               >
-                <div style={{ ...cell, flex: 2, borderBottom: "none" }}>{p.name}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
-                <div style={{ ...cell, flex: 1, borderBottom: "none" }}>{p.doc || "—"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 2, borderBottom: "none" }} title={p.name}>{p.name}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }}>{p.type || "Adulto"}</div>
+                <div style={{ ...cell, ...oneLine, flex: 1, borderBottom: "none" }} title={p.doc || "—"}>{p.doc || "—"}</div>
               </div>
             ))
           )}
