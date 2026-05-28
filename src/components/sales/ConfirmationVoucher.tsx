@@ -180,7 +180,7 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
         <h2 style={h2}>Informações importantes</h2>
         <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 8 }}>
           <InfoLine
-            icon="🕒"
+            icon={<Clock size={18} color={GREEN} strokeWidth={1.8} />}
             title="Horários"
             lines={[
               `Check-in: a partir das ${data.checkin_time || "15:00"}`,
@@ -188,7 +188,7 @@ export const HotelVoucher = forwardRef<HTMLDivElement, { data: HotelVoucherData 
             ]}
           />
           <InfoLine
-            icon="🛂"
+            icon={<ShieldCheck size={18} color={GREEN} strokeWidth={1.8} />}
             title="Documentação"
             lines={[data.doc_note || "Apresente seu passaporte no momento do check-in."]}
           />
