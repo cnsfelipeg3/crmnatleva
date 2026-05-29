@@ -350,6 +350,7 @@ export default function ProdutoEditor() {
           recommendations: data.recommendations ?? "", duration: data.duration ?? "",
           price_from: data.price_from?.toString() ?? "", price_promo: data.price_promo?.toString() ?? "",
           price_label: data.price_label ?? "por pessoa", currency: data.currency ?? "BRL",
+          payment_mode: (data.payment_terms?.mode ?? "entrada_boleto") as PaymentMode,
           payment_entry_percent: (data.payment_terms?.entry_percent ?? 30).toString(),
           payment_entry_amount: data.payment_terms?.entry_amount != null ? String(data.payment_terms.entry_amount) : "",
           payment_days_before: (data.payment_terms?.min_days_before_checkin ?? 20).toString(),
