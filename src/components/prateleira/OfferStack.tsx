@@ -201,6 +201,10 @@ export default function OfferStack({
             customInstallments={planOptions.customInstallments}
             balanceMethod={pt.balance_method || "boleto"}
             balanceInterestPercent={pt.balance_interest_percent}
+            paymentMode={(pt as any).mode || null}
+            entryMethods={Array.isArray(pt.entry_methods) ? (pt.entry_methods as any) : undefined}
+            entryCardInstallmentsMax={pt.entry_card_installments_max as any}
+            pixDiscountPercent={pt.pix_discount_percent as any}
           />
 
           {/* Valor total do pacote · discreto · embaixo do plano de pagamento */}

@@ -32,6 +32,23 @@ const KIND_OPTIONS = [
   { value: "outros", label: "Outros" },
 ];
 
+export type PaymentMode =
+  | "pix_avista"
+  | "cartao_avista"
+  | "cartao_parcelado"
+  | "entrada_cartao"
+  | "entrada_boleto"
+  | "personalizado";
+
+export const PAYMENT_MODE_OPTIONS: { value: PaymentMode; label: string; hint: string }[] = [
+  { value: "pix_avista", label: "À vista no PIX", hint: "Cliente paga o total no PIX (com desconto opcional)" },
+  { value: "cartao_avista", label: "À vista no cartão", hint: "Cobra o total em 1x no cartão" },
+  { value: "cartao_parcelado", label: "Parcelado no cartão", hint: "Sem entrada · valor dividido em Nx no cartão" },
+  { value: "entrada_cartao", label: "Entrada + saldo no cartão", hint: "Reserva com entrada e parcela o saldo no cartão" },
+  { value: "entrada_boleto", label: "Entrada + saldo no boleto", hint: "Padrão Natleva · entrada + boletos sem juros" },
+  { value: "personalizado", label: "Personalizado", hint: "Configure manualmente todos os campos" },
+];
+
 type ProductForm = {
   // basic
   slug: string; title: string; product_kind: string;
@@ -47,6 +64,7 @@ type ProductForm = {
   duration: string;
   // price
   price_from: string; price_promo: string; price_label: string; currency: string;
+  payment_mode: PaymentMode;
   payment_entry_percent: string; payment_entry_amount: string; payment_days_before: string;
   payment_entry_percent_min: string; payment_entry_percent_max: string;
   payment_entry_methods: { pix: boolean; cartao: boolean; link: boolean };
@@ -80,6 +98,7 @@ const empty: ProductForm = {
   how_it_works: "", pickup_info: "", recommendations: "",
   duration: "",
   price_from: "", price_promo: "", price_label: "por pessoa", currency: "BRL",
+  payment_mode: "entrada_boleto",
   payment_entry_percent: "30", payment_entry_amount: "", payment_days_before: "20",
   payment_entry_percent_min: "20", payment_entry_percent_max: "50",
   payment_entry_methods: { pix: true, cartao: true, link: true },
@@ -331,6 +350,7 @@ export default function ProdutoEditor() {
           recommendations: data.recommendations ?? "", duration: data.duration ?? "",
           price_from: data.price_from?.toString() ?? "", price_promo: data.price_promo?.toString() ?? "",
           price_label: data.price_label ?? "por pessoa", currency: data.currency ?? "BRL",
+          payment_mode: (data.payment_terms?.mode ?? "entrada_boleto") as PaymentMode,
           payment_entry_percent: (data.payment_terms?.entry_percent ?? 30).toString(),
           payment_entry_amount: data.payment_terms?.entry_amount != null ? String(data.payment_terms.entry_amount) : "",
           payment_days_before: (data.payment_terms?.min_days_before_checkin ?? 20).toString(),
@@ -403,6 +423,7 @@ export default function ProdutoEditor() {
       pix_discount_percent: numOrNull(form.payment_pix_discount_percent),
       payment_terms: {
         plan: "natleva_default",
+        mode: form.payment_mode,
         entry_percent: numOrNull(form.payment_entry_percent) ?? 30,
         entry_amount: numOrNull(form.payment_entry_amount),
         entry_percent_min: numOrNull(form.payment_entry_percent_min) ?? 20,
@@ -729,6 +750,16 @@ export default function ProdutoEditor() {
             {/* ============ 7 · PREÇO & PAGAMENTO (simplificado) ============ */}
             <Card className="p-5 space-y-4">
               <SectionHeader icon={CreditCard} title="Preço e pagamento" subtitle="Direto ao ponto · só o essencial" />
+
+              {/* Seletor de modo de pagamento · presets rápidos */}
+              <PaymentModeSelector
+                value={form.payment_mode}
+                onChange={(mode) => {
+                  set("payment_mode", mode);
+                  applyPaymentModePreset(mode, form, set);
+                }}
+              />
+
 
               {(() => {
                 // Cálculos derivados pra ficar tudo simples e claro
@@ -1373,10 +1404,19 @@ function PaymentPreview({ form }: { form: any }) {
           entryAmount={entryAmtNum > 0 ? entryAmtNum : undefined}
           daysBefore={Number(form.payment_days_before) || 20}
           customInstallments={customInst.length > 0 ? customInst : undefined}
+          maxInstallments={Number(form.payment_balance_installments_max) || 12}
+          minInstallment={Number(form.payment_balance_min_installment) || 0}
+          balanceMethod={form.payment_balance_method || "boleto"}
+          balanceInterestPercent={Number(form.payment_balance_interest_percent) || 0}
+          paymentMode={form.payment_mode}
+          entryMethods={(["pix", "cartao", "link"] as const).filter((k) => form.payment_entry_methods?.[k])}
+          entryCardInstallmentsMax={Number(form.payment_entry_card_installments_max) || 1}
+          pixDiscountPercent={Number(form.payment_pix_discount_percent) || 0}
         />
         <div className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-3 text-sm">
           <div className="font-semibold text-foreground">Resumo da configuração</div>
           <ul className="space-y-2 text-xs text-muted-foreground">
+            <li><span className="text-foreground font-medium">Modo:</span> {PAYMENT_MODE_OPTIONS.find((o) => o.value === form.payment_mode)?.label ?? "—"}</li>
             <li><span className="text-foreground font-medium">Entrada:</span> {plan.entryPercent}% · {formatMoneyBR(plan.entryAmount, plan.currency)} · faixa permitida {form.payment_entry_percent_min}%–{form.payment_entry_percent_max}%</li>
             <li><span className="text-foreground font-medium">Métodos da entrada:</span> {entryMethods || "nenhum selecionado"}</li>
             {form.payment_entry_methods?.cartao && (
@@ -1402,4 +1442,100 @@ function PaymentPreview({ form }: { form: any }) {
       </div>
     </div>
   );
+}
+
+// =====================================================================
+// Modo de pagamento · presets rápidos
+// =====================================================================
+function PaymentModeSelector({ value, onChange }: { value: PaymentMode; onChange: (m: PaymentMode) => void }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Modo de pagamento</div>
+          <p className="text-[11px] text-muted-foreground">Escolha um preset · o preview reflete exatamente o que o cliente verá</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {PAYMENT_MODE_OPTIONS.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`text-left rounded-lg border p-2.5 transition-all ${
+                active
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
+              }`}
+            >
+              <div className={`text-xs font-semibold leading-tight ${active ? "text-primary" : "text-foreground"}`}>{opt.label}</div>
+              <div className="text-[10px] text-muted-foreground mt-1 leading-snug">{opt.hint}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Aplica os campos derivados de cada preset · mantém valor total intacto
+function applyPaymentModePreset(mode: PaymentMode, form: ProductForm, set: <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => void) {
+  const total = Number(form.price_promo) || Number(form.price_from) || 0;
+  switch (mode) {
+    case "pix_avista":
+      set("payment_entry_amount", total > 0 ? String(total) : "");
+      set("payment_entry_percent", "100");
+      set("payment_entry_methods", { pix: true, cartao: false, link: false });
+      set("payment_entry_card_installments_max", "1");
+      set("payment_balance_installments_max", "1");
+      set("payment_balance_method", "boleto");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "cartao_avista":
+      set("payment_entry_amount", total > 0 ? String(total) : "");
+      set("payment_entry_percent", "100");
+      set("payment_entry_methods", { pix: false, cartao: true, link: false });
+      set("payment_entry_card_installments_max", "1");
+      set("payment_balance_installments_max", "1");
+      set("payment_balance_method", "cartao");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "cartao_parcelado":
+      set("payment_entry_amount", "");
+      set("payment_entry_percent", "0");
+      set("payment_entry_methods", { pix: false, cartao: true, link: false });
+      set("payment_entry_card_installments_max", "12");
+      set("payment_balance_installments_max", "12");
+      set("payment_balance_method", "cartao");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "entrada_cartao":
+      if (total > 0 && !Number(form.payment_entry_amount)) {
+        set("payment_entry_amount", String(Math.round(total * 0.3 * 100) / 100));
+        set("payment_entry_percent", "30");
+      }
+      set("payment_entry_methods", { pix: true, cartao: true, link: true });
+      set("payment_balance_method", "cartao");
+      set("payment_balance_installments_max", form.payment_balance_installments_max || "10");
+      set("payment_balance_interest_percent", "0");
+      break;
+    case "entrada_boleto":
+      if (total > 0 && !Number(form.payment_entry_amount)) {
+        set("payment_entry_amount", String(Math.round(total * 0.3 * 100) / 100));
+        set("payment_entry_percent", "30");
+      }
+      set("payment_entry_methods", { pix: true, cartao: true, link: true });
+      set("payment_balance_method", "boleto");
+      set("payment_balance_installments_max", form.payment_balance_installments_max || "12");
+      set("payment_balance_interest_percent", "0");
+      break;
+    case "personalizado":
+      // Não mexe em nada · usuário ajusta livre
+      break;
+  }
 }
