@@ -1404,10 +1404,19 @@ function PaymentPreview({ form }: { form: any }) {
           entryAmount={entryAmtNum > 0 ? entryAmtNum : undefined}
           daysBefore={Number(form.payment_days_before) || 20}
           customInstallments={customInst.length > 0 ? customInst : undefined}
+          maxInstallments={Number(form.payment_balance_installments_max) || 12}
+          minInstallment={Number(form.payment_balance_min_installment) || 0}
+          balanceMethod={form.payment_balance_method || "boleto"}
+          balanceInterestPercent={Number(form.payment_balance_interest_percent) || 0}
+          paymentMode={form.payment_mode}
+          entryMethods={(["pix", "cartao", "link"] as const).filter((k) => form.payment_entry_methods?.[k])}
+          entryCardInstallmentsMax={Number(form.payment_entry_card_installments_max) || 1}
+          pixDiscountPercent={Number(form.payment_pix_discount_percent) || 0}
         />
         <div className="rounded-xl border border-border/70 bg-muted/30 p-4 space-y-3 text-sm">
           <div className="font-semibold text-foreground">Resumo da configuração</div>
           <ul className="space-y-2 text-xs text-muted-foreground">
+            <li><span className="text-foreground font-medium">Modo:</span> {PAYMENT_MODE_OPTIONS.find((o) => o.value === form.payment_mode)?.label ?? "—"}</li>
             <li><span className="text-foreground font-medium">Entrada:</span> {plan.entryPercent}% · {formatMoneyBR(plan.entryAmount, plan.currency)} · faixa permitida {form.payment_entry_percent_min}%–{form.payment_entry_percent_max}%</li>
             <li><span className="text-foreground font-medium">Métodos da entrada:</span> {entryMethods || "nenhum selecionado"}</li>
             {form.payment_entry_methods?.cartao && (
