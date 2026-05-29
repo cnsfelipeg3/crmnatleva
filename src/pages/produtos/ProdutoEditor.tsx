@@ -1443,3 +1443,99 @@ function PaymentPreview({ form }: { form: any }) {
     </div>
   );
 }
+
+// =====================================================================
+// Modo de pagamento · presets rápidos
+// =====================================================================
+function PaymentModeSelector({ value, onChange }: { value: PaymentMode; onChange: (m: PaymentMode) => void }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Modo de pagamento</div>
+          <p className="text-[11px] text-muted-foreground">Escolha um preset · o preview reflete exatamente o que o cliente verá</p>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+        {PAYMENT_MODE_OPTIONS.map((opt) => {
+          const active = value === opt.value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => onChange(opt.value)}
+              className={`text-left rounded-lg border p-2.5 transition-all ${
+                active
+                  ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                  : "border-border bg-card hover:border-primary/40 hover:bg-muted/30"
+              }`}
+            >
+              <div className={`text-xs font-semibold leading-tight ${active ? "text-primary" : "text-foreground"}`}>{opt.label}</div>
+              <div className="text-[10px] text-muted-foreground mt-1 leading-snug">{opt.hint}</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// Aplica os campos derivados de cada preset · mantém valor total intacto
+function applyPaymentModePreset(mode: PaymentMode, form: ProductForm, set: <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => void) {
+  const total = Number(form.price_promo) || Number(form.price_from) || 0;
+  switch (mode) {
+    case "pix_avista":
+      set("payment_entry_amount", total > 0 ? String(total) : "");
+      set("payment_entry_percent", "100");
+      set("payment_entry_methods", { pix: true, cartao: false, link: false });
+      set("payment_entry_card_installments_max", "1");
+      set("payment_balance_installments_max", "1");
+      set("payment_balance_method", "boleto");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "cartao_avista":
+      set("payment_entry_amount", total > 0 ? String(total) : "");
+      set("payment_entry_percent", "100");
+      set("payment_entry_methods", { pix: false, cartao: true, link: false });
+      set("payment_entry_card_installments_max", "1");
+      set("payment_balance_installments_max", "1");
+      set("payment_balance_method", "cartao");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "cartao_parcelado":
+      set("payment_entry_amount", "");
+      set("payment_entry_percent", "0");
+      set("payment_entry_methods", { pix: false, cartao: true, link: false });
+      set("payment_entry_card_installments_max", "12");
+      set("payment_balance_installments_max", "12");
+      set("payment_balance_method", "cartao");
+      set("payment_balance_interest_percent", "0");
+      set("payment_balance_custom_installments", []);
+      break;
+    case "entrada_cartao":
+      if (total > 0 && !Number(form.payment_entry_amount)) {
+        set("payment_entry_amount", String(Math.round(total * 0.3 * 100) / 100));
+        set("payment_entry_percent", "30");
+      }
+      set("payment_entry_methods", { pix: true, cartao: true, link: true });
+      set("payment_balance_method", "cartao");
+      set("payment_balance_installments_max", form.payment_balance_installments_max || "10");
+      set("payment_balance_interest_percent", "0");
+      break;
+    case "entrada_boleto":
+      if (total > 0 && !Number(form.payment_entry_amount)) {
+        set("payment_entry_amount", String(Math.round(total * 0.3 * 100) / 100));
+        set("payment_entry_percent", "30");
+      }
+      set("payment_entry_methods", { pix: true, cartao: true, link: true });
+      set("payment_balance_method", "boleto");
+      set("payment_balance_installments_max", form.payment_balance_installments_max || "12");
+      set("payment_balance_interest_percent", "0");
+      break;
+    case "personalizado":
+      // Não mexe em nada · usuário ajusta livre
+      break;
+  }
+}
