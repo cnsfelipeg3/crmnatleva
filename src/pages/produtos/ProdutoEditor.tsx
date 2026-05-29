@@ -32,6 +32,23 @@ const KIND_OPTIONS = [
   { value: "outros", label: "Outros" },
 ];
 
+export type PaymentMode =
+  | "pix_avista"
+  | "cartao_avista"
+  | "cartao_parcelado"
+  | "entrada_cartao"
+  | "entrada_boleto"
+  | "personalizado";
+
+export const PAYMENT_MODE_OPTIONS: { value: PaymentMode; label: string; hint: string }[] = [
+  { value: "pix_avista", label: "À vista no PIX", hint: "Cliente paga o total no PIX (com desconto opcional)" },
+  { value: "cartao_avista", label: "À vista no cartão", hint: "Cobra o total em 1x no cartão" },
+  { value: "cartao_parcelado", label: "Parcelado no cartão", hint: "Sem entrada · valor dividido em Nx no cartão" },
+  { value: "entrada_cartao", label: "Entrada + saldo no cartão", hint: "Reserva com entrada e parcela o saldo no cartão" },
+  { value: "entrada_boleto", label: "Entrada + saldo no boleto", hint: "Padrão Natleva · entrada + boletos sem juros" },
+  { value: "personalizado", label: "Personalizado", hint: "Configure manualmente todos os campos" },
+];
+
 type ProductForm = {
   // basic
   slug: string; title: string; product_kind: string;
