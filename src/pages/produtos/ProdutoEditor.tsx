@@ -423,6 +423,7 @@ export default function ProdutoEditor() {
       pix_discount_percent: numOrNull(form.payment_pix_discount_percent),
       payment_terms: {
         plan: "natleva_default",
+        mode: form.payment_mode,
         entry_percent: numOrNull(form.payment_entry_percent) ?? 30,
         entry_amount: numOrNull(form.payment_entry_amount),
         entry_percent_min: numOrNull(form.payment_entry_percent_min) ?? 20,
