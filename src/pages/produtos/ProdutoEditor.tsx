@@ -751,6 +751,16 @@ export default function ProdutoEditor() {
             <Card className="p-5 space-y-4">
               <SectionHeader icon={CreditCard} title="Preço e pagamento" subtitle="Direto ao ponto · só o essencial" />
 
+              {/* Seletor de modo de pagamento · presets rápidos */}
+              <PaymentModeSelector
+                value={form.payment_mode}
+                onChange={(mode) => {
+                  set("payment_mode", mode);
+                  applyPaymentModePreset(mode, form, set);
+                }}
+              />
+
+
               {(() => {
                 // Cálculos derivados pra ficar tudo simples e claro
                 const total = Number(form.price_promo) || Number(form.price_from) || 0;
