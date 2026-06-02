@@ -22,11 +22,11 @@ interface Props {
  * Visível APENAS para administradores (presidentes).
  */
 export default function DeleteSaleButton({ saleId, saleLabel, variant = "icon", onDeleted }: Props) {
-  const { role, user } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  if (role !== "admin") return null;
+  if (!user) return null;
 
   const handleDelete = async () => {
     setLoading(true);
