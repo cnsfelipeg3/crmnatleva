@@ -496,7 +496,7 @@ export default function VitrinePremiacoes() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
-                          {row.full_name}
+                          {smartCapitalizeName(row.full_name)}
                           {isMe && (
                             <span className="text-[10px] text-emerald-700 ml-1 font-semibold">
                               · você
