@@ -371,6 +371,104 @@ export default function VitrinePremiacoes() {
   const lvl = tiers.length ? resolveLevel(tiers, closed, lifetime) : null;
   const myRankRow = ranking?.find((r: any) => r.affiliate_id === affiliate?.id);
 
+  // ===== Modal de detalhamento do prêmio =====
+  const [openPrize, setOpenPrize] = useState<PrizeDetail | null>(null);
+
+  const buildCampaignDetail = (c: any): PrizeDetail => ({
+    id: c.id,
+    kind: "campaign",
+    name: c.name,
+    tagline: c.tagline,
+    prize: c.prize,
+    prizeValue: c.prizeValue,
+    heroImage: c.heroImage,
+    prizeImage: c.prizeImage,
+    videoUrl: c.videoUrl,
+    gallery: c.gallery,
+    accent: c.accent,
+    accentDark: c.accentDark,
+    longDescription: c.longDescription,
+    psychologyHook: c.psychologyHook,
+    powerLaw: c.powerLaw,
+    deadline: c.deadline,
+    competitors: c.competitors,
+    whatsIncluded: c.whatsIncluded,
+    experienceSteps: c.experienceSteps,
+    testimonials: c.testimonials,
+    cta: c.cta,
+    ranking: c.ranking,
+  });
+
+  const buildLevelDetail = (p: typeof LEVEL_PRIZES[number]): PrizeDetail => {
+    const heroByLevel: Record<string, string> = {
+      prata: "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1800&q=80",
+      ouro: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1800&q=80",
+      diamante: "https://images.unsplash.com/photo-1515548212222-ab48aceaff58?auto=format&fit=crop&w=1800&q=80",
+      black: "https://images.unsplash.com/photo-1542315192-1f61a1792f33?auto=format&fit=crop&w=1800&q=80",
+    };
+    const galleryByLevel: Record<string, string[]> = {
+      prata: [
+        "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1554260570-9140fd3b7614?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=1600&q=80",
+      ],
+      ouro: [
+        "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1606293459298-69e85c1bfe40?auto=format&fit=crop&w=1600&q=80",
+      ],
+      diamante: [
+        "https://images.unsplash.com/photo-1515548212222-ab48aceaff58?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1602810316693-3667c854239a?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1605792657660-596af9009e82?auto=format&fit=crop&w=1600&q=80",
+      ],
+      black: [
+        "https://images.unsplash.com/photo-1542315192-1f61a1792f33?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1505761671935-60b3a7427bad?auto=format&fit=crop&w=1600&q=80",
+        "https://images.unsplash.com/photo-1551918120-9739cb430c6d?auto=format&fit=crop&w=1600&q=80",
+      ],
+    };
+    return {
+      id: p.id,
+      kind: "level",
+      name: `Nível ${p.name} ${p.emoji}`,
+      tagline:
+        p.id === "black"
+          ? "O topo da pirâmide · onde só lendas chegam"
+          : `Desbloqueie o nível ${p.name} e mude de patamar`,
+      prize: p.flagship ? "Viagem nacional completa para 2" : `${p.pix ? `R$ ${p.pix.toLocaleString("pt-BR")} via PIX` : "Pacote exclusivo"} + benefícios`,
+      prizeValue: p.flagship ? "R$ 8.000+" : p.pix ? `R$ ${p.pix.toLocaleString("pt-BR")}` : undefined,
+      heroImage: heroByLevel[p.id] || heroByLevel.prata,
+      prizeImage: heroByLevel[p.id],
+      gallery: galleryByLevel[p.id] || [],
+      accent: p.accent,
+      accentDark: p.accent,
+      longDescription:
+        p.id === "black"
+          ? "Esse não é um nível · é um clube. Quem chega ao Black entra numa lista que recebe convites, jantares, viagens e oportunidades que nunca aparecem em lugar nenhum. É a NatLeva por dentro. É o que ninguém posta."
+          : `O nível ${p.name} é o que separa quem vende do que constrói carreira. Ao bater ${fmtBRL(p.goal)} em vendas, você desbloqueia bônus em dinheiro, comissão extra e status visível no painel de toda a equipe.`,
+      whatsIncluded: [
+        ...p.perks,
+        "Selo permanente no seu perfil de afiliado",
+        "Prioridade em campanhas e materiais novos",
+        p.flagship ? "Convite anual pro Club Black off-line" : "Reconhecimento público na live mensal",
+      ],
+      experienceSteps: [
+        { title: `1. Atinja ${fmtBRL(p.goal)}`, detail: "Em vendas acumuladas (lifetime)." },
+        { title: "2. Liberação automática", detail: "O sistema detecta e a NatLeva entra em contato em 48h." },
+        { title: "3. Receba o prêmio", detail: p.pix ? "PIX no mesmo dia." : "Pacote enviado em até 10 dias úteis." },
+        { title: "4. Suba a próxima escada", detail: "Status e comissão extra valem pra sempre." },
+      ],
+      cta: `Quero o nível ${p.name}`,
+    };
+  };
+
+  const handlePrimaryAction = (p: PrizeDetail) => {
+    toast.success(`Bora! Foque em ${p.name} agora mesmo`, {
+      description: "Use os materiais e a régua de divulgação na aba Materiais.",
+    });
+  };
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-12">
       <header className="space-y-1">
