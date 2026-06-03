@@ -72,6 +72,17 @@ export default function VitrineComissoes() {
   });
 
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const payLabel = (m?: string | null) => {
+    if (!m) return "·";
+    const map: Record<string, string> = { pix: "PIX", credit_card: "Cartão de crédito", debit: "Débito", boleto: "Boleto" };
+    return map[m] || m;
+  };
   const filtered = (items || []).filter((c: any) => {
     if (!search.trim()) return true;
     const s = search.toLowerCase();
