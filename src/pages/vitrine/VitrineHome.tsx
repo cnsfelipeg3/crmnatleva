@@ -36,7 +36,7 @@ export default function VitrineHome() {
   const { data: tiers = [] } = useAffiliateLevels();
   const { data: series = [] } = useAffiliateMonthlyCommissions(affiliate?.id, 6);
 
-  const firstName = affiliate?.full_name?.split(" ")[0] || "Afiliado";
+  const firstName = smartCapitalizeName(affiliate?.full_name?.split(" ")[0]) || "Afiliado";
 
   const lifetime = stats?.totalEarned ?? 0;
   const available = stats?.availablePayout ?? 0;
