@@ -1,17 +1,15 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowRight, Sparkles, Store, Users2, Wallet } from "lucide-react";
+import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "@/components/vitrine/useAffiliateLevel";
 import { useAffiliateMonthlyCommissions } from "@/components/vitrine/useAffiliateTimeSeries";
 
-import CountUp from "@/components/vitrine/CountUp";
+import HeroCockpit from "@/components/vitrine/HeroCockpit";
 import WalletCard from "@/components/vitrine/WalletCard";
 import JourneyTrack from "@/components/vitrine/JourneyTrack";
 import WeeklyMission from "@/components/vitrine/WeeklyMission";
@@ -123,46 +121,30 @@ export default function VitrineHome() {
     reward: "+500 NatCoins · badge especial",
   };
 
+  const dreamAchieved = Math.min(DEFAULT_DREAM.goal, lifetime);
+  const dreamPct = Math.min(100, (dreamAchieved / DEFAULT_DREAM.goal) * 100);
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-8">
-      {/* HERO PREMIUM */}
-      <motion.section
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="space-y-1"
-      >
-        <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] font-semibold text-amber-700">
-          <Sparkles className="h-3 w-3" /> NatLeva Partners Club
-        </span>
-        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl tracking-tight leading-[1.1]">
-          Olá, {firstName} 👋
-        </h1>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-3xl mt-2 leading-relaxed">
-          Você já gerou{" "}
-          <strong className="text-foreground">
-            <CountUp value={lifetime} prefix="R$ " />
-          </strong>{" "}
-          em comissões com a NatLeva.
-          {lvl?.next && lvl.missingRevenue > 0 && (
-            <>
-              {" "}Faltam apenas{" "}
-              <strong className="text-amber-700">{fmtBRL(lvl.missingRevenue)}</strong> em vendas pra alcançar{" "}
-              <strong className="text-foreground">{lvl.next.name}</strong>.
-            </>
-          )}
-        </p>
-        <div className="flex flex-wrap gap-2 pt-3">
-          <Button asChild className="rounded-full h-10 px-5">
-            <Link to="/vitrine/pacotes">
-              Vender uma viagem hoje <ArrowRight className="ml-1 h-4 w-4" />
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="rounded-full h-10 px-5">
-            <Link to="/vitrine/materiais">Pegar materiais</Link>
-          </Button>
-        </div>
-      </motion.section>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-10">
+      {/* HERO CINEMATOGRÁFICO */}
+      <HeroCockpit
+        firstName={firstName}
+        missingSales={lvl?.missingSales ?? 0}
+        nextTierName={lvl?.next?.name || null}
+        dreamLabel={DEFAULT_DREAM.destination}
+        dreamPct={dreamPct}
+        dreamAchieved={dreamAchieved}
+        dreamGoal={DEFAULT_DREAM.goal}
+      />
+
+      {/* SONHO IMERSIVO · segundo maior destaque */}
+      <DreamCard
+        destination={DEFAULT_DREAM.destination}
+        imageUrl={DEFAULT_DREAM.imageUrl}
+        goal={DEFAULT_DREAM.goal}
+        achieved={dreamAchieved}
+        inspiration={DEFAULT_DREAM.inspiration}
+      />
 
       {/* CARTEIRA */}
       <WalletCard
@@ -198,25 +180,18 @@ export default function VitrineHome() {
             target={mission.target}
             rewardLabel={mission.reward}
           />
-          <NationalRankCard
-            myRank={myRank}
-            delta={4}
-            totalAffiliates={totalAffiliates || undefined}
-            above={above ? { rank: above.rank, name: above.full_name, revenue: Number(above.total_commission || 0) } : undefined}
-            me={{ rank: myRank, name: affiliate?.full_name || "Você", revenue: lifetime, me: true }}
-            below={below ? { rank: below.rank, name: below.full_name, revenue: Number(below.total_commission || 0) } : undefined}
-          />
         </div>
       </section>
 
-      {/* SONHO + FEED */}
-      <section className="grid lg:grid-cols-[1.3fr_1fr] gap-6">
-        <DreamCard
-          destination={DEFAULT_DREAM.destination}
-          imageUrl={DEFAULT_DREAM.imageUrl}
-          goal={DEFAULT_DREAM.goal}
-          achieved={Math.min(DEFAULT_DREAM.goal, lifetime)}
-          inspiration={DEFAULT_DREAM.inspiration}
+      {/* RANKING + FEED · competição e pertencimento */}
+      <section className="grid lg:grid-cols-[1fr_1fr] gap-6">
+        <NationalRankCard
+          myRank={myRank}
+          delta={4}
+          totalAffiliates={totalAffiliates || undefined}
+          above={above ? { rank: above.rank, name: above.full_name, revenue: Number(above.total_commission || 0) } : undefined}
+          me={{ rank: myRank, name: affiliate?.full_name || "Você", revenue: lifetime, me: true }}
+          below={below ? { rank: below.rank, name: below.full_name, revenue: Number(below.total_commission || 0) } : undefined}
         />
         <ClubFeed items={feedItems} />
       </section>
