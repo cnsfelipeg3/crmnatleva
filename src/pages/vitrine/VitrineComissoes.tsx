@@ -108,6 +108,23 @@ export default function VitrineComissoes() {
     return { maxComm, nextPayout, avgMonth };
   }, [items, series]);
 
+  // Receita por pacote · agrupa vendas pelo produto vendido
+  const perProduct = useMemo(() => {
+    const map = new Map<string, { product: any; qty: number; revenue: number; commission: number; cost: number }>();
+    (items || []).forEach((c: any) => {
+      if (!c.product) return;
+      const key = c.product.id;
+      const cur = map.get(key) || { product: c.product, qty: 0, revenue: 0, commission: 0, cost: 0 };
+      cur.qty += 1;
+      cur.revenue += Number(c.sale_value || 0);
+      cur.commission += Number(c.commission_value || 0);
+      cur.cost += Number(c.cost_value || 0);
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [items]);
+
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       <header className="space-y-1">
