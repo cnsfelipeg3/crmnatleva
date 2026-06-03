@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake, ImageIcon, Banknote, PlaneTakeoff, BedDouble, Briefcase, Compass, ArrowRight } from "lucide-react";
+import { Sparkles, MapPin, Plus, Search, ExternalLink, Eye, Users, Pencil, Calendar, BarChart3, Power, PowerOff, Trash2, TrendingUp, Crown, Handshake, ImageIcon, Banknote, PlaneTakeoff, BedDouble, Briefcase, Compass, ArrowRight, Copy, Share2 } from "lucide-react";
+import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import PrateleiraAnalyticsDialog from "@/components/prateleira/PrateleiraAnalyticsDialog";
 import MarketingMediaDialog from "@/components/produtos/MarketingMediaDialog";
 import PublicFooter from "@/components/prateleira/PublicFooter";
@@ -314,6 +315,23 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
 
 function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Product; viewMode: "ceo" | "afiliado"; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
   const isAffiliate = viewMode === "afiliado";
+  const { data: affiliate } = useAffiliateProfile();
+  const refCode = affiliate?.ref_code;
+  const personalLink = refCode
+    ? `${window.location.origin}/p/${p.slug}?ref=${refCode}`
+    : `${window.location.origin}/p/${p.slug}`;
+  const copyPersonalLink = async () => {
+    try {
+      await navigator.clipboard.writeText(personalLink);
+      toast({ title: refCode ? "Seu link foi copiado" : "Link copiado", description: refCode ? `Tudo que vier por aqui será creditado a você (${refCode}).` : "Cadastro como afiliado pendente · link sem rastreio." });
+    } catch {
+      toast({ title: "Não consegui copiar", description: "Copie manualmente: " + personalLink, variant: "destructive" });
+    }
+  };
+  const shareWhatsapp = () => {
+    const msg = `Olha esse pacote da NatLeva · ${p.title}\n${personalLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  };
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
@@ -643,7 +661,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                 <BarChart3 className="w-3.5 h-3.5" />
               </Button>
             )}
-            <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
+            <a href={isAffiliate ? personalLink : `/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
               <Button
                 variant="outline"
                 size="sm"
@@ -666,6 +684,27 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               </Button>
             )}
           </div>
+          {isAffiliate && (
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-primary/20">
+              <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                Seu link personalizado · todo lead vem pra você
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 py-1.5">
+                <code className="flex-1 text-[10px] truncate font-mono text-foreground/80">
+                  {personalLink}
+                </code>
+              </div>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" onClick={copyPersonalLink} className="flex-1 text-xs h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary">
+                  <Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar
+                </Button>
+                <Button variant="outline" size="sm" onClick={shareWhatsapp} className="flex-1 text-xs h-8 border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700">
+                  <Share2 className="w-3.5 h-3.5 mr-1.5" /> WhatsApp
+                </Button>
+              </div>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"

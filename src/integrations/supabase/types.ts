@@ -843,9 +843,12 @@ export type Database = {
       affiliate_referrals: {
         Row: {
           affiliate_id: string
+          city: string | null
           client_id: string | null
           converted_at: string | null
+          country: string | null
           created_at: string
+          device_type: string | null
           estimated_commission: number | null
           id: string
           lead_email: string | null
@@ -855,9 +858,12 @@ export type Database = {
           product_id: string | null
           product_slug: string | null
           ref_code: string
+          referrer: string | null
           sale_id: string | null
+          session_id: string | null
           source_page: string | null
           status: string
+          time_on_page_seconds: number | null
           updated_at: string
           user_agent: string | null
           utm_campaign: string | null
@@ -867,9 +873,12 @@ export type Database = {
         }
         Insert: {
           affiliate_id: string
+          city?: string | null
           client_id?: string | null
           converted_at?: string | null
+          country?: string | null
           created_at?: string
+          device_type?: string | null
           estimated_commission?: number | null
           id?: string
           lead_email?: string | null
@@ -879,9 +888,12 @@ export type Database = {
           product_id?: string | null
           product_slug?: string | null
           ref_code: string
+          referrer?: string | null
           sale_id?: string | null
+          session_id?: string | null
           source_page?: string | null
           status?: string
+          time_on_page_seconds?: number | null
           updated_at?: string
           user_agent?: string | null
           utm_campaign?: string | null
@@ -891,9 +903,12 @@ export type Database = {
         }
         Update: {
           affiliate_id?: string
+          city?: string | null
           client_id?: string | null
           converted_at?: string | null
+          country?: string | null
           created_at?: string
+          device_type?: string | null
           estimated_commission?: number | null
           id?: string
           lead_email?: string | null
@@ -903,9 +918,12 @@ export type Database = {
           product_id?: string | null
           product_slug?: string | null
           ref_code?: string
+          referrer?: string | null
           sale_id?: string | null
+          session_id?: string | null
           source_page?: string | null
           status?: string
+          time_on_page_seconds?: number | null
           updated_at?: string
           user_agent?: string | null
           utm_campaign?: string | null

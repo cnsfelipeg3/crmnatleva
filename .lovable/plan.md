@@ -1,114 +1,100 @@
-# Ecossistema do Afiliado · Plano de Construção
+## O que já existe (não vou mexer)
 
-Vamos transformar o `/vitrine` em uma plataforma completa pro afiliado, no estilo de programas de indicação profissionais (Hotmart, Booking Partner, etc). A vitrine de pacotes (atual) vira só uma das abas dentro de um painel maior.
+- `affiliates.ref_code` único por afiliado
+- Tabela `affiliate_referrals` registra cliques, leads, conversões
+- `RefTracker` captura `?ref=` em `/loja` e `/p/:slug` e grava em `affiliate_referrals`
+- `affiliate_commissions` já calcula comissão por venda
+- `/vitrine/indicacoes` mostra leads do afiliado (versão simples)
+- `/admin/vitrine` gerencia status dos afiliados
 
-## Nova estrutura de navegação (dentro de `/vitrine`)
+## O que falta · serão as adições
 
-Sidebar lateral fixa (estilo dashboard SaaS), com tema verde escuro/dourado da NatLeva:
+### 1 · Link personalizado por pacote na prateleira do afiliado
 
-```text
-/vitrine                      Home · visão geral do afiliado
-/vitrine/pacotes              Vitrine de pacotes (o que existe hoje)
-/vitrine/indicacoes           Minhas indicações · pipeline de leads enviados
-/vitrine/comissoes            Extrato financeiro · pagamentos PIX
-/vitrine/metas                Metas e progresso do mês
-/vitrine/premiacoes           Bônus, ranking e conquistas
-/vitrine/materiais            Kit de divulgação (links, imagens, textos prontos)
-/vitrine/perfil               Dados pessoais, PIX, foto
+Hoje o afiliado tem só **1 link genérico** em `/vitrine/materiais` (`/loja?ref=CODIGO`).
+Vou criar uma página `/vitrine/produtos` (Prateleira do Afiliado) listando todos os pacotes ativos com:
+- Card do pacote (capa, título, preço, comissão em R$)
+- Botão **"Copiar link"** que gera `https://crmnatleva.lovable.app/p/<slug-do-pacote>?ref=<ref_code>`
+- Botão **"Compartilhar no WhatsApp"** com mensagem pronta
+- Mini stats por pacote (cliques, leads, vendas dos últimos 30d)
+
+### 2 · Enriquecer o tracking
+
+Pequena expansão na tabela `affiliate_referrals` para capturar mais sinais:
+- `referrer` (página de origem · de onde o lead clicou)
+- `device_type` (mobile/desktop/tablet)
+- `country`, `city` (via header)
+- `session_id` (uuid no localStorage pra agrupar várias visitas do mesmo visitante)
+- `time_on_page_seconds` (ping do `/p/:slug`)
+
+`RefTracker` continua o mesmo · só passa a enviar esses campos extras.
+
+### 3 · Dashboard de leads do afiliado · `/vitrine/leads`
+
+Nova página com:
+- **KPIs do topo:** total de cliques · leads únicos · conversões · taxa de conversão · receita gerada · comissão acumulada
+- **Gráfico:** linha de cliques vs leads vs vendas (últimos 30/60/90 dias)
+- **Top pacotes:** ranking dos pacotes que mais geraram cliques/leads/conversões pra ele
+- **Funil:** cliques → leads → negociando → convertidos
+- **Tabela detalhada de leads:** data, pacote visitado, dispositivo, cidade, status do funil, comissão estimada, link da conversa
+- Filtros por período, pacote, status
+
+### 4 · Dashboard do gestor · `/admin/vitrine/leads`
+
+Nova aba dentro do `/admin/vitrine` com visão consolidada:
+- **KPIs globais:** total de afiliados ativos, cliques agregados, leads, conversões, receita gerada por afiliados, comissões pagas/pendentes
+- **Ranking dos afiliados** por cliques, leads, conversões, receita
+- **Top pacotes vendidos por afiliados**
+- **Tabela "Quem trouxe quem":** lead → afiliado → pacote → status → valor
+- **Heatmap de horários** com mais movimento de cliques
+- Drilldown: clica num afiliado e vê o painel individual dele
+
+## Mudanças no banco · migration mínima
+
+```sql
+ALTER TABLE affiliate_referrals
+  ADD COLUMN device_type text,
+  ADD COLUMN referrer text,
+  ADD COLUMN country text,
+  ADD COLUMN city text,
+  ADD COLUMN session_id uuid,
+  ADD COLUMN time_on_page_seconds int;
+
+CREATE INDEX idx_aff_ref_affiliate_created ON affiliate_referrals(affiliate_id, created_at DESC);
+CREATE INDEX idx_aff_ref_product ON affiliate_referrals(product_id);
 ```
 
-## 1 · Home (`/vitrine`)
+E vou popular esses campos novos nos ~734 registros fictícios atuais com dados realistas (dispositivo, cidade, etc).
 
-Painel inicial com:
-- Saudação personalizada · "Olá, [nome] · você está no nível Prata"
-- 4 KPIs principais · Comissão do mês · Indicações ativas · Conversões · Saldo a receber
-- Card grande "Próxima meta" com barra de progresso
-- Últimas 5 indicações (mini timeline)
-- 3 pacotes em destaque (atalho pra vitrine)
-- Ranking · sua posição entre os afiliados do mês
+## Arquivos novos / alterados
 
-## 2 · Vitrine de pacotes (`/vitrine/pacotes`)
+**Novos**
+- `src/pages/vitrine/VitrineProdutos.tsx` · prateleira com link personalizado
+- `src/pages/vitrine/VitrineLeads.tsx` · dashboard de leads do afiliado
+- `src/pages/admin/AdminVitrineLeads.tsx` · visão do gestor
+- `src/components/vitrine/useAffiliateLeadsStats.ts` · hook compartilhado
 
-O que já existe hoje (Indique & Ganhe) · só renomear a rota.
+**Alterados (sem quebrar o atual)**
+- `src/lib/affiliateTracking.ts` · adiciona session_id, device, referrer
+- `src/components/vitrine/RefTracker.tsx` · ping de tempo na página
+- `src/components/vitrine/AffiliateSidebar.tsx` · adiciona itens "Prateleira" e "Leads"
+- `src/pages/admin/AdminVitrine.tsx` · adiciona tab "Leads & Tráfego"
+- `src/App.tsx` · novas rotas
 
-## 3 · Minhas indicações (`/vitrine/indicacoes`)
+## O que NÃO mexo (garantia de não quebrar)
 
-Tabela com cada lead/cliente que o afiliado indicou:
-- Status: Novo lead · Em negociação · Proposta enviada · Fechado · Perdido
-- Pacote indicado · valor potencial de comissão · data
-- Timeline visual de cada indicação
+- `/vitrine/comissoes`, `/vitrine/indicacoes`, `/vitrine/perfil`, `/vitrine/cadastro`, `/vitrine/home`, `/vitrine/metas`, `/vitrine/materiais`, `/vitrine/premiacoes`
+- Tabela `affiliates`, `affiliate_commissions` (estrutura)
+- Lógica de captura de `?ref=` continua idêntica · só adiciona campos novos
 
-## 4 · Comissões (`/vitrine/comissoes`)
+## Ordem de execução
 
-- Saldo disponível · Saldo pendente · Total recebido (lifetime)
-- Extrato detalhado: data · cliente · pacote · % · valor · status PIX
-- Filtros por período, status (pago/pendente/cancelado)
-- Botão "Solicitar saque" (se houver saldo)
-- Histórico de pagamentos com comprovantes
+1. Migration (campos novos + índices)
+2. Popular campos nos dados fictícios
+3. Enriquecer `affiliateTracking.ts` e `RefTracker`
+4. Criar `VitrineProdutos` (prateleira com links personalizados)
+5. Criar `VitrineLeads` (dashboard do afiliado)
+6. Criar `AdminVitrineLeads` (visão do gestor) + tab no admin
+7. Atualizar sidebar e rotas
 
-## 5 · Metas (`/vitrine/metas`)
-
-- Meta do mês definida pela NatLeva (ex: 5 conversões = bônus de R$500)
-- Barra de progresso animada
-- Histórico de metas batidas
-- Próximas metas desbloqueadas conforme nível
-
-## 6 · Premiações (`/vitrine/premiacoes`)
-
-- Sistema de níveis · Bronze → Prata → Ouro → Diamante
-- Conquistas/badges (1ª venda, 10 indicações, top 3 do mês…)
-- Ranking mensal dos afiliados (com privacidade · só primeiro nome)
-- Bônus especiais ativos · ex: "Dobro de comissão em Foz neste mês"
-
-## 7 · Materiais (`/vitrine/materiais`)
-
-- Link personalizado de afiliado (com tracking ?ref=)
-- Imagens prontas pra Instagram/Stories
-- Textos prontos pra WhatsApp
-- Botão copiar com 1 clique
-- QR Code do link pessoal
-
-## 8 · Perfil (`/vitrine/perfil`)
-
-- Dados pessoais, foto, bio
-- Chave PIX (obrigatória pra receber)
-- Dados bancários alternativos
-- Configurações de notificação (WhatsApp/Email)
-
-## Backend · novas tabelas
-
-- `affiliate_referrals` · leads indicados (affiliate_id, customer_phone, sale_id, status, potential_commission)
-- `affiliate_commissions` · registro de comissão por venda (affiliate_id, sale_id, amount, status: pendente/disponivel/pago, paid_at)
-- `affiliate_goals` · metas configuradas pela NatLeva
-- `affiliate_achievements` · badges/conquistas conquistadas
-- `affiliate_levels` · nível atual do afiliado (calculado por volume de vendas)
-- `affiliate_materials` · biblioteca de materiais de marketing
-- extensão em `affiliates` · pix_key, avatar_url, bio, level, total_earned
-
-Todas com RLS · o afiliado só vê os próprios dados; admin vê tudo.
-
-## Admin (já existe em `/admin/vitrine`)
-
-Vou expandir depois com: gestão de comissões/pagamentos, criação de metas, upload de materiais, ranking geral. Foco inicial é o lado do afiliado.
-
-## Etapas de implementação
-
-Pra não virar um deploy gigante de uma vez, sugiro fatiar assim:
-
-**Fase 1 · Estrutura + Home + Pacotes (esta entrega)**
-- Sidebar/layout do painel do afiliado
-- Home com KPIs (mockados se ainda não houver dados reais)
-- Migração da vitrine atual pra `/vitrine/pacotes`
-- Página de Perfil básica (PIX, foto)
-
-**Fase 2 · Indicações + Comissões**
-- Tabelas no banco
-- Tracking de indicações via link `?ref=`
-- Extrato real de comissões integrado com vendas fechadas
-
-**Fase 3 · Metas + Premiações + Materiais**
-- Sistema de níveis/badges
-- Ranking
-- Biblioteca de materiais
-
-Posso começar pela **Fase 1** agora?
+Posso seguir?
