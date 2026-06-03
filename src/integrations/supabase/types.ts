@@ -757,6 +757,65 @@ export type Database = {
         }
         Relationships: []
       }
+      affiliate_payouts: {
+        Row: {
+          affiliate_id: string
+          amount: number
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          pix_key: string
+          pix_key_type: string
+          processed_at: string | null
+          rejection_reason: string | null
+          requested_at: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id: string
+          amount: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pix_key: string
+          pix_key_type: string
+          processed_at?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string
+          amount?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          pix_key?: string
+          pix_key_type?: string
+          processed_at?: string | null
+          rejection_reason?: string | null
+          requested_at?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_payouts_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_referrals: {
         Row: {
           affiliate_id: string
