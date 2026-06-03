@@ -1,98 +1,114 @@
+# Ecossistema do Afiliado · Plano de Construção
 
-# Converter Proposta em Venda
+Vamos transformar o `/vitrine` em uma plataforma completa pro afiliado, no estilo de programas de indicação profissionais (Hotmart, Booking Partner, etc). A vitrine de pacotes (atual) vira só uma das abas dentro de um painel maior.
 
-## Objetivo
+## Nova estrutura de navegação (dentro de `/vitrine`)
 
-Permitir que uma proposta vire um rascunho de venda com 1 clique, herdando todos os dados que já existem (cliente, datas, destino, passageiros, valores, voos, hospedagem) e deixando para o operador apenas o que falta (fornecedor, localizadores, custos reais, forma de pagamento).
-
-## Princípios para evitar bugs
-
-1. Operação idempotente: se a proposta já tem `sale_id` preenchido, o botão NÃO cria outra venda · ele abre a venda existente (com aviso).
-2. Conversão dentro de 1 transação no servidor (Edge Function com service role), não no cliente · evita venda criada pela metade se a aba fechar.
-3. Venda nasce com `status = 'Rascunho'` (já é o default da tabela `sales`) e nada vira receita/comissão até o operador salvar como concluída.
-4. Link bidirecional: `proposals.sale_id` aponta para a venda · `sales` recebe `source_proposal_id` (nova coluna) para auditoria reversa.
-5. Nada de apagar/alterar a proposta original. A proposta continua viva e navegável.
-
-## Fluxo do usuário
+Sidebar lateral fixa (estilo dashboard SaaS), com tema verde escuro/dourado da NatLeva:
 
 ```text
-[Proposta aberta]
-       |
-       v
-  Botão "Converter em Venda"
-       |
-       v
-  Modal de confirmação
-   - mostra resumo do que será copiado
-   - avisa "Vai criar um rascunho · você revisa antes de concluir"
-   - se já existe venda vinculada: botão vira "Abrir venda vinculada"
-       |
-       v
-  Edge Function: proposal-to-sale
-   - valida proposta
-   - cria sale (Rascunho)
-   - copia voos -> flight_segments
-   - copia hotel -> campos hotel_* + cost_items (hotel)
-   - copia passageiros (se já existirem no briefing)
-   - grava proposals.sale_id e sales.source_proposal_id
-       |
-       v
-  Redireciona para /vendas/{id}/editar
-   - banner no topo: "Rascunho gerado a partir da proposta X · Complete os dados em aberto"
-   - lista de campos pendentes destacados (fornecedor, localizador, custo real, forma de pgto)
+/vitrine                      Home · visão geral do afiliado
+/vitrine/pacotes              Vitrine de pacotes (o que existe hoje)
+/vitrine/indicacoes           Minhas indicações · pipeline de leads enviados
+/vitrine/comissoes            Extrato financeiro · pagamentos PIX
+/vitrine/metas                Metas e progresso do mês
+/vitrine/premiacoes           Bônus, ranking e conquistas
+/vitrine/materiais            Kit de divulgação (links, imagens, textos prontos)
+/vitrine/perfil               Dados pessoais, PIX, foto
 ```
 
-## O que será copiado (mapeamento)
+## 1 · Home (`/vitrine`)
 
-| Proposta (origem)                          | Venda (destino)                                  |
-|--------------------------------------------|--------------------------------------------------|
-| `client_id`                                | `sales.client_id`                                |
-| `client_name`                              | `sales.name`                                     |
-| `origin`                                   | `sales.origin_city` / `origin_iata` (via lookup) |
-| `destinations[0]`                          | `sales.destination_city` / `destination_iata`    |
-| `travel_start_date` / `travel_end_date`    | `sales.departure_date` / `return_date`           |
-| `passengers_adults` / `_children` / `ages` | `sales.adults` / `children` / `children_ages`    |
-| `total_value`                              | `sales.received_value` (provisório, editável)    |
-| `proposal_items` tipo `flight`             | `flight_segments` (1 linha por trecho)           |
-| `proposal_items` tipo `hotel`              | `sales.hotel_*` + `cost_items` (category=hotel)  |
-| `proposal_items` tipo `service` / `extra`  | `cost_items` (category derivada do tipo)         |
-| `created_by` (consultor)                   | `sales.seller_id`                                |
+Painel inicial com:
+- Saudação personalizada · "Olá, [nome] · você está no nível Prata"
+- 4 KPIs principais · Comissão do mês · Indicações ativas · Conversões · Saldo a receber
+- Card grande "Próxima meta" com barra de progresso
+- Últimas 5 indicações (mini timeline)
+- 3 pacotes em destaque (atalho pra vitrine)
+- Ranking · sua posição entre os afiliados do mês
 
-Campos NÃO copiados (entram vazios para o operador preencher):
-- `payment_method`, `airline` final, `locators`, `total_cost`, `profit`, `margin`, `emission_status`, `supplier_id` nos `cost_items`, `card_info`.
+## 2 · Vitrine de pacotes (`/vitrine/pacotes`)
 
-## Regras de segurança e dados
+O que já existe hoje (Indique & Ganhe) · só renomear a rota.
 
-- Se a proposta tiver `status = 'lost'` ou `proposal_outcome = 'rejected'`: bloquear conversão com mensagem clara.
-- Se faltar dado mínimo (sem destino OU sem data de ida): exigir preenchimento na proposta antes de converter, em vez de criar venda quebrada.
-- Conversão registra evento em `audit_log` com `sale_id` e referência à proposta · facilita rastrear origem de cada venda no futuro.
-- Edge function valida JWT em código (padrão do projeto) e roda com service role só para o passo de inserts encadeados.
+## 3 · Minhas indicações (`/vitrine/indicacoes`)
 
-## Mudanças técnicas
+Tabela com cada lead/cliente que o afiliado indicou:
+- Status: Novo lead · Em negociação · Proposta enviada · Fechado · Perdido
+- Pacote indicado · valor potencial de comissão · data
+- Timeline visual de cada indicação
 
-Banco (migration):
-- `ALTER TABLE sales ADD COLUMN source_proposal_id uuid REFERENCES proposals(id) ON DELETE SET NULL;`
-- Índice `idx_sales_source_proposal_id`.
+## 4 · Comissões (`/vitrine/comissoes`)
 
-Edge Function nova:
-- `supabase/functions/proposal-to-sale/index.ts`
-- Input: `{ proposal_id }`. Output: `{ sale_id, already_existed: boolean }`.
-- Faz tudo em ordem: sale -> flight_segments -> cost_items -> update proposal.sale_id -> audit_log.
-- Em qualquer erro intermediário, deleta o `sale` recém criado (compensação) para não deixar lixo.
+- Saldo disponível · Saldo pendente · Total recebido (lifetime)
+- Extrato detalhado: data · cliente · pacote · % · valor · status PIX
+- Filtros por período, status (pago/pendente/cancelado)
+- Botão "Solicitar saque" (se houver saldo)
+- Histórico de pagamentos com comprovantes
 
-Frontend:
-- Botão "Converter em Venda" em:
-  - `src/pages/ProposalEditor.tsx` (header da proposta)
-  - Card da proposta em `src/pages/Proposals.tsx` e no painel detalhe do pipeline (`NegotiationDetailPanel`)
-- Modal de confirmação compartilhado: `src/components/proposal/ConvertToSaleDialog.tsx`
-- Após sucesso: `navigate('/vendas/' + sale_id + '/editar')` + toast.
-- Hook utilitário: `src/lib/proposalToSaleBridge.ts` (chama a edge function, trata erros, devolve `sale_id`).
-- Banner "Rascunho a partir da proposta" no editor de venda quando `sales.source_proposal_id` estiver preenchido, com link para abrir a proposta de origem em nova aba.
+## 5 · Metas (`/vitrine/metas`)
 
-## Pontos a confirmar antes de eu construir
+- Meta do mês definida pela NatLeva (ex: 5 conversões = bônus de R$500)
+- Barra de progresso animada
+- Histórico de metas batidas
+- Próximas metas desbloqueadas conforme nível
 
-1. Quando a proposta já tem `sale_id`, o botão deve mesmo só "abrir venda existente", ou você quer permitir gerar uma nova venda mesmo assim (caso a primeira tenha sido descartada)?
-2. O valor que entra como `received_value` no rascunho deve ser o `total_value` cheio da proposta, ou zero (pra forçar o operador a digitar o valor realmente recebido)?
-3. Os `cost_items` herdados da proposta entram com custo provisório igual ao valor mostrado no item, ou entram zerados (pra forçar lançamento do custo real do fornecedor)?
+## 6 · Premiações (`/vitrine/premiacoes`)
 
-Se você responder essas três e estiver de acordo com o restante, eu sigo direto para a implementação.
+- Sistema de níveis · Bronze → Prata → Ouro → Diamante
+- Conquistas/badges (1ª venda, 10 indicações, top 3 do mês…)
+- Ranking mensal dos afiliados (com privacidade · só primeiro nome)
+- Bônus especiais ativos · ex: "Dobro de comissão em Foz neste mês"
+
+## 7 · Materiais (`/vitrine/materiais`)
+
+- Link personalizado de afiliado (com tracking ?ref=)
+- Imagens prontas pra Instagram/Stories
+- Textos prontos pra WhatsApp
+- Botão copiar com 1 clique
+- QR Code do link pessoal
+
+## 8 · Perfil (`/vitrine/perfil`)
+
+- Dados pessoais, foto, bio
+- Chave PIX (obrigatória pra receber)
+- Dados bancários alternativos
+- Configurações de notificação (WhatsApp/Email)
+
+## Backend · novas tabelas
+
+- `affiliate_referrals` · leads indicados (affiliate_id, customer_phone, sale_id, status, potential_commission)
+- `affiliate_commissions` · registro de comissão por venda (affiliate_id, sale_id, amount, status: pendente/disponivel/pago, paid_at)
+- `affiliate_goals` · metas configuradas pela NatLeva
+- `affiliate_achievements` · badges/conquistas conquistadas
+- `affiliate_levels` · nível atual do afiliado (calculado por volume de vendas)
+- `affiliate_materials` · biblioteca de materiais de marketing
+- extensão em `affiliates` · pix_key, avatar_url, bio, level, total_earned
+
+Todas com RLS · o afiliado só vê os próprios dados; admin vê tudo.
+
+## Admin (já existe em `/admin/vitrine`)
+
+Vou expandir depois com: gestão de comissões/pagamentos, criação de metas, upload de materiais, ranking geral. Foco inicial é o lado do afiliado.
+
+## Etapas de implementação
+
+Pra não virar um deploy gigante de uma vez, sugiro fatiar assim:
+
+**Fase 1 · Estrutura + Home + Pacotes (esta entrega)**
+- Sidebar/layout do painel do afiliado
+- Home com KPIs (mockados se ainda não houver dados reais)
+- Migração da vitrine atual pra `/vitrine/pacotes`
+- Página de Perfil básica (PIX, foto)
+
+**Fase 2 · Indicações + Comissões**
+- Tabelas no banco
+- Tracking de indicações via link `?ref=`
+- Extrato real de comissões integrado com vendas fechadas
+
+**Fase 3 · Metas + Premiações + Materiais**
+- Sistema de níveis/badges
+- Ranking
+- Biblioteca de materiais
+
+Posso começar pela **Fase 1** agora?
