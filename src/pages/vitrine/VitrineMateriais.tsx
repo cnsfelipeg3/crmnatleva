@@ -211,6 +211,7 @@ export default function VitrineMateriais() {
     (destination !== "all" ? 1 : 0) +
     (country !== "all" ? 1 : 0) +
     (category !== "all" ? 1 : 0) +
+    (formatFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
   const clearFilters = () => {
@@ -219,6 +220,7 @@ export default function VitrineMateriais() {
     setDestination("all");
     setCountry("all");
     setCategory("all");
+    setFormatFilter("all");
   };
 
   const textosProntos = [
