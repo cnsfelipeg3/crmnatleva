@@ -977,6 +977,14 @@ export default function VitrinePremiacoes() {
           </CardContent>
         </Card>
       </section>
+
+      <PrizeDetailDialog
+        open={!!openPrize}
+        onOpenChange={(o) => !o && setOpenPrize(null)}
+        prize={openPrize}
+        onPrimaryAction={handlePrimaryAction}
+      />
     </div>
   );
 }
+
