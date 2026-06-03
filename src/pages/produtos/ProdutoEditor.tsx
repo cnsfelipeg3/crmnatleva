@@ -113,6 +113,7 @@ const empty: ProductForm = {
   payment_notes: "",
   internal_cost: "",
   commission_per_sale: "",
+  emission_link: "",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
