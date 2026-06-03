@@ -10,6 +10,7 @@ import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "@/components/vitrine/useAffiliateLevel";
 import JourneyTrack from "@/components/vitrine/JourneyTrack";
 import { useEffect, useState } from "react";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
