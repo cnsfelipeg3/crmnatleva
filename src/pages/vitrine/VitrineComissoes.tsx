@@ -215,6 +215,80 @@ export default function VitrineComissoes() {
         </CardContent>
       </Card>
 
+      {/* Receita por pacote · ranking */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Receita por pacote</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Quanto cada produto da prateleira gerou em vendas, comissão e quantidade.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0">
+          {perProduct.length === 0 ? (
+            <div className="text-center py-10 text-sm text-muted-foreground">Sem vendas ainda.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <th className="px-4 py-2.5 font-medium">Pacote</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Qtd vendida</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Receita total</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Ticket médio</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Sua comissão</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perProduct.map((row) => (
+                    <tr key={row.product.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {row.product.cover_image_url ? (
+                            <img
+                              src={row.product.cover_image_url}
+                              alt={row.product.title}
+                              loading="lazy"
+                              className="h-12 w-16 rounded-md object-cover ring-1 ring-border shrink-0"
+                            />
+                          ) : (
+                            <div className="h-12 w-16 rounded-md bg-emerald-500/10 grid place-items-center shrink-0">
+                              <Package className="h-4 w-4 text-emerald-700" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[280px]">{row.product.title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {[row.product.destination, row.product.destination_country].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Badge variant="outline" className="text-[11px]">{row.qty}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium whitespace-nowrap">{fmtBRL(row.revenue)}</td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground whitespace-nowrap">
+                        {fmtBRL(row.qty > 0 ? row.revenue / row.qty : 0)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(row.commission)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-muted/20">
+                  <tr className="text-xs font-medium">
+                    <td className="px-4 py-2.5">{perProduct.length} pacote{perProduct.length === 1 ? "" : "s"} diferente{perProduct.length === 1 ? "" : "s"}</td>
+                    <td className="px-4 py-2.5 text-right">{perProduct.reduce((s, r) => s + r.qty, 0)}</td>
+                    <td className="px-4 py-2.5 text-right">{fmtBRL(perProduct.reduce((s, r) => s + r.revenue, 0))}</td>
+                    <td />
+                    <td className="px-4 py-2.5 text-right text-emerald-700">{fmtBRL(perProduct.reduce((s, r) => s + r.commission, 0))}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Extrato */}
       <Card>
         <CardHeader className="pb-3">
