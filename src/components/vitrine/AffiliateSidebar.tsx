@@ -73,10 +73,10 @@ export default function AffiliateSidebar() {
           {!collapsed && (
             <div className="flex flex-col leading-tight">
               <span className="text-[10px] uppercase tracking-[0.18em] text-amber-600 font-semibold">
-                Programa de Bônus
+                Partners Club
               </span>
               <span className="text-xs text-muted-foreground">
-                Painel do Afiliado
+                NatLeva · seu próximo nível
               </span>
             </div>
           )}
