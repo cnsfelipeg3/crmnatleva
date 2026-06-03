@@ -22,6 +22,7 @@ import {
   Images,
   UserCog,
   LogOut,
+  Activity,
 } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { supabase } from "@/integrations/supabase/client";
 const mainItems = [
   { title: "Início", url: "/vitrine", icon: LayoutDashboard, end: true },
   { title: "Pacotes pra vender", url: "/vitrine/pacotes", icon: Store },
+  { title: "Meus leads", url: "/vitrine/leads", icon: Activity },
   { title: "Minhas indicações", url: "/vitrine/indicacoes", icon: Users2 },
   { title: "Comissões", url: "/vitrine/comissoes", icon: Wallet },
 ];
