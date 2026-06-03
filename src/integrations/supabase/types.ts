@@ -4331,6 +4331,7 @@ export type Database = {
           destination_iata: string | null
           display_order: number
           duration: string | null
+          emission_link: string | null
           excludes: Json
           flexible_dates: boolean
           gallery: Json
@@ -4393,6 +4394,7 @@ export type Database = {
           destination_iata?: string | null
           display_order?: number
           duration?: string | null
+          emission_link?: string | null
           excludes?: Json
           flexible_dates?: boolean
           gallery?: Json
@@ -4455,6 +4457,7 @@ export type Database = {
           destination_iata?: string | null
           display_order?: number
           duration?: string | null
+          emission_link?: string | null
           excludes?: Json
           flexible_dates?: boolean
           gallery?: Json
