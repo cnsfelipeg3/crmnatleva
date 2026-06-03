@@ -59,8 +59,8 @@ export default function WalletCard({
             <div className="mt-5 flex items-center gap-3">
               <Button
                 onClick={onWithdraw}
-                disabled={available <= 0 || !hasPix}
-                className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-semibold rounded-full h-11 px-6 gap-2 shadow-[0_8px_24px_-6px_rgba(245,200,80,0.55)]"
+                disabled={hasPix && available <= 0}
+                className="bg-gradient-to-r from-amber-300 to-amber-400 hover:from-amber-200 hover:to-amber-300 text-emerald-950 font-bold rounded-full h-11 px-6 gap-2 shadow-[0_10px_30px_-6px_rgba(251,191,36,0.7),inset_0_1px_0_rgba(255,255,255,0.4)] hover:-translate-y-0.5 transition-all disabled:opacity-100 disabled:from-white/15 disabled:to-white/10 disabled:text-white/60 disabled:shadow-none"
               >
                 <ArrowDownToLine className="h-4 w-4" />
                 {hasPix ? "Receber via PIX" : "Cadastrar PIX"}
