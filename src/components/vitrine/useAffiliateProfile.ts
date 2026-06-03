@@ -10,6 +10,13 @@ export type AffiliateProfile = {
   status: "pending" | "approved" | "rejected";
   approved_at: string | null;
   created_at: string;
+  ref_code: string;
+  pix_key: string | null;
+  pix_key_type: "cpf" | "cnpj" | "email" | "phone" | "random" | null;
+  avatar_url: string | null;
+  bio: string | null;
+  commission_percent: number;
+  total_earned: number;
 };
 
 export function useAffiliateProfile() {
