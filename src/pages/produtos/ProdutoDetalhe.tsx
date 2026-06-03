@@ -3,8 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil, ExternalLink, Lock, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type Product = {
   id: string;
@@ -26,11 +28,14 @@ type Product = {
   how_it_works: string | null;
   pickup_info: string | null;
   recommendations: string | null;
+  emission_link: string | null;
 };
 
 export default function ProdutoDetalhe() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isCeo = role === "admin" || role === "gestor";
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
@@ -69,9 +74,42 @@ export default function ProdutoDetalhe() {
         <Link to="/produtos">
           <Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-1.5" /> Todos os passeios</Button>
         </Link>
-        <Button variant="outline" size="sm" onClick={() => navigate(`/produtos/${p.slug}/editar`)}>
-          <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
-        </Button>
+        <div className="flex items-center gap-2">
+          {isCeo && p.emission_link && (
+            <>
+              <Button
+                size="sm"
+                className="bg-amber-500 hover:bg-amber-600 text-black"
+                onClick={() => window.open(p.emission_link!, "_blank", "noopener,noreferrer")}
+              >
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" /> Link para Emissão
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(p.emission_link!);
+                    toast.success("Link copiado");
+                  } catch {
+                    toast.error("Não foi possível copiar");
+                  }
+                }}
+                title="Copiar link de emissão"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+            </>
+          )}
+          {isCeo && !p.emission_link && (
+            <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-muted-foreground px-2.5 py-1 rounded-md border border-dashed border-border/60">
+              <Lock className="w-3 h-3" /> Sem link de emissão cadastrado
+            </span>
+          )}
+          <Button variant="outline" size="sm" onClick={() => navigate(`/produtos/${p.slug}/editar`)}>
+            <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
+          </Button>
+        </div>
       </div>
 
       {/* Hero */}

@@ -78,6 +78,7 @@ type ProductForm = {
   payment_notes: string;
   internal_cost: string;
   commission_per_sale: string;
+  emission_link: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
@@ -112,6 +113,7 @@ const empty: ProductForm = {
   payment_notes: "",
   internal_cost: "",
   commission_per_sale: "",
+  emission_link: "",
   is_promo: false, promo_badge: "",
   origin_city: "", origin_iata: "", destination_iata: "",
   airline: "", hotel_name: "", hotel_stars: "",
@@ -373,6 +375,7 @@ export default function ProdutoEditor() {
           payment_notes: data.payment_terms?.notes ?? "",
           internal_cost: data.internal_cost != null ? String(data.internal_cost) : "",
           commission_per_sale: data.commission_per_sale != null ? String(data.commission_per_sale) : "",
+          emission_link: data.emission_link ?? "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
@@ -441,6 +444,7 @@ export default function ProdutoEditor() {
       },
       internal_cost: numOrNull(form.internal_cost),
       commission_per_sale: numOrNull(form.commission_per_sale),
+      emission_link: form.emission_link.trim() || null,
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
@@ -1125,6 +1129,23 @@ export default function ProdutoEditor() {
                                 {totalRevenue > 0 && cost > 0 ? `Margem de ${margin.toFixed(1)}%` : "Receita · custo"}
                               </p>
                             </div>
+                          </div>
+
+                          {/* Link interno para emissão da viagem */}
+                          <div className="mt-4 pt-4 border-t border-amber-500/20">
+                            <Label className="text-sm font-semibold flex items-center gap-1.5">
+                              <ExternalLink className="w-3.5 h-3.5 text-amber-600" /> Link para emissão
+                            </Label>
+                            <Input
+                              type="url"
+                              value={form.emission_link}
+                              onChange={(e) => set("emission_link", e.target.value)}
+                              placeholder="https://... (link interno usado pra emitir essa viagem quando alguém comprar)"
+                              className="text-sm mt-1"
+                            />
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Só a equipe vê esse link · aparece como botão no detalhe do produto pra facilitar a emissão depois da venda
+                            </p>
                           </div>
                         </div>
                       );
