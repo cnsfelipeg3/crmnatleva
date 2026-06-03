@@ -171,6 +171,14 @@ const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraV
 const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
 const VitrineCadastro = lazy(() => import("@/pages/vitrine/VitrineCadastro"));
 const AffiliateGuard = lazy(() => import("@/components/vitrine/AffiliateGuard"));
+const AffiliateLayout = lazy(() => import("@/components/vitrine/AffiliateLayout"));
+const VitrineHome = lazy(() => import("@/pages/vitrine/VitrineHome"));
+const VitrineComissoes = lazy(() => import("@/pages/vitrine/VitrineComissoes"));
+const VitrineIndicacoes = lazy(() => import("@/pages/vitrine/VitrineIndicacoes"));
+const VitrineMetas = lazy(() => import("@/pages/vitrine/VitrineMetas"));
+const VitrinePremiacoes = lazy(() => import("@/pages/vitrine/VitrinePremiacoes"));
+const VitrineMateriais = lazy(() => import("@/pages/vitrine/VitrineMateriais"));
+const VitrinePerfil = lazy(() => import("@/pages/vitrine/VitrinePerfil"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 
 // Operação Diária
@@ -444,11 +452,18 @@ function AppRoutes() {
         <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
         <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
 
-        {/* Painel do Afiliado (área logada) · mesmos produtos pra revender e ganhar comissão */}
+        {/* Painel do Afiliado (área logada) · ecossistema completo do programa de bônus NatLeva */}
         <Route path="/vitrine/login" element={<Suspense fallback={<MinimalLoader />}><VitrineLogin /></Suspense>} />
         <Route path="/vitrine/cadastro" element={<Suspense fallback={<MinimalLoader />}><VitrineCadastro /></Suspense>} />
-        <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><Produtos lockedMode="afiliado" /></AffiliateGuard></Suspense>} />
-        <Route path="/vitrine/:slug" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVendaPublica /></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineHome /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/pacotes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><Produtos lockedMode="afiliado" /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/indicacoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineIndicacoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/comissoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineComissoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/metas" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineMetas /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/premiacoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrinePremiacoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/materiais" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineMateriais /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/perfil" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrinePerfil /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/pacotes/:slug" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVendaPublica /></AffiliateGuard></Suspense>} />
 
         {/* Página pública de cancelamento de inscrição (e-mails) */}
         <Route path="/unsubscribe" element={<Suspense fallback={<MinimalLoader />}><Unsubscribe /></Suspense>} />
