@@ -176,7 +176,10 @@ export default function EmployeeDashboard() {
     ...QUICK_ACTIONS.filter((a) => can(a.menuKey, "view")),
   ];
 
-  const firstName = (profile?.full_name || "").split(" ")[0] || "olá";
+  const rawFirst = (profile?.full_name || "").trim().split(" ")[0] || "";
+  const firstName = rawFirst
+    ? rawFirst.charAt(0).toLocaleUpperCase("pt-BR") + rawFirst.slice(1).toLocaleLowerCase("pt-BR")
+    : "Olá";
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return "Bom dia";

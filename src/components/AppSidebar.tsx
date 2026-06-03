@@ -503,7 +503,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
       <div className="relative border-t border-sidebar-border/50 p-3 space-y-1">
         {!isCollapsed && profile && (
           <div className="px-2 mb-2">
-            <p className="text-xs font-semibold truncate text-foreground">{profile.full_name || profile.email}</p>
+            <p className="text-xs font-semibold truncate text-foreground">{(profile.full_name || profile.email || "").replace(/\b\p{L}+/gu, (w) => w.charAt(0).toLocaleUpperCase("pt-BR") + w.slice(1).toLocaleLowerCase("pt-BR"))}</p>
             <p className="text-[10px] text-muted-foreground capitalize font-mono tracking-wider">{employeePosition || role}</p>
           </div>
         )}
