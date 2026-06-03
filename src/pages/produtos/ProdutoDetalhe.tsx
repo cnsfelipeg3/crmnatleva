@@ -34,6 +34,8 @@ type Product = {
 export default function ProdutoDetalhe() {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const { role } = useAuth();
+  const isCeo = role === "admin" || role === "gestor";
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
