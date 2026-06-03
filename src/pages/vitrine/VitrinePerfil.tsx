@@ -1,13 +1,52 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { UserCog, Mail, Phone, CheckCircle2, KeyRound, BellRing } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
+
+type PixType = "cpf" | "cnpj" | "email" | "phone" | "random";
 
 export default function VitrinePerfil() {
   const { data: affiliate, isLoading } = useAffiliateProfile();
+  const qc = useQueryClient();
+
+  const [pixKey, setPixKey] = useState("");
+  const [pixKeyType, setPixKeyType] = useState<PixType>("cpf");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (affiliate) {
+      setPixKey(affiliate.pix_key || "");
+      setPixKeyType((affiliate.pix_key_type as PixType) || "cpf");
+    }
+  }, [affiliate?.id]);
+
+  const savePix = async () => {
+    if (!affiliate) return;
+    if (!pixKey.trim()) {
+      toast.error("Informe sua chave PIX.");
+      return;
+    }
+    setSaving(true);
+    const { error } = await supabase
+      .from("affiliates")
+      .update({ pix_key: pixKey.trim(), pix_key_type: pixKeyType })
+      .eq("id", affiliate.id);
+    setSaving(false);
+    if (error) {
+      toast.error("Não foi possível salvar: " + error.message);
+      return;
+    }
+    toast.success("Chave PIX salva!");
+    qc.invalidateQueries({ queryKey: ["affiliate-self-profile"] });
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto space-y-6">
@@ -31,15 +70,11 @@ export default function VitrinePerfil() {
               <Input value={affiliate?.full_name || ""} disabled />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1">
-                <Mail className="h-3 w-3" /> E-mail
-              </Label>
+              <Label className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" /> E-mail</Label>
               <Input value={affiliate?.email || ""} disabled />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs flex items-center gap-1">
-                <Phone className="h-3 w-3" /> Telefone
-              </Label>
+              <Label className="text-xs flex items-center gap-1"><Phone className="h-3 w-3" /> Telefone</Label>
               <Input value={affiliate?.phone || ""} disabled />
             </div>
             <div className="space-y-1.5">
@@ -53,6 +88,14 @@ export default function VitrinePerfil() {
                   <Badge variant="outline">{affiliate?.status || "·"}</Badge>
                 )}
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Seu código de afiliado</Label>
+              <Input value={affiliate?.ref_code || ""} disabled className="font-mono" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Comissão padrão</Label>
+              <Input value={`${affiliate?.commission_percent ?? 10}%`} disabled />
             </div>
           </div>
           <p className="text-[11px] text-muted-foreground">
@@ -68,17 +111,30 @@ export default function VitrinePerfil() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs">Tipo de chave</Label>
-            <Input placeholder="CPF · E-mail · Telefone · Aleatória" disabled />
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Tipo de chave</Label>
+              <Select value={pixKeyType} onValueChange={(v) => setPixKeyType(v as PixType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cpf">CPF</SelectItem>
+                  <SelectItem value="cnpj">CNPJ</SelectItem>
+                  <SelectItem value="email">E-mail</SelectItem>
+                  <SelectItem value="phone">Telefone</SelectItem>
+                  <SelectItem value="random">Chave aleatória</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label className="text-xs">Chave PIX</Label>
+              <Input value={pixKey} onChange={(e) => setPixKey(e.target.value)} placeholder="Sua chave PIX" />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Chave PIX</Label>
-            <Input placeholder="Em breve · cadastro de PIX" disabled />
-          </div>
-          <Button disabled className="w-full sm:w-auto">Salvar chave PIX</Button>
+          <Button onClick={savePix} disabled={saving} className="w-full sm:w-auto">
+            {saving ? "Salvando..." : "Salvar chave PIX"}
+          </Button>
           <p className="text-[11px] text-muted-foreground">
-            Em breve · cadastro de PIX habilitado junto com o sistema de comissões (Fase 2).
+            Esta chave é usada pra receber suas comissões. Confira com cuidado antes de salvar.
           </p>
         </CardContent>
       </Card>
@@ -91,8 +147,7 @@ export default function VitrinePerfil() {
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            Em breve · escolha receber avisos de novas indicações e comissões por WhatsApp ou
-            e-mail.
+            Em breve · escolha receber avisos de novas indicações e comissões por WhatsApp ou e-mail.
           </p>
         </CardContent>
       </Card>
