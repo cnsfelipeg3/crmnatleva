@@ -122,7 +122,7 @@ function SidegroupBlock({
   return (
     <SidebarGroup>
       {!collapsed && (
-        <SidebarGroupLabel className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.18em] text-foreground/60 font-semibold">
           {label}
         </SidebarGroupLabel>
       )}
@@ -138,15 +138,15 @@ function SidegroupBlock({
                     end={item.end}
                     className={({ isActive: navActive }) =>
                       [
-                        "flex items-center gap-2 rounded-md transition-colors",
+                        "flex items-center gap-2.5 rounded-md transition-all duration-200",
                         (navActive || active)
-                          ? "bg-emerald-950/10 text-emerald-900 dark:bg-emerald-400/10 dark:text-emerald-200 font-medium"
-                          : "hover:bg-muted/60 text-foreground/80",
+                          ? "bg-gradient-to-r from-emerald-950/15 to-amber-500/10 text-emerald-900 dark:from-emerald-400/15 dark:to-amber-300/10 dark:text-emerald-100 font-semibold shadow-[inset_2px_0_0_0_rgb(245,158,11)]"
+                          : "hover:bg-foreground/5 text-foreground/85 hover:text-foreground",
                       ].join(" ")
                     }
                   >
-                    <item.icon className="h-4 w-4 shrink-0" />
-                    {!collapsed && <span className="truncate">{item.title}</span>}
+                    <item.icon className="h-[18px] w-[18px] shrink-0 stroke-[2.2]" />
+                    {!collapsed && <span className="truncate text-[13px]">{item.title}</span>}
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -154,6 +154,7 @@ function SidegroupBlock({
           })}
         </SidebarMenu>
       </SidebarGroupContent>
+
     </SidebarGroup>
   );
 }
