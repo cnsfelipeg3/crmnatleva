@@ -573,6 +573,7 @@ export default function VitrineComissoes() {
           available={disponivel}
           pixKey={affiliate.pix_key}
           pixKeyType={(affiliate.pix_key_type as any) || "cpf"}
+          holderName={affiliate.full_name}
         />
       )}
     </div>
