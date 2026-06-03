@@ -62,20 +62,20 @@ export default function AffiliateSidebar() {
   );
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-emerald-900/20">
-      <SidebarHeader className="px-3 py-4 border-b border-emerald-900/15">
-        <div className="flex items-center gap-2">
+    <Sidebar collapsible="icon" className="border-r border-emerald-900/30">
+      <SidebarHeader className="px-3 py-4 border-b border-emerald-900/25">
+        <div className="flex items-center gap-2.5">
           <img
             src={logoNatleva}
             alt="NatLeva"
-            className="h-8 w-auto shrink-0 dark:invert"
+            className="h-9 w-auto shrink-0 dark:invert drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
           />
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-[10px] uppercase tracking-[0.18em] text-amber-600 font-semibold">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-amber-600 dark:text-amber-300 font-bold">
                 Partners Club
               </span>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs text-foreground/70 font-medium">
                 NatLeva · seu próximo nível
               </span>
             </div>
@@ -88,6 +88,7 @@ export default function AffiliateSidebar() {
         {renderGroup("Crescimento", growthItems)}
         {renderGroup("Conta", accountItems)}
       </SidebarContent>
+
 
       <SidebarFooter className="p-2 border-t border-emerald-900/15">
         <Button
