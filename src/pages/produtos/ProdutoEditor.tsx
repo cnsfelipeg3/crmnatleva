@@ -78,6 +78,7 @@ type ProductForm = {
   payment_notes: string;
   internal_cost: string;
   commission_per_sale: string;
+  emission_link: string;
   is_promo: boolean; promo_badge: string;
   // logistics
   origin_city: string; origin_iata: string; destination_iata: string;
