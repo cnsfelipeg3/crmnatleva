@@ -463,6 +463,7 @@ function AppRoutes() {
         <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineHome /></AffiliateLayout></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/pacotes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><Produtos lockedMode="afiliado" /></AffiliateLayout></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/indicacoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineIndicacoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine/leads" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineLeads /></AffiliateLayout></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/comissoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineComissoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/metas" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrineMetas /></AffiliateLayout></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/premiacoes" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><AffiliateLayout><VitrinePremiacoes /></AffiliateLayout></AffiliateGuard></Suspense>} />
