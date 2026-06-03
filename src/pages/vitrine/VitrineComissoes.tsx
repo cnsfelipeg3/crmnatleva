@@ -262,6 +262,7 @@ export default function VitrineComissoes() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <th className="px-2 py-2.5 w-8"></th>
                     <th className="px-4 py-2.5 font-medium">Data</th>
                     <th className="px-4 py-2.5 font-medium">Pacote vendido</th>
                     <th className="px-4 py-2.5 font-medium">Cliente</th>
@@ -276,56 +277,114 @@ export default function VitrineComissoes() {
                   {filtered.map((c: any) => {
                     const st = statusBadge[c.status] || { label: c.status, cls: "bg-muted" };
                     const clientName = smartCapitalizeName(c.referral?.lead_name);
+                    const isOpen = expanded.has(c.id);
                     return (
-                      <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="h-7 w-7 shrink-0 rounded-md bg-emerald-500/10 grid place-items-center">
-                              <Package className="h-3.5 w-3.5 text-emerald-700" />
-                            </div>
-                            <span className="font-medium truncate max-w-[260px]" title={c.product?.title || ""}>
-                              {c.product?.title || <span className="text-muted-foreground italic">Pacote removido</span>}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {clientName ? (
+                      <>
+                        <tr
+                          key={c.id}
+                          onClick={() => toggle(c.id)}
+                          className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                        >
+                          <td className="px-2 py-3 text-muted-foreground">
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                          </td>
+                          <td className="px-4 py-3">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="h-7 w-7 shrink-0 rounded-full bg-sky-500/10 grid place-items-center text-[10px] font-bold text-sky-700">
-                                {clientName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                              <div className="h-7 w-7 shrink-0 rounded-md bg-emerald-500/10 grid place-items-center">
+                                <Package className="h-3.5 w-3.5 text-emerald-700" />
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium truncate">{clientName}</p>
-                                {c.referral?.lead_email && (
-                                  <p className="text-[10px] text-muted-foreground truncate">{c.referral.lead_email}</p>
-                                )}
-                              </div>
+                              <span className="font-medium truncate max-w-[260px]" title={c.product?.title || ""}>
+                                {c.product?.title || <span className="text-muted-foreground italic">Pacote removido</span>}
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                              <User2 className="h-3 w-3" /> Cliente não identificado
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">{fmtBRL(Number(c.sale_value || 0))}</td>
-                        <td className="px-4 py-3 text-right text-xs">{Number(c.commission_percent || 0)}%</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(Number(c.commission_value || 0))}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-4 py-3">
+                            {clientName ? (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="h-7 w-7 shrink-0 rounded-full bg-sky-500/10 grid place-items-center text-[10px] font-bold text-sky-700">
+                                  {clientName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium truncate">{clientName}</p>
+                                  {c.referral?.lead_email && (
+                                    <p className="text-[10px] text-muted-foreground truncate">{c.referral.lead_email}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                                <User2 className="h-3 w-3" /> Cliente não identificado
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">{fmtBRL(Number(c.sale_value || 0))}</td>
+                          <td className="px-4 py-3 text-right text-xs">{Number(c.commission_percent || 0)}%</td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(Number(c.commission_value || 0))}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr key={`${c.id}-detail`} className="bg-muted/20 border-b">
+                            <td />
+                            <td colSpan={8} className="px-4 py-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <Banknote className="h-3.5 w-3.5" /> Entrada
+                                  </div>
+                                  <p className="font-semibold text-sm">{fmtBRL(Number(c.down_payment || 0))}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">{payLabel(c.down_payment_method)}</p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <CreditCard className="h-3.5 w-3.5" /> Parcelado
+                                  </div>
+                                  <p className="font-semibold text-sm">
+                                    {c.installments_count || 0}x · {fmtBRL(Number(c.installment_value || 0))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {payLabel(c.installments_method)} · total {fmtBRL(Number(c.installments_total || 0))}
+                                  </p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <Receipt className="h-3.5 w-3.5" /> Custo do pacote
+                                  </div>
+                                  <p className="font-semibold text-sm text-rose-700">{fmtBRL(Number(c.cost_value || 0))}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">Custo interno NatLeva</p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <TrendingUp className="h-3.5 w-3.5" /> Lucro líquido
+                                  </div>
+                                  <p className={`font-semibold text-sm ${Number(c.net_profit||0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                                    {fmtBRL(Number(c.net_profit || 0))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">Venda · custo · comissão</p>
+                                </div>
+                              </div>
+                              {c.payment_reference && (
+                                <p className="text-[10px] text-muted-foreground mt-3">
+                                  Ref. pagamento da comissão: <span className="font-mono">{c.payment_reference}</span>
+                                </p>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </>
                     );
                   })}
                 </tbody>
                 <tfoot className="bg-muted/20">
                   <tr className="text-xs font-medium">
-                    <td className="px-4 py-2.5" colSpan={3}>
+                    <td className="px-4 py-2.5" colSpan={4}>
                       {filtered.length} venda{filtered.length === 1 ? "" : "s"}
                     </td>
                     <td className="px-4 py-2.5 text-right">
