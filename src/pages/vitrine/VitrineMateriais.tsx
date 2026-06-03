@@ -28,13 +28,13 @@ import {
   MapPin,
   LayoutGrid,
   Rows,
+  Sparkles,
 } from "lucide-react";
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-
-type GalleryItem = { type?: string; url: string };
+import { FORMATS, type FormatId } from "@/lib/marketing/formats";
 
 type ProductRow = {
   id: string;
@@ -43,16 +43,38 @@ type ProductRow = {
   destination: string | null;
   destination_country: string | null;
   category: string | null;
-  cover_image_url: string | null;
-  gallery: GalleryItem[] | null;
+};
+
+type AssetRow = {
+  id: string;
+  product_id: string;
+  format: string;
+  url: string;
+  caption: string | null;
+  created_at: string;
 };
 
 type Creative = {
   id: string;
   url: string;
   kind: "image" | "video";
-  isCover: boolean;
+  format: FormatId;
+  caption: string | null;
   product: ProductRow;
+};
+
+const FORMAT_LABEL: Record<string, string> = {
+  feed: "Feed 1:1",
+  story: "Story 9:16",
+  vertical: "Vertical 4:5",
+  horizontal: "Horizontal 16:9",
+};
+
+const FORMAT_ASPECT: Record<string, string> = {
+  feed: "aspect-square",
+  story: "aspect-[9/16]",
+  vertical: "aspect-[4/5]",
+  horizontal: "aspect-video",
 };
 
 export default function VitrineMateriais() {
@@ -63,6 +85,7 @@ export default function VitrineMateriais() {
   const [destination, setDestination] = useState<string>("all");
   const [country, setCountry] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
+  const [formatFilter, setFormatFilter] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "grouped">("grouped");
   const [lightbox, setLightbox] = useState<Creative | null>(null);
 
@@ -76,12 +99,24 @@ export default function VitrineMateriais() {
       const { data, error } = await supabase
         .from("experience_products")
         .select(
-          "id, slug, title, destination, destination_country, category, cover_image_url, gallery"
+          "id, slug, title, destination, destination_country, category"
         )
         .eq("is_active", true)
         .order("display_order", { ascending: true });
       if (error) throw error;
       return (data || []) as ProductRow[];
+    },
+  });
+
+  const { data: assets = [] } = useQuery({
+    queryKey: ["affiliate-marketing-assets"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("product_marketing_assets")
+        .select("id, product_id, format, url, caption, created_at")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as AssetRow[];
     },
   });
 
@@ -98,53 +133,49 @@ export default function VitrineMateriais() {
     },
   });
 
-  // Build creatives list from product gallery + cover
+  // Build creatives list from IA-generated product_marketing_assets
   const allCreatives: Creative[] = useMemo(() => {
+    const byId = new Map(products.map((p) => [p.id, p]));
     const out: Creative[] = [];
-    for (const p of products) {
-      if (p.cover_image_url) {
-        out.push({
-          id: `${p.id}-cover`,
-          url: p.cover_image_url,
-          kind: "image",
-          isCover: true,
-          product: p,
-        });
-      }
-      const gal = Array.isArray(p.gallery) ? p.gallery : [];
-      gal.forEach((g, idx) => {
-        if (!g?.url) return;
-        const k = (g.type === "video" ? "video" : "image") as "image" | "video";
-        out.push({
-          id: `${p.id}-g-${idx}`,
-          url: g.url,
-          kind: k,
-          isCover: false,
-          product: p,
-        });
+    for (const a of assets) {
+      const p = byId.get(a.product_id);
+      if (!p) continue;
+      const isVideo = /\.(mp4|mov|webm)(\?|$)/i.test(a.url);
+      out.push({
+        id: a.id,
+        url: a.url,
+        kind: isVideo ? "video" : "image",
+        format: (a.format as FormatId) || "feed",
+        caption: a.caption,
+        product: p,
       });
     }
     return out;
-  }, [products]);
+  }, [assets, products]);
 
-  // Unique filter options
+  // Only show products that actually have IA assets
+  const productsWithAssets = useMemo(() => {
+    const ids = new Set(allCreatives.map((c) => c.product.id));
+    return products.filter((p) => ids.has(p.id));
+  }, [products, allCreatives]);
+
   const destinations = useMemo(() => {
     const s = new Set<string>();
-    products.forEach((p) => p.destination && s.add(p.destination));
+    productsWithAssets.forEach((p) => p.destination && s.add(p.destination));
     return Array.from(s).sort();
-  }, [products]);
+  }, [productsWithAssets]);
 
   const countries = useMemo(() => {
     const s = new Set<string>();
-    products.forEach((p) => p.destination_country && s.add(p.destination_country));
+    productsWithAssets.forEach((p) => p.destination_country && s.add(p.destination_country));
     return Array.from(s).sort();
-  }, [products]);
+  }, [productsWithAssets]);
 
   const categories = useMemo(() => {
     const s = new Set<string>();
-    products.forEach((p) => p.category && s.add(p.category));
+    productsWithAssets.forEach((p) => p.category && s.add(p.category));
     return Array.from(s).sort();
-  }, [products]);
+  }, [productsWithAssets]);
 
   // Apply filters
   const filtered = useMemo(() => {
@@ -154,13 +185,14 @@ export default function VitrineMateriais() {
       if (destination !== "all" && c.product.destination !== destination) return false;
       if (country !== "all" && c.product.destination_country !== country) return false;
       if (category !== "all" && c.product.category !== category) return false;
+      if (formatFilter !== "all" && c.format !== formatFilter) return false;
       if (q) {
-        const hay = `${c.product.title} ${c.product.destination ?? ""} ${c.product.destination_country ?? ""} ${c.product.category ?? ""}`.toLowerCase();
+        const hay = `${c.product.title} ${c.product.destination ?? ""} ${c.product.destination_country ?? ""} ${c.product.category ?? ""} ${c.caption ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
       }
       return true;
     });
-  }, [allCreatives, productId, destination, country, category, search]);
+  }, [allCreatives, productId, destination, country, category, formatFilter, search]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, { product: ProductRow; items: Creative[] }>();
@@ -179,6 +211,7 @@ export default function VitrineMateriais() {
     (destination !== "all" ? 1 : 0) +
     (country !== "all" ? 1 : 0) +
     (category !== "all" ? 1 : 0) +
+    (formatFilter !== "all" ? 1 : 0) +
     (search.trim() ? 1 : 0);
 
   const clearFilters = () => {
@@ -187,6 +220,7 @@ export default function VitrineMateriais() {
     setDestination("all");
     setCountry("all");
     setCategory("all");
+    setFormatFilter("all");
   };
 
   const textosProntos = [
@@ -243,7 +277,7 @@ export default function VitrineMateriais() {
   const renderTile = (c: Creative) => (
     <Card key={c.id} className="overflow-hidden group border-emerald-900/10">
       <div
-        className="aspect-square bg-muted relative cursor-zoom-in"
+        className={`${FORMAT_ASPECT[c.format] || "aspect-square"} bg-muted relative cursor-zoom-in`}
         onClick={() => setLightbox(c)}
       >
         {c.kind === "video" ? (
@@ -256,11 +290,9 @@ export default function VitrineMateriais() {
             loading="lazy"
           />
         )}
-        {c.isCover && (
-          <Badge className="absolute top-2 left-2 bg-emerald-700 hover:bg-emerald-700 text-white border-0 text-[10px]">
-            Capa
-          </Badge>
-        )}
+        <Badge className="absolute top-2 left-2 bg-emerald-700/95 hover:bg-emerald-700 text-white border-0 text-[10px] gap-1">
+          <Sparkles className="h-2.5 w-2.5" /> IA
+        </Badge>
         <Badge
           variant="outline"
           className="absolute top-2 right-2 text-[10px] bg-background/85 backdrop-blur capitalize"
@@ -270,7 +302,7 @@ export default function VitrineMateriais() {
               <Video className="h-3 w-3 mr-1" /> Vídeo
             </>
           ) : (
-            "Foto"
+            FORMAT_LABEL[c.format] || c.format
           )}
         </Badge>
       </div>
@@ -399,7 +431,7 @@ export default function VitrineMateriais() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Images className="h-4 w-4 text-emerald-700" />
-              Criativos por pacote
+              Artes geradas por IA · Feed, Story e mais
               <Badge variant="outline" className="ml-1 text-[10px] font-normal">
                 {filtered.length} artes
               </Badge>
@@ -426,7 +458,7 @@ export default function VitrineMateriais() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filters */}
-          <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto] items-center">
+          <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto_auto] items-center">
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -443,9 +475,23 @@ export default function VitrineMateriais() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os pacotes</SelectItem>
-                {products.map((p) => (
+                {productsWithAssets.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={formatFilter} onValueChange={setFormatFilter}>
+              <SelectTrigger className="h-9 text-xs min-w-[140px]">
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Formato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os formatos</SelectItem>
+                {FORMATS.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {FORMAT_LABEL[f.id]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -491,6 +537,7 @@ export default function VitrineMateriais() {
               </SelectContent>
             </Select>
           </div>
+
 
           {activeFilters > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
