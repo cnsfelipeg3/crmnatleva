@@ -9,7 +9,7 @@ import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "@/components/vitrine/useAffiliateLevel";
 import JourneyTrack from "@/components/vitrine/JourneyTrack";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import { PrizeDetailDialog, type PrizeDetail } from "@/components/vitrine/PrizeDetailDialog";
 import { toast } from "sonner";
