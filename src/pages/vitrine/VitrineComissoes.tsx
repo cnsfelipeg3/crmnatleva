@@ -39,12 +39,43 @@ export default function VitrineComissoes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("affiliate_commissions")
-        .select("id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference")
+        .select(`
+          id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference,
+          product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug),
+          referral:affiliate_referrals!affiliate_commissions_referral_id_fkey(id, lead_name, lead_email, lead_phone)
+        `)
         .eq("affiliate_id", affiliate!.id)
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // Fallback sem joins se a FK não estiver explícita
+        const fb = await supabase
+          .from("affiliate_commissions")
+          .select("id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference, product_id, referral_id")
+          .eq("affiliate_id", affiliate!.id)
+          .order("created_at", { ascending: false });
+        if (fb.error) throw fb.error;
+        const ids = Array.from(new Set((fb.data || []).map((r: any) => r.product_id).filter(Boolean)));
+        const refIds = Array.from(new Set((fb.data || []).map((r: any) => r.referral_id).filter(Boolean)));
+        const [{ data: prods }, { data: refs }] = await Promise.all([
+          ids.length ? supabase.from("experience_products").select("id, title, slug").in("id", ids) : Promise.resolve({ data: [] as any[] }),
+          refIds.length ? supabase.from("affiliate_referrals").select("id, lead_name, lead_email, lead_phone").in("id", refIds) : Promise.resolve({ data: [] as any[] }),
+        ]);
+        const pMap = new Map((prods || []).map((p: any) => [p.id, p]));
+        const rMap = new Map((refs || []).map((r: any) => [r.id, r]));
+        return (fb.data || []).map((r: any) => ({ ...r, product: pMap.get(r.product_id), referral: rMap.get(r.referral_id) }));
+      }
       return data || [];
     },
+  });
+
+  const [search, setSearch] = useState("");
+  const filtered = (items || []).filter((c: any) => {
+    if (!search.trim()) return true;
+    const s = search.toLowerCase();
+    return (
+      (c.product?.title || "").toLowerCase().includes(s) ||
+      (c.referral?.lead_name || "").toLowerCase().includes(s)
+    );
   });
 
   const disponivel = stats?.availablePayout ?? 0;
