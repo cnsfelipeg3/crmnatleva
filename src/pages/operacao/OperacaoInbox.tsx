@@ -125,11 +125,29 @@ function getStatusIcon(status: MsgStatus) {
   return <Check className="h-3 w-3 text-white" />;
 }
 
-// Z-API helper
-async function callZapiProxy(action: string, payload?: any) {
-  const { data, error } = await supabase.functions.invoke("zapi-proxy", {
+// Z-API helper · força refresh + Authorization explícito para evitar 401 em sessões expirando
+async function getFreshAccessToken(): Promise<string | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return null;
+  const expiresAt = (session.expires_at ?? 0) * 1000;
+  if (expiresAt - Date.now() < 60_000) {
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    return refreshed?.session?.access_token ?? session.access_token;
+  }
+  return session.access_token;
+}
+
+async function invokeZapiProxy(action: string, payload?: any) {
+  const token = await getFreshAccessToken();
+  if (!token) throw new Error("Sessão expirada · faça login novamente");
+  return supabase.functions.invoke("zapi-proxy", {
     body: { action, payload },
+    headers: { Authorization: `Bearer ${token}` },
   });
+}
+
+async function callZapiProxy(action: string, payload?: any) {
+  const { data, error } = await invokeZapiProxy(action, payload);
   if (error) throw new Error(error.message || "Erro na chamada Z-API");
   return data;
 }
@@ -141,9 +159,7 @@ export { FAILURE_REASONS };
 // Wrapper local (mantém assinatura usada nos sites de envio).
 async function sendViaZapi(action: string, payload: any): Promise<{ ok: boolean; reason: string | null; detail?: string; data: any }> {
   try {
-    const { data, error } = await supabase.functions.invoke("zapi-proxy", {
-      body: { action, payload },
-    });
+    const { data, error } = await invokeZapiProxy(action, payload);
     const outcome = classifySendOutcome(error, data);
     return { ...outcome, data };
   } catch (err: any) {
