@@ -60,6 +60,7 @@ export default function Produtos({ lockedMode }: { lockedMode?: "ceo" | "afiliad
     () => (searchParams.get("sort") as any) || "recent"
   );
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
+    if (lockedMode) return lockedMode;
     const fromUrl = searchParams.get("mode");
     if (fromUrl === "ceo" || fromUrl === "afiliado") return fromUrl;
     if (typeof window === "undefined") return "ceo";
