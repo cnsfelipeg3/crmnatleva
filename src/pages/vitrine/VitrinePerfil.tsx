@@ -10,6 +10,7 @@ import { UserCog, Mail, Phone, CheckCircle2, KeyRound, BellRing } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 type PixType = "cpf" | "cnpj" | "email" | "phone" | "random";
 
