@@ -11060,6 +11060,24 @@ export type Database = {
         Args: { conv_id: string }
         Returns: number
       }
+      register_proposal_viewer: {
+        Args: {
+          p_city?: string
+          p_country?: string
+          p_device_type?: string
+          p_email: string
+          p_ip?: string
+          p_latitude?: number
+          p_longitude?: number
+          p_name?: string
+          p_phone?: string
+          p_proposal_id: string
+          p_referred_by_share_id?: string
+          p_region?: string
+          p_user_agent?: string
+        }
+        Returns: string
+      }
       reindex_conversation: { Args: { conv_id: string }; Returns: undefined }
       smart_capitalize_name: { Args: { input_name: string }; Returns: string }
       soft_delete_sale: { Args: { _sale_id: string }; Returns: undefined }
