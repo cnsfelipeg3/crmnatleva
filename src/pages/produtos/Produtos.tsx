@@ -46,7 +46,7 @@ function fmtDate(d?: string | null) {
   try { return format(parseISO(d), "dd/MM/yy", { locale: ptBR }); } catch { return d; }
 }
 
-export default function Produtos() {
+export default function Produtos({ lockedMode }: { lockedMode?: "ceo" | "afiliado" } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,7 @@ export default function Produtos() {
     () => (searchParams.get("sort") as any) || "recent"
   );
   const [viewMode, setViewMode] = useState<"ceo" | "afiliado">(() => {
+    if (lockedMode) return lockedMode;
     const fromUrl = searchParams.get("mode");
     if (fromUrl === "ceo" || fromUrl === "afiliado") return fromUrl;
     if (typeof window === "undefined") return "ceo";
@@ -182,32 +183,34 @@ export default function Produtos() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 items-center">
-              <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
-                <button
-                  onClick={() => setViewMode("ceo")}
-                  className={cn(
-                    "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
-                    viewMode === "ceo" ? "bg-amber-500 text-black" : "text-white/80 hover:text-white"
-                  )}
-                  title="Visão completa com lucro, custos e controles"
-                >
-                  <Crown className="w-3.5 h-3.5" /> Modo CEO
-                </button>
-                <button
-                  onClick={() => setViewMode("afiliado")}
-                  className={cn(
-                    "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
-                    viewMode === "afiliado" ? "bg-sky-500 text-white" : "text-white/80 hover:text-white"
-                  )}
-                  title="Visão do afiliado · apenas preços e comissão"
-                >
-                  <Handshake className="w-3.5 h-3.5" /> Modo Afiliado
-                </button>
-              </div>
-              <a href="/p" target="_blank" rel="noreferrer">
+              {!lockedMode && (
+                <div className="inline-flex rounded-md border border-white/20 bg-white/10 backdrop-blur p-0.5">
+                  <button
+                    onClick={() => setViewMode("ceo")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
+                      viewMode === "ceo" ? "bg-amber-500 text-black" : "text-white/80 hover:text-white"
+                    )}
+                    title="Visão completa com lucro, custos e controles"
+                  >
+                    <Crown className="w-3.5 h-3.5" /> Modo CEO
+                  </button>
+                  <button
+                    onClick={() => setViewMode("afiliado")}
+                    className={cn(
+                      "px-3 py-1.5 rounded-[5px] text-xs font-semibold inline-flex items-center gap-1.5 transition-colors",
+                      viewMode === "afiliado" ? "bg-sky-500 text-white" : "text-white/80 hover:text-white"
+                    )}
+                    title="Visão do afiliado · apenas preços e comissão"
+                  >
+                    <Handshake className="w-3.5 h-3.5" /> Modo Afiliado
+                  </button>
+                </div>
+              )}
+              <a href="/loja" target="_blank" rel="noreferrer">
                 <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20"><ExternalLink className="w-4 h-4 mr-1.5" /> Ver vitrine pública</Button>
               </a>
-              {viewMode === "ceo" && (
+              {viewMode === "ceo" && !lockedMode && (
                 <Link to="/prateleira/novo">
                   <Button className="bg-amber-500 text-black hover:bg-amber-400"><Plus className="w-4 h-4 mr-1.5" /> Novo produto</Button>
                 </Link>
