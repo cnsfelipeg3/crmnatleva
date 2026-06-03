@@ -10,7 +10,8 @@ import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateMonthlyCommissions } from "@/components/vitrine/useAffiliateTimeSeries";
 import CountUp from "@/components/vitrine/CountUp";
-import { toast } from "sonner";
+import WithdrawDialog from "@/components/vitrine/WithdrawDialog";
+import { useNavigate } from "react-router-dom";
 import { smartCapitalizeName } from "@/lib/nameUtils";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
@@ -29,6 +30,8 @@ const statusBadge: Record<string, { label: string; cls: string }> = {
 };
 
 export default function VitrineComissoes() {
+  const navigate = useNavigate();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const { data: affiliate } = useAffiliateProfile();
   const { data: stats } = useAffiliateStats(affiliate?.id);
   const { data: series = [] } = useAffiliateMonthlyCommissions(affiliate?.id, 6);
@@ -120,8 +123,14 @@ export default function VitrineComissoes() {
               <CountUp value={disponivel} prefix="R$ " decimals={2} />
             </div>
             <Button
-              disabled={disponivel <= 0 || !affiliate?.pix_key}
-              onClick={() => toast.success("Solicitação enviada · PIX em até 1 dia útil.")}
+              disabled={!affiliate?.pix_key ? false : disponivel <= 0}
+              onClick={() => {
+                if (!affiliate?.pix_key) {
+                  navigate("/vitrine/perfil");
+                  return;
+                }
+                setWithdrawOpen(true);
+              }}
               className="mt-5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-semibold rounded-full h-11 px-6 gap-2"
             >
               <ArrowDownToLine className="h-4 w-4" />
