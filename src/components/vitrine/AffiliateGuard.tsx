@@ -18,8 +18,7 @@ export function useAffiliateState(): AffiliateState {
   useEffect(() => {
     let mounted = true;
 
-    const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    const loadFromSession = async (session: any) => {
       if (!mounted) return;
       if (!session?.user) return setState({ status: "unauth" });
 
@@ -27,20 +26,41 @@ export function useAffiliateState(): AffiliateState {
         return setState({ status: "unconfirmed", email: session.user.email ?? "" });
       }
 
-      const { data, error } = await supabase
-        .from("affiliates")
-        .select("status, full_name")
-        .eq("user_id", session.user.id)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from("affiliates")
+          .select("status, full_name")
+          .eq("user_id", session.user.id)
+          .maybeSingle();
 
-      if (!mounted) return;
-      if (error || !data) return setState({ status: "no_record" });
-      setState({ status: data.status as any, name: data.full_name });
+        if (!mounted) return;
+        if (error || !data) return setState({ status: "no_record" });
+        setState({ status: data.status as any, name: data.full_name });
+      } catch {
+        if (mounted) setState({ status: "no_record" });
+      }
     };
 
-    load();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => load());
-    return () => { mounted = false; sub.subscription.unsubscribe(); };
+    // Fail-safe: never stay in loading forever
+    const failSafe = window.setTimeout(() => {
+      if (mounted) setState((s) => (s.status === "loading" ? { status: "unauth" } : s));
+    }, 4000);
+
+    // Initial session load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      loadFromSession(session);
+    }).catch(() => { if (mounted) setState({ status: "unauth" }); });
+
+    // Subsequent auth changes · fire-and-forget (no await inside callback)
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => loadFromSession(session), 0);
+    });
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(failSafe);
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return state;
