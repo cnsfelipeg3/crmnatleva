@@ -46,7 +46,7 @@ function fmtDate(d?: string | null) {
   try { return format(parseISO(d), "dd/MM/yy", { locale: ptBR }); } catch { return d; }
 }
 
-export default function Produtos() {
+export default function Produtos({ lockedMode }: { lockedMode?: "ceo" | "afiliado" } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
