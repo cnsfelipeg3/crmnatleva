@@ -190,9 +190,9 @@ export default function VitrineHome() {
           myRank={myRank}
           delta={4}
           totalAffiliates={totalAffiliates || undefined}
-          above={above ? { rank: above.rank, name: above.full_name, revenue: Number(above.total_commission || 0) } : undefined}
-          me={{ rank: myRank, name: affiliate?.full_name || "Você", revenue: lifetime, me: true }}
-          below={below ? { rank: below.rank, name: below.full_name, revenue: Number(below.total_commission || 0) } : undefined}
+          above={above ? { rank: above.rank, name: smartCapitalizeName(above.full_name), revenue: Number(above.total_commission || 0) } : undefined}
+          me={{ rank: myRank, name: smartCapitalizeName(affiliate?.full_name) || "Você", revenue: lifetime, me: true }}
+          below={below ? { rank: below.rank, name: smartCapitalizeName(below.full_name), revenue: Number(below.total_commission || 0) } : undefined}
         />
         <ClubFeed items={feedItems} />
       </section>
