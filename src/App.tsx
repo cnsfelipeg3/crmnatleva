@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useIsAffiliateOnly } from "@/hooks/useIsAffiliateOnly";
 import { TabManagerProvider } from "@/contexts/TabManagerContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { RefTracker } from "@/components/vitrine/RefTracker";
@@ -215,11 +216,21 @@ function ScreenLoader() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { loading: affLoading, isAffiliateOnly } = useIsAffiliateOnly();
   const location = useLocation();
   // Skeleton consistente com a rota destino · evita flash branco / spinner sem contexto
-  if (isLoading) return <RouteAwareSkeleton pathname={location.pathname} />;
+  if (isLoading || (isAuthenticated && affLoading)) return <RouteAwareSkeleton pathname={location.pathname} />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  // SEGURANÇA: afiliados puros não acessam nenhuma rota interna · só /vitrine
+  if (isAffiliateOnly) return <Navigate to="/vitrine" replace />;
   return <>{children}</>;
+}
+
+function LoginRedirect() {
+  const { isLoading } = useAuth();
+  const { loading: affLoading, isAffiliateOnly } = useIsAffiliateOnly();
+  if (isLoading || affLoading) return <LoginSkeleton />;
+  return <Navigate to={isAffiliateOnly ? "/vitrine" : "/dashboard"} replace />;
 }
 
 // Admin (e gestor) veem o dashboard BI completo. Demais colaboradores veem
@@ -269,10 +280,10 @@ function AppRoutes() {
       <Routes>
         <Route
           path="/login"
-          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <LoginRedirect /> : <Login />}
         />
-        {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        {/* Raiz: vai pro dashboard (ou /vitrine se for afiliado) se logado, senão pro login */}
+        <Route path="/" element={isAuthenticated ? <LoginRedirect /> : <Navigate to="/login" replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<DashboardSwitch />} />
           <Route path="/sales" element={<Sales />} />
