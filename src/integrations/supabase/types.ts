@@ -525,8 +525,16 @@ export type Database = {
           available_at: string | null
           commission_percent: number
           commission_value: number
+          cost_value: number | null
           created_at: string
+          down_payment: number | null
+          down_payment_method: string | null
           id: string
+          installment_value: number | null
+          installments_count: number | null
+          installments_method: string | null
+          installments_total: number | null
+          net_profit: number | null
           notes: string | null
           paid_at: string | null
           payment_method: string | null
@@ -543,8 +551,16 @@ export type Database = {
           available_at?: string | null
           commission_percent?: number
           commission_value?: number
+          cost_value?: number | null
           created_at?: string
+          down_payment?: number | null
+          down_payment_method?: string | null
           id?: string
+          installment_value?: number | null
+          installments_count?: number | null
+          installments_method?: string | null
+          installments_total?: number | null
+          net_profit?: number | null
           notes?: string | null
           paid_at?: string | null
           payment_method?: string | null
@@ -561,8 +577,16 @@ export type Database = {
           available_at?: string | null
           commission_percent?: number
           commission_value?: number
+          cost_value?: number | null
           created_at?: string
+          down_payment?: number | null
+          down_payment_method?: string | null
           id?: string
+          installment_value?: number | null
+          installments_count?: number | null
+          installments_method?: string | null
+          installments_total?: number | null
+          net_profit?: number | null
           notes?: string | null
           paid_at?: string | null
           payment_method?: string | null

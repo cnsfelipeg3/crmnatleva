@@ -1,8 +1,8 @@
-import { useMemo } from "react";
+import React, { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Clock, TrendingUp, Download, Info, Calendar, ArrowDownToLine, Trophy } from "lucide-react";
+import { Wallet, Clock, TrendingUp, Download, Info, Calendar, ArrowDownToLine, Trophy, ChevronDown, ChevronRight, CreditCard, Banknote, Receipt } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,20 +40,20 @@ export default function VitrineComissoes() {
     queryKey: ["affiliate-commissions-list", affiliate?.id],
     enabled: !!affiliate?.id,
     queryFn: async () => {
+      const COLS = "id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference, down_payment, down_payment_method, installments_count, installment_value, installments_method, installments_total, cost_value, net_profit";
       const { data, error } = await supabase
         .from("affiliate_commissions")
         .select(`
-          id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference,
+          ${COLS},
           product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug),
           referral:affiliate_referrals!affiliate_commissions_referral_id_fkey(id, lead_name, lead_email, lead_phone)
         `)
         .eq("affiliate_id", affiliate!.id)
         .order("created_at", { ascending: false });
       if (error) {
-        // Fallback sem joins se a FK não estiver explícita
         const fb = await supabase
           .from("affiliate_commissions")
-          .select("id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference, product_id, referral_id")
+          .select(`${COLS}, product_id, referral_id`)
           .eq("affiliate_id", affiliate!.id)
           .order("created_at", { ascending: false });
         if (fb.error) throw fb.error;
@@ -72,6 +72,17 @@ export default function VitrineComissoes() {
   });
 
   const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+  const payLabel = (m?: string | null) => {
+    if (!m) return "·";
+    const map: Record<string, string> = { pix: "PIX", credit_card: "Cartão de crédito", debit: "Débito", boleto: "Boleto" };
+    return map[m] || m;
+  };
   const filtered = (items || []).filter((c: any) => {
     if (!search.trim()) return true;
     const s = search.toLowerCase();
@@ -251,6 +262,7 @@ export default function VitrineComissoes() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <th className="px-2 py-2.5 w-8"></th>
                     <th className="px-4 py-2.5 font-medium">Data</th>
                     <th className="px-4 py-2.5 font-medium">Pacote vendido</th>
                     <th className="px-4 py-2.5 font-medium">Cliente</th>
@@ -265,56 +277,113 @@ export default function VitrineComissoes() {
                   {filtered.map((c: any) => {
                     const st = statusBadge[c.status] || { label: c.status, cls: "bg-muted" };
                     const clientName = smartCapitalizeName(c.referral?.lead_name);
+                    const isOpen = expanded.has(c.id);
                     return (
-                      <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <div className="h-7 w-7 shrink-0 rounded-md bg-emerald-500/10 grid place-items-center">
-                              <Package className="h-3.5 w-3.5 text-emerald-700" />
-                            </div>
-                            <span className="font-medium truncate max-w-[260px]" title={c.product?.title || ""}>
-                              {c.product?.title || <span className="text-muted-foreground italic">Pacote removido</span>}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {clientName ? (
+                      <React.Fragment key={c.id}>
+                        <tr
+                          onClick={() => toggle(c.id)}
+                          className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
+                        >
+                          <td className="px-2 py-3 text-muted-foreground">
+                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                          </td>
+                          <td className="px-4 py-3">
                             <div className="flex items-center gap-2 min-w-0">
-                              <div className="h-7 w-7 shrink-0 rounded-full bg-sky-500/10 grid place-items-center text-[10px] font-bold text-sky-700">
-                                {clientName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                              <div className="h-7 w-7 shrink-0 rounded-md bg-emerald-500/10 grid place-items-center">
+                                <Package className="h-3.5 w-3.5 text-emerald-700" />
                               </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium truncate">{clientName}</p>
-                                {c.referral?.lead_email && (
-                                  <p className="text-[10px] text-muted-foreground truncate">{c.referral.lead_email}</p>
-                                )}
-                              </div>
+                              <span className="font-medium truncate max-w-[260px]" title={c.product?.title || ""}>
+                                {c.product?.title || <span className="text-muted-foreground italic">Pacote removido</span>}
+                              </span>
                             </div>
-                          ) : (
-                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                              <User2 className="h-3 w-3" /> Cliente não identificado
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right whitespace-nowrap">{fmtBRL(Number(c.sale_value || 0))}</td>
-                        <td className="px-4 py-3 text-right text-xs">{Number(c.commission_percent || 0)}%</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(Number(c.commission_value || 0))}</td>
-                        <td className="px-4 py-3">
-                          <Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge>
-                        </td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
-                          {c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}
-                        </td>
-                      </tr>
+                          </td>
+                          <td className="px-4 py-3">
+                            {clientName ? (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="h-7 w-7 shrink-0 rounded-full bg-sky-500/10 grid place-items-center text-[10px] font-bold text-sky-700">
+                                  {clientName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium truncate">{clientName}</p>
+                                  {c.referral?.lead_email && (
+                                    <p className="text-[10px] text-muted-foreground truncate">{c.referral.lead_email}</p>
+                                  )}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                                <User2 className="h-3 w-3" /> Cliente não identificado
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">{fmtBRL(Number(c.sale_value || 0))}</td>
+                          <td className="px-4 py-3 text-right text-xs">{Number(c.commission_percent || 0)}%</td>
+                          <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(Number(c.commission_value || 0))}</td>
+                          <td className="px-4 py-3">
+                            <Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                            {c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr key={`${c.id}-detail`} className="bg-muted/20 border-b">
+                            <td />
+                            <td colSpan={8} className="px-4 py-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <Banknote className="h-3.5 w-3.5" /> Entrada
+                                  </div>
+                                  <p className="font-semibold text-sm">{fmtBRL(Number(c.down_payment || 0))}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">{payLabel(c.down_payment_method)}</p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <CreditCard className="h-3.5 w-3.5" /> Parcelado
+                                  </div>
+                                  <p className="font-semibold text-sm">
+                                    {c.installments_count || 0}x · {fmtBRL(Number(c.installment_value || 0))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">
+                                    {payLabel(c.installments_method)} · total {fmtBRL(Number(c.installments_total || 0))}
+                                  </p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <Receipt className="h-3.5 w-3.5" /> Custo do pacote
+                                  </div>
+                                  <p className="font-semibold text-sm text-rose-700">{fmtBRL(Number(c.cost_value || 0))}</p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">Custo interno NatLeva</p>
+                                </div>
+                                <div className="rounded-lg bg-background border p-3">
+                                  <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
+                                    <TrendingUp className="h-3.5 w-3.5" /> Lucro líquido
+                                  </div>
+                                  <p className={`font-semibold text-sm ${Number(c.net_profit||0) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                                    {fmtBRL(Number(c.net_profit || 0))}
+                                  </p>
+                                  <p className="text-[10px] text-muted-foreground mt-0.5">Venda · custo · comissão</p>
+                                </div>
+                              </div>
+                              {c.payment_reference && (
+                                <p className="text-[10px] text-muted-foreground mt-3">
+                                  Ref. pagamento da comissão: <span className="font-mono">{c.payment_reference}</span>
+                                </p>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
                 <tfoot className="bg-muted/20">
                   <tr className="text-xs font-medium">
-                    <td className="px-4 py-2.5" colSpan={3}>
+                    <td className="px-4 py-2.5" colSpan={4}>
                       {filtered.length} venda{filtered.length === 1 ? "" : "s"}
                     </td>
                     <td className="px-4 py-2.5 text-right">
