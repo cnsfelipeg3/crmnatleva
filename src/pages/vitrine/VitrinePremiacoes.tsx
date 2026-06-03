@@ -10,6 +10,7 @@ import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "@/components/vitrine/useAffiliateLevel";
 import JourneyTrack from "@/components/vitrine/JourneyTrack";
 import { useEffect, useState } from "react";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -402,28 +403,28 @@ export default function VitrinePremiacoes() {
               title: "Top do mês",
               icon: Crown,
               gradient: "from-amber-400 to-yellow-600",
-              name: ranking?.[0]?.full_name || "Em disputa",
+              name: smartCapitalizeName(ranking?.[0]?.full_name) || "Em disputa",
               detail: ranking?.[0] ? fmtBRL(Number(ranking[0].total_commission)) : "—",
             },
             {
               title: "Maior comissão",
               icon: TrendingUp,
               gradient: "from-emerald-500 to-teal-600",
-              name: ranking?.[0]?.full_name || "Em disputa",
+              name: smartCapitalizeName(ranking?.[0]?.full_name) || "Em disputa",
               detail: ranking?.[0] ? fmtBRL(Number(ranking[0].total_commission)) : "—",
             },
             {
               title: "Maior crescimento",
               icon: Award,
               gradient: "from-violet-500 to-fuchsia-600",
-              name: ranking?.[1]?.full_name || "Em disputa",
+              name: smartCapitalizeName(ranking?.[1]?.full_name) || "Em disputa",
               detail: ranking?.[1] ? `${ranking[1].sales_count} vendas` : "—",
             },
             {
               title: "Maior venda única",
               icon: Medal,
               gradient: "from-rose-500 to-pink-600",
-              name: ranking?.[2]?.full_name || "Em disputa",
+              name: smartCapitalizeName(ranking?.[2]?.full_name) || "Em disputa",
               detail: ranking?.[2] ? fmtBRL(Number(ranking[2].total_revenue)) : "—",
             },
           ].map((d, i) => {
@@ -495,7 +496,7 @@ export default function VitrinePremiacoes() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">
-                          {row.full_name}
+                          {smartCapitalizeName(row.full_name)}
                           {isMe && (
                             <span className="text-[10px] text-emerald-700 ml-1 font-semibold">
                               · você

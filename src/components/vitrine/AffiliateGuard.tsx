@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Clock, MailWarning } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { Button } from "@/components/ui/button";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 type AffiliateState =
   | { status: "loading" }
@@ -93,7 +94,7 @@ export default function AffiliateGuard({ children }: { children: ReactNode }) {
   if (state.status === "pending") {
     return <StatusScreen
       icon={<Clock className="w-12 h-12 text-amber-500" />}
-      title={`Olá, ${state.name.split(" ")[0]}!`}
+      title={`Olá, ${smartCapitalizeName(state.name.split(" ")[0])}!`}
       message="Seu cadastro foi recebido e está em análise. Assim que aprovarmos seu acesso de afiliado, a gente te avisa por e-mail."
     />;
   }

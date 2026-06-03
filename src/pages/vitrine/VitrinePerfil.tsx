@@ -10,6 +10,7 @@ import { UserCog, Mail, Phone, CheckCircle2, KeyRound, BellRing } from "lucide-r
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 type PixType = "cpf" | "cnpj" | "email" | "phone" | "random";
 
@@ -67,7 +68,7 @@ export default function VitrinePerfil() {
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs">Nome completo</Label>
-              <Input value={affiliate?.full_name || ""} disabled />
+              <Input value={smartCapitalizeName(affiliate?.full_name)} disabled />
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs flex items-center gap-1"><Mail className="h-3 w-3" /> E-mail</Label>

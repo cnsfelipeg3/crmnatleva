@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
@@ -35,7 +36,7 @@ export default function VitrineHome() {
   const { data: tiers = [] } = useAffiliateLevels();
   const { data: series = [] } = useAffiliateMonthlyCommissions(affiliate?.id, 6);
 
-  const firstName = affiliate?.full_name?.split(" ")[0] || "Afiliado";
+  const firstName = smartCapitalizeName(affiliate?.full_name?.split(" ")[0]) || "Afiliado";
 
   const lifetime = stats?.totalEarned ?? 0;
   const available = stats?.availablePayout ?? 0;
@@ -83,7 +84,7 @@ export default function VitrineHome() {
       r.status === "won" ? "sale" :
       r.status === "negotiating" ? "goal" :
       "sale",
-    who: r.affiliates?.full_name?.split(" ")[0] || "Afiliado",
+    who: smartCapitalizeName(r.affiliates?.full_name?.split(" ")[0]) || "Afiliado",
     text:
       r.status === "won"
         ? `fechou ${r.product_slug || "uma viagem"}`
@@ -189,9 +190,9 @@ export default function VitrineHome() {
           myRank={myRank}
           delta={4}
           totalAffiliates={totalAffiliates || undefined}
-          above={above ? { rank: above.rank, name: above.full_name, revenue: Number(above.total_commission || 0) } : undefined}
-          me={{ rank: myRank, name: affiliate?.full_name || "Você", revenue: lifetime, me: true }}
-          below={below ? { rank: below.rank, name: below.full_name, revenue: Number(below.total_commission || 0) } : undefined}
+          above={above ? { rank: above.rank, name: smartCapitalizeName(above.full_name), revenue: Number(above.total_commission || 0) } : undefined}
+          me={{ rank: myRank, name: smartCapitalizeName(affiliate?.full_name) || "Você", revenue: lifetime, me: true }}
+          below={below ? { rank: below.rank, name: smartCapitalizeName(below.full_name), revenue: Number(below.total_commission || 0) } : undefined}
         />
         <ClubFeed items={feedItems} />
       </section>
