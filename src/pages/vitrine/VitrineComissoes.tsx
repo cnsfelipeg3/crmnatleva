@@ -354,6 +354,17 @@ export default function VitrineComissoes() {
           </div>
         </CardContent>
       </Card>
+
+      {affiliate?.pix_key && (
+        <WithdrawDialog
+          open={withdrawOpen}
+          onOpenChange={setWithdrawOpen}
+          affiliateId={affiliate.id}
+          available={disponivel}
+          pixKey={affiliate.pix_key}
+          pixKeyType={(affiliate.pix_key_type as any) || "cpf"}
+        />
+      )}
     </div>
   );
 }
