@@ -1,17 +1,15 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { ArrowRight, Sparkles, Store, Users2, Wallet } from "lucide-react";
+import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "@/components/vitrine/useAffiliateLevel";
 import { useAffiliateMonthlyCommissions } from "@/components/vitrine/useAffiliateTimeSeries";
 
-import CountUp from "@/components/vitrine/CountUp";
+import HeroCockpit from "@/components/vitrine/HeroCockpit";
 import WalletCard from "@/components/vitrine/WalletCard";
 import JourneyTrack from "@/components/vitrine/JourneyTrack";
 import WeeklyMission from "@/components/vitrine/WeeklyMission";
