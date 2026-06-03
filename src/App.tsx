@@ -14,6 +14,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TabManagerProvider } from "@/contexts/TabManagerContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
+import { RefTracker } from "@/components/vitrine/RefTracker";
 
 // Portal do Cliente
 import { PortalAuthProvider } from "@/contexts/PortalAuthContext";
@@ -262,6 +263,7 @@ function AppRoutes() {
         </Suspense>
       )}
       <ErrorBoundary>
+      <RefTracker />
       <Routes>
         <Route
           path="/login"

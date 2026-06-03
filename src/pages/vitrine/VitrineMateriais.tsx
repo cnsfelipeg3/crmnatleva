@@ -12,7 +12,7 @@ export default function VitrineMateriais() {
   const { data: affiliate } = useAffiliateProfile();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
-  const ref = affiliate?.id?.slice(0, 8) || "seu-codigo";
+  const ref = affiliate?.ref_code || "seu-codigo";
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://adm.natleva.com";
   const meuLink = `${baseUrl}/loja?ref=${ref}`;
 

@@ -4,6 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
+import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Wallet,
   Users2,
@@ -22,16 +25,28 @@ const fmtBRL = (v: number) =>
 export default function VitrineHome() {
   const { data: affiliate } = useAffiliateProfile();
   const firstName = affiliate?.full_name?.split(" ")[0] || "Afiliado";
+  const { data: stats } = useAffiliateStats(affiliate?.id);
 
-  // Fase 1 · dados ainda vazios (próxima fase integra com vendas reais)
-  const kpis = {
-    monthCommission: 0,
-    activeReferrals: 0,
-    closedThisMonth: 0,
-    pendingPayout: 0,
-  };
+  const { data: recent } = useQuery({
+    queryKey: ["affiliate-recent-referrals", affiliate?.id],
+    enabled: !!affiliate?.id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("affiliate_referrals")
+        .select("id, lead_name, status, product_slug, estimated_commission, created_at")
+        .eq("affiliate_id", affiliate!.id)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      return data || [];
+    },
+  });
 
-  const goal = { target: 5, current: 0, bonus: 500 };
+  const monthCommission = stats?.monthCommission ?? 0;
+  const activeReferrals = stats?.activeReferrals ?? 0;
+  const closedThisMonth = stats?.closedThisMonth ?? 0;
+  const pendingPayout = stats?.pendingPayout ?? 0;
+
+  const goal = { target: 5, current: closedThisMonth, bonus: 500 };
   const progressPct = Math.min(100, Math.round((goal.current / goal.target) * 100));
 
   return (
@@ -67,30 +82,10 @@ export default function VitrineHome() {
 
       {/* KPIs */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard
-          icon={<Wallet className="h-4 w-4" />}
-          label="Comissão do mês"
-          value={fmtBRL(kpis.monthCommission)}
-          accent="emerald"
-        />
-        <KpiCard
-          icon={<Users2 className="h-4 w-4" />}
-          label="Indicações ativas"
-          value={String(kpis.activeReferrals)}
-          accent="sky"
-        />
-        <KpiCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Fechadas no mês"
-          value={String(kpis.closedThisMonth)}
-          accent="amber"
-        />
-        <KpiCard
-          icon={<Clock className="h-4 w-4" />}
-          label="A receber"
-          value={fmtBRL(kpis.pendingPayout)}
-          accent="violet"
-        />
+        <KpiCard icon={<Wallet className="h-4 w-4" />} label="Comissão do mês" value={fmtBRL(monthCommission)} accent="emerald" />
+        <KpiCard icon={<Users2 className="h-4 w-4" />} label="Indicações ativas" value={String(activeReferrals)} accent="sky" />
+        <KpiCard icon={<TrendingUp className="h-4 w-4" />} label="Fechadas no mês" value={String(closedThisMonth)} accent="amber" />
+        <KpiCard icon={<Clock className="h-4 w-4" />} label="A receber" value={fmtBRL(pendingPayout)} accent="violet" />
       </section>
 
       {/* Goal + Ranking */}
@@ -112,13 +107,13 @@ export default function VitrineHome() {
               <p className="text-sm text-muted-foreground">
                 Feche <strong className="text-foreground">{goal.target} viagens</strong> este mês e leve o bônus extra.
               </p>
-              <span className="text-sm font-semibold">
-                {goal.current}/{goal.target}
-              </span>
+              <span className="text-sm font-semibold">{goal.current}/{goal.target}</span>
             </div>
             <Progress value={progressPct} className="h-2.5" />
             <p className="text-xs text-muted-foreground">
-              Faltam {goal.target - goal.current} indicações fechadas pra desbloquear o bônus.
+              {goal.current >= goal.target
+                ? "Meta batida · bônus desbloqueado!"
+                : `Faltam ${goal.target - goal.current} indicações fechadas pra desbloquear o bônus.`}
             </p>
           </CardContent>
         </Card>
@@ -144,24 +139,9 @@ export default function VitrineHome() {
 
       {/* Atalhos */}
       <section className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <ShortcutCard
-          to="/vitrine/pacotes"
-          icon={<Store className="h-5 w-5" />}
-          title="Vitrine de pacotes"
-          desc="Escolha o pacote, copie o link e compartilhe."
-        />
-        <ShortcutCard
-          to="/vitrine/indicacoes"
-          icon={<Users2 className="h-5 w-5" />}
-          title="Minhas indicações"
-          desc="Acompanhe o status de cada lead que você enviou."
-        />
-        <ShortcutCard
-          to="/vitrine/comissoes"
-          icon={<Wallet className="h-5 w-5" />}
-          title="Extrato de comissões"
-          desc="Veja pagamentos pendentes e histórico no PIX."
-        />
+        <ShortcutCard to="/vitrine/pacotes" icon={<Store className="h-5 w-5" />} title="Vitrine de pacotes" desc="Escolha o pacote, copie o link e compartilhe." />
+        <ShortcutCard to="/vitrine/indicacoes" icon={<Users2 className="h-5 w-5" />} title="Minhas indicações" desc="Acompanhe o status de cada lead que você enviou." />
+        <ShortcutCard to="/vitrine/comissoes" icon={<Wallet className="h-5 w-5" />} title="Extrato de comissões" desc="Veja pagamentos pendentes e histórico no PIX." />
       </section>
 
       {/* Recentes */}
@@ -170,28 +150,34 @@ export default function VitrineHome() {
           <CardTitle className="text-base">Últimas indicações</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-10 text-sm text-muted-foreground">
-            <Users2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
-            Você ainda não tem indicações. Quando alguém clicar no seu link e fechar viagem,
-            aparece aqui em tempo real.
-          </div>
+          {recent && recent.length > 0 ? (
+            <div className="divide-y">
+              {recent.map((r) => (
+                <div key={r.id} className="py-3 flex items-center justify-between gap-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="font-medium truncate">{r.lead_name || "Visitante anônimo"}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {r.product_slug || "Sem pacote"} · {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-10 text-sm text-muted-foreground">
+              <Users2 className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              Você ainda não tem indicações. Quando alguém clicar no seu link e fechar viagem,
+              aparece aqui em tempo real.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   );
 }
 
-function KpiCard({
-  icon,
-  label,
-  value,
-  accent,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  accent: "emerald" | "sky" | "amber" | "violet";
-}) {
+function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: "emerald" | "sky" | "amber" | "violet"; }) {
   const accents: Record<string, string> = {
     emerald: "text-emerald-700 bg-emerald-500/10",
     sky: "text-sky-700 bg-sky-500/10",
@@ -202,9 +188,7 @@ function KpiCard({
     <Card className="border-border/60">
       <CardContent className="p-4">
         <div className="flex items-center gap-2 mb-2">
-          <div className={`h-7 w-7 rounded-md grid place-items-center ${accents[accent]}`}>
-            {icon}
-          </div>
+          <div className={`h-7 w-7 rounded-md grid place-items-center ${accents[accent]}`}>{icon}</div>
           <span className="text-xs text-muted-foreground">{label}</span>
         </div>
         <div className="text-xl sm:text-2xl font-semibold tracking-tight">{value}</div>
@@ -213,26 +197,11 @@ function KpiCard({
   );
 }
 
-function ShortcutCard({
-  to,
-  icon,
-  title,
-  desc,
-}: {
-  to: string;
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-}) {
+function ShortcutCard({ to, icon, title, desc }: { to: string; icon: React.ReactNode; title: string; desc: string; }) {
   return (
-    <Link
-      to={to}
-      className="group relative overflow-hidden rounded-xl border border-border/60 bg-card p-4 hover:border-emerald-700/40 hover:shadow-md transition-all"
-    >
+    <Link to={to} className="group relative overflow-hidden rounded-xl border border-border/60 bg-card p-4 hover:border-emerald-700/40 hover:shadow-md transition-all">
       <div className="flex items-start gap-3">
-        <div className="h-10 w-10 rounded-lg bg-emerald-950/5 text-emerald-800 grid place-items-center group-hover:bg-emerald-950/10">
-          {icon}
-        </div>
+        <div className="h-10 w-10 rounded-lg bg-emerald-950/5 text-emerald-800 grid place-items-center group-hover:bg-emerald-950/10">{icon}</div>
         <div className="flex-1 min-w-0">
           <h3 className="font-medium text-sm">{title}</h3>
           <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{desc}</p>
