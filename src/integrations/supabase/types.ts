@@ -475,6 +475,50 @@ export type Database = {
           },
         ]
       }
+      affiliate_achievements: {
+        Row: {
+          affiliate_id: string
+          code: string
+          created_at: string
+          description: string | null
+          earned_at: string
+          icon: string | null
+          id: string
+          metadata: Json
+          title: string
+        }
+        Insert: {
+          affiliate_id: string
+          code: string
+          created_at?: string
+          description?: string | null
+          earned_at?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          title: string
+        }
+        Update: {
+          affiliate_id?: string
+          code?: string
+          created_at?: string
+          description?: string | null
+          earned_at?: string
+          icon?: string | null
+          id?: string
+          metadata?: Json
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_achievements_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       affiliate_commissions: {
         Row: {
           affiliate_id: string
@@ -560,6 +604,158 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      affiliate_goals: {
+        Row: {
+          affiliate_id: string | null
+          bonus_value: number
+          created_at: string
+          description: string | null
+          id: string
+          is_global: boolean
+          reference_month: string
+          target_revenue: number
+          target_sales: number
+          updated_at: string
+        }
+        Insert: {
+          affiliate_id?: string | null
+          bonus_value?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          reference_month: string
+          target_revenue?: number
+          target_sales?: number
+          updated_at?: string
+        }
+        Update: {
+          affiliate_id?: string | null
+          bonus_value?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_global?: boolean
+          reference_month?: string
+          target_revenue?: number
+          target_sales?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "affiliate_goals_affiliate_id_fkey"
+            columns: ["affiliate_id"]
+            isOneToOne: false
+            referencedRelation: "affiliates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      affiliate_levels: {
+        Row: {
+          color: string | null
+          commission_bonus_percent: number
+          created_at: string
+          display_order: number
+          emoji: string | null
+          id: string
+          is_active: boolean
+          min_revenue: number
+          min_sales_count: number
+          name: string
+          perks: Json
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string | null
+          commission_bonus_percent?: number
+          created_at?: string
+          display_order?: number
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          min_revenue?: number
+          min_sales_count?: number
+          name: string
+          perks?: Json
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string | null
+          commission_bonus_percent?: number
+          created_at?: string
+          display_order?: number
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          min_revenue?: number
+          min_sales_count?: number
+          name?: string
+          perks?: Json
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      affiliate_materials: {
+        Row: {
+          copy_text: string | null
+          created_at: string
+          description: string | null
+          destination_tags: Json
+          display_order: number
+          duration_seconds: number | null
+          format: string | null
+          height: number | null
+          id: string
+          is_active: boolean
+          kind: string
+          media_url: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+          width: number | null
+        }
+        Insert: {
+          copy_text?: string | null
+          created_at?: string
+          description?: string | null
+          destination_tags?: Json
+          display_order?: number
+          duration_seconds?: number | null
+          format?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          media_url?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+          width?: number | null
+        }
+        Update: {
+          copy_text?: string | null
+          created_at?: string
+          description?: string | null
+          destination_tags?: Json
+          display_order?: number
+          duration_seconds?: number | null
+          format?: string | null
+          height?: number | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          media_url?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+          width?: number | null
+        }
+        Relationships: []
       }
       affiliate_referrals: {
         Row: {
@@ -10754,6 +10950,18 @@ export type Database = {
       }
     }
     Functions: {
+      affiliate_monthly_ranking: {
+        Args: { p_month?: string }
+        Returns: {
+          affiliate_id: string
+          avatar_url: string
+          full_name: string
+          rank: number
+          sales_count: number
+          total_commission: number
+          total_revenue: number
+        }[]
+      }
       audit_conversation_ordering: {
         Args: never
         Returns: {
