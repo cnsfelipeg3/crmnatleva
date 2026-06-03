@@ -880,7 +880,7 @@ export type Database = {
           status: Database["public"]["Enums"]["affiliate_status"]
           total_earned: number
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -900,7 +900,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["affiliate_status"]
           total_earned?: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -920,7 +920,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["affiliate_status"]
           total_earned?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
