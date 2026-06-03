@@ -65,8 +65,15 @@ export default function AdminVitrine() {
         payload.approved_by = user?.id ?? null;
       }
       if (notes !== undefined) payload.notes = notes;
-      const { error } = await supabase.from("affiliates").update(payload).eq("id", id);
+      const { data, error } = await supabase
+        .from("affiliates")
+        .update(payload)
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Atualização bloqueada pelo banco · seu usuário não tem a role 'admin'. Adicione em /admin/users e tente de novo.");
+      }
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["admin-affiliates"] });
