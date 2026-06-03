@@ -661,7 +661,7 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
                 <BarChart3 className="w-3.5 h-3.5" />
               </Button>
             )}
-            <a href={`/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
+            <a href={isAffiliate ? personalLink : `/p/${p.slug}`} target="_blank" rel="noreferrer" className={isAffiliate ? "flex-1" : ""}>
               <Button
                 variant="outline"
                 size="sm"
