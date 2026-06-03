@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
 import { smartCapitalizeName } from "@/lib/nameUtils";
+import WithdrawDialog from "@/components/vitrine/WithdrawDialog";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
