@@ -377,7 +377,7 @@ export default function VitrineComissoes() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
