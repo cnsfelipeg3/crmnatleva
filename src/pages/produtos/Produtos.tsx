@@ -315,6 +315,23 @@ function KPI({ label, value, highlight }: { label: string; value: number | strin
 
 function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Product; viewMode: "ceo" | "afiliado"; onToggleActive: (next: boolean) => void; onDelete: () => void }) {
   const isAffiliate = viewMode === "afiliado";
+  const { data: affiliate } = useAffiliateProfile();
+  const refCode = affiliate?.ref_code;
+  const personalLink = refCode
+    ? `${window.location.origin}/p/${p.slug}?ref=${refCode}`
+    : `${window.location.origin}/p/${p.slug}`;
+  const copyPersonalLink = async () => {
+    try {
+      await navigator.clipboard.writeText(personalLink);
+      toast({ title: refCode ? "Seu link foi copiado" : "Link copiado", description: refCode ? `Tudo que vier por aqui será creditado a você (${refCode}).` : "Cadastro como afiliado pendente · link sem rastreio." });
+    } catch {
+      toast({ title: "Não consegui copiar", description: "Copie manualmente: " + personalLink, variant: "destructive" });
+    }
+  };
+  const shareWhatsapp = () => {
+    const msg = `Olha esse pacote da NatLeva · ${p.title}\n${personalLink}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+  };
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [mediaOpen, setMediaOpen] = useState(false);
   const [savingActive, setSavingActive] = useState(false);
