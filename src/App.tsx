@@ -437,11 +437,14 @@ function AppRoutes() {
         {/* Proposta pública */}
         <Route path="/proposta/:slug" element={<Suspense fallback={<MinimalLoader />}><ProposalPublicView /></Suspense>} />
 
-        {/* Prateleira NatLeva pública */}
+        {/* Loja pública NatLeva · qualquer pessoa pode navegar e comprar via WhatsApp da Nath */}
+        <Route path="/loja" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
+        <Route path="/loja/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
+        {/* Aliases legados · mantidos pra não quebrar links já compartilhados */}
         <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
         <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
 
-        {/* Vitrine de Afiliados (área logada) */}
+        {/* Painel do Afiliado (área logada) · mesmos produtos pra revender e ganhar comissão */}
         <Route path="/vitrine/login" element={<Suspense fallback={<MinimalLoader />}><VitrineLogin /></Suspense>} />
         <Route path="/vitrine/cadastro" element={<Suspense fallback={<MinimalLoader />}><VitrineCadastro /></Suspense>} />
         <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVitrine /></AffiliateGuard></Suspense>} />
