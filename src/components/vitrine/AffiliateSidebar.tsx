@@ -123,7 +123,7 @@ function SidegroupBlock({
   return (
     <SidebarGroup>
       {!collapsed && (
-        <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.18em] text-foreground/60 font-semibold">
+        <SidebarGroupLabel className="text-[10px] uppercase tracking-[0.18em] text-amber-200/70 font-bold">
           {label}
         </SidebarGroupLabel>
       )}
@@ -141,8 +141,8 @@ function SidegroupBlock({
                       [
                         "flex items-center gap-2.5 rounded-md transition-all duration-200",
                         (navActive || active)
-                          ? "bg-gradient-to-r from-emerald-950/15 to-amber-500/10 text-emerald-900 dark:from-emerald-400/15 dark:to-amber-300/10 dark:text-emerald-100 font-semibold shadow-[inset_2px_0_0_0_rgb(245,158,11)]"
-                          : "hover:bg-foreground/5 text-foreground/85 hover:text-foreground",
+                          ? "bg-gradient-to-r from-emerald-500/25 to-amber-400/15 text-white font-semibold shadow-[inset_3px_0_0_0_rgb(251,191,36),0_4px_12px_-4px_rgba(0,0,0,0.5)]"
+                          : "text-white/80 hover:bg-white/10 hover:text-white",
                       ].join(" ")
                     }
                   >
