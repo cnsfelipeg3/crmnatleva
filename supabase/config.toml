@@ -166,6 +166,6 @@ project_id = "mexlhkqcmiaktjxsyvod"
   [functions.zapi-heartbeat]
     verify_jwt = false
   [functions.zapi-proxy]
-    verify_jwt = true
+    verify_jwt = false
   [functions.zapi-webhook]
     verify_jwt = false
