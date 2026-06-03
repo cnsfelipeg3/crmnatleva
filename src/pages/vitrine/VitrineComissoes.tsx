@@ -180,53 +180,162 @@ export default function VitrineComissoes() {
 
       {/* Extrato */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Extrato detalhado</CardTitle>
+        <CardHeader className="pb-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Relatório detalhado de vendas</CardTitle>
+              <p className="text-xs text-muted-foreground mt-1">
+                Pacote vendido · cliente · valor da venda · sua comissão
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar pacote ou cliente..."
+                  className="h-9 pl-8 w-full sm:w-64 text-xs"
+                />
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => {
+                  const rows = filtered.map((c: any) => ({
+                    data: new Date(c.created_at).toLocaleDateString("pt-BR"),
+                    pacote: c.product?.title || "—",
+                    cliente: smartCapitalizeName(c.referral?.lead_name) || "—",
+                    contato: c.referral?.lead_email || c.referral?.lead_phone || "—",
+                    valor_venda: Number(c.sale_value || 0).toFixed(2),
+                    percentual: Number(c.commission_percent || 0),
+                    comissao: Number(c.commission_value || 0).toFixed(2),
+                    status: statusBadge[c.status]?.label || c.status,
+                    pago_em: c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "",
+                  }));
+                  const header = Object.keys(rows[0] || { data: "" }).join(";");
+                  const body = rows
+                    .map((r) => Object.values(r).map((v) => `"${String(v).replace(/"/g, '""')}"`).join(";"))
+                    .join("\n");
+                  const csv = `${header}\n${body}`;
+                  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = `comissoes_${new Date().toISOString().slice(0, 10)}.csv`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }}
+                disabled={!filtered.length}
+              >
+                <Download className="h-3.5 w-3.5" /> CSV
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="text-center py-16 text-sm text-muted-foreground">Carregando...</div>
-          ) : items && items.length > 0 ? (
+          ) : filtered.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b text-left text-xs text-muted-foreground">
-                    <th className="px-4 py-2 font-medium">Data</th>
-                    <th className="px-4 py-2 font-medium text-right">Valor da venda</th>
-                    <th className="px-4 py-2 font-medium text-right">%</th>
-                    <th className="px-4 py-2 font-medium text-right">Comissão</th>
-                    <th className="px-4 py-2 font-medium">Status</th>
-                    <th className="px-4 py-2 font-medium">Pago em</th>
+                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <th className="px-4 py-2.5 font-medium">Data</th>
+                    <th className="px-4 py-2.5 font-medium">Pacote vendido</th>
+                    <th className="px-4 py-2.5 font-medium">Cliente</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Valor da venda</th>
+                    <th className="px-4 py-2.5 font-medium text-right">%</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Sua comissão</th>
+                    <th className="px-4 py-2.5 font-medium">Status</th>
+                    <th className="px-4 py-2.5 font-medium">Pago em</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((c) => {
+                  {filtered.map((c: any) => {
                     const st = statusBadge[c.status] || { label: c.status, cls: "bg-muted" };
+                    const clientName = smartCapitalizeName(c.referral?.lead_name);
                     return (
                       <tr key={c.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("pt-BR")}</td>
-                        <td className="px-4 py-3 text-right">{fmtBRL(Number(c.sale_value || 0))}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(c.created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "2-digit" })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="h-7 w-7 shrink-0 rounded-md bg-emerald-500/10 grid place-items-center">
+                              <Package className="h-3.5 w-3.5 text-emerald-700" />
+                            </div>
+                            <span className="font-medium truncate max-w-[260px]" title={c.product?.title || ""}>
+                              {c.product?.title || <span className="text-muted-foreground italic">Pacote removido</span>}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          {clientName ? (
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-7 w-7 shrink-0 rounded-full bg-sky-500/10 grid place-items-center text-[10px] font-bold text-sky-700">
+                                {clientName.split(" ").map((p) => p[0]).slice(0, 2).join("")}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-medium truncate">{clientName}</p>
+                                {c.referral?.lead_email && (
+                                  <p className="text-[10px] text-muted-foreground truncate">{c.referral.lead_email}</p>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                              <User2 className="h-3 w-3" /> Cliente não identificado
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right whitespace-nowrap">{fmtBRL(Number(c.sale_value || 0))}</td>
                         <td className="px-4 py-3 text-right text-xs">{Number(c.commission_percent || 0)}%</td>
-                        <td className="px-4 py-3 text-right font-semibold text-emerald-700">{fmtBRL(Number(c.commission_value || 0))}</td>
-                        <td className="px-4 py-3"><Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge></td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(Number(c.commission_value || 0))}</td>
+                        <td className="px-4 py-3">
+                          <Badge variant="outline" className={`text-[10px] ${st.cls} border-transparent`}>{st.label}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                          {c.paid_at ? new Date(c.paid_at).toLocaleDateString("pt-BR") : "·"}
+                        </td>
                       </tr>
                     );
                   })}
                 </tbody>
+                <tfoot className="bg-muted/20">
+                  <tr className="text-xs font-medium">
+                    <td className="px-4 py-2.5" colSpan={3}>
+                      {filtered.length} venda{filtered.length === 1 ? "" : "s"}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {fmtBRL(filtered.reduce((s: number, c: any) => s + Number(c.sale_value || 0), 0))}
+                    </td>
+                    <td />
+                    <td className="px-4 py-2.5 text-right text-emerald-700">
+                      {fmtBRL(filtered.reduce((s: number, c: any) => s + Number(c.commission_value || 0), 0))}
+                    </td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
               </table>
             </div>
           ) : (
             <div className="text-center py-16 text-sm text-muted-foreground border-t border-dashed">
               <Wallet className="h-10 w-10 mx-auto mb-3 opacity-40" />
-              <p className="font-medium text-foreground mb-1">Nenhuma comissão por aqui ainda</p>
+              <p className="font-medium text-foreground mb-1">
+                {search ? "Nenhum resultado pra essa busca" : "Nenhuma comissão por aqui ainda"}
+              </p>
               <p className="max-w-md mx-auto text-xs leading-relaxed">
-                Quando alguém fechar uma viagem usando seu link, o valor aparece aqui com data, cliente e status do pagamento.
+                {search
+                  ? "Tenta um nome de pacote ou cliente diferente."
+                  : "Quando alguém fechar uma viagem usando seu link, o valor aparece aqui com data, cliente e status do pagamento."}
               </p>
             </div>
           )}
         </CardContent>
       </Card>
+
 
       <Card className="bg-emerald-950/5 border-emerald-900/15">
         <CardContent className="p-4 flex gap-3 items-start">
