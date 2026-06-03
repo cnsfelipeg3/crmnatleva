@@ -262,6 +262,7 @@ function AppRoutes() {
         </Suspense>
       )}
       <ErrorBoundary>
+      <RefTracker />
       <Routes>
         <Route
           path="/login"
