@@ -4,12 +4,13 @@ import AffiliateSidebar from "./AffiliateSidebar";
 import { useAffiliateProfile } from "./useAffiliateProfile";
 import { useAffiliateStats } from "./useAffiliateStats";
 import { useAffiliateLevels, resolveLevel } from "./useAffiliateLevel";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 export default function AffiliateLayout({ children }: { children: ReactNode }) {
   const { data: affiliate } = useAffiliateProfile();
   const { data: stats } = useAffiliateStats(affiliate?.id);
   const { data: tiers = [] } = useAffiliateLevels();
-  const firstName = affiliate?.full_name?.split(" ")[0] || "Afiliado";
+  const firstName = smartCapitalizeName(affiliate?.full_name?.split(" ")[0]) || "Afiliado";
 
   const lvl = tiers.length
     ? resolveLevel(tiers, stats?.closedThisMonth ?? 0, stats?.totalEarned ?? 0)
