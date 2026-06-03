@@ -40,20 +40,20 @@ export default function VitrineComissoes() {
     queryKey: ["affiliate-commissions-list", affiliate?.id],
     enabled: !!affiliate?.id,
     queryFn: async () => {
+      const COLS = "id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference, down_payment, down_payment_method, installments_count, installment_value, installments_method, installments_total, cost_value, net_profit";
       const { data, error } = await supabase
         .from("affiliate_commissions")
         .select(`
-          id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference,
+          ${COLS},
           product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug),
           referral:affiliate_referrals!affiliate_commissions_referral_id_fkey(id, lead_name, lead_email, lead_phone)
         `)
         .eq("affiliate_id", affiliate!.id)
         .order("created_at", { ascending: false });
       if (error) {
-        // Fallback sem joins se a FK não estiver explícita
         const fb = await supabase
           .from("affiliate_commissions")
-          .select("id, sale_value, commission_percent, commission_value, status, created_at, paid_at, available_at, payment_reference, product_id, referral_id")
+          .select(`${COLS}, product_id, referral_id`)
           .eq("affiliate_id", affiliate!.id)
           .order("created_at", { ascending: false });
         if (fb.error) throw fb.error;
