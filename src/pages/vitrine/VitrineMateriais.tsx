@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Check, Link2, MessageCircle, Images } from "lucide-react";
+import { Copy, Check, Link2, MessageCircle, Images, Download, Video, FileText } from "lucide-react";
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function VitrineMateriais() {
   const { data: affiliate } = useAffiliateProfile();
@@ -15,6 +17,19 @@ export default function VitrineMateriais() {
   const ref = affiliate?.ref_code || "seu-codigo";
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://adm.natleva.com";
   const meuLink = `${baseUrl}/loja?ref=${ref}`;
+
+  const { data: materials } = useQuery({
+    queryKey: ["affiliate-materials"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("affiliate_materials")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const textosProntos = [
     {
@@ -106,14 +121,65 @@ export default function VitrineMateriais() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
-            <Images className="h-4 w-4" /> Banco de imagens
+            <Images className="h-4 w-4" /> Biblioteca de criativos
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg">
-            <Images className="h-10 w-10 mx-auto mb-2 opacity-40" />
-            Em breve · biblioteca de criativos prontos pra Stories, Reels e feed.
-          </div>
+          {materials && materials.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {materials.map((m) => {
+                const Icon = m.kind === "video" ? Video : m.kind === "document" ? FileText : Images;
+                return (
+                  <Card key={m.id} className="overflow-hidden group">
+                    <div className="aspect-square bg-muted relative">
+                      {m.thumbnail_url || m.media_url ? (
+                        m.kind === "video" ? (
+                          <video src={m.media_url || undefined} poster={m.thumbnail_url || undefined} className="w-full h-full object-cover" muted loop />
+                        ) : (
+                          <img src={m.thumbnail_url || m.media_url || ""} alt={m.title} className="w-full h-full object-cover" loading="lazy" />
+                        )
+                      ) : (
+                        <div className="w-full h-full grid place-items-center text-muted-foreground">
+                          <Icon className="h-8 w-8 opacity-40" />
+                        </div>
+                      )}
+                      <Badge variant="outline" className="absolute top-2 left-2 text-[10px] bg-background/80 backdrop-blur capitalize">
+                        {m.format || m.kind}
+                      </Badge>
+                    </div>
+                    <CardContent className="p-3 space-y-2">
+                      <h4 className="text-xs font-medium line-clamp-1">{m.title}</h4>
+                      {m.description && <p className="text-[10px] text-muted-foreground line-clamp-2">{m.description}</p>}
+                      <div className="flex gap-1.5">
+                        {m.media_url && (
+                          <Button asChild size="sm" variant="outline" className="flex-1 h-7 text-[11px] gap-1">
+                            <a href={m.media_url} download target="_blank" rel="noreferrer">
+                              <Download className="h-3 w-3" /> Baixar
+                            </a>
+                          </Button>
+                        )}
+                        {m.copy_text && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2"
+                            onClick={() => copy(m.copy_text!.replace(/\{link\}/g, meuLink), `mat-${m.id}`)}
+                          >
+                            {copiedKey === `mat-${m.id}` ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-sm text-muted-foreground border border-dashed rounded-lg">
+              <Images className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              A biblioteca de criativos ainda está sendo montada pela equipe NatLeva. Em breve aparecem aqui artes, vídeos e textos prontos pra cada destino.
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
