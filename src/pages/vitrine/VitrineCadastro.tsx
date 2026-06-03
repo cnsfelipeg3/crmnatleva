@@ -141,8 +141,10 @@ export default function VitrineCadastro() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-wide flex items-center gap-1.5"><Lock className="w-3 h-3" /> Senha</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} />
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres com número e símbolo" required minLength={8} />
+                <p className="text-[10px] text-muted-foreground/70">Dica: use uma frase forte, ex: <span className="font-mono">Viagem@2026!</span></p>
               </div>
+
 
               <Button type="submit" disabled={loading} className="w-full h-11 mt-2 text-sm font-semibold">
                 {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Criando conta...</> : "Criar conta de afiliado"}
