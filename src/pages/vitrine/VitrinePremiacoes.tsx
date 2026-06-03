@@ -71,62 +71,124 @@ const LEVEL_PRIZES = [
   },
 ];
 
+// Campanhas com tratamento cinematográfico · fotos reais, gatilhos psicológicos
 const CAMPAIGNS = [
   {
     id: "dubai",
-    emoji: "🕌",
     name: "Operação Dubai",
-    description: "Venda Dubai e leve o smartphone mais desejado do ano.",
+    tagline: "Domine o deserto do luxo",
+    description:
+      "Cada venda pra Dubai te aproxima do smartphone que vai dizer, sem precisar falar, em que liga você joga.",
     goal: 150000,
     metric: "vendidos em Dubai",
-    prize: "iPhone 18 Pro",
-    prizeIcon: "📱",
+    prize: "iPhone 18 Pro Titanium",
+    prizeValue: "R$ 12.500",
+    prizeImage:
+      "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1546412414-e1885259563a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1582672060674-bc2bd808a8f5?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-08-31",
-    gradient: "from-amber-500 via-orange-500 to-rose-500",
+    accent: "#f97316",
+    accentDark: "#9a3412",
+    competitors: 47,
+    psychologyHook: "Apenas 1 leva o iPhone. Os outros 46 levam só a história.",
+    powerLaw: "Lei 25 · Recrie-se: o aparelho que dita o seu próximo capítulo.",
+    cta: "Quero esse iPhone",
     progress: 0.34,
   },
   {
     id: "europa",
-    emoji: "🗼",
     name: "Operação Europa",
-    description: "O continente clássico vale R$ 5.000 em PIX direto.",
+    tagline: "R$ 5.000 em PIX direto na sua conta",
+    description:
+      "Vender Europa é vender sonho com carimbo. Cada pacote te aproxima de cinco mil reais pra fazer o que quiser, sem prestar conta a ninguém.",
     goal: 250000,
     metric: "vendidos na Europa",
-    prize: "R$ 5.000 PIX",
-    prizeIcon: "💸",
+    prize: "R$ 5.000 via PIX",
+    prizeValue: "R$ 5.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1554260570-9140fd3b7614?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-09-30",
-    gradient: "from-indigo-500 via-violet-500 to-fuchsia-500",
+    accent: "#8b5cf6",
+    accentDark: "#4c1d95",
+    competitors: 62,
+    psychologyHook: "62 afiliados estão atrás dos mesmos R$ 5.000. Você quer mesmo ficar parado?",
+    powerLaw: "Lei 28 · Entre em ação com ousadia: o titubeante perde o pix.",
+    cta: "Quero os 5 mil",
     progress: 0.18,
   },
   {
     id: "cruzeiros",
-    emoji: "🛳️",
     name: "Operação Cruzeiros",
-    description: "Top 3 vendedores embarcam num cruzeiro inesquecível.",
+    tagline: "Top 3 embarcam · o resto assiste do porto",
+    description:
+      "Cabines de luxo, jantares assinados, paradas em três países. Só três vendedores cruzam essa rampa. O quarto colocado vai contar pros netos que quase foi.",
     goal: 0,
     metric: "Top 3 do ranking",
-    prize: "Cruzeiro para 2 pessoas",
-    prizeIcon: "⚓",
+    prize: "Cruzeiro 7 noites · 2 pessoas",
+    prizeValue: "R$ 28.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1599992020148-c4c9b9bfe73e?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1566375638485-aa46497c2bce?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1605281317010-fe5ffe798166?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-12-31",
-    gradient: "from-sky-500 via-cyan-500 to-teal-500",
+    accent: "#0ea5e9",
+    accentDark: "#0c4a6e",
+    competitors: 89,
+    psychologyHook: "89 afiliados, 3 vagas no convés. A escassez aqui é cirúrgica.",
+    powerLaw: "Lei 6 · Chame atenção a qualquer custo: o top 3 vira lenda interna.",
+    cta: "Quero estar no convés",
     progress: 0.62,
     ranking: true,
   },
   {
     id: "copa",
-    emoji: "🏆",
     name: "Operação Copa do Mundo",
-    description: "O maior vendedor leva o pacote do ano: a Copa do Mundo.",
+    tagline: "O maior vendedor leva o pacote do ano",
+    description:
+      "Estádio lotado, hino, gol, hospedagem premium, ingresso na mão. Não é prêmio de catálogo · é memória pra vida inteira. Só um leva.",
     goal: 0,
     metric: "Maior vendedor do período",
     prize: "Pacote Copa do Mundo 2026",
-    prizeIcon: "⚽",
+    prizeValue: "R$ 45.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1540552965303-39b22a4cf09c?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-05-31",
-    gradient: "from-emerald-600 via-green-600 to-lime-500",
+    accent: "#059669",
+    accentDark: "#064e3b",
+    competitors: 104,
+    psychologyHook: "Copa do Mundo passa de 4 em 4 anos. Essa janela fecha em poucos dias.",
+    powerLaw: "Lei 46 · Nunca pareça perfeito demais: o vencedor é humano, é você.",
+    cta: "Quero a Copa",
     progress: 0.08,
     ranking: true,
   },
 ];
+
 
 function useCountdown(deadline: string) {
   const [now, setNow] = useState(Date.now());
