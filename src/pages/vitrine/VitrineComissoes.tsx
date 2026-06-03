@@ -423,7 +423,57 @@ export default function VitrineComissoes() {
                         {isOpen && (
                           <tr key={`${c.id}-detail`} className="bg-muted/20 border-b">
                             <td />
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={8} className="px-4 py-4 space-y-4">
+                              {/* Card visual do pacote vendido · igual à prateleira */}
+                              {c.product && (
+                                <div className="rounded-xl overflow-hidden border bg-background flex flex-col sm:flex-row">
+                                  <div className="relative sm:w-56 h-40 sm:h-auto shrink-0 bg-muted">
+                                    {c.product.cover_image_url ? (
+                                      <img
+                                        src={c.product.cover_image_url}
+                                        alt={c.product.title}
+                                        loading="lazy"
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="absolute inset-0 grid place-items-center bg-emerald-500/10">
+                                        <Package className="h-8 w-8 text-emerald-700" />
+                                      </div>
+                                    )}
+                                    {c.product.category && (
+                                      <Badge className="absolute top-2 left-2 bg-white/90 text-[10px] text-emerald-900 border-0">
+                                        {c.product.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 p-4 min-w-0">
+                                    <p className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold">
+                                      {[c.product.destination, c.product.destination_country].filter(Boolean).join(" · ") || "Pacote NatLeva"}
+                                    </p>
+                                    <h3 className="font-serif text-lg mt-0.5 truncate" title={c.product.title}>{c.product.title}</h3>
+                                    <div className="flex flex-wrap gap-3 mt-2 text-[11px] text-muted-foreground">
+                                      {c.product.nights ? <span>🌙 {c.product.nights} noites</span> : null}
+                                      {c.product.duration && !c.product.nights ? <span>⏱ {c.product.duration}</span> : null}
+                                      {c.product.hotel_name ? (
+                                        <span>🏨 {c.product.hotel_name}{c.product.hotel_stars ? ` · ${"★".repeat(c.product.hotel_stars)}` : ""}</span>
+                                      ) : null}
+                                      {c.product.airline ? <span>✈ {c.product.airline}</span> : null}
+                                      {c.product.price_from ? <span>A partir de {fmtBRL(Number(c.product.price_from))}</span> : null}
+                                    </div>
+                                    {c.product.slug && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-3 h-8 text-xs"
+                                        onClick={() => window.open(`/p/${c.product.slug}`, "_blank")}
+                                      >
+                                        Ver pacote na prateleira
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                                 <div className="rounded-lg bg-background border p-3">
                                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
