@@ -431,7 +431,7 @@ export default function VitrineMateriais() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Images className="h-4 w-4 text-emerald-700" />
-              Criativos por pacote
+              Artes geradas por IA · Feed, Story e mais
               <Badge variant="outline" className="ml-1 text-[10px] font-normal">
                 {filtered.length} artes
               </Badge>
