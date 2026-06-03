@@ -447,7 +447,7 @@ function AppRoutes() {
         {/* Painel do Afiliado (área logada) · mesmos produtos pra revender e ganhar comissão */}
         <Route path="/vitrine/login" element={<Suspense fallback={<MinimalLoader />}><VitrineLogin /></Suspense>} />
         <Route path="/vitrine/cadastro" element={<Suspense fallback={<MinimalLoader />}><VitrineCadastro /></Suspense>} />
-        <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVitrine /></AffiliateGuard></Suspense>} />
+        <Route path="/vitrine" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><Produtos lockedMode="afiliado" /></AffiliateGuard></Suspense>} />
         <Route path="/vitrine/:slug" element={<Suspense fallback={<MinimalLoader />}><AffiliateGuard><PrateleiraVendaPublica /></AffiliateGuard></Suspense>} />
 
         {/* Página pública de cancelamento de inscrição (e-mails) */}
