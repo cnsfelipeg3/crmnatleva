@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { useIsAffiliateOnly } from "@/hooks/useIsAffiliateOnly";
 import { TabManagerProvider } from "@/contexts/TabManagerContext";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { RefTracker } from "@/components/vitrine/RefTracker";
