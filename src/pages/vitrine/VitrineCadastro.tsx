@@ -17,8 +17,18 @@ type AffiliateSignupResponse = {
   existing?: boolean;
 };
 
+function translateError(msg: string): string {
+  const m = msg || "";
+  if (/weak|easy to guess|pwned/i.test(m)) return "Senha muito fraca. Use letras, números e símbolos (ex: Viagem@2026!).";
+  if (/already.*registered|already.*exists/i.test(m)) return "Esse e-mail já está cadastrado. Tente fazer login.";
+  if (/rate.*limit|too many/i.test(m)) return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  if (/invalid.*email/i.test(m)) return "E-mail inválido.";
+  if (/Tempo esgotado/i.test(m)) return m;
+  return m || "Erro ao criar cadastro";
+}
+
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro ao criar cadastro";
+  return translateError(error instanceof Error ? error.message : "Erro ao criar cadastro");
 }
 
 export default function VitrineCadastro() {
