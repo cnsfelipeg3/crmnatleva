@@ -11,6 +11,10 @@ import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
 import { useAffiliateMonthlyCommissions } from "@/components/vitrine/useAffiliateTimeSeries";
 import CountUp from "@/components/vitrine/CountUp";
 import { toast } from "sonner";
+import { smartCapitalizeName } from "@/lib/nameUtils";
+import { Input } from "@/components/ui/input";
+import { useState } from "react";
+import { Package, User2, Search } from "lucide-react";
 
 const fmtBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
