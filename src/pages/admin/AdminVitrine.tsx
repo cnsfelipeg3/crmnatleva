@@ -114,14 +114,22 @@ export default function AdminVitrine() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-primary/10 grid place-items-center">
-          <Store className="h-5 w-5 text-primary" />
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-primary/10 grid place-items-center">
+            <Store className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold">Vitrine · Afiliados</h1>
+            <p className="text-sm text-muted-foreground">Aprove ou rejeite cadastros de afiliados. O email é enviado automaticamente.</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-semibold">Vitrine · Afiliados</h1>
-          <p className="text-sm text-muted-foreground">Aprove ou rejeite cadastros de afiliados. O email é enviado automaticamente.</p>
-        </div>
+        <Button asChild variant="outline" className="gap-2">
+          <Link to="/admin/vitrine/leads">
+            <Activity className="h-4 w-4" />
+            Leads & Tráfego
+          </Link>
+        </Button>
       </div>
 
       <Card className="p-4 space-y-4">
