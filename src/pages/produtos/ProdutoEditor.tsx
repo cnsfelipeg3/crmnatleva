@@ -1130,6 +1130,23 @@ export default function ProdutoEditor() {
                               </p>
                             </div>
                           </div>
+
+                          {/* Link interno para emissão da viagem */}
+                          <div className="mt-4 pt-4 border-t border-amber-500/20">
+                            <Label className="text-sm font-semibold flex items-center gap-1.5">
+                              <ExternalLink className="w-3.5 h-3.5 text-amber-600" /> Link para emissão
+                            </Label>
+                            <Input
+                              type="url"
+                              value={form.emission_link}
+                              onChange={(e) => set("emission_link", e.target.value)}
+                              placeholder="https://... (link interno usado pra emitir essa viagem quando alguém comprar)"
+                              className="text-sm mt-1"
+                            />
+                            <p className="text-[11px] text-muted-foreground mt-1">
+                              Só a equipe vê esse link · aparece como botão no detalhe do produto pra facilitar a emissão depois da venda
+                            </p>
+                          </div>
                         </div>
                       );
                     })()}
