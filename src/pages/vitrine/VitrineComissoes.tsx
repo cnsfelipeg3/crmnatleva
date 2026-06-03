@@ -279,9 +279,8 @@ export default function VitrineComissoes() {
                     const clientName = smartCapitalizeName(c.referral?.lead_name);
                     const isOpen = expanded.has(c.id);
                     return (
-                      <>
+                      <React.Fragment key={c.id}>
                         <tr
-                          key={c.id}
                           onClick={() => toggle(c.id)}
                           className="border-b last:border-0 hover:bg-muted/30 transition-colors cursor-pointer"
                         >
