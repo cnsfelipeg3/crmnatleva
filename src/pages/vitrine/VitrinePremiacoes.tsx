@@ -794,6 +794,10 @@ export default function VitrinePremiacoes() {
                     {!expired && (
                       <button
                         type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenPrize(buildCampaignDetail(c));
+                        }}
                         className="w-full rounded-full py-3 font-semibold text-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex items-center justify-center gap-2 group/btn"
                         style={{
                           background: `linear-gradient(135deg, ${c.accent}, ${c.accentDark})`,
