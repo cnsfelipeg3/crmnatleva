@@ -486,6 +486,7 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
               { to: "/admin/conversas-excluidas", icon: Inbox, label: "Conversas Excluídas" },
               { to: "/admin/regras-globais", icon: ScrollText, label: "Regras Globais Agentes" },
               { to: "/admin/megafone", icon: Megaphone, label: "MegaFone" },
+              { to: "/admin/vitrine", icon: Store, label: "Vitrine · Afiliados" },
               { to: "/settings", icon: Settings, label: "Configurações" },
             ])}
           </>
