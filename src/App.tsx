@@ -280,10 +280,10 @@ function AppRoutes() {
       <Routes>
         <Route
           path="/login"
-          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+          element={isLoading && !isPublicRoute ? <LoginSkeleton /> : isAuthenticated ? <LoginRedirect /> : <Login />}
         />
-        {/* Raiz: vai pro dashboard se logado, senão pro login (ProtectedRoute trata) */}
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />} />
+        {/* Raiz: vai pro dashboard (ou /vitrine se for afiliado) se logado, senão pro login */}
+        <Route path="/" element={isAuthenticated ? <LoginRedirect /> : <Navigate to="/login" replace />} />
         <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route path="/dashboard" element={<DashboardSwitch />} />
           <Route path="/sales" element={<Sales />} />
