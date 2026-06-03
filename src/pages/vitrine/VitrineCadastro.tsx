@@ -17,8 +17,18 @@ type AffiliateSignupResponse = {
   existing?: boolean;
 };
 
+function translateError(msg: string): string {
+  const m = msg || "";
+  if (/weak|easy to guess|pwned/i.test(m)) return "Senha muito fraca. Use letras, números e símbolos (ex: Viagem@2026!).";
+  if (/already.*registered|already.*exists/i.test(m)) return "Esse e-mail já está cadastrado. Tente fazer login.";
+  if (/rate.*limit|too many/i.test(m)) return "Muitas tentativas. Aguarde alguns minutos e tente novamente.";
+  if (/invalid.*email/i.test(m)) return "E-mail inválido.";
+  if (/Tempo esgotado/i.test(m)) return m;
+  return m || "Erro ao criar cadastro";
+}
+
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Erro ao criar cadastro";
+  return translateError(error instanceof Error ? error.message : "Erro ao criar cadastro");
 }
 
 export default function VitrineCadastro() {
@@ -131,8 +141,10 @@ export default function VitrineCadastro() {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-[11px] uppercase tracking-wide flex items-center gap-1.5"><Lock className="w-3 h-3" /> Senha</Label>
-                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} />
+                <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres com número e símbolo" required minLength={8} />
+                <p className="text-[10px] text-muted-foreground/70">Dica: use uma frase forte, ex: <span className="font-mono">Viagem@2026!</span></p>
               </div>
+
 
               <Button type="submit" disabled={loading} className="w-full h-11 mt-2 text-sm font-semibold">
                 {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Criando conta...</> : "Criar conta de afiliado"}
