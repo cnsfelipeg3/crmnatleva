@@ -215,11 +215,21 @@ function ScreenLoader() {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const { loading: affLoading, isAffiliateOnly } = useIsAffiliateOnly();
   const location = useLocation();
   // Skeleton consistente com a rota destino · evita flash branco / spinner sem contexto
-  if (isLoading) return <RouteAwareSkeleton pathname={location.pathname} />;
+  if (isLoading || (isAuthenticated && affLoading)) return <RouteAwareSkeleton pathname={location.pathname} />;
   if (!isAuthenticated) return <Navigate to="/login" state={{ from: location }} replace />;
+  // SEGURANÇA: afiliados puros não acessam nenhuma rota interna · só /vitrine
+  if (isAffiliateOnly) return <Navigate to="/vitrine" replace />;
   return <>{children}</>;
+}
+
+function LoginRedirect() {
+  const { isLoading } = useAuth();
+  const { loading: affLoading, isAffiliateOnly } = useIsAffiliateOnly();
+  if (isLoading || affLoading) return <LoginSkeleton />;
+  return <Navigate to={isAffiliateOnly ? "/vitrine" : "/dashboard"} replace />;
 }
 
 // Admin (e gestor) veem o dashboard BI completo. Demais colaboradores veem
