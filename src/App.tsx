@@ -357,6 +357,7 @@ function AppRoutes() {
           <Route path="/admin/regras-globais" element={<RegrasGlobaisAgentes />} />
           <Route path="/admin/megafone" element={<Megafone />} />
           <Route path="/admin/vitrine" element={<AdminVitrine />} />
+          <Route path="/admin/vitrine/leads" element={<AdminVitrineLeads />} />
 
           {/* Portal Admin */}
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />
