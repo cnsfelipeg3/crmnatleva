@@ -444,6 +444,7 @@ export default function ProdutoEditor() {
       },
       internal_cost: numOrNull(form.internal_cost),
       commission_per_sale: numOrNull(form.commission_per_sale),
+      emission_link: form.emission_link.trim() || null,
       is_promo: form.is_promo, promo_badge: form.promo_badge || null,
       origin_city: form.origin_city || null, origin_iata: form.origin_iata || null,
       destination_iata: form.destination_iata || null,
