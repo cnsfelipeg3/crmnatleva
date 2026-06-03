@@ -180,6 +180,8 @@ const VitrineMetas = lazy(() => import("@/pages/vitrine/VitrineMetas"));
 const VitrinePremiacoes = lazy(() => import("@/pages/vitrine/VitrinePremiacoes"));
 const VitrineMateriais = lazy(() => import("@/pages/vitrine/VitrineMateriais"));
 const VitrinePerfil = lazy(() => import("@/pages/vitrine/VitrinePerfil"));
+const VitrineLeads = lazy(() => import("@/pages/vitrine/VitrineLeads"));
+const AdminVitrineLeads = lazy(() => import("@/pages/admin/AdminVitrineLeads"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 
 // Operação Diária
