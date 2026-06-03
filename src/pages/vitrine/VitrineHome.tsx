@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
