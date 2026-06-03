@@ -71,62 +71,124 @@ const LEVEL_PRIZES = [
   },
 ];
 
+// Campanhas com tratamento cinematográfico · fotos reais, gatilhos psicológicos
 const CAMPAIGNS = [
   {
     id: "dubai",
-    emoji: "🕌",
     name: "Operação Dubai",
-    description: "Venda Dubai e leve o smartphone mais desejado do ano.",
+    tagline: "Domine o deserto do luxo",
+    description:
+      "Cada venda pra Dubai te aproxima do smartphone que vai dizer, sem precisar falar, em que liga você joga.",
     goal: 150000,
     metric: "vendidos em Dubai",
-    prize: "iPhone 18 Pro",
-    prizeIcon: "📱",
+    prize: "iPhone 18 Pro Titanium",
+    prizeValue: "R$ 12.500",
+    prizeImage:
+      "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1546412414-e1885259563a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1582672060674-bc2bd808a8f5?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-08-31",
-    gradient: "from-amber-500 via-orange-500 to-rose-500",
+    accent: "#f97316",
+    accentDark: "#9a3412",
+    competitors: 47,
+    psychologyHook: "Apenas 1 leva o iPhone. Os outros 46 levam só a história.",
+    powerLaw: "Lei 25 · Recrie-se: o aparelho que dita o seu próximo capítulo.",
+    cta: "Quero esse iPhone",
     progress: 0.34,
   },
   {
     id: "europa",
-    emoji: "🗼",
     name: "Operação Europa",
-    description: "O continente clássico vale R$ 5.000 em PIX direto.",
+    tagline: "R$ 5.000 em PIX direto na sua conta",
+    description:
+      "Vender Europa é vender sonho com carimbo. Cada pacote te aproxima de cinco mil reais pra fazer o que quiser, sem prestar conta a ninguém.",
     goal: 250000,
     metric: "vendidos na Europa",
-    prize: "R$ 5.000 PIX",
-    prizeIcon: "💸",
+    prize: "R$ 5.000 via PIX",
+    prizeValue: "R$ 5.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1554260570-9140fd3b7614?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-09-30",
-    gradient: "from-indigo-500 via-violet-500 to-fuchsia-500",
+    accent: "#8b5cf6",
+    accentDark: "#4c1d95",
+    competitors: 62,
+    psychologyHook: "62 afiliados estão atrás dos mesmos R$ 5.000. Você quer mesmo ficar parado?",
+    powerLaw: "Lei 28 · Entre em ação com ousadia: o titubeante perde o pix.",
+    cta: "Quero os 5 mil",
     progress: 0.18,
   },
   {
     id: "cruzeiros",
-    emoji: "🛳️",
     name: "Operação Cruzeiros",
-    description: "Top 3 vendedores embarcam num cruzeiro inesquecível.",
+    tagline: "Top 3 embarcam · o resto assiste do porto",
+    description:
+      "Cabines de luxo, jantares assinados, paradas em três países. Só três vendedores cruzam essa rampa. O quarto colocado vai contar pros netos que quase foi.",
     goal: 0,
     metric: "Top 3 do ranking",
-    prize: "Cruzeiro para 2 pessoas",
-    prizeIcon: "⚓",
+    prize: "Cruzeiro 7 noites · 2 pessoas",
+    prizeValue: "R$ 28.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1599992020148-c4c9b9bfe73e?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1566375638485-aa46497c2bce?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1605281317010-fe5ffe798166?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-12-31",
-    gradient: "from-sky-500 via-cyan-500 to-teal-500",
+    accent: "#0ea5e9",
+    accentDark: "#0c4a6e",
+    competitors: 89,
+    psychologyHook: "89 afiliados, 3 vagas no convés. A escassez aqui é cirúrgica.",
+    powerLaw: "Lei 6 · Chame atenção a qualquer custo: o top 3 vira lenda interna.",
+    cta: "Quero estar no convés",
     progress: 0.62,
     ranking: true,
   },
   {
     id: "copa",
-    emoji: "🏆",
     name: "Operação Copa do Mundo",
-    description: "O maior vendedor leva o pacote do ano: a Copa do Mundo.",
+    tagline: "O maior vendedor leva o pacote do ano",
+    description:
+      "Estádio lotado, hino, gol, hospedagem premium, ingresso na mão. Não é prêmio de catálogo · é memória pra vida inteira. Só um leva.",
     goal: 0,
     metric: "Maior vendedor do período",
     prize: "Pacote Copa do Mundo 2026",
-    prizeIcon: "⚽",
+    prizeValue: "R$ 45.000",
+    prizeImage:
+      "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=900&q=80",
+    heroImage:
+      "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1800&q=80",
+    gallery: [
+      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1540552965303-39b22a4cf09c?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=600&q=80",
+    ],
     deadline: "2026-05-31",
-    gradient: "from-emerald-600 via-green-600 to-lime-500",
+    accent: "#059669",
+    accentDark: "#064e3b",
+    competitors: 104,
+    psychologyHook: "Copa do Mundo passa de 4 em 4 anos. Essa janela fecha em poucos dias.",
+    powerLaw: "Lei 46 · Nunca pareça perfeito demais: o vencedor é humano, é você.",
+    cta: "Quero a Copa",
     progress: 0.08,
     ranking: true,
   },
 ];
+
 
 function useCountdown(deadline: string) {
   const [now, setNow] = useState(Date.now());
@@ -320,71 +382,231 @@ export default function VitrinePremiacoes() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {CAMPAIGNS.map((c, i) => (
-            <motion.div
-              key={c.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-            >
-              <Card className="relative overflow-hidden h-full border-2 border-border/60 hover:shadow-2xl transition-all">
-                <div className={`h-28 relative bg-gradient-to-br ${c.gradient}`}>
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,white,transparent_60%)] opacity-30" />
-                  <div className="absolute top-3 left-4 flex items-center gap-2 text-white">
-                    <span className="text-3xl drop-shadow">{c.emoji}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {CAMPAIGNS.map((c, i) => {
+            const expired = new Date(c.deadline).getTime() < Date.now();
+            return (
+              <motion.div
+                key={c.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.08, duration: 0.5 }}
+              >
+                <Card className="group relative overflow-hidden h-full border-0 shadow-xl hover:shadow-2xl transition-all duration-500 rounded-3xl">
+                  {/* ============ HERO CINEMATOGRÁFICO ============ */}
+                  <div className="relative h-72 overflow-hidden">
+                    <img
+                      src={c.heroImage}
+                      alt={c.name}
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-[2000ms] group-hover:scale-110"
+                      loading="lazy"
+                    />
+                    {/* Vinheta */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/55 to-black/10" />
+                    <div
+                      className="absolute inset-0 mix-blend-overlay opacity-50"
+                      style={{
+                        background: `linear-gradient(135deg, ${c.accent}55 0%, transparent 60%)`,
+                      }}
+                    />
+
+                    {/* Tag superior · ao vivo + countdown */}
+                    <div className="absolute top-4 left-4 right-4 flex items-start justify-between gap-3 z-10">
+                      <Badge className="bg-rose-500/95 text-white border-0 backdrop-blur-md shadow-lg gap-1.5 px-2.5 py-1">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full rounded-full bg-white opacity-75 animate-ping" />
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
+                        </span>
+                        AO VIVO
+                      </Badge>
+                      <div className="bg-black/55 backdrop-blur-md rounded-full px-3 py-1 text-white text-[11px] font-semibold flex items-center gap-1.5 border border-white/10">
+                        <Clock className="h-3 w-3" />
+                        <Countdown deadline={c.deadline} />
+                      </div>
+                    </div>
+
+                    {/* Identidade + tagline */}
+                    <div className="absolute bottom-5 left-5 right-5 text-white z-10">
+                      <p
+                        className="text-[10px] uppercase tracking-[0.3em] font-semibold mb-1.5 opacity-80"
+                        style={{ color: c.accent === "#059669" ? "#86efac" : "#fde68a" }}
+                      >
+                        Campanha · {c.id}
+                      </p>
+                      <h3 className="font-serif text-3xl sm:text-4xl leading-[1.05] drop-shadow-lg">
+                        {c.name}
+                      </h3>
+                      <p className="text-sm sm:text-base mt-2 opacity-90 max-w-md font-light italic">
+                        {c.tagline}
+                      </p>
+                    </div>
+
+                    {/* Mini galeria flutuante */}
+                    <div className="absolute top-1/2 right-4 -translate-y-1/2 flex flex-col gap-1.5 z-10">
+                      {c.gallery.slice(0, 3).map((g, idx) => (
+                        <div
+                          key={idx}
+                          className="w-12 h-12 rounded-lg overflow-hidden border-2 border-white/30 shadow-lg backdrop-blur-sm hover:scale-110 transition-transform duration-300"
+                          style={{ transform: `translateY(${idx * -2}px)` }}
+                        >
+                          <img src={g} alt="" className="w-full h-full object-cover" loading="lazy" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* ============ CORPO ============ */}
+                  <CardContent className="p-5 space-y-4 bg-card">
+                    {/* Hook psicológico · escassez */}
+                    <div
+                      className="rounded-xl p-3 border-l-4 text-xs italic leading-relaxed"
+                      style={{
+                        borderColor: c.accent,
+                        background: `linear-gradient(90deg, ${c.accent}10, transparent)`,
+                      }}
+                    >
+                      <p className="font-medium text-foreground/90">"{c.psychologyHook}"</p>
+                      <p
+                        className="text-[10px] uppercase tracking-wider font-semibold mt-1.5 not-italic"
+                        style={{ color: c.accent }}
+                      >
+                        {c.powerLaw}
+                      </p>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground leading-relaxed">{c.description}</p>
+
+                    {/* PRÊMIO HERO · destaque visual com imagem */}
+                    <div
+                      className="relative rounded-2xl overflow-hidden border-2 shadow-md"
+                      style={{ borderColor: `${c.accent}40` }}
+                    >
+                      <div className="grid grid-cols-[120px_1fr] gap-0">
+                        <div className="relative h-32 bg-muted overflow-hidden">
+                          <img
+                            src={c.prizeImage}
+                            alt={c.prize}
+                            className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
+                            loading="lazy"
+                          />
+                        </div>
+                        <div
+                          className="p-3 flex flex-col justify-center"
+                          style={{
+                            background: `linear-gradient(135deg, ${c.accent}15, transparent)`,
+                          }}
+                        >
+                          <p className="text-[10px] uppercase tracking-widest font-bold flex items-center gap-1"
+                             style={{ color: c.accent }}>
+                            <Trophy className="h-3 w-3" /> Seu prêmio
+                          </p>
+                          <p className="font-serif text-lg leading-tight mt-1">{c.prize}</p>
+                          <p className="text-[11px] text-muted-foreground mt-1">
+                            Valor de mercado{" "}
+                            <span className="font-bold text-foreground">{c.prizeValue}</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats · prova social + competição */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-muted/40 p-2.5 text-center">
+                        <p className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                          Concorrentes
+                        </p>
+                        <p className="font-bold text-lg mt-0.5">{c.competitors}</p>
+                        <p className="text-[9px] text-muted-foreground">na disputa</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-2.5 text-center">
+                        <p className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                          Sua posição
+                        </p>
+                        <p className="font-bold text-lg mt-0.5" style={{ color: c.accent }}>
+                          #{myRankRow?.rank ?? "—"}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">no ranking</p>
+                      </div>
+                      <div className="rounded-lg bg-muted/40 p-2.5 text-center">
+                        <p className="text-[9px] uppercase tracking-widest text-muted-foreground">
+                          {c.ranking ? "Top exigido" : "Meta"}
+                        </p>
+                        <p className="font-bold text-lg mt-0.5">
+                          {c.ranking ? "Top 3" : `${Math.round(c.progress * 100)}%`}
+                        </p>
+                        <p className="text-[9px] text-muted-foreground">
+                          {c.ranking ? "do ranking" : "atingido"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Barra de progresso com gradiente personalizado */}
                     <div>
-                      <p className="text-[10px] uppercase tracking-widest opacity-90 flex items-center gap-1">
-                        <Flame className="h-2.5 w-2.5" /> campanha quente
-                      </p>
-                      <p className="font-serif text-lg leading-none drop-shadow">{c.name}</p>
+                      <div className="flex justify-between text-[11px] mb-1.5">
+                        <span className="text-muted-foreground flex items-center gap-1">
+                          <Target className="h-2.5 w-2.5" />
+                          {c.ranking ? "Sua posição" : "Progresso da meta"}
+                        </span>
+                        <span className="font-bold" style={{ color: c.accent }}>
+                          {c.ranking
+                            ? `#${myRankRow?.rank ?? "—"} de ${c.competitors}`
+                            : `${fmtBRL(c.goal * c.progress)} / ${fmtBRL(c.goal)}`}
+                        </span>
+                      </div>
+                      <div className="h-2.5 rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-1000"
+                          style={{
+                            width: `${Math.round(c.progress * 100)}%`,
+                            background: `linear-gradient(90deg, ${c.accent}, ${c.accentDark})`,
+                            boxShadow: `0 0 12px ${c.accent}80`,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="absolute bottom-3 right-4 text-right">
-                    <Countdown deadline={c.deadline} />
-                  </div>
-                </div>
 
-                <CardContent className="p-4 space-y-3">
-                  <p className="text-sm text-muted-foreground">{c.description}</p>
+                    {/* CTA dourado · Lei do desejo */}
+                    {!expired && (
+                      <button
+                        type="button"
+                        className="w-full rounded-full py-3 font-semibold text-sm transition-all duration-300 hover:scale-[1.02] hover:shadow-xl flex items-center justify-center gap-2 group/btn"
+                        style={{
+                          background: `linear-gradient(135deg, ${c.accent}, ${c.accentDark})`,
+                          color: "white",
+                          boxShadow: `0 8px 24px -8px ${c.accent}80`,
+                        }}
+                      >
+                        <Flame className="h-4 w-4 group-hover/btn:rotate-12 transition-transform" />
+                        {c.cta}
+                        <Sparkles className="h-3.5 w-3.5 opacity-80" />
+                      </button>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-muted/40 p-2.5">
-                      <p className="text-[10px] uppercase tracking-widest text-muted-foreground flex items-center gap-1">
-                        <Target className="h-2.5 w-2.5" /> meta
-                      </p>
-                      <p className="text-sm font-bold mt-0.5">
-                        {c.goal > 0 ? fmtBRL(c.goal) : c.metric}
-                      </p>
-                      {c.goal > 0 && <p className="text-[10px] text-muted-foreground">{c.metric}</p>}
-                    </div>
-                    <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 p-2.5 border border-amber-200/50">
-                      <p className="text-[10px] uppercase tracking-widest text-amber-700 flex items-center gap-1">
-                        <Trophy className="h-2.5 w-2.5" /> prêmio
-                      </p>
-                      <p className="text-sm font-bold mt-0.5 flex items-center gap-1">
-                        <span>{c.prizeIcon}</span> {c.prize}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-[11px] mb-1">
-                      <span className="text-muted-foreground">
-                        {c.ranking ? "Sua posição na campanha" : "Seu progresso"}
-                      </span>
-                      <span className="font-semibold">
-                        {c.ranking ? `#${myRankRow?.rank ?? "—"}` : `${Math.round(c.progress * 100)}%`}
-                      </span>
-                    </div>
-                    <Progress value={c.progress * 100} className="h-2" />
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+        {/* Manifesto psicológico abaixo das campanhas */}
+        <div className="mt-6 rounded-2xl border border-amber-200/40 bg-gradient-to-r from-amber-50/60 via-card to-rose-50/40 dark:from-amber-500/5 dark:to-rose-500/5 p-5 flex items-start gap-3">
+          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-rose-500 grid place-items-center shrink-0 shadow-lg">
+            <Flame className="h-5 w-5 text-white" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-serif text-lg leading-tight">
+              "Aquilo que poucos conseguem, todos desejam."
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Cada campanha tem 1, 2 ou 3 vencedores. Não é sobre vender muito · é sobre vender mais
+              que os outros. Quem entra cedo, sai com o prêmio. Quem hesita, assiste pelo Instagram
+              do colega.
+            </p>
+          </div>
         </div>
       </section>
+
+
 
       {/* ===================== BLOCO 4 · HALL DA FAMA ===================== */}
       <section className="space-y-4">
