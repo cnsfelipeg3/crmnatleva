@@ -458,7 +458,7 @@ export default function VitrineMateriais() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Filters */}
-          <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto] items-center">
+          <div className="grid gap-2 md:grid-cols-[1fr_auto_auto_auto_auto_auto] items-center">
             <div className="relative">
               <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -475,9 +475,23 @@ export default function VitrineMateriais() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os pacotes</SelectItem>
-                {products.map((p) => (
+                {productsWithAssets.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
                     {p.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={formatFilter} onValueChange={setFormatFilter}>
+              <SelectTrigger className="h-9 text-xs min-w-[140px]">
+                <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                <SelectValue placeholder="Formato" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os formatos</SelectItem>
+                {FORMATS.map((f) => (
+                  <SelectItem key={f.id} value={f.id}>
+                    {FORMAT_LABEL[f.id]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -523,6 +537,7 @@ export default function VitrineMateriais() {
               </SelectContent>
             </Select>
           </div>
+
 
           {activeFilters > 0 && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
