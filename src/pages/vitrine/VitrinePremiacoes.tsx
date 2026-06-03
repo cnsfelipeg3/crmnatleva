@@ -614,7 +614,10 @@ export default function VitrinePremiacoes() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08, duration: 0.5 }}
               >
-                <Card className="group relative overflow-hidden h-full border-0 shadow-xl hover:shadow-2xl transition-all duration-500 rounded-3xl">
+                <Card
+                  onClick={() => setOpenPrize(buildCampaignDetail(c))}
+                  className="group relative overflow-hidden h-full border-0 shadow-xl hover:shadow-2xl transition-all duration-500 rounded-3xl cursor-pointer"
+                >
                   {/* ============ HERO CINEMATOGRÁFICO ============ */}
                   <div className="relative h-72 overflow-hidden">
                     <img
