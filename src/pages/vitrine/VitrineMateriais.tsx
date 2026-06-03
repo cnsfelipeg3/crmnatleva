@@ -277,7 +277,7 @@ export default function VitrineMateriais() {
   const renderTile = (c: Creative) => (
     <Card key={c.id} className="overflow-hidden group border-emerald-900/10">
       <div
-        className="aspect-square bg-muted relative cursor-zoom-in"
+        className={`${FORMAT_ASPECT[c.format] || "aspect-square"} bg-muted relative cursor-zoom-in`}
         onClick={() => setLightbox(c)}
       >
         {c.kind === "video" ? (
@@ -290,11 +290,9 @@ export default function VitrineMateriais() {
             loading="lazy"
           />
         )}
-        {c.isCover && (
-          <Badge className="absolute top-2 left-2 bg-emerald-700 hover:bg-emerald-700 text-white border-0 text-[10px]">
-            Capa
-          </Badge>
-        )}
+        <Badge className="absolute top-2 left-2 bg-emerald-700/95 hover:bg-emerald-700 text-white border-0 text-[10px] gap-1">
+          <Sparkles className="h-2.5 w-2.5" /> IA
+        </Badge>
         <Badge
           variant="outline"
           className="absolute top-2 right-2 text-[10px] bg-background/85 backdrop-blur capitalize"
@@ -304,7 +302,7 @@ export default function VitrineMateriais() {
               <Video className="h-3 w-3 mr-1" /> Vídeo
             </>
           ) : (
-            "Foto"
+            FORMAT_LABEL[c.format] || c.format
           )}
         </Badge>
       </div>
