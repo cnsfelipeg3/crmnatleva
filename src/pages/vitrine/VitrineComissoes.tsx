@@ -45,7 +45,7 @@ export default function VitrineComissoes() {
         .from("affiliate_commissions")
         .select(`
           ${COLS},
-          product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug),
+          product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug, cover_image_url, destination, destination_country, nights, duration, hotel_name, hotel_stars, airline, price_from, category),
           referral:affiliate_referrals!affiliate_commissions_referral_id_fkey(id, lead_name, lead_email, lead_phone)
         `)
         .eq("affiliate_id", affiliate!.id)
@@ -60,7 +60,7 @@ export default function VitrineComissoes() {
         const ids = Array.from(new Set((fb.data || []).map((r: any) => r.product_id).filter(Boolean)));
         const refIds = Array.from(new Set((fb.data || []).map((r: any) => r.referral_id).filter(Boolean)));
         const [{ data: prods }, { data: refs }] = await Promise.all([
-          ids.length ? supabase.from("experience_products").select("id, title, slug").in("id", ids) : Promise.resolve({ data: [] as any[] }),
+          ids.length ? supabase.from("experience_products").select("id, title, slug, cover_image_url, destination, destination_country, nights, duration, hotel_name, hotel_stars, airline, price_from, category").in("id", ids) : Promise.resolve({ data: [] as any[] }),
           refIds.length ? supabase.from("affiliate_referrals").select("id, lead_name, lead_email, lead_phone").in("id", refIds) : Promise.resolve({ data: [] as any[] }),
         ]);
         const pMap = new Map((prods || []).map((p: any) => [p.id, p]));
