@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 import { ArrowRight, Store, Users2, Wallet } from "lucide-react";
 import { smartCapitalizeName } from "@/lib/nameUtils";
+import WithdrawDialog from "@/components/vitrine/WithdrawDialog";
 
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { useAffiliateStats } from "@/components/vitrine/useAffiliateStats";
@@ -31,6 +32,8 @@ const DEFAULT_DREAM = {
 };
 
 export default function VitrineHome() {
+  const navigate = useNavigate();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const { data: affiliate } = useAffiliateProfile();
   const { data: stats } = useAffiliateStats(affiliate?.id);
   const { data: tiers = [] } = useAffiliateLevels();
@@ -155,10 +158,25 @@ export default function VitrineHome() {
         lifetime={lifetime}
         series={series}
         hasPix={!!affiliate?.pix_key}
-        onWithdraw={() =>
-          toast.success("Solicitação enviada · cai no seu PIX em até 1 dia útil.")
-        }
+        onWithdraw={() => {
+          if (!affiliate?.pix_key) {
+            navigate("/vitrine/perfil");
+            return;
+          }
+          setWithdrawOpen(true);
+        }}
       />
+
+      {affiliate?.pix_key && (
+        <WithdrawDialog
+          open={withdrawOpen}
+          onOpenChange={setWithdrawOpen}
+          affiliateId={affiliate.id}
+          available={available}
+          pixKey={affiliate.pix_key}
+          pixKeyType={(affiliate.pix_key_type as any) || "cpf"}
+        />
+      )}
 
       {/* JORNADA + MISSÃO */}
       <section className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
