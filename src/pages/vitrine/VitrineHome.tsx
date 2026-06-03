@@ -84,7 +84,7 @@ export default function VitrineHome() {
       r.status === "won" ? "sale" :
       r.status === "negotiating" ? "goal" :
       "sale",
-    who: r.affiliates?.full_name?.split(" ")[0] || "Afiliado",
+    who: smartCapitalizeName(r.affiliates?.full_name?.split(" ")[0]) || "Afiliado",
     text:
       r.status === "won"
         ? `fechou ${r.product_slug || "uma viagem"}`
