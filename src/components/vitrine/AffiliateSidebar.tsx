@@ -68,14 +68,15 @@ export default function AffiliateSidebar() {
           <img
             src={logoNatleva}
             alt="NatLeva"
-            className="h-9 w-auto shrink-0 dark:invert drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]"
+            className="h-9 w-auto shrink-0 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+            style={{ filter: "brightness(0) invert(1)" }}
           />
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-amber-600 dark:text-amber-300 font-bold">
+              <span className="text-[10px] uppercase tracking-[0.22em] text-amber-300 font-bold drop-shadow-[0_1px_1px_rgba(0,0,0,0.5)]">
                 Partners Club
               </span>
-              <span className="text-xs text-foreground/70 font-medium">
+              <span className="text-xs text-white/85 font-medium">
                 NatLeva · seu próximo nível
               </span>
             </div>
@@ -90,11 +91,11 @@ export default function AffiliateSidebar() {
       </SidebarContent>
 
 
-      <SidebarFooter className="p-2 border-t border-emerald-900/15">
+      <SidebarFooter className="p-2 border-t border-white/10">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+          className="w-full justify-start gap-2 text-white/70 hover:text-white hover:bg-white/10"
           onClick={async () => {
             await supabase.auth.signOut();
             window.location.href = "/vitrine/login";
