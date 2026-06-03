@@ -89,10 +89,13 @@ const CAMPAIGNS = [
       "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=900&q=80",
     heroImage:
       "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1800&q=80",
+    videoUrl: "https://www.youtube.com/embed/gXlIAS-rs4M",
     gallery: [
-      "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1546412414-e1885259563a?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1582672060674-bc2bd808a8f5?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1518684079-3c830dcef090?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1546412414-e1885259563a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1582672060674-bc2bd808a8f5?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1695048133142-1a20484d2569?auto=format&fit=crop&w=1600&q=80",
     ],
     deadline: "2026-08-31",
     accent: "#f97316",
@@ -102,6 +105,36 @@ const CAMPAIGNS = [
     powerLaw: "Lei 25 · Recrie-se: o aparelho que dita o seu próximo capítulo.",
     cta: "Quero esse iPhone",
     progress: 0.34,
+    longDescription:
+      "O iPhone 18 Pro Titanium não é só um celular · é um carimbo. Quem tira ele do bolso já entra na sala dizendo em qual nível joga. Acabamento em titânio aeroespacial, câmera com sensor de 1\" e a tela mais brilhante que a Apple já fez.\n\nNo dia que a Operação Dubai fechar, um único afiliado vai postar o unboxing. Os outros 46 vão dar like.",
+    whatsIncluded: [
+      "iPhone 18 Pro Titanium 256GB · lacrado",
+      "Capa premium em couro Apple",
+      "AirPods Pro 3 de brinde para o ganhador",
+      "Carregador MagSafe e cabo Thunderbolt",
+      "Entrega expressa em casa, com vídeo de unboxing oficial",
+      "Post de divulgação no Instagram da NatLeva com o ganhador",
+    ],
+    experienceSteps: [
+      { title: "1. Você vende Dubai", detail: "Cada pacote conta pontos pra sua escalada no ranking." },
+      { title: "2. Ranking ao vivo", detail: "Acompanhe sua posição em tempo real no painel." },
+      { title: "3. O top 1 ganha", detail: "No último dia, o nome do vencedor entra no grupo." },
+      { title: "4. Unboxing em vídeo", detail: "Recebe em casa com cerimônia · e a Nath grava." },
+    ],
+    testimonials: [
+      {
+        name: "Ricardo M.",
+        role: "Top 1 · Operação Maldivas 2025",
+        quote:
+          "Quando o iPhone chegou em casa, minha filha viu primeiro. Ela falou: 'pai, você é foda'. Vale cada venda.",
+      },
+      {
+        name: "Juliana P.",
+        role: "Afiliada Diamante",
+        quote:
+          "Eu nunca tinha vendido tanto Dubai. A campanha me forçou a estudar o destino e dobrei meu ticket médio.",
+      },
+    ],
   },
   {
     id: "europa",
@@ -117,10 +150,13 @@ const CAMPAIGNS = [
       "https://images.unsplash.com/photo-1554260570-9140fd3b7614?auto=format&fit=crop&w=900&q=80",
     heroImage:
       "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1800&q=80",
+    videoUrl: "https://www.youtube.com/embed/AQ6GdjE2tyA",
     gallery: [
-      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1499856871958-5b9627545d1a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1513581166391-887a96ddeafd?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1467269204594-9661b134dd2b?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1520939817895-060bdaf4fe1b?auto=format&fit=crop&w=1600&q=80",
     ],
     deadline: "2026-09-30",
     accent: "#8b5cf6",
@@ -130,6 +166,34 @@ const CAMPAIGNS = [
     powerLaw: "Lei 28 · Entre em ação com ousadia: o titubeante perde o pix.",
     cta: "Quero os 5 mil",
     progress: 0.18,
+    longDescription:
+      "Cinco mil reais. Direto. Na sua conta. Sem desconto, sem promessa de bônus pra mês que vem, sem precisar trocar por produto. PIX no mesmo dia da apuração.\n\nO que você faz com 5k é problema seu · viagem, reforma, investir, pagar dívida, trocar de moto. A NatLeva só te entrega o cheque. O resto da história quem escreve é você.",
+    whatsIncluded: [
+      "R$ 5.000,00 via PIX no mesmo dia da apuração",
+      "Comprovante oficial assinado pela NatLeva",
+      "Post no Instagram da empresa anunciando o ganhador",
+      "Convite vitalício pro grupo de afiliados Top Europa",
+      "Certificado digital de Vendedor Destaque do trimestre",
+    ],
+    experienceSteps: [
+      { title: "1. Foque em Europa", detail: "Toda venda Europa entra na contagem · sem exceções." },
+      { title: "2. Apuração transparente", detail: "Ranking público, atualizado todo dia útil." },
+      { title: "3. PIX direto", detail: "No primeiro dia útil após o encerramento." },
+    ],
+    testimonials: [
+      {
+        name: "Camila S.",
+        role: "Top 1 · Operação Caribe 2025",
+        quote:
+          "Recebi os 5 mil num sábado de manhã. Comprei a passagem da minha mãe pra Portugal. Chorei.",
+      },
+      {
+        name: "André L.",
+        role: "Afiliado Ouro",
+        quote:
+          "PIX caiu, conferi 3 vezes. É real. Já tô na próxima campanha pra repetir a dose.",
+      },
+    ],
   },
   {
     id: "cruzeiros",
@@ -145,10 +209,13 @@ const CAMPAIGNS = [
       "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=900&q=80",
     heroImage:
       "https://images.unsplash.com/photo-1599992020148-c4c9b9bfe73e?auto=format&fit=crop&w=1800&q=80",
+    videoUrl: "https://www.youtube.com/embed/CWuYqQTwjmI",
     gallery: [
-      "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1566375638485-aa46497c2bce?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1605281317010-fe5ffe798166?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1599992020148-c4c9b9bfe73e?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1548574505-5e239809ee19?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1601581875309-fafbf2d3ed3a?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1566375638485-aa46497c2bce?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1605281317010-fe5ffe798166?auto=format&fit=crop&w=1600&q=80",
     ],
     deadline: "2026-12-31",
     accent: "#0ea5e9",
@@ -159,6 +226,31 @@ const CAMPAIGNS = [
     cta: "Quero estar no convés",
     progress: 0.62,
     ranking: true,
+    longDescription:
+      "Sete noites num navio onde a comida é assinada por chef estrelado, o quarto tem varanda pro mar e a programação inclui ópera, casino e festa branca no convés. Três paradas em ilhas onde 90% dos brasileiros nunca vão pisar.\n\nVocê embarca com acompanhante. Tudo pago. Da escova de dente ao espumante de boas-vindas.",
+    whatsIncluded: [
+      "Cabine Premium Balcony pra 2 pessoas · 7 noites",
+      "All inclusive: refeições, drinks e entretenimento a bordo",
+      "Transfer privado porto-aeroporto nos dois sentidos",
+      "Excursões guiadas em 3 destinos selecionados",
+      "Jantar privativo com o capitão · noite branca",
+      "Spa day em casal · 90 minutos de massagem",
+      "Foto oficial emoldurada como cortesia",
+    ],
+    experienceSteps: [
+      { title: "1. Suba no ranking", detail: "Cada venda multiplica · sazonalidade favorece quem vende cruise." },
+      { title: "2. Top 3 garantido", detail: "Apuração no último dia do trimestre, ao vivo no grupo." },
+      { title: "3. Embarque dos sonhos", detail: "Aéreo, transfer e cabine prontos · só leva a mala." },
+      { title: "4. Volta ovacionado", detail: "Stories, foto oficial e o título de Cruise Master do ano." },
+    ],
+    testimonials: [
+      {
+        name: "Patrícia R.",
+        role: "Top 2 · Cruzeiros 2024",
+        quote:
+          "Levei meu marido. Ele chorou no jantar com o capitão. A gente nunca tinha vivido nada parecido. Vale anos de trabalho.",
+      },
+    ],
   },
   {
     id: "copa",
@@ -174,10 +266,13 @@ const CAMPAIGNS = [
       "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=900&q=80",
     heroImage:
       "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1800&q=80",
+    videoUrl: "https://www.youtube.com/embed/4ZbCkOZGFhU",
     gallery: [
-      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1540552965303-39b22a4cf09c?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=600&q=80",
+      "https://images.unsplash.com/photo-1577223625816-7546f13df25d?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1551958219-acbc608c6377?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1540552965303-39b22a4cf09c?auto=format&fit=crop&w=1600&q=80",
+      "https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=1600&q=80",
     ],
     deadline: "2026-05-31",
     accent: "#059669",
@@ -188,8 +283,34 @@ const CAMPAIGNS = [
     cta: "Quero a Copa",
     progress: 0.08,
     ranking: true,
+    longDescription:
+      "Um único afiliado vai estar dentro do estádio quando o Brasil entrar em campo na Copa 2026. Hotel 5 estrelas a 15 minutos da arena, ingresso na categoria mais premium, jantar oficial da delegação parceira.\n\nCopa do Mundo não se compra · se conquista. Daqui a 4 anos você vai querer ter essa história pra contar, ou vai querer ter visto pela tv?",
+    whatsIncluded: [
+      "Aéreo internacional ida e volta · classe executiva",
+      "Ingresso categoria 1 pra jogo da seleção",
+      "Hotel 5 estrelas · 5 noites com café incluído",
+      "Transfer privado em todos os deslocamentos",
+      "City tour gastronômico com guia exclusivo",
+      "Camisa oficial da seleção autografada",
+      "Cobertura fotográfica profissional · 100 fotos editadas",
+    ],
+    experienceSteps: [
+      { title: "1. Domine o ranking", detail: "O maior vendedor do período leva · sem segundo lugar." },
+      { title: "2. Apuração no jogo final", detail: "Anúncio ao vivo na live mensal de afiliados." },
+      { title: "3. Embarque histórico", detail: "Documentação e roteiro entregues 60 dias antes." },
+      { title: "4. Viva a Copa", detail: "Camisa, ingresso, estádio · e um vídeo de cortesia pra vida toda." },
+    ],
+    testimonials: [
+      {
+        name: "Fernando G.",
+        role: "Top 1 · Eurocopa 2024",
+        quote:
+          "Eu vi o gol de placa de dentro do estádio. Tem coisa que dinheiro não compra · você precisa conquistar. E foi isso.",
+      },
+    ],
   },
 ];
+
 
 
 function useCountdown(deadline: string) {
