@@ -528,7 +528,8 @@ export default function VitrinePremiacoes() {
                 transition={{ delay: i * 0.08 }}
               >
                 <Card
-                  className={`relative overflow-hidden h-full border-2 transition-all hover:scale-[1.02] hover:shadow-2xl ${
+                  onClick={() => setOpenPrize(buildLevelDetail(p))}
+                  className={`relative overflow-hidden h-full border-2 transition-all hover:scale-[1.02] hover:shadow-2xl cursor-pointer ${
                     unlocked ? "border-emerald-500/60" : "border-border/60"
                   } ${p.flagship ? "lg:row-span-1" : ""}`}
                 >
