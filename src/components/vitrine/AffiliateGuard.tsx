@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Clock, MailWarning } from "lucide-react";
 import logoNatleva from "@/assets/logo-natleva.webp";
 import { Button } from "@/components/ui/button";
+import { smartCapitalizeName } from "@/lib/nameUtils";
 
 type AffiliateState =
   | { status: "loading" }
