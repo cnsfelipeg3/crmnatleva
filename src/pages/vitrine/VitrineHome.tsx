@@ -32,6 +32,8 @@ const DEFAULT_DREAM = {
 };
 
 export default function VitrineHome() {
+  const navigate = useNavigate();
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
   const { data: affiliate } = useAffiliateProfile();
   const { data: stats } = useAffiliateStats(affiliate?.id);
   const { data: tiers = [] } = useAffiliateLevels();
@@ -156,10 +158,25 @@ export default function VitrineHome() {
         lifetime={lifetime}
         series={series}
         hasPix={!!affiliate?.pix_key}
-        onWithdraw={() =>
-          toast.success("Solicitação enviada · cai no seu PIX em até 1 dia útil.")
-        }
+        onWithdraw={() => {
+          if (!affiliate?.pix_key) {
+            navigate("/vitrine/perfil");
+            return;
+          }
+          setWithdrawOpen(true);
+        }}
       />
+
+      {affiliate?.pix_key && (
+        <WithdrawDialog
+          open={withdrawOpen}
+          onOpenChange={setWithdrawOpen}
+          affiliateId={affiliate.id}
+          available={available}
+          pixKey={affiliate.pix_key}
+          pixKeyType={(affiliate.pix_key_type as any) || "cpf"}
+        />
+      )}
 
       {/* JORNADA + MISSÃO */}
       <section className="grid lg:grid-cols-[1.4fr_1fr] gap-6">
