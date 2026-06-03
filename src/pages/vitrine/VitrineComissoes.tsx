@@ -45,7 +45,7 @@ export default function VitrineComissoes() {
         .from("affiliate_commissions")
         .select(`
           ${COLS},
-          product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug),
+          product:experience_products!affiliate_commissions_product_id_fkey(id, title, slug, cover_image_url, destination, destination_country, nights, duration, hotel_name, hotel_stars, airline, price_from, category),
           referral:affiliate_referrals!affiliate_commissions_referral_id_fkey(id, lead_name, lead_email, lead_phone)
         `)
         .eq("affiliate_id", affiliate!.id)
@@ -60,7 +60,7 @@ export default function VitrineComissoes() {
         const ids = Array.from(new Set((fb.data || []).map((r: any) => r.product_id).filter(Boolean)));
         const refIds = Array.from(new Set((fb.data || []).map((r: any) => r.referral_id).filter(Boolean)));
         const [{ data: prods }, { data: refs }] = await Promise.all([
-          ids.length ? supabase.from("experience_products").select("id, title, slug").in("id", ids) : Promise.resolve({ data: [] as any[] }),
+          ids.length ? supabase.from("experience_products").select("id, title, slug, cover_image_url, destination, destination_country, nights, duration, hotel_name, hotel_stars, airline, price_from, category").in("id", ids) : Promise.resolve({ data: [] as any[] }),
           refIds.length ? supabase.from("affiliate_referrals").select("id, lead_name, lead_email, lead_phone").in("id", refIds) : Promise.resolve({ data: [] as any[] }),
         ]);
         const pMap = new Map((prods || []).map((p: any) => [p.id, p]));
@@ -107,6 +107,23 @@ export default function VitrineComissoes() {
       : 0;
     return { maxComm, nextPayout, avgMonth };
   }, [items, series]);
+
+  // Receita por pacote · agrupa vendas pelo produto vendido
+  const perProduct = useMemo(() => {
+    const map = new Map<string, { product: any; qty: number; revenue: number; commission: number; cost: number }>();
+    (items || []).forEach((c: any) => {
+      if (!c.product) return;
+      const key = c.product.id;
+      const cur = map.get(key) || { product: c.product, qty: 0, revenue: 0, commission: 0, cost: 0 };
+      cur.qty += 1;
+      cur.revenue += Number(c.sale_value || 0);
+      cur.commission += Number(c.commission_value || 0);
+      cur.cost += Number(c.cost_value || 0);
+      map.set(key, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue);
+  }, [items]);
+
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
@@ -195,6 +212,80 @@ export default function VitrineComissoes() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Receita por pacote · ranking */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Receita por pacote</CardTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            Quanto cada produto da prateleira gerou em vendas, comissão e quantidade.
+          </p>
+        </CardHeader>
+        <CardContent className="p-0">
+          {perProduct.length === 0 ? (
+            <div className="text-center py-10 text-sm text-muted-foreground">Sem vendas ainda.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-[11px] uppercase tracking-wider text-muted-foreground bg-muted/30">
+                    <th className="px-4 py-2.5 font-medium">Pacote</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Qtd vendida</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Receita total</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Ticket médio</th>
+                    <th className="px-4 py-2.5 font-medium text-right">Sua comissão</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {perProduct.map((row) => (
+                    <tr key={row.product.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          {row.product.cover_image_url ? (
+                            <img
+                              src={row.product.cover_image_url}
+                              alt={row.product.title}
+                              loading="lazy"
+                              className="h-12 w-16 rounded-md object-cover ring-1 ring-border shrink-0"
+                            />
+                          ) : (
+                            <div className="h-12 w-16 rounded-md bg-emerald-500/10 grid place-items-center shrink-0">
+                              <Package className="h-4 w-4 text-emerald-700" />
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium truncate max-w-[280px]">{row.product.title}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {[row.product.destination, row.product.destination_country].filter(Boolean).join(" · ")}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <Badge variant="outline" className="text-[11px]">{row.qty}</Badge>
+                      </td>
+                      <td className="px-4 py-3 text-right font-medium whitespace-nowrap">{fmtBRL(row.revenue)}</td>
+                      <td className="px-4 py-3 text-right text-xs text-muted-foreground whitespace-nowrap">
+                        {fmtBRL(row.qty > 0 ? row.revenue / row.qty : 0)}
+                      </td>
+                      <td className="px-4 py-3 text-right font-semibold text-emerald-700 whitespace-nowrap">{fmtBRL(row.commission)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-muted/20">
+                  <tr className="text-xs font-medium">
+                    <td className="px-4 py-2.5">{perProduct.length} pacote{perProduct.length === 1 ? "" : "s"} diferente{perProduct.length === 1 ? "" : "s"}</td>
+                    <td className="px-4 py-2.5 text-right">{perProduct.reduce((s, r) => s + r.qty, 0)}</td>
+                    <td className="px-4 py-2.5 text-right">{fmtBRL(perProduct.reduce((s, r) => s + r.revenue, 0))}</td>
+                    <td />
+                    <td className="px-4 py-2.5 text-right text-emerald-700">{fmtBRL(perProduct.reduce((s, r) => s + r.commission, 0))}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -332,7 +423,57 @@ export default function VitrineComissoes() {
                         {isOpen && (
                           <tr key={`${c.id}-detail`} className="bg-muted/20 border-b">
                             <td />
-                            <td colSpan={8} className="px-4 py-4">
+                            <td colSpan={8} className="px-4 py-4 space-y-4">
+                              {/* Card visual do pacote vendido · igual à prateleira */}
+                              {c.product && (
+                                <div className="rounded-xl overflow-hidden border bg-background flex flex-col sm:flex-row">
+                                  <div className="relative sm:w-56 h-40 sm:h-auto shrink-0 bg-muted">
+                                    {c.product.cover_image_url ? (
+                                      <img
+                                        src={c.product.cover_image_url}
+                                        alt={c.product.title}
+                                        loading="lazy"
+                                        className="absolute inset-0 h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="absolute inset-0 grid place-items-center bg-emerald-500/10">
+                                        <Package className="h-8 w-8 text-emerald-700" />
+                                      </div>
+                                    )}
+                                    {c.product.category && (
+                                      <Badge className="absolute top-2 left-2 bg-white/90 text-[10px] text-emerald-900 border-0">
+                                        {c.product.category}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="flex-1 p-4 min-w-0">
+                                    <p className="text-[10px] uppercase tracking-wider text-amber-700 font-semibold">
+                                      {[c.product.destination, c.product.destination_country].filter(Boolean).join(" · ") || "Pacote NatLeva"}
+                                    </p>
+                                    <h3 className="font-serif text-lg mt-0.5 truncate" title={c.product.title}>{c.product.title}</h3>
+                                    <div className="flex flex-wrap gap-3 mt-2 text-[11px] text-muted-foreground">
+                                      {c.product.nights ? <span>🌙 {c.product.nights} noites</span> : null}
+                                      {c.product.duration && !c.product.nights ? <span>⏱ {c.product.duration}</span> : null}
+                                      {c.product.hotel_name ? (
+                                        <span>🏨 {c.product.hotel_name}{c.product.hotel_stars ? ` · ${"★".repeat(c.product.hotel_stars)}` : ""}</span>
+                                      ) : null}
+                                      {c.product.airline ? <span>✈ {c.product.airline}</span> : null}
+                                      {c.product.price_from ? <span>A partir de {fmtBRL(Number(c.product.price_from))}</span> : null}
+                                    </div>
+                                    {c.product.slug && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-3 h-8 text-xs"
+                                        onClick={() => window.open(`/p/${c.product.slug}`, "_blank")}
+                                      >
+                                        Ver pacote na prateleira
+                                      </Button>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                                 <div className="rounded-lg bg-background border p-3">
                                   <div className="flex items-center gap-1.5 text-muted-foreground mb-1.5">
