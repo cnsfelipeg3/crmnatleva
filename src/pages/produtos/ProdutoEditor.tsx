@@ -375,6 +375,7 @@ export default function ProdutoEditor() {
           payment_notes: data.payment_terms?.notes ?? "",
           internal_cost: data.internal_cost != null ? String(data.internal_cost) : "",
           commission_per_sale: data.commission_per_sale != null ? String(data.commission_per_sale) : "",
+          emission_link: data.emission_link ?? "",
           is_promo: !!data.is_promo, promo_badge: data.promo_badge ?? "",
           origin_city: data.origin_city ?? "", origin_iata: data.origin_iata ?? "",
           destination_iata: data.destination_iata ?? "",
