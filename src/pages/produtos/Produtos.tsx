@@ -684,6 +684,27 @@ function AdminProductCard({ p, viewMode, onToggleActive, onDelete }: { p: Produc
               </Button>
             )}
           </div>
+          {isAffiliate && (
+            <div className="flex flex-col gap-1.5 pt-2 border-t border-dashed border-primary/20">
+              <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide flex items-center gap-1.5">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                Seu link personalizado · todo lead vem pra você
+              </div>
+              <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 py-1.5">
+                <code className="flex-1 text-[10px] truncate font-mono text-foreground/80">
+                  {personalLink}
+                </code>
+              </div>
+              <div className="flex gap-1.5">
+                <Button variant="outline" size="sm" onClick={copyPersonalLink} className="flex-1 text-xs h-8 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary">
+                  <Copy className="w-3.5 h-3.5 mr-1.5" /> Copiar
+                </Button>
+                <Button variant="outline" size="sm" onClick={shareWhatsapp} className="flex-1 text-xs h-8 border-emerald-500/30 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700">
+                  <Share2 className="w-3.5 h-3.5 mr-1.5" /> WhatsApp
+                </Button>
+              </div>
+            </div>
+          )}
           <Button
             variant="outline"
             size="sm"
