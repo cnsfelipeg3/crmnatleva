@@ -3,8 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil, ExternalLink, Lock, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 type Product = {
   id: string;
@@ -26,6 +28,7 @@ type Product = {
   how_it_works: string | null;
   pickup_info: string | null;
   recommendations: string | null;
+  emission_link: string | null;
 };
 
 export default function ProdutoDetalhe() {
