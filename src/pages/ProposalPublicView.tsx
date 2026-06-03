@@ -145,72 +145,33 @@ export default function ProposalPublicView() {
         }
       }
 
-      // Upsert viewer record · if it succeeds we swap the local id for the real one
+      // Register viewer via SECURITY DEFINER RPC · funciona pra anônimos sem expor leads
       try {
-        const { data: existing } = await supabase
-          .from("proposal_viewers" as any)
-          .select("id, total_views")
-          .eq("proposal_id", proposal.id)
-          .eq("email", email)
-          .maybeSingle();
+        const { data: vid, error: rpcErr } = await supabase.rpc("register_proposal_viewer" as any, {
+          p_proposal_id: proposal.id,
+          p_email: email,
+          p_name: name || null,
+          p_phone: phone || null,
+          p_device_type: deviceType,
+          p_user_agent: ua,
+          p_ip: geo.ip || null,
+          p_city: geo.city || null,
+          p_region: geo.region || null,
+          p_country: geo.country_name || null,
+          p_latitude: geo.latitude || null,
+          p_longitude: geo.longitude || null,
+          p_referred_by_share_id: referredByShareId,
+        });
 
-        let vid: string | null = null;
-        if (existing) {
-          vid = (existing as any).id;
-          await supabase.from("proposal_viewers" as any).update({
-            last_active_at: new Date().toISOString(),
-            total_views: ((existing as any).total_views || 1) + 1,
-            name: name || undefined,
-            phone: phone || undefined,
-            device_type: deviceType,
-            user_agent: ua,
-            ip_address: geo.ip || null,
-            city: geo.city || null,
-            region: geo.region || null,
-            country: geo.country_name || null,
-            latitude: geo.latitude || null,
-            longitude: geo.longitude || null,
-            ...(referredByShareId ? { referred_by_share_id: referredByShareId } : {}),
-          }).eq("id", vid);
-        } else {
-          const { data: newViewer } = await supabase
-            .from("proposal_viewers" as any)
-            .insert({
-              proposal_id: proposal.id,
-              email,
-              name: name || null,
-              phone: phone || null,
-              device_type: deviceType,
-              user_agent: ua,
-              ip_address: geo.ip || null,
-              city: geo.city || null,
-              region: geo.region || null,
-              country: geo.country_name || null,
-              latitude: geo.latitude || null,
-              longitude: geo.longitude || null,
-              referred_by_share_id: referredByShareId,
-            })
-            .select("id")
-            .single();
-          vid = (newViewer as any)?.id ?? null;
+        if (rpcErr) {
+          console.warn("[ProposalView] register_proposal_viewer failed", rpcErr);
         }
 
-        if (vid && vid !== localVid) {
-          setViewerId(vid);
-          try { sessionStorage.setItem(`proposal_viewer_id_${slug}`, vid); } catch {}
+        const realVid = (vid as unknown as string) || null;
+        if (realVid && realVid !== localVid) {
+          setViewerId(realVid);
+          try { sessionStorage.setItem(`proposal_viewer_id_${slug}`, realVid); } catch {}
         }
-
-        // Update proposal counters · fire and forget
-        supabase.from("proposals").update({
-          views_count: (proposal.views_count || 0) + 1,
-          last_viewed_at: new Date().toISOString(),
-        }).eq("id", proposal.id).then(() => {}, () => {});
-
-        supabase.from("proposal_views").insert({
-          proposal_id: proposal.id,
-          device_type: deviceType,
-          user_agent: ua,
-        }).then(() => {}, () => {});
 
         emitLearningEvent({
           event_type: "proposal_opened",
@@ -219,11 +180,11 @@ export default function ProposalPublicView() {
           metadata: {
             viewer_email: email,
             viewer_name: name,
-            viewer_id: vid || localVid,
+            viewer_id: realVid || localVid,
             device_type: deviceType,
-            is_return_visit: !!existing,
           },
         });
+
       } catch (err) {
         // Tracking failure is non-fatal · client is already inside the proposal
         console.warn("[ProposalView] background tracking failed", err);
