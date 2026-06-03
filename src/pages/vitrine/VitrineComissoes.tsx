@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, Clock, TrendingUp, Download, Info, Calendar, ArrowDownToLine, Trophy } from "lucide-react";
+import { Wallet, Clock, TrendingUp, Download, Info, Calendar, ArrowDownToLine, Trophy, ChevronDown, ChevronRight, CreditCard, Banknote, Receipt } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
