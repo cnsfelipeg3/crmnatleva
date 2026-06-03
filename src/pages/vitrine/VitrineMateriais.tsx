@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Check, Link2, MessageCircle, Images } from "lucide-react";
+import { Copy, Check, Link2, MessageCircle, Images, Download, Video, FileText } from "lucide-react";
 import { useAffiliateProfile } from "@/components/vitrine/useAffiliateProfile";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function VitrineMateriais() {
   const { data: affiliate } = useAffiliateProfile();
@@ -15,6 +17,19 @@ export default function VitrineMateriais() {
   const ref = affiliate?.ref_code || "seu-codigo";
   const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://adm.natleva.com";
   const meuLink = `${baseUrl}/loja?ref=${ref}`;
+
+  const { data: materials } = useQuery({
+    queryKey: ["affiliate-materials"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("affiliate_materials")
+        .select("*")
+        .eq("is_active", true)
+        .order("display_order");
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   const textosProntos = [
     {
