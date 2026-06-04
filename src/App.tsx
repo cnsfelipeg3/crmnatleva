@@ -169,6 +169,12 @@ const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
 const PrateleiraVitrine = lazy(() => import("@/pages/prateleira/PrateleiraVitrine"));
 const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraVendaPublica"));
 const PrateleiraRetorno = lazy(() => import("@/pages/prateleira/PrateleiraRetorno"));
+const CheckoutLayout = lazy(() => import("@/components/checkout/CheckoutLayout"));
+const CheckoutResumo = lazy(() => import("@/pages/checkout/CheckoutResumo"));
+const CheckoutContato = lazy(() => import("@/pages/checkout/CheckoutContato"));
+const CheckoutPassageiros = lazy(() => import("@/pages/checkout/CheckoutPassageiros"));
+const CheckoutTermos = lazy(() => import("@/pages/checkout/CheckoutTermos"));
+const CheckoutPagamento = lazy(() => import("@/pages/checkout/CheckoutPagamento"));
 
 // Vitrine de Afiliados (área logada)
 const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
@@ -253,6 +259,8 @@ function AppRoutes() {
     location.pathname === "/cadastro-fornecedor" ||
     location.pathname === "/p" ||
     location.pathname.startsWith("/p/") ||
+    location.pathname.startsWith("/loja") ||
+    location.pathname.startsWith("/checkout/") ||
     location.pathname === "/unsubscribe";
 
   // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
