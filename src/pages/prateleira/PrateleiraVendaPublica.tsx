@@ -608,23 +608,28 @@ export default function PrateleiraVendaPublica() {
                   </>
                 )}
               </div>
-              <motion.button
-                onClick={handleCTA}
-                whileTap={{ scale: 0.96 }}
-                className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg shrink-0"
-              >
-                <motion.span
-                  aria-hidden
-                  className="absolute inset-0 pointer-events-none"
-                  animate={{ x: ["-120%", "120%"] }}
-                  transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
-                  style={{
-                    background:
-                      "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)",
-                  }}
-                />
-                <span className="relative">Garantir vaga</span>
-              </motion.button>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <motion.button
+                  onClick={handleReservar}
+                  whileTap={{ scale: 0.96 }}
+                  className="relative overflow-hidden h-12 px-5 rounded-xl bg-emerald-600 text-white font-semibold text-sm flex items-center gap-2 shadow-lg"
+                >
+                  <motion.span
+                    aria-hidden
+                    className="absolute inset-0 pointer-events-none"
+                    animate={{ x: ["-120%", "120%"] }}
+                    transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+                    style={{ background: "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)" }}
+                  />
+                  <span className="relative">Reservar</span>
+                </motion.button>
+                <button
+                  onClick={handleCTA}
+                  className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Falar no WhatsApp
+                </button>
+              </div>
             </div>
           );
         })()}
