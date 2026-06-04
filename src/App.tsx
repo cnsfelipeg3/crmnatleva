@@ -464,7 +464,7 @@ function AppRoutes() {
 
         {/* Loja pública NatLeva · qualquer pessoa pode navegar e comprar via WhatsApp da Nath */}
         <Route path="/loja" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
-        <Route path="/loja/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
+        <Route path="/loja/:slug/retorno" element={<Suspense fallback={<MinimalLoader />}><PrateleiraRetorno /></Suspense>} />
         {/* Aliases legados · mantidos pra não quebrar links já compartilhados */}
         <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
         <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
