@@ -524,6 +524,9 @@ export default function PrateleiraVendaPublica() {
             installmentsMax={p.installments_max}
             installmentsNoInterest={p.installments_no_interest}
             paymentTerms={p.payment_terms}
+            priceLabel={p.price_label}
+            paxMin={p.pax_min}
+            paxMax={p.pax_max}
             departureDate={p.departure_date}
             buyer={(() => {
               try {

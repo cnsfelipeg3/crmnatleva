@@ -7646,15 +7646,18 @@ export type Database = {
           is_entry_only: boolean
           paid_amount_cents: number | null
           paid_at: string | null
+          pax: number
           payment_intent: string | null
           product_id: string | null
           product_slug: string | null
           product_title: string | null
           raw_webhook: Json | null
           receipt_url: string | null
+          sale_id: string | null
           source: string
           status: string
           transaction_nsu: string | null
+          unit_price_cents: number | null
           updated_at: string
           webhook_token: string
         }
@@ -7676,15 +7679,18 @@ export type Database = {
           is_entry_only?: boolean
           paid_amount_cents?: number | null
           paid_at?: string | null
+          pax?: number
           payment_intent?: string | null
           product_id?: string | null
           product_slug?: string | null
           product_title?: string | null
           raw_webhook?: Json | null
           receipt_url?: string | null
+          sale_id?: string | null
           source?: string
           status?: string
           transaction_nsu?: string | null
+          unit_price_cents?: number | null
           updated_at?: string
           webhook_token?: string
         }
@@ -7706,15 +7712,18 @@ export type Database = {
           is_entry_only?: boolean
           paid_amount_cents?: number | null
           paid_at?: string | null
+          pax?: number
           payment_intent?: string | null
           product_id?: string | null
           product_slug?: string | null
           product_title?: string | null
           raw_webhook?: Json | null
           receipt_url?: string | null
+          sale_id?: string | null
           source?: string
           status?: string
           transaction_nsu?: string | null
+          unit_price_cents?: number | null
           updated_at?: string
           webhook_token?: string
         }
@@ -7724,6 +7733,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "experience_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prateleira_orders_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
