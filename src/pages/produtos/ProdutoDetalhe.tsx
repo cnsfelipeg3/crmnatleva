@@ -3,10 +3,11 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil, ExternalLink, Lock, Copy } from "lucide-react";
+import { ArrowLeft, Clock, MapPin, Check, X, Sparkles, Info, Pencil, ExternalLink, Lock, Copy, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import GeneratePaymentLinkDialog from "@/components/prateleira/GeneratePaymentLinkDialog";
 
 type Product = {
   id: string;
