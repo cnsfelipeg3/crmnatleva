@@ -416,6 +416,7 @@ function VirtualEmissionGroup({
   onMove,
   onRequestDelete,
   canDelete,
+  prateleiraSaleIds,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
