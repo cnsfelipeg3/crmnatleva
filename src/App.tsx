@@ -475,6 +475,16 @@ function AppRoutes() {
         <Route path="/loja/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
         <Route path="/loja/:slug/retorno" element={<Suspense fallback={<MinimalLoader />}><PrateleiraRetorno /></Suspense>} />
 
+        {/* Funil de checkout em etapas (convidado) */}
+        <Route path="/checkout/:orderId" element={<Suspense fallback={<MinimalLoader />}><CheckoutLayout /></Suspense>}>
+          <Route index element={<Navigate to="resumo" replace />} />
+          <Route path="resumo" element={<Suspense fallback={<MinimalLoader />}><CheckoutResumo /></Suspense>} />
+          <Route path="contato" element={<Suspense fallback={<MinimalLoader />}><CheckoutContato /></Suspense>} />
+          <Route path="passageiros" element={<Suspense fallback={<MinimalLoader />}><CheckoutPassageiros /></Suspense>} />
+          <Route path="termos" element={<Suspense fallback={<MinimalLoader />}><CheckoutTermos /></Suspense>} />
+          <Route path="pagamento" element={<Suspense fallback={<MinimalLoader />}><CheckoutPagamento /></Suspense>} />
+        </Route>
+
         {/* Aliases legados · mantidos pra não quebrar links já compartilhados */}
         <Route path="/p" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVitrine /></Suspense>} />
         <Route path="/p/:slug" element={<Suspense fallback={<MinimalLoader />}><PrateleiraVendaPublica /></Suspense>} />
