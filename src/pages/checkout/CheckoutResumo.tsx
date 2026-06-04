@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, Users, Minus, Plus, Zap, CreditCard, Wallet, Calendar, Plane, Hotel, Check, X, Star } from "lucide-react";
+import { Loader2, Users, Minus, Plus, Zap, CreditCard, Wallet, Calendar, Plane, Hotel, Check, X, Star, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { CheckoutCtx } from "@/components/checkout/CheckoutLayout";
 import {
   computeNatlevaPlan, formatMoneyBR, paymentPlanOptionsFromTerms,
+  paymentBalanceLabel, formatPayoffDate,
 } from "@/lib/prateleira/payment-plan";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,16 +60,54 @@ export default function CheckoutResumo() {
   const pixTotal = pixDisc > 0
     ? Math.round(groupTotal * (1 - pixDisc / 100) * 100) / 100
     : groupTotal;
+  const pixSaved = Math.max(0, Math.round((groupTotal - pixTotal) * 100) / 100);
+
+  const balanceMethod = (p.payment_terms?.balance_method as string | undefined) ?? "boleto";
+  const balanceInterest = Number(p.payment_terms?.balance_interest_percent) || 0;
+  const balanceLabel = paymentBalanceLabel(balanceMethod, balanceInterest);
+  const installmentsMaxCard = Number(p.installments_max) || 1;
+  const payoffStr = plan ? formatPayoffDate(plan.payoffDate) : null;
 
   const defaultIntent: Intent = (draft.payment_intent as Intent)
     || (hasEntry ? "entrada" : pixDisc > 0 ? "pix" : "cartao");
   const [intent, setIntent] = useState<Intent>(defaultIntent);
   const [saving, setSaving] = useState(false);
 
+  const cardSubtitle = installmentsMaxCard > 1
+    ? `Em até ${installmentsMaxCard}x de ${formatMoneyBR(groupTotal / installmentsMaxCard, currency)} sem juros no checkout`
+    : "À vista no cartão";
+
+  const entrySubtitle = hasEntry
+    ? `Entrada de ${formatMoneyBR(plan!.entryAmount, currency)} (${plan!.entryPercent}%) · saldo em ${plan!.installments}x de ${formatMoneyBR(plan!.installmentAmount, currency)} ${balanceLabel}`
+    : "";
+
   const options: Array<{ id: Intent; icon: typeof Zap; title: string; subtitle: string; amount: number; visible: boolean }> = [
-    { id: "pix", icon: Zap, title: pixDisc > 0 ? `Pix · ${pixDisc}% off` : "Pix à vista", subtitle: "Confirmação imediata", amount: pixTotal, visible: true },
-    { id: "cartao", icon: CreditCard, title: `Cartão${p.installments_max && p.installments_max > 1 ? ` · até ${p.installments_max}x` : ""}`, subtitle: "Parcelamento no checkout", amount: groupTotal, visible: true },
-    { id: "entrada", icon: Wallet, title: "Pagar entrada agora", subtitle: hasEntry ? `Saldo (${formatMoneyBR(plan!.balanceAmount, currency)}) combinado depois` : "", amount: hasEntry ? plan!.entryAmount : 0, visible: hasEntry },
+    {
+      id: "pix",
+      icon: Zap,
+      title: pixDisc > 0 ? `Pix à vista · ${pixDisc}% off` : "Pix à vista",
+      subtitle: pixDisc > 0
+        ? `Você economiza ${formatMoneyBR(pixSaved, currency)} · confirmação imediata`
+        : "Confirmação imediata · sem taxas",
+      amount: pixTotal,
+      visible: true,
+    },
+    {
+      id: "cartao",
+      icon: CreditCard,
+      title: installmentsMaxCard > 1 ? `Cartão · até ${installmentsMaxCard}x sem juros` : "Cartão à vista",
+      subtitle: cardSubtitle,
+      amount: groupTotal,
+      visible: true,
+    },
+    {
+      id: "entrada",
+      icon: Wallet,
+      title: "Entrada + saldo parcelado",
+      subtitle: entrySubtitle,
+      amount: hasEntry ? plan!.entryAmount : 0,
+      visible: hasEntry,
+    },
   ];
 
   const onContinue = async () => {
@@ -181,12 +220,58 @@ export default function CheckoutResumo() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium leading-tight">{o.title}</div>
-                  {o.subtitle && <div className="text-[11px] text-muted-foreground truncate">{o.subtitle}</div>}
+                  {o.subtitle && <div className="text-[11px] text-muted-foreground line-clamp-2">{o.subtitle}</div>}
                 </div>
                 <div className="text-sm font-semibold tabular-nums shrink-0">{formatMoneyBR(o.amount, currency)}</div>
               </button>
             );
           })}
+        </div>
+
+        {/* Detalhamento da forma escolhida */}
+        <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+            <Receipt className="w-4 h-4" /> Detalhes do pagamento
+          </div>
+
+          {intent === "pix" && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal, currency)}</span></li>
+              {pixDisc > 0 && (
+                <li className="flex justify-between text-emerald-700"><span>Desconto Pix ({pixDisc}%)</span><span className="font-semibold tabular-nums">− {formatMoneyBR(pixSaved, currency)}</span></li>
+              )}
+              <li className="flex justify-between border-t border-emerald-500/20 pt-2"><span className="font-medium">Você paga via Pix</span><span className="font-bold tabular-nums">{formatMoneyBR(pixTotal, currency)}</span></li>
+              <li className="text-[11px] text-muted-foreground">QR code gerado na próxima tela · confirmação automática em segundos.</li>
+            </ul>
+          )}
+
+          {intent === "cartao" && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal, currency)}</span></li>
+              {installmentsMaxCard > 1 ? (
+                <>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Parcelamento</span><span className="font-semibold tabular-nums">até {installmentsMaxCard}x sem juros</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Valor mínimo da parcela</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal / installmentsMaxCard, currency)}</span></li>
+                </>
+              ) : (
+                <li className="flex justify-between"><span className="text-muted-foreground">Forma</span><span className="font-semibold">À vista no cartão</span></li>
+              )}
+              <li className="text-[11px] text-muted-foreground">Você escolhe a bandeira e o nº de parcelas na tela da InfinitePay (Visa, Master, Elo, Amex, Hiper).</li>
+            </ul>
+          )}
+
+          {intent === "entrada" && hasEntry && plan && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.total, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Entrada agora ({plan.entryPercent}%)</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.entryAmount, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Saldo</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.balanceAmount, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Parcelamento do saldo</span><span className="font-semibold tabular-nums">{plan.installments}x de {formatMoneyBR(plan.installmentAmount, currency)} {balanceLabel}</span></li>
+              {payoffStr && (
+                <li className="flex justify-between"><span className="text-muted-foreground">Quitação até</span><span className="font-semibold tabular-nums">{payoffStr} · {plan.daysBefore} dias antes do embarque</span></li>
+              )}
+              <li className="text-[11px] text-muted-foreground">Entrada via Pix ou cartão agora · saldo no {balanceMethod === "cartao" ? "cartão" : balanceMethod === "ambos" ? "boleto ou cartão" : "boleto"} combinado depois com a nossa equipe.</li>
+            </ul>
+          )}
         </div>
       </Card>
 
