@@ -3,7 +3,7 @@ export const TERMS_TITLE = "Termos e Condições de Compra · NatLeva Travel";
 export const TERMS_MARKDOWN = `
 **Identificação**
 
-CONTRATADA: NatLeva Travel, inscrita no CNPJ sob nº [CNPJ], com sede em [ENDEREÇO], doravante "AGÊNCIA". CONTRATANTE: a pessoa que realiza a compra, identificada no checkout. A contratação dos serviços implica a aceitação integral destes Termos.
+CONTRATADA: NATLEVA VIAGENS LTDA - ME (nome fantasia NATLEVA), inscrita no CNPJ sob nº 52.910.644/0001-10, com sede em Curitiba/PR, fundada em 16/11/2023, atuante no ramo de Agências de viagens, doravante "AGÊNCIA". CONTRATANTE: a pessoa que realiza a compra, identificada no checkout. A contratação dos serviços implica a aceitação integral destes Termos.
 
 **1. Definições**
 
