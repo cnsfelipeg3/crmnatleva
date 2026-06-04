@@ -115,9 +115,10 @@ interface SaleRowProps {
   onMove: (saleId: string, toEmitted: boolean) => void;
   onRequestDelete: (sale: SaleRow) => void;
   canDelete: boolean;
+  fromPrateleira?: boolean;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete, fromPrateleira }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
