@@ -7632,10 +7632,12 @@ export type Database = {
           affiliate_ref: string | null
           amount_cents: number
           balance_cents: number | null
+          buyer_address: Json | null
           buyer_email: string | null
           buyer_name: string | null
           buyer_phone: string | null
           capture_method: string | null
+          checkout_step: string
           checkout_url: string | null
           commission_cents: number | null
           created_at: string
@@ -7646,6 +7648,7 @@ export type Database = {
           is_entry_only: boolean
           paid_amount_cents: number | null
           paid_at: string | null
+          passengers: Json | null
           pax: number
           payment_intent: string | null
           product_id: string | null
@@ -7656,6 +7659,9 @@ export type Database = {
           sale_id: string | null
           source: string
           status: string
+          terms_accepted_at: string | null
+          terms_accepted_ip: string | null
+          terms_version: string | null
           transaction_nsu: string | null
           unit_price_cents: number | null
           updated_at: string
@@ -7665,10 +7671,12 @@ export type Database = {
           affiliate_ref?: string | null
           amount_cents: number
           balance_cents?: number | null
+          buyer_address?: Json | null
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
           capture_method?: string | null
+          checkout_step?: string
           checkout_url?: string | null
           commission_cents?: number | null
           created_at?: string
@@ -7679,6 +7687,7 @@ export type Database = {
           is_entry_only?: boolean
           paid_amount_cents?: number | null
           paid_at?: string | null
+          passengers?: Json | null
           pax?: number
           payment_intent?: string | null
           product_id?: string | null
@@ -7689,6 +7698,9 @@ export type Database = {
           sale_id?: string | null
           source?: string
           status?: string
+          terms_accepted_at?: string | null
+          terms_accepted_ip?: string | null
+          terms_version?: string | null
           transaction_nsu?: string | null
           unit_price_cents?: number | null
           updated_at?: string
@@ -7698,10 +7710,12 @@ export type Database = {
           affiliate_ref?: string | null
           amount_cents?: number
           balance_cents?: number | null
+          buyer_address?: Json | null
           buyer_email?: string | null
           buyer_name?: string | null
           buyer_phone?: string | null
           capture_method?: string | null
+          checkout_step?: string
           checkout_url?: string | null
           commission_cents?: number | null
           created_at?: string
@@ -7712,6 +7726,7 @@ export type Database = {
           is_entry_only?: boolean
           paid_amount_cents?: number | null
           paid_at?: string | null
+          passengers?: Json | null
           pax?: number
           payment_intent?: string | null
           product_id?: string | null
@@ -7722,6 +7737,9 @@ export type Database = {
           sale_id?: string | null
           source?: string
           status?: string
+          terms_accepted_at?: string | null
+          terms_accepted_ip?: string | null
+          terms_version?: string | null
           transaction_nsu?: string | null
           unit_price_cents?: number | null
           updated_at?: string
