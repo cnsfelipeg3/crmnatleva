@@ -393,6 +393,7 @@ interface VirtualEmissionGroupProps {
   onMove: (saleId: string, toEmitted: boolean) => void;
   onRequestDelete: (sale: SaleRow) => void;
   canDelete: boolean;
+  prateleiraSaleIds: Set<string>;
 }
 
 function VirtualEmissionGroup({
