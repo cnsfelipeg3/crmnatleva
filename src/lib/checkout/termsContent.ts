@@ -47,5 +47,5 @@ Os dados pessoais coletados são utilizados exclusivamente para processar a comp
 
 **11. Disposições gerais e aceite**
 
-Estes Termos podem ser atualizados; a versão aplicável é a vigente na data da contratação, registrada no aceite. Ao marcar "Li e aceito os Termos e Condições", o CONTRATANTE declara concordância integral, registrando-se data, versão e IP do aceite. Fica eleito o foro da comarca de [CIDADE/UF], salvo o foro de domicílio do consumidor quando assim exigido.
+Estes Termos podem ser atualizados; a versão aplicável é a vigente na data da contratação, registrada no aceite. Ao marcar "Li e aceito os Termos e Condições", o CONTRATANTE declara concordância integral, registrando-se data, versão e IP do aceite. Fica eleito o foro da comarca de Curitiba/PR, salvo o foro de domicílio do consumidor quando assim exigido.
 `.trim();
