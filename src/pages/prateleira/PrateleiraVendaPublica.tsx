@@ -15,7 +15,7 @@ import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
 import PublicFooter from "@/components/prateleira/PublicFooter";
-import CheckoutPurchaseBlock from "@/components/prateleira/CheckoutPurchaseBlock";
+import ReservarBlock from "@/components/prateleira/ReservarBlock";
 import { getStoredRef } from "@/lib/affiliateTracking";
 import GalleryModal from "@/components/prateleira/GalleryModal";
 import { format, parseISO } from "date-fns";
@@ -334,6 +334,21 @@ export default function PrateleiraVendaPublica() {
     window.open(buildWhatsAppLink(targetWhatsApp, msg), "_blank");
   };
 
+  const handleReservar = async () => {
+    try {
+      trackerRef.current?.trackClick("cta_reservar_mobile", "offer");
+      const { data, error } = await supabase.functions.invoke("checkout-draft", {
+        body: { action: "create", product_id: p.id, source: "catalogo_publico" },
+      });
+      if (error) throw error;
+      const orderId = (data as { order_id?: string })?.order_id;
+      if (!orderId) throw new Error("Pedido não criado");
+      navigate(`/checkout/${orderId}/resumo`);
+    } catch (e: any) {
+      toast.error("Não foi possível iniciar a reserva", { description: e?.message });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero cinematográfico */}
@@ -512,34 +527,15 @@ export default function PrateleiraVendaPublica() {
 
         {/* Sticky offer stack */}
         <div className="lg:col-span-2 space-y-4" data-section="offer">
-          <CheckoutPurchaseBlock
+          <ReservarBlock
             productId={p.id}
-            productSlug={p.slug}
             productTitle={p.title}
-            priceFrom={p.price_from}
-            pricePromo={p.price_promo}
-            isPromo={!!p.is_promo}
-            currency={p.currency || "BRL"}
-            pixDiscountPercent={p.pix_discount_percent}
-            installmentsMax={p.installments_max}
-            installmentsNoInterest={p.installments_no_interest}
-            paymentTerms={p.payment_terms}
-            priceLabel={p.price_label}
-            paxMin={p.pax_min}
-            paxMax={p.pax_max}
-            departureDate={p.departure_date}
-            buyer={(() => {
-              try {
-                const email = sessionStorage.getItem(`prateleira_viewer_${slug}`) || undefined;
-                return email ? { email } : undefined;
-              } catch { return undefined; }
-            })()}
             affiliateRef={(() => {
               try { return getStoredRef()?.code ?? null; } catch { return null; }
             })()}
             source="catalogo_publico"
-            onBeforeRedirect={(intent) => {
-              try { trackerRef.current?.trackClick(`cta_comprar_${intent}`, "offer"); } catch {}
+            onBeforeRedirect={() => {
+              try { trackerRef.current?.trackClick("cta_reservar", "offer"); } catch {}
             }}
           />
           <OfferStack
@@ -612,23 +608,28 @@ export default function PrateleiraVendaPublica() {
                   </>
                 )}
               </div>
-              <motion.button
-                onClick={handleCTA}
-                whileTap={{ scale: 0.96 }}
-                className="relative overflow-hidden h-12 px-5 rounded-xl bg-foreground text-background font-semibold text-sm flex items-center gap-2 shadow-lg shrink-0"
-              >
-                <motion.span
-                  aria-hidden
-                  className="absolute inset-0 pointer-events-none"
-                  animate={{ x: ["-120%", "120%"] }}
-                  transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
-                  style={{
-                    background:
-                      "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)",
-                  }}
-                />
-                <span className="relative">Garantir vaga</span>
-              </motion.button>
+              <div className="flex flex-col gap-1.5 shrink-0">
+                <motion.button
+                  onClick={handleReservar}
+                  whileTap={{ scale: 0.96 }}
+                  className="relative overflow-hidden h-12 px-5 rounded-xl bg-emerald-600 text-white font-semibold text-sm flex items-center gap-2 shadow-lg"
+                >
+                  <motion.span
+                    aria-hidden
+                    className="absolute inset-0 pointer-events-none"
+                    animate={{ x: ["-120%", "120%"] }}
+                    transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
+                    style={{ background: "linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.35) 50%, transparent 60%)" }}
+                  />
+                  <span className="relative">Reservar</span>
+                </motion.button>
+                <button
+                  onClick={handleCTA}
+                  className="text-[10px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Falar no WhatsApp
+                </button>
+              </div>
             </div>
           );
         })()}
