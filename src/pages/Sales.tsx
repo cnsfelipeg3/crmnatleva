@@ -1046,6 +1046,7 @@ export default function Sales() {
                     onMove={handleMoveSale}
                     onRequestDelete={setSaleToDelete}
                     canDelete={canDelete}
+                    prateleiraSaleIds={prateleiraSaleIds}
                   />
                 </div>
             </Card>}
