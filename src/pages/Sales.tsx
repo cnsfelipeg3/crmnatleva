@@ -115,9 +115,10 @@ interface SaleRowProps {
   onMove: (saleId: string, toEmitted: boolean) => void;
   onRequestDelete: (sale: SaleRow) => void;
   canDelete: boolean;
+  fromPrateleira?: boolean;
 }
 
-const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete }: SaleRowProps) {
+const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, externalSeller, productCatalog, onNavigate, onNavigateClient, onDeleted, onDragStart, onMove, onRequestDelete, canDelete, fromPrateleira }: SaleRowProps) {
   const o = routeCode(sale.origin_city, sale.origin_iata);
   const d = routeCode(sale.destination_city, sale.destination_iata);
   const routeEmpty = !o && !d;
@@ -223,6 +224,17 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
       </td>
       <td className="px-3 py-4">
         <div className="flex items-center gap-1.5 min-w-0">
+          {fromPrateleira && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="relative flex h-2.5 w-2.5 shrink-0" aria-label="Compra automática pela prateleira">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Compra automática · prateleira NatLeva</TooltipContent>
+            </Tooltip>
+          )}
           <p className="font-medium text-foreground truncate">{sale.name}</p>
           {sale.client_id && (
             <button
@@ -381,6 +393,7 @@ interface VirtualEmissionGroupProps {
   onMove: (saleId: string, toEmitted: boolean) => void;
   onRequestDelete: (sale: SaleRow) => void;
   canDelete: boolean;
+  prateleiraSaleIds: Set<string>;
 }
 
 function VirtualEmissionGroup({
@@ -403,6 +416,7 @@ function VirtualEmissionGroup({
   onMove,
   onRequestDelete,
   canDelete,
+  prateleiraSaleIds,
 }: VirtualEmissionGroupProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rowVirtualizer = useVirtualizer({
@@ -489,6 +503,7 @@ function VirtualEmissionGroup({
                         onMove={onMove}
                         onRequestDelete={onRequestDelete}
                         canDelete={canDelete}
+                        fromPrateleira={prateleiraSaleIds.has(sale.id)}
                       />
                     );
                   })}
@@ -560,6 +575,8 @@ export default function Sales() {
 
   const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
 
+  const [prateleiraSaleIds, setPrateleiraSaleIds] = useState<Set<string>>(new Set());
+
   const loadSales = useCallback(async () => {
     const eqFilters = !canViewAll && sellerId ? { seller_id: sellerId } : undefined;
     try {
@@ -569,6 +586,17 @@ export default function Sales() {
         { order: { column: "created_at", ascending: false }, eqFilters },
       );
       setSales(data as SaleRow[]);
+      // Marca quais vendas vieram de uma compra automática da prateleira
+      try {
+        const { data: orders } = await (supabase as any)
+          .from("prateleira_orders")
+          .select("sale_id")
+          .not("sale_id", "is", null);
+        const set = new Set<string>((orders || []).map((o: any) => o.sale_id).filter(Boolean));
+        setPrateleiraSaleIds(set);
+      } catch (e) {
+        console.warn("prateleira_orders lookup falhou", e);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -877,7 +905,15 @@ export default function Sales() {
                   {/* Linha 1 · nome + valor */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground text-sm leading-tight truncate">{sale.name}</p>
+                      <p className="font-medium text-foreground text-sm leading-tight truncate flex items-center gap-1.5">
+                        {prateleiraSaleIds.has(sale.id) && (
+                          <span className="relative flex h-2 w-2 shrink-0" title="Compra automática · prateleira">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-60" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-destructive" />
+                          </span>
+                        )}
+                        <span className="truncate">{sale.name}</span>
+                      </p>
                       <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
                         {sale.display_id} · {formatDateBR(sale.close_date)}
                       </p>
@@ -996,6 +1032,7 @@ export default function Sales() {
                     onMove={handleMoveSale}
                     onRequestDelete={setSaleToDelete}
                     canDelete={canDelete}
+                    prateleiraSaleIds={prateleiraSaleIds}
                   />
                   <VirtualEmissionGroup
                     id="group:emitted"
@@ -1017,6 +1054,7 @@ export default function Sales() {
                     onMove={handleMoveSale}
                     onRequestDelete={setSaleToDelete}
                     canDelete={canDelete}
+                    prateleiraSaleIds={prateleiraSaleIds}
                   />
                 </div>
             </Card>}
