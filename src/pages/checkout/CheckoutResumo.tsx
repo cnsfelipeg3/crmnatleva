@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Loader2, Users, Minus, Plus, Zap, CreditCard, Wallet, Calendar, Plane, Hotel, Check, X, Star } from "lucide-react";
+import { Loader2, Users, Minus, Plus, Zap, CreditCard, Wallet, Calendar, Plane, Hotel, Check, X, Star, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { CheckoutCtx } from "@/components/checkout/CheckoutLayout";
 import {
   computeNatlevaPlan, formatMoneyBR, paymentPlanOptionsFromTerms,
+  paymentBalanceLabel, formatPayoffDate,
 } from "@/lib/prateleira/payment-plan";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
