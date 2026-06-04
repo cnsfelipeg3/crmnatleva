@@ -532,7 +532,7 @@ export default function PrateleiraVendaPublica() {
               } catch { return undefined; }
             })()}
             affiliateRef={(() => {
-              try { return getStoredRef()?.ref ?? null; } catch { return null; }
+              try { return getStoredRef()?.code ?? null; } catch { return null; }
             })()}
             source="catalogo_publico"
             onBeforeRedirect={(intent) => {
