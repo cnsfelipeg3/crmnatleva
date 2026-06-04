@@ -109,11 +109,28 @@ export default function ProdutoDetalhe() {
               <Lock className="w-3 h-3" /> Sem link de emissão cadastrado
             </span>
           )}
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPayLinkOpen(true)}
+            className="border-emerald-500/40 text-emerald-700 hover:bg-emerald-500/10"
+          >
+            <LinkIcon className="w-3.5 h-3.5 mr-1.5" /> Gerar link de pagamento
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate(`/produtos/${p.slug}/editar`)}>
             <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
           </Button>
         </div>
       </div>
+
+      <GeneratePaymentLinkDialog
+        open={payLinkOpen}
+        onOpenChange={setPayLinkOpen}
+        productId={p.id}
+        productTitle={p.title}
+        hasEntryPlan={!!(p as any).payment_terms}
+      />
+
 
       {/* Hero */}
       <div className="max-w-6xl mx-auto px-6 pt-8">
