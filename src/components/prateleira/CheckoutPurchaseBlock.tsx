@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { CreditCard, Zap, Wallet, Loader2, ShieldCheck } from "lucide-react";
+import { CreditCard, Zap, Wallet, Loader2, ShieldCheck, Minus, Plus, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -25,11 +25,21 @@ interface CheckoutPurchaseBlockProps {
   installmentsMax?: number | null;
   installmentsNoInterest?: number | null;
   paymentTerms?: PublicPaymentTerms | null;
+  priceLabel?: string | null;
+  paxMin?: number | null;
+  paxMax?: number | null;
   departureDate?: string | null;
   buyer?: { name?: string; email?: string; phone?: string };
   affiliateRef?: string | null;
   source?: "catalogo_publico" | "link_avulso";
   onBeforeRedirect?: (intent: Intent) => void;
+}
+
+function isPerPersonLabel(label?: string | null): boolean {
+  if (label === null || label === undefined) return true;
+  const s = String(label).trim();
+  if (!s) return true;
+  return /pessoa/i.test(s);
 }
 
 export default function CheckoutPurchaseBlock({
@@ -42,39 +52,59 @@ export default function CheckoutPurchaseBlock({
   pixDiscountPercent,
   installmentsMax,
   paymentTerms,
+  priceLabel,
+  paxMin,
+  paxMax,
   departureDate,
   buyer,
   affiliateRef,
   source = "catalogo_publico",
   onBeforeRedirect,
 }: CheckoutPurchaseBlockProps) {
-  const base = useMemo(() => {
+  const unit = useMemo(() => {
     const v = isPromo && pricePromo ? Number(pricePromo) : Number(priceFrom);
     return Number.isFinite(v) && v > 0 ? v : 0;
   }, [isPromo, priceFrom, pricePromo]);
 
+  const perPerson = isPerPersonLabel(priceLabel);
+  const minPax = Math.max(1, Number(paxMin) || 1);
+  const maxPax = (() => {
+    const v = Number(paxMax);
+    return Number.isFinite(v) && v > 0 ? v : Math.max(minPax, 20);
+  })();
+
+  const [pax, setPax] = useState<number>(minPax);
+  const paxMultiplier = perPerson ? pax : 1;
+  const groupTotal = useMemo(
+    () => Math.round(unit * paxMultiplier * 100) / 100,
+    [unit, paxMultiplier],
+  );
+
   const plan = useMemo(
     () =>
       computeNatlevaPlan(
-        base,
+        groupTotal,
         departureDate,
         paymentPlanOptionsFromTerms(paymentTerms ?? undefined, {
           currency: currency ?? "BRL",
           maxInstallments: installmentsMax ?? null,
         }),
       ),
-    [base, departureDate, paymentTerms, currency, installmentsMax],
+    [groupTotal, departureDate, paymentTerms, currency, installmentsMax],
   );
 
   const hasEntry = !!plan && plan.entryAmount > 0 && plan.entryAmount < plan.total;
   const pixDisc = Number(pixDiscountPercent) || 0;
-  const pixTotal = pixDisc > 0 ? Math.round(base * (1 - pixDisc / 100) * 100) / 100 : base;
+  const pixTotal = pixDisc > 0 ? Math.round(groupTotal * (1 - pixDisc / 100) * 100) / 100 : groupTotal;
 
   const defaultIntent: Intent = hasEntry ? "entrada" : pixDisc > 0 ? "pix" : "cartao";
   const [intent, setIntent] = useState<Intent>(defaultIntent);
   const [loading, setLoading] = useState(false);
 
-  if (!base) return null;
+  if (!unit) return null;
+
+  const decPax = () => setPax((p) => Math.max(minPax, p - 1));
+  const incPax = () => setPax((p) => Math.min(maxPax, p + 1));
 
   const handlePay = async () => {
     setLoading(true);
@@ -84,6 +114,7 @@ export default function CheckoutPurchaseBlock({
         body: {
           product_id: productId,
           payment_intent: intent,
+          pax: perPerson ? pax : undefined,
           buyer,
           affiliate_ref: affiliateRef ?? undefined,
           source,
@@ -122,7 +153,7 @@ export default function CheckoutPurchaseBlock({
       icon: CreditCard,
       title: `Cartão${installmentsMax && installmentsMax > 1 ? ` · até ${installmentsMax}x` : ""}`,
       subtitle: "Parcelamento escolhido no checkout",
-      amount: base,
+      amount: groupTotal,
       visible: true,
     },
     {
@@ -146,6 +177,48 @@ export default function CheckoutPurchaseBlock({
       <p className="text-[12px] text-muted-foreground mb-4">
         Pagamento processado pela InfinitePay. Você escolhe Pix ou cartão na próxima tela.
       </p>
+
+      {perPerson && (
+        <div className="mb-4 rounded-xl border border-border bg-background/50 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm">
+              <Users className="w-4 h-4 text-emerald-600" />
+              <span className="font-medium">Passageiros</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={decPax}
+                disabled={pax <= minPax || loading}
+                className="w-8 h-8 rounded-lg border border-border flex items-center justify-center disabled:opacity-40 hover:border-emerald-500/50"
+                aria-label="Diminuir passageiros"
+              >
+                <Minus className="w-4 h-4" />
+              </button>
+              <div className="w-8 text-center font-semibold tabular-nums">{pax}</div>
+              <button
+                type="button"
+                onClick={incPax}
+                disabled={pax >= maxPax || loading}
+                className="w-8 h-8 rounded-lg border border-border flex items-center justify-center disabled:opacity-40 hover:border-emerald-500/50"
+                aria-label="Aumentar passageiros"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          <div className="mt-2 text-[11px] text-muted-foreground">
+            {formatMoneyBR(unit, currency ?? "BRL")} por pessoa · total{" "}
+            <span className="font-semibold text-foreground">
+              {formatMoneyBR(groupTotal, currency ?? "BRL")}
+            </span>{" "}
+            para {pax} {pax === 1 ? "pessoa" : "pessoas"}
+            {(minPax > 1 || maxPax < 20) && (
+              <> · mín {minPax}, máx {maxPax}</>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2 mb-4">
         {options
@@ -198,7 +271,7 @@ export default function CheckoutPurchaseBlock({
         ) : (
           <>
             Pagar {formatMoneyBR(
-              options.find((o) => o.id === intent)?.amount ?? base,
+              options.find((o) => o.id === intent)?.amount ?? groupTotal,
               currency ?? "BRL",
             )}
           </>
@@ -206,6 +279,7 @@ export default function CheckoutPurchaseBlock({
       </motion.button>
       <div className="text-[10px] text-center text-muted-foreground mt-2 truncate">
         {productTitle}
+        {perPerson && pax > 1 ? ` · ${pax} passageiros` : ""}
       </div>
     </Card>
   );
