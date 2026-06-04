@@ -40,6 +40,8 @@ export default function ProdutoDetalhe() {
   const [p, setP] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImg, setActiveImg] = useState(0);
+  const [payLinkOpen, setPayLinkOpen] = useState(false);
+
 
   useEffect(() => {
     if (!slug) return;
