@@ -224,6 +224,17 @@ const SaleRowComponent = memo(function SaleRowComponent({ sale, seller, external
       </td>
       <td className="px-3 py-4">
         <div className="flex items-center gap-1.5 min-w-0">
+          {fromPrateleira && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="relative flex h-2.5 w-2.5 shrink-0" aria-label="Compra automática pela prateleira">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-60" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive" />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>Compra automática · prateleira NatLeva</TooltipContent>
+            </Tooltip>
+          )}
           <p className="font-medium text-foreground truncate">{sale.name}</p>
           {sale.client_id && (
             <button
