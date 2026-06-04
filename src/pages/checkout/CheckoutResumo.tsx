@@ -60,16 +60,54 @@ export default function CheckoutResumo() {
   const pixTotal = pixDisc > 0
     ? Math.round(groupTotal * (1 - pixDisc / 100) * 100) / 100
     : groupTotal;
+  const pixSaved = Math.max(0, Math.round((groupTotal - pixTotal) * 100) / 100);
+
+  const balanceMethod = (p.payment_terms?.balance_method as string | undefined) ?? "boleto";
+  const balanceInterest = Number(p.payment_terms?.balance_interest_percent) || 0;
+  const balanceLabel = paymentBalanceLabel(balanceMethod, balanceInterest);
+  const installmentsMaxCard = Number(p.installments_max) || 1;
+  const payoffStr = plan ? formatPayoffDate(plan.payoffDate) : null;
 
   const defaultIntent: Intent = (draft.payment_intent as Intent)
     || (hasEntry ? "entrada" : pixDisc > 0 ? "pix" : "cartao");
   const [intent, setIntent] = useState<Intent>(defaultIntent);
   const [saving, setSaving] = useState(false);
 
+  const cardSubtitle = installmentsMaxCard > 1
+    ? `Em até ${installmentsMaxCard}x de ${formatMoneyBR(groupTotal / installmentsMaxCard, currency)} sem juros no checkout`
+    : "À vista no cartão";
+
+  const entrySubtitle = hasEntry
+    ? `Entrada de ${formatMoneyBR(plan!.entryAmount, currency)} (${plan!.entryPercent}%) · saldo em ${plan!.installments}x de ${formatMoneyBR(plan!.installmentAmount, currency)} ${balanceLabel}`
+    : "";
+
   const options: Array<{ id: Intent; icon: typeof Zap; title: string; subtitle: string; amount: number; visible: boolean }> = [
-    { id: "pix", icon: Zap, title: pixDisc > 0 ? `Pix · ${pixDisc}% off` : "Pix à vista", subtitle: "Confirmação imediata", amount: pixTotal, visible: true },
-    { id: "cartao", icon: CreditCard, title: `Cartão${p.installments_max && p.installments_max > 1 ? ` · até ${p.installments_max}x` : ""}`, subtitle: "Parcelamento no checkout", amount: groupTotal, visible: true },
-    { id: "entrada", icon: Wallet, title: "Pagar entrada agora", subtitle: hasEntry ? `Saldo (${formatMoneyBR(plan!.balanceAmount, currency)}) combinado depois` : "", amount: hasEntry ? plan!.entryAmount : 0, visible: hasEntry },
+    {
+      id: "pix",
+      icon: Zap,
+      title: pixDisc > 0 ? `Pix à vista · ${pixDisc}% off` : "Pix à vista",
+      subtitle: pixDisc > 0
+        ? `Você economiza ${formatMoneyBR(pixSaved, currency)} · confirmação imediata`
+        : "Confirmação imediata · sem taxas",
+      amount: pixTotal,
+      visible: true,
+    },
+    {
+      id: "cartao",
+      icon: CreditCard,
+      title: installmentsMaxCard > 1 ? `Cartão · até ${installmentsMaxCard}x sem juros` : "Cartão à vista",
+      subtitle: cardSubtitle,
+      amount: groupTotal,
+      visible: true,
+    },
+    {
+      id: "entrada",
+      icon: Wallet,
+      title: "Entrada + saldo parcelado",
+      subtitle: entrySubtitle,
+      amount: hasEntry ? plan!.entryAmount : 0,
+      visible: hasEntry,
+    },
   ];
 
   const onContinue = async () => {
