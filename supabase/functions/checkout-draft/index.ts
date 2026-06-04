@@ -59,7 +59,8 @@ function summarizeOrder(order: any, product: any) {
           pax_min: product.pax_min,
           pax_max: product.pax_max,
           departure_date: product.departure_date,
-          destination_city: product.destination_city,
+          destination: product.destination,
+          destination_country: product.destination_country,
         }
       : null,
     pax: order.pax,
