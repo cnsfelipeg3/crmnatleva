@@ -575,6 +575,8 @@ export default function Sales() {
 
   const { canViewAll, sellerId, loading: scopeLoading } = useSalesScope();
 
+  const [prateleiraSaleIds, setPrateleiraSaleIds] = useState<Set<string>>(new Set());
+
   const loadSales = useCallback(async () => {
     const eqFilters = !canViewAll && sellerId ? { seller_id: sellerId } : undefined;
     try {
@@ -584,6 +586,17 @@ export default function Sales() {
         { order: { column: "created_at", ascending: false }, eqFilters },
       );
       setSales(data as SaleRow[]);
+      // Marca quais vendas vieram de uma compra automática da prateleira
+      try {
+        const { data: orders } = await (supabase as any)
+          .from("prateleira_orders")
+          .select("sale_id")
+          .not("sale_id", "is", null);
+        const set = new Set<string>((orders || []).map((o: any) => o.sale_id).filter(Boolean));
+        setPrateleiraSaleIds(set);
+      } catch (e) {
+        console.warn("prateleira_orders lookup falhou", e);
+      }
     } catch (err) {
       console.error(err);
     } finally {
