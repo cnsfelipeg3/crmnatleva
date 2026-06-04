@@ -16,8 +16,14 @@ export default function VitrineLogin() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) navigate("/vitrine", { replace: true });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return;
+      const { data } = await supabase
+        .from("affiliates")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+      if (data) navigate("/vitrine", { replace: true });
     });
   }, [navigate]);
 
