@@ -220,12 +220,58 @@ export default function CheckoutResumo() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium leading-tight">{o.title}</div>
-                  {o.subtitle && <div className="text-[11px] text-muted-foreground truncate">{o.subtitle}</div>}
+                  {o.subtitle && <div className="text-[11px] text-muted-foreground line-clamp-2">{o.subtitle}</div>}
                 </div>
                 <div className="text-sm font-semibold tabular-nums shrink-0">{formatMoneyBR(o.amount, currency)}</div>
               </button>
             );
           })}
+        </div>
+
+        {/* Detalhamento da forma escolhida */}
+        <div className="mt-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-2 text-sm">
+          <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400 font-medium">
+            <Receipt className="w-4 h-4" /> Detalhes do pagamento
+          </div>
+
+          {intent === "pix" && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal, currency)}</span></li>
+              {pixDisc > 0 && (
+                <li className="flex justify-between text-emerald-700"><span>Desconto Pix ({pixDisc}%)</span><span className="font-semibold tabular-nums">− {formatMoneyBR(pixSaved, currency)}</span></li>
+              )}
+              <li className="flex justify-between border-t border-emerald-500/20 pt-2"><span className="font-medium">Você paga via Pix</span><span className="font-bold tabular-nums">{formatMoneyBR(pixTotal, currency)}</span></li>
+              <li className="text-[11px] text-muted-foreground">QR code gerado na próxima tela · confirmação automática em segundos.</li>
+            </ul>
+          )}
+
+          {intent === "cartao" && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal, currency)}</span></li>
+              {installmentsMaxCard > 1 ? (
+                <>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Parcelamento</span><span className="font-semibold tabular-nums">até {installmentsMaxCard}x sem juros</span></li>
+                  <li className="flex justify-between"><span className="text-muted-foreground">Valor mínimo da parcela</span><span className="font-semibold tabular-nums">{formatMoneyBR(groupTotal / installmentsMaxCard, currency)}</span></li>
+                </>
+              ) : (
+                <li className="flex justify-between"><span className="text-muted-foreground">Forma</span><span className="font-semibold">À vista no cartão</span></li>
+              )}
+              <li className="text-[11px] text-muted-foreground">Você escolhe a bandeira e o nº de parcelas na tela da InfinitePay (Visa, Master, Elo, Amex, Hiper).</li>
+            </ul>
+          )}
+
+          {intent === "entrada" && hasEntry && plan && (
+            <ul className="space-y-1 text-[13px]">
+              <li className="flex justify-between"><span className="text-muted-foreground">Valor total</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.total, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Entrada agora ({plan.entryPercent}%)</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.entryAmount, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Saldo</span><span className="font-semibold tabular-nums">{formatMoneyBR(plan.balanceAmount, currency)}</span></li>
+              <li className="flex justify-between"><span className="text-muted-foreground">Parcelamento do saldo</span><span className="font-semibold tabular-nums">{plan.installments}x de {formatMoneyBR(plan.installmentAmount, currency)} {balanceLabel}</span></li>
+              {payoffStr && (
+                <li className="flex justify-between"><span className="text-muted-foreground">Quitação até</span><span className="font-semibold tabular-nums">{payoffStr} · {plan.daysBefore} dias antes do embarque</span></li>
+              )}
+              <li className="text-[11px] text-muted-foreground">Entrada via Pix ou cartão agora · saldo no {balanceMethod === "cartao" ? "cartão" : balanceMethod === "ambos" ? "boleto ou cartão" : "boleto"} combinado depois com a nossa equipe.</li>
+            </ul>
+          )}
         </div>
       </Card>
 
