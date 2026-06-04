@@ -168,6 +168,7 @@ const ProdutoDetalhe = lazy(() => import("@/pages/produtos/ProdutoDetalhe"));
 const ProdutoEditor = lazy(() => import("@/pages/produtos/ProdutoEditor"));
 const PrateleiraVitrine = lazy(() => import("@/pages/prateleira/PrateleiraVitrine"));
 const PrateleiraVendaPublica = lazy(() => import("@/pages/prateleira/PrateleiraVendaPublica"));
+const PrateleiraRetorno = lazy(() => import("@/pages/prateleira/PrateleiraRetorno"));
 
 // Vitrine de Afiliados (área logada)
 const VitrineLogin = lazy(() => import("@/pages/vitrine/VitrineLogin"));
