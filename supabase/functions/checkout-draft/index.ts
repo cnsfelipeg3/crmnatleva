@@ -33,7 +33,7 @@ async function loadProduct(supabase: ReturnType<typeof createClient>, productId:
   return supabase
     .from("experience_products")
     .select(
-      "id, slug, title, is_active, sale_page_enabled, price_from, price_promo, is_promo, pix_discount_percent, payment_terms, currency, commission_per_sale, price_label, pax_min, pax_max, departure_date, destination_city, destination_iata",
+      "id, slug, title, is_active, sale_page_enabled, price_from, price_promo, is_promo, pix_discount_percent, payment_terms, currency, commission_per_sale, price_label, pax_min, pax_max, departure_date, destination, destination_country, destination_iata",
     )
     .eq("id", productId)
     .maybeSingle();
@@ -59,7 +59,8 @@ function summarizeOrder(order: any, product: any) {
           pax_min: product.pax_min,
           pax_max: product.pax_max,
           departure_date: product.departure_date,
-          destination_city: product.destination_city,
+          destination: product.destination,
+          destination_country: product.destination_country,
         }
       : null,
     pax: order.pax,
