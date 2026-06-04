@@ -334,6 +334,21 @@ export default function PrateleiraVendaPublica() {
     window.open(buildWhatsAppLink(targetWhatsApp, msg), "_blank");
   };
 
+  const handleReservar = async () => {
+    try {
+      trackerRef.current?.trackClick("cta_reservar_mobile", "offer");
+      const { data, error } = await supabase.functions.invoke("checkout-draft", {
+        body: { action: "create", product_id: p.id, source: "catalogo_publico" },
+      });
+      if (error) throw error;
+      const orderId = (data as { order_id?: string })?.order_id;
+      if (!orderId) throw new Error("Pedido não criado");
+      navigate(`/checkout/${orderId}/resumo`);
+    } catch (e: any) {
+      toast.error("Não foi possível iniciar a reserva", { description: e?.message });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Hero cinematográfico */}
