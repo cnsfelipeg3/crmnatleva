@@ -15,6 +15,8 @@ import CinematicHero from "@/components/prateleira/CinematicHero";
 import OfferStack from "@/components/prateleira/OfferStack";
 import SalesTriggersBlock from "@/components/prateleira/SalesTriggersBlock";
 import PublicFooter from "@/components/prateleira/PublicFooter";
+import CheckoutPurchaseBlock from "@/components/prateleira/CheckoutPurchaseBlock";
+import { getStoredRef } from "@/lib/affiliateTracking";
 import GalleryModal from "@/components/prateleira/GalleryModal";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -509,7 +511,34 @@ export default function PrateleiraVendaPublica() {
         </div>
 
         {/* Sticky offer stack */}
-        <div className="lg:col-span-2" data-section="offer">
+        <div className="lg:col-span-2 space-y-4" data-section="offer">
+          <CheckoutPurchaseBlock
+            productId={p.id}
+            productSlug={p.slug}
+            productTitle={p.title}
+            priceFrom={p.price_from}
+            pricePromo={p.price_promo}
+            isPromo={!!p.is_promo}
+            currency={p.currency || "BRL"}
+            pixDiscountPercent={p.pix_discount_percent}
+            installmentsMax={p.installments_max}
+            installmentsNoInterest={p.installments_no_interest}
+            paymentTerms={p.payment_terms}
+            departureDate={p.departure_date}
+            buyer={(() => {
+              try {
+                const email = sessionStorage.getItem(`prateleira_viewer_${slug}`) || undefined;
+                return email ? { email } : undefined;
+              } catch { return undefined; }
+            })()}
+            affiliateRef={(() => {
+              try { return getStoredRef()?.code ?? null; } catch { return null; }
+            })()}
+            source="catalogo_publico"
+            onBeforeRedirect={(intent) => {
+              try { trackerRef.current?.trackClick(`cta_comprar_${intent}`, "offer"); } catch {}
+            }}
+          />
           <OfferStack
             promoPrice={promoPrice}
             fullPrice={fullPrice}
@@ -532,6 +561,7 @@ export default function PrateleiraVendaPublica() {
           />
         </div>
       </div>
+
 
       {/* Mobile floating CTA · com gatilho */}
       <div

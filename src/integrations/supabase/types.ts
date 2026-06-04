@@ -7627,6 +7627,107 @@ export type Database = {
           },
         ]
       }
+      prateleira_orders: {
+        Row: {
+          affiliate_ref: string | null
+          amount_cents: number
+          balance_cents: number | null
+          buyer_email: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          capture_method: string | null
+          checkout_url: string | null
+          commission_cents: number | null
+          created_at: string
+          currency: string
+          id: string
+          installments: number | null
+          invoice_slug: string | null
+          is_entry_only: boolean
+          paid_amount_cents: number | null
+          paid_at: string | null
+          payment_intent: string | null
+          product_id: string | null
+          product_slug: string | null
+          product_title: string | null
+          raw_webhook: Json | null
+          receipt_url: string | null
+          source: string
+          status: string
+          transaction_nsu: string | null
+          updated_at: string
+          webhook_token: string
+        }
+        Insert: {
+          affiliate_ref?: string | null
+          amount_cents: number
+          balance_cents?: number | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          capture_method?: string | null
+          checkout_url?: string | null
+          commission_cents?: number | null
+          created_at?: string
+          currency?: string
+          id?: string
+          installments?: number | null
+          invoice_slug?: string | null
+          is_entry_only?: boolean
+          paid_amount_cents?: number | null
+          paid_at?: string | null
+          payment_intent?: string | null
+          product_id?: string | null
+          product_slug?: string | null
+          product_title?: string | null
+          raw_webhook?: Json | null
+          receipt_url?: string | null
+          source?: string
+          status?: string
+          transaction_nsu?: string | null
+          updated_at?: string
+          webhook_token?: string
+        }
+        Update: {
+          affiliate_ref?: string | null
+          amount_cents?: number
+          balance_cents?: number | null
+          buyer_email?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          capture_method?: string | null
+          checkout_url?: string | null
+          commission_cents?: number | null
+          created_at?: string
+          currency?: string
+          id?: string
+          installments?: number | null
+          invoice_slug?: string | null
+          is_entry_only?: boolean
+          paid_amount_cents?: number | null
+          paid_at?: string | null
+          payment_intent?: string | null
+          product_id?: string | null
+          product_slug?: string | null
+          product_title?: string | null
+          raw_webhook?: Json | null
+          receipt_url?: string | null
+          source?: string
+          status?: string
+          transaction_nsu?: string | null
+          updated_at?: string
+          webhook_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prateleira_orders_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "experience_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prateleira_product_viewers: {
         Row: {
           active_seconds: number
