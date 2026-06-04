@@ -503,6 +503,7 @@ function VirtualEmissionGroup({
                         onMove={onMove}
                         onRequestDelete={onRequestDelete}
                         canDelete={canDelete}
+                        fromPrateleira={prateleiraSaleIds.has(sale.id)}
                       />
                     );
                   })}
