@@ -32,9 +32,7 @@ function clientIp(req: Request): string {
 async function loadProduct(supabase: ReturnType<typeof createClient>, productId: string) {
   return supabase
     .from("experience_products")
-    .select(
-      "id, slug, title, is_active, sale_page_enabled, price_from, price_promo, is_promo, pix_discount_percent, payment_terms, currency, commission_per_sale, price_label, pax_min, pax_max, departure_date, destination, destination_country, destination_iata",
-    )
+    .select("*")
     .eq("id", productId)
     .maybeSingle();
 }
@@ -44,25 +42,7 @@ function summarizeOrder(order: any, product: any) {
     order_id: order.id,
     status: order.status,
     checkout_step: order.checkout_step ?? "resumo",
-    product: product
-      ? {
-          id: product.id,
-          slug: product.slug,
-          title: product.title,
-          currency: product.currency,
-          price_from: product.price_from,
-          price_promo: product.price_promo,
-          is_promo: product.is_promo,
-          pix_discount_percent: product.pix_discount_percent,
-          payment_terms: product.payment_terms,
-          price_label: product.price_label,
-          pax_min: product.pax_min,
-          pax_max: product.pax_max,
-          departure_date: product.departure_date,
-          destination: product.destination,
-          destination_country: product.destination_country,
-        }
-      : null,
+    product: product ?? null,
     pax: order.pax,
     payment_intent: order.payment_intent,
     amount_cents: order.amount_cents,
