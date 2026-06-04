@@ -79,8 +79,16 @@ export default function AffiliateGuard({ children }: { children: ReactNode }) {
     );
   }
 
-  if (state.status === "unauth" || state.status === "no_record") {
+  if (state.status === "unauth") {
     return <Navigate to="/vitrine/login" replace state={{ from: location }} />;
+  }
+
+  if (state.status === "no_record") {
+    return <StatusScreen
+      icon={<MailWarning className="w-12 h-12 text-amber-500" />}
+      title="Acesso de afiliado não encontrado"
+      message="Sua conta está logada mas não tem cadastro de afiliado vinculado. Saia e entre com a conta de afiliado, ou cadastre-se."
+    />;
   }
 
   if (state.status === "unconfirmed") {
