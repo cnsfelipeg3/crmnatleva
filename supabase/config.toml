@@ -169,3 +169,7 @@ project_id = "mexlhkqcmiaktjxsyvod"
     verify_jwt = false
   [functions.zapi-webhook]
     verify_jwt = false
+  [functions.infinitepay-create-link]
+    verify_jwt = false
+  [functions.infinitepay-webhook]
+    verify_jwt = false
