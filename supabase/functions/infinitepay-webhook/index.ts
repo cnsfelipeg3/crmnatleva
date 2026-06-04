@@ -18,6 +18,17 @@ function jsonResponse(req: Request, status: number, body: unknown) {
   });
 }
 
+type PaxJson = {
+  full_name?: string;
+  name?: string;
+  cpf?: string;
+  birth_date?: string;
+  email?: string;
+  phone?: string;
+  passport_number?: string;
+  passport_expiry?: string;
+};
+
 // deno-lint-ignore no-explicit-any
 async function postSale(orderId: string, _payload: Record<string, unknown>) {
   try {
@@ -33,16 +44,12 @@ async function postSale(orderId: string, _payload: Record<string, unknown>) {
       return;
     }
 
-    if (order.sale_id) {
-      log.info("postSale: sale already exists, skipping", { orderId, saleId: order.sale_id });
-      return;
-    }
     if (order.status !== "paid" && order.status !== "partial") {
       log.info("postSale: order not paid, skipping", { orderId, status: order.status });
       return;
     }
 
-    // Carregar dados do produto pra enriquecer a venda
+    // Carrega produto
     let product: Record<string, unknown> | null = null;
     if (order.product_id) {
       const { data: prod } = await supabase
@@ -54,6 +61,7 @@ async function postSale(orderId: string, _payload: Record<string, unknown>) {
     }
 
     const paidReais = Number(order.paid_amount_cents ?? order.amount_cents ?? 0) / 100;
+    const balanceReais = Number(order.balance_cents ?? 0) / 100;
     const paymentMethod =
       order.capture_method === "credit_card"
         ? "Cartão de crédito"
@@ -61,55 +69,144 @@ async function postSale(orderId: string, _payload: Record<string, unknown>) {
         ? "Pix"
         : order.capture_method ?? null;
 
-    const saleInsert: Record<string, unknown> = {
-      name: order.buyer_name || order.product_title || "Cliente checkout",
-      status: "Rascunho",
-      products: order.product_title ? [order.product_title] : [],
-      received_value: paidReais,
-      payment_method: paymentMethod,
-      adults: Number(order.pax) || 1,
-      observations: [
-        "Gerado automaticamente pelo checkout InfinitePay",
-        `Pedido ${order.id}`,
-        order.transaction_nsu ? `Transação ${order.transaction_nsu}` : null,
-        order.buyer_email ? `E-mail: ${order.buyer_email}` : null,
-        order.buyer_phone ? `Telefone: ${order.buyer_phone}` : null,
-        order.is_entry_only ? `Entrada paga. Saldo: R$ ${((Number(order.balance_cents) || 0) / 100).toFixed(2)}` : null,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-    };
+    const buyerAddr = (order.buyer_address ?? {}) as Record<string, string | undefined>;
+    const paxList: PaxJson[] = Array.isArray(order.passengers) ? (order.passengers as PaxJson[]) : [];
 
-    if (product) {
-      if (product.departure_date) saleInsert.departure_date = product.departure_date;
-      if (product.destination_city) saleInsert.destination_city = product.destination_city;
-      if (product.destination_iata) saleInsert.destination_iata = product.destination_iata;
+    // ===== Cliente (best-effort): localiza por telefone/email ou cria =====
+    let clientId: string | null = null;
+    try {
+      if (order.buyer_phone || order.buyer_email) {
+        const orQuery: string[] = [];
+        if (order.buyer_phone) orQuery.push(`phone.eq.${order.buyer_phone}`);
+        if (order.buyer_email) orQuery.push(`email.eq.${order.buyer_email}`);
+        const { data: existing } = await supabase
+          .from("clients")
+          .select("id")
+          .or(orQuery.join(","))
+          .limit(1)
+          .maybeSingle();
+        if (existing?.id) clientId = existing.id;
+      }
+      if (!clientId && order.buyer_name) {
+        const { data: created } = await supabase
+          .from("clients")
+          .insert({
+            display_name: order.buyer_name,
+            phone: order.buyer_phone ?? null,
+            email: order.buyer_email ?? null,
+            city: buyerAddr.cidade ?? null,
+            state: buyerAddr.uf ?? null,
+            customer_since: new Date().toISOString(),
+            customer_since_source: "prateleira_checkout",
+          })
+          .select("id")
+          .single();
+        if (created?.id) clientId = created.id;
+      }
+    } catch (e) {
+      log.warn("postSale: client upsert failed", { orderId, err: (e as Error).message });
     }
 
-    const { data: sale, error: saleErr } = await supabase
-      .from("sales")
-      .insert(saleInsert)
-      .select("id, display_id")
-      .single();
-
-    if (saleErr || !sale) {
-      log.error("postSale: failed to create sale", { orderId, err: saleErr?.message });
-      return;
+    // ===== Venda (idempotente) =====
+    let saleId: string | null = order.sale_id ?? null;
+    if (!saleId) {
+      const saleInsert: Record<string, unknown> = {
+        name: order.buyer_name || order.product_title || "Cliente checkout",
+        status: "Rascunho",
+        products: order.product_title ? [order.product_title] : [],
+        received_value: paidReais,
+        payment_method: paymentMethod,
+        adults: Number(order.pax) || 1,
+        client_id: clientId,
+        observations: [
+          "Gerado automaticamente pelo checkout InfinitePay",
+          `Pedido ${order.id}`,
+          order.transaction_nsu ? `Transação ${order.transaction_nsu}` : null,
+          order.buyer_email ? `E-mail: ${order.buyer_email}` : null,
+          order.buyer_phone ? `Telefone: ${order.buyer_phone}` : null,
+          order.is_entry_only ? `Entrada paga. Saldo: R$ ${balanceReais.toFixed(2)}` : null,
+        ]
+          .filter(Boolean)
+          .join(" · "),
+      };
+      if (product) {
+        if ((product as any).departure_date) saleInsert.departure_date = (product as any).departure_date;
+        if ((product as any).destination_city) saleInsert.destination_city = (product as any).destination_city;
+        if ((product as any).destination_iata) saleInsert.destination_iata = (product as any).destination_iata;
+      }
+      const { data: sale, error: saleErr } = await supabase
+        .from("sales")
+        .insert(saleInsert)
+        .select("id, display_id")
+        .single();
+      if (saleErr || !sale) {
+        log.error("postSale: failed to create sale", { orderId, err: saleErr?.message });
+        return;
+      }
+      saleId = sale.id;
+      await supabase.from("prateleira_orders").update({ sale_id: saleId }).eq("id", orderId);
+      log.info("postSale: sale draft created", { orderId, saleId, displayId: sale.display_id });
     }
 
-    await supabase
-      .from("prateleira_orders")
-      .update({ sale_id: sale.id })
-      .eq("id", orderId);
+    // ===== Passageiros (idempotente: só materializa se a venda ainda não tem nenhum) =====
+    try {
+      const { count: existingPax } = await supabase
+        .from("sale_passengers")
+        .select("id", { count: "exact", head: true })
+        .eq("sale_id", saleId);
 
-    log.info("postSale: sale draft created", {
-      orderId,
-      saleId: sale.id,
-      displayId: sale.display_id,
-      paidReais,
-    });
+      if ((existingPax ?? 0) === 0 && paxList.length > 0) {
+        let firstPassengerId: string | null = null;
+        for (let i = 0; i < paxList.length; i++) {
+          const p = paxList[i];
+          const fullName = (p.full_name || p.name || "").trim();
+          if (!fullName) continue;
+          const passengerPayload: Record<string, unknown> = {
+            full_name: fullName,
+            cpf: p.cpf ?? null,
+            birth_date: p.birth_date || null,
+            email: p.email ?? (i === 0 ? order.buyer_email ?? null : null),
+            phone: p.phone ?? (i === 0 ? order.buyer_phone ?? null : null),
+            passport_number: p.passport_number ?? null,
+            passport_expiry: p.passport_expiry || null,
+            address_cep: buyerAddr.cep ?? null,
+            address_street: buyerAddr.rua ?? null,
+            address_number: buyerAddr.numero ?? null,
+            address_complement: buyerAddr.complemento ?? null,
+            address_neighborhood: buyerAddr.bairro ?? null,
+            address_city: buyerAddr.cidade ?? null,
+            address_state: buyerAddr.uf ?? null,
+            created_via: "prateleira_checkout",
+          };
+          const { data: pax, error: paxErr } = await supabase
+            .from("passengers")
+            .insert(passengerPayload)
+            .select("id")
+            .single();
+          if (paxErr || !pax) {
+            log.warn("postSale: passenger insert failed", { orderId, err: paxErr?.message });
+            continue;
+          }
+          if (i === 0) firstPassengerId = pax.id;
+          await supabase.from("sale_passengers").insert({
+            sale_id: saleId,
+            passenger_id: pax.id,
+            role: i === 0 ? "titular" : "acompanhante",
+          });
+        }
+        if (firstPassengerId) {
+          await supabase
+            .from("sales")
+            .update({ payer_passenger_id: firstPassengerId })
+            .eq("id", saleId)
+            .is("payer_passenger_id", null);
+        }
+      }
+    } catch (e) {
+      log.warn("postSale: passengers materialization failed", { orderId, err: (e as Error).message });
+    }
 
-    // Confirmação opcional ao cliente (best-effort)
+    // ===== E-mail de confirmação =====
     if (order.buyer_email) {
       try {
         await supabase.functions.invoke("send-transactional-email", {
@@ -122,12 +219,33 @@ async function postSale(orderId: string, _payload: Record<string, unknown>) {
               productTitle: order.product_title ?? "Sua reserva",
               amount: paidReais,
               receiptUrl: order.receipt_url ?? null,
+              isEntryOnly: !!order.is_entry_only,
+              balance: balanceReais,
             },
           },
         });
       } catch (e) {
         log.warn("postSale: email confirm failed", { orderId, err: (e as Error).message });
       }
+    }
+
+    // ===== Notificação interna (best-effort) =====
+    try {
+      const notifBody = `💰 Venda online confirmada: ${order.product_title ?? "pacote"} · R$ ${paidReais.toFixed(2)} via ${paymentMethod ?? "pagamento"} · ${order.buyer_name ?? order.buyer_email ?? "comprador"}`;
+      const { error: notifErr } = await supabase.functions.invoke("create-notification", {
+        body: {
+          type: "sale_online_confirmed",
+          title: "Venda online confirmada",
+          message: notifBody,
+          link: saleId ? `/vendas?sale=${saleId}` : null,
+          metadata: { order_id: orderId, sale_id: saleId },
+        },
+      });
+      if (notifErr) {
+        log.info("postSale: notification function unavailable", { orderId, err: notifErr.message });
+      }
+    } catch (e) {
+      log.info("postSale: notification skipped", { orderId, err: (e as Error).message });
     }
   } catch (e) {
     log.error("postSale: unexpected error", { orderId, err: (e as Error).message });
