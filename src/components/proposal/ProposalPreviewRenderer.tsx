@@ -311,15 +311,17 @@ function InlineAirlineLogo({ iata, size = 36 }: { iata: string; size?: number })
     </span>
   );
   return (
-    <SmartImage
-      src={url}
-      alt={code}
-      className="rounded-lg bg-transparent"
-      imgClassName="object-contain"
-      loading="lazy"
-      eagerMount={typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search)}
-      onResolvedUrl={() => setError(false)}
-    />
+    <span className="inline-block" style={{ width: size, height: size }}>
+      <SmartImage
+        src={url}
+        alt={code}
+        className="w-full h-full rounded-lg bg-transparent"
+        imgClassName="object-contain"
+        loading="lazy"
+        eagerMount={typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search)}
+        onResolvedUrl={() => setError(false)}
+      />
+    </span>
   );
 }
 
