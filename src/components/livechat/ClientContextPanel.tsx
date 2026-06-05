@@ -765,17 +765,39 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
               </div>
             </div>
 
+            {/* Vincular cliente */}
+            <div className="mt-3">
+              <Button
+                variant={clientData ? "outline" : "default"}
+                size="sm"
+                className="w-full h-7 gap-1.5 text-[11px]"
+                onClick={() => setShowLinkDialog(true)}
+                disabled={!dbConvId}
+              >
+                {clientData ? (
+                  <><Link2 className="h-3 w-3" /> Trocar/desvincular cliente</>
+                ) : (
+                  <><Link2 className="h-3 w-3" /> Vincular cliente cadastrado</>
+                )}
+              </Button>
+            </div>
+
             {/* Tags */}
-            <div className="flex flex-wrap gap-1 mt-3">
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Tag className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</span>
+              </div>
+              <ConversationTagsManager
+                conversationDbId={dbConvId || undefined}
+                tags={currentTags}
+                onChange={setCurrentTags}
+              />
               {conversation.is_vip && (
                 <Badge className="bg-amber-500/10 text-amber-500 text-[9px] gap-0.5 px-1.5 py-0">
                   <Star className="h-2.5 w-2.5 fill-current" /> VIP
                 </Badge>
               )}
-              <Badge variant="outline" className="text-[9px] px-1.5 py-0 capitalize">{conversation.source?.replace("_", " ") || "WhatsApp"}</Badge>
-              {conversation.tags?.slice(0, 2).map(tag => (
-                <Badge key={tag} variant="secondary" className="text-[9px] px-1.5 py-0">{tag}</Badge>
-              ))}
             </div>
 
             {/* Assigned */}
