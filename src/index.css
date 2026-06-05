@@ -886,3 +886,42 @@ img[loading="lazy"] {
 @media (prefers-reduced-motion: reduce) {
   .bonus-value { animation: none; }
 }
+
+/* ============================================================
+   Print styles · usados pelo "Salvar em PDF" da proposta pública
+   Garante cores fiéis, evita quebras feias e oculta UI não essencial
+   ============================================================ */
+@media print {
+  @page {
+    size: A4;
+    margin: 12mm 10mm;
+  }
+  html, body {
+    background: #ffffff !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Evita cortar cards, imagens e seções no meio */
+  img, svg, video, table, figure,
+  [data-track-section], section, article, .card,
+  .rounded-xl, .rounded-2xl, .rounded-3xl {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  /* Esconde elementos puramente interativos */
+  button, [role="button"], .no-print, header nav, .sticky {
+    /* não removemos botões internos do conteúdo · só barras fixas */
+  }
+  .sticky, [data-print-hide], .print\:hidden {
+    display: none !important;
+  }
+  /* Remove animações que atrapalham captura */
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
