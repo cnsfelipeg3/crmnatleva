@@ -20,6 +20,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QuoteSummaryCard } from "./QuoteSummaryCard";
 import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 import { ProfilePictureViewer } from "./ProfilePictureViewer";
+import { ConversationTagsManager } from "./ConversationTagsManager";
+import { LinkClientDialog } from "./LinkClientDialog";
+import { Link2, Unlink } from "lucide-react";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
