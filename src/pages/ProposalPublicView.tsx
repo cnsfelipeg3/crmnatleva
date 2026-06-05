@@ -281,10 +281,8 @@ function PublicProposalStageLoader({ message }: { message: string }) {
 
 function PrintReadyMarker() {
   useEffect(() => {
-    // Wait for images and fonts to settle, then mark ready and optionally auto-print
-    const autoPrint = new URLSearchParams(window.location.search).get("autoprint") === "1";
-
-    const triggerPrint = async () => {
+    // Wait for images and fonts to settle, then mark ready for the PDF exporter.
+    const markReady = async () => {
       try { await (document as any).fonts?.ready; } catch {}
       // Wait for all images in the document
       const imgs = Array.from(document.images);
@@ -303,13 +301,9 @@ function PrintReadyMarker() {
       await new Promise((r) => setTimeout(r, 1200));
       (window as any).__PROPOSAL_READY__ = true;
       document.documentElement.setAttribute("data-proposal-ready", "1");
-      if (autoPrint) {
-        window.focus();
-        window.print();
-      }
     };
 
-    triggerPrint();
+    markReady();
   }, []);
   return null;
 }

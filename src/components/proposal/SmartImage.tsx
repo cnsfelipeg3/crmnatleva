@@ -99,12 +99,15 @@ export default function SmartImage({
   onResolvedUrl,
 }: SmartImageProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [inView, setInView] = useState<boolean>(eagerMount);
+  const pdfExportMode = typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search);
+  const effectiveEagerMount = eagerMount || pdfExportMode;
+  const effectiveLoading = pdfExportMode ? "eager" : loading;
+  const [inView, setInView] = useState<boolean>(effectiveEagerMount);
   const [currentSrc, setCurrentSrc] = useState<string | null>(() =>
     forceProxy ? proxyCache.get(src) || null : src
   );
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    eagerMount ? "loading" : "idle"
+    effectiveEagerMount ? "loading" : "idle"
   );
   const triedProxyRef = useRef(false);
   const mountedRef = useRef(true);
@@ -116,7 +119,7 @@ export default function SmartImage({
 
   // Viewport deferral — only mount the actual <img> when wrapper is near screen.
   useEffect(() => {
-    if (eagerMount || inView) return;
+    if (effectiveEagerMount || inView) return;
     const node = wrapperRef.current;
     if (!node || typeof IntersectionObserver === "undefined") {
       setInView(true);
@@ -136,7 +139,7 @@ export default function SmartImage({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [eagerMount, inView]);
+  }, [effectiveEagerMount, inView]);
 
   // Reset when src changes
   useEffect(() => {
@@ -204,7 +207,7 @@ export default function SmartImage({
         <img
           src={currentSrc}
           alt={alt}
-          loading={loading}
+          loading={effectiveLoading}
           referrerPolicy="no-referrer"
           decoding="async"
           onLoad={() => mountedRef.current && setStatus("ready")}

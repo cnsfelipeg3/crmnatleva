@@ -1951,6 +1951,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   return (
     <div
       ref={__overridesRootRef}
+      data-proposal-export-root
       className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}
       style={themeStyle}
     >
