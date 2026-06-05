@@ -20,6 +20,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { QuoteSummaryCard } from "./QuoteSummaryCard";
 import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 import { ProfilePictureViewer } from "./ProfilePictureViewer";
+import { ConversationTagsManager } from "./ConversationTagsManager";
+import { LinkClientDialog } from "./LinkClientDialog";
+import { Link2, Unlink } from "lucide-react";
 
 // ─── Types ───
 type Stage = "novo_lead" | "contato_inicial" | "qualificacao" | "diagnostico" | "proposta_preparacao" | "proposta_enviada" | "proposta_visualizada" | "ajustes" | "negociacao" | "fechamento_andamento" | "fechado" | "pos_venda" | "perdido";
@@ -137,6 +140,11 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [agentHasReplied, setAgentHasReplied] = useState(false);
   const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
   const [showProfileViewer, setShowProfileViewer] = useState(false);
+  const [dbConvId, setDbConvId] = useState<string | null>(conversation.db_id || null);
+  const [currentTags, setCurrentTags] = useState<string[]>(conversation.tags || []);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  useEffect(() => { setCurrentTags(conversation.tags || []); }, [conversation.tags]);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
@@ -160,6 +168,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         const dbConv = convRows?.[0];
         const convId = dbConv?.id;
         const clientId = dbConv?.client_id;
+        if (!cancelled && convId) setDbConvId(convId);
 
         // Fetch last agent/client messages + stats for smart actions
         if (convId) {
@@ -197,25 +206,13 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             setNotes(notesRes.data || []);
             setReceivables(receivablesRes.data || []);
           }
-        } else {
-          // Try matching by name
-          const { data: clientByName } = await supabase
-            .from("clients")
-            .select("*")
-            .ilike("display_name", `%${conversation.contact_name}%`)
-            .limit(1);
-          if (!cancelled && clientByName?.[0]) {
-            setClientData(clientByName[0]);
-            const cid = clientByName[0].id;
-            const [salesRes, notesRes, receivablesRes] = await Promise.all([
-              supabase.from("sales").select("*").eq("client_id", cid).order("created_at", { ascending: false }).limit(20),
-              supabase.from("client_notes").select("*").eq("client_id", cid).order("created_at", { ascending: false }).limit(20),
-              supabase.from("accounts_receivable").select("*").eq("client_id", cid).order("due_date", { ascending: true }).limit(50),
-            ]);
-            setSales(salesRes.data || []);
-            setNotes(notesRes.data || []);
-            setReceivables(receivablesRes.data || []);
-          }
+        } else if (!cancelled) {
+          // Vínculo cliente é manual · não fazemos match automático por nome
+          // para evitar associações erradas. O usuário linka via botão "Vincular cliente".
+          setClientData(null);
+          setSales([]);
+          setNotes([]);
+          setReceivables([]);
         }
 
         // Load profiles for assigned_to
@@ -768,17 +765,39 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
               </div>
             </div>
 
+            {/* Vincular cliente */}
+            <div className="mt-3">
+              <Button
+                variant={clientData ? "outline" : "default"}
+                size="sm"
+                className="w-full h-7 gap-1.5 text-[11px]"
+                onClick={() => setShowLinkDialog(true)}
+                disabled={!dbConvId}
+              >
+                {clientData ? (
+                  <><Link2 className="h-3 w-3" /> Trocar/desvincular cliente</>
+                ) : (
+                  <><Link2 className="h-3 w-3" /> Vincular cliente cadastrado</>
+                )}
+              </Button>
+            </div>
+
             {/* Tags */}
-            <div className="flex flex-wrap gap-1 mt-3">
+            <div className="mt-3 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <Tag className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Tags</span>
+              </div>
+              <ConversationTagsManager
+                conversationDbId={dbConvId || undefined}
+                tags={currentTags}
+                onChange={setCurrentTags}
+              />
               {conversation.is_vip && (
                 <Badge className="bg-amber-500/10 text-amber-500 text-[9px] gap-0.5 px-1.5 py-0">
                   <Star className="h-2.5 w-2.5 fill-current" /> VIP
                 </Badge>
               )}
-              <Badge variant="outline" className="text-[9px] px-1.5 py-0 capitalize">{conversation.source?.replace("_", " ") || "WhatsApp"}</Badge>
-              {conversation.tags?.slice(0, 2).map(tag => (
-                <Badge key={tag} variant="secondary" className="text-[9px] px-1.5 py-0">{tag}</Badge>
-              ))}
             </div>
 
             {/* Assigned */}
@@ -1044,6 +1063,29 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         source={conversation.source}
         tags={conversation.tags}
       />
+
+      {dbConvId && (
+        <LinkClientDialog
+          open={showLinkDialog}
+          onOpenChange={setShowLinkDialog}
+          conversationId={dbConvId}
+          conversationPhone={conversation.phone}
+          conversationName={conversation.contact_name}
+          currentClientId={clientData?.id || null}
+          onLinked={(_id, _name) => {
+            setShowLinkDialog(false);
+            // força recarregar dados do cliente
+            window.location.reload();
+          }}
+          onUnlinked={() => {
+            setClientData(null);
+            setSales([]);
+            setNotes([]);
+            setReceivables([]);
+            setShowLinkDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 }
