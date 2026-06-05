@@ -189,7 +189,12 @@ export default function SmartImage({
   const showSkeleton = status === "loading" || status === "idle";
 
   return (
-    <div ref={wrapperRef} className={cn("relative overflow-hidden bg-muted/30", className)}>
+    <div
+      ref={wrapperRef}
+      data-smart-image-status={status}
+      data-smart-image-src={src}
+      className={cn("relative overflow-hidden bg-muted/30", className)}
+    >
       {showSkeleton && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
           {status === "loading" && (

@@ -284,6 +284,16 @@ function PrintReadyMarker() {
     // Wait for images and fonts to settle, then mark ready for the PDF exporter.
     const markReady = async () => {
       try { await (document as any).fonts?.ready; } catch {}
+      document.querySelectorAll("img").forEach((img) => {
+        img.setAttribute("loading", "eager");
+        img.setAttribute("decoding", "sync");
+      });
+      const startedAt = Date.now();
+      while (Date.now() - startedAt < 20000) {
+        const pendingSmartImages = document.querySelectorAll('[data-smart-image-status="idle"], [data-smart-image-status="loading"]');
+        if (pendingSmartImages.length === 0) break;
+        await new Promise((r) => setTimeout(r, 150));
+      }
       // Wait for all images in the document
       const imgs = Array.from(document.images);
       await Promise.all(
