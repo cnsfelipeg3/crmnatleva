@@ -102,9 +102,10 @@ export default function SmartImage({
   const pdfExportMode = typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search);
   const effectiveEagerMount = eagerMount || pdfExportMode;
   const effectiveLoading = pdfExportMode ? "eager" : loading;
+  const effectiveForceProxy = forceProxy || pdfExportMode;
   const [inView, setInView] = useState<boolean>(effectiveEagerMount);
   const [currentSrc, setCurrentSrc] = useState<string | null>(() =>
-    forceProxy ? proxyCache.get(src) || null : src
+    effectiveForceProxy ? proxyCache.get(src) || null : src
   );
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
     effectiveEagerMount ? "loading" : "idle"
@@ -150,7 +151,7 @@ export default function SmartImage({
       setStatus(inView ? "loading" : "idle");
       return;
     }
-    if (forceProxy && inView) {
+    if (effectiveForceProxy && inView) {
       setCurrentSrc(null);
       setStatus("loading");
       triedProxyRef.current = true;
@@ -167,7 +168,7 @@ export default function SmartImage({
       setCurrentSrc(src);
       setStatus(inView ? "loading" : "idle");
     }
-  }, [src, forceProxy, refererUrl, onResolvedUrl, inView]);
+  }, [src, effectiveForceProxy, refererUrl, onResolvedUrl, inView]);
 
   const handleError = async () => {
     if (triedProxyRef.current) {

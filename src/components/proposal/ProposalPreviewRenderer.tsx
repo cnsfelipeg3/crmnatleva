@@ -2030,16 +2030,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           transition={{ duration: 0.8, delay: 0.2 }}
           className="relative w-full aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-muted shadow-md sm:shadow-lg"
         >
-          <img
+          <SmartImage
             src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
             alt={proposal.title || "Capa da proposta"}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full"
+            imgClassName="object-cover"
             loading="eager"
-            decoding="async"
-            onError={(e) => {
-              const t = e.currentTarget as HTMLImageElement;
-              if (t.src !== orlandoFamilyCover) t.src = orlandoFamilyCover;
-            }}
+            eagerMount
           />
         </motion.div>
       </section>
@@ -2093,12 +2090,12 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                         className="group rounded-2xl overflow-hidden relative aspect-[4/5] sm:aspect-[3/4] cursor-pointer shadow-lg shadow-black/10 w-full max-w-sm bg-muted"
                       >
                         {imgSrc ? (
-                          <img
+                          <SmartImage
                             src={imgSrc}
                             alt={dest.title}
                             loading="lazy"
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
+                            className="absolute inset-0 w-full h-full group-hover:scale-105 transition-transform duration-700"
+                            imgClassName="object-cover"
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center bg-muted">
