@@ -331,6 +331,21 @@ function OperacaoInboxInner() {
   // ─── Message reactions (WhatsApp-style) ───
   const visibleMessageIds = useMemo(() => currentMessages.map(m => m.id).filter(Boolean), [currentMessages]);
   const { reactions: reactionsByMsg, addReaction, removeReaction } = useMessageReactions(visibleMessageIds, selectedId);
+
+  // ─── WhatsApp calls timeline ───
+  const conversationCalls = useConversationCalls(selectedId, selected?.phone);
+  const timelineItems = useMemo(() => {
+    type Item = { kind: "msg"; data: any; ts: number } | { kind: "call"; data: any; ts: number };
+    const items: Item[] = [];
+    for (const m of currentMessages) {
+      items.push({ kind: "msg", data: m, ts: new Date(m.created_at).getTime() || 0 });
+    }
+    for (const c of conversationCalls) {
+      items.push({ kind: "call", data: c, ts: new Date(c.started_at).getTime() || 0 });
+    }
+    items.sort((a, b) => a.ts - b.ts);
+    return items;
+  }, [currentMessages, conversationCalls]);
   const handleToggleReaction = useCallback((msg: any, emoji: string) => {
     const list = reactionsByMsg[msg.id] || [];
     const mine = list.find((r: any) => r.reactor_type === "atendente" && r.reactor_id === (user?.id || null));
