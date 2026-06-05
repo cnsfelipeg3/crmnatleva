@@ -102,9 +102,14 @@ export function useInboxMessages(
         let allMsgs: Message[] = [];
         if (!error && unifiedRows) {
           allMsgs = dedupeUiMessages(mapUnifiedMessages(unifiedRows, selectedId));
-          setHasOlderMessages(prev => ({ ...prev, [selectedId]: unifiedRows.length >= MESSAGE_PAGE_SIZE }));
-          const oldestRow = unifiedRows[unifiedRows.length - 1];
-          setOldestLoadedTimestamp(prev => ({ ...prev, [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || null) }));
+          // Só atualiza hasOlderMessages/oldestLoadedTimestamp no primeiro carregamento
+          // (sem cache). Em reloads em background, preserva o estado para não invalidar
+          // o histórico que o usuário já carregou via "carregar mensagens anteriores".
+          if (!hasCached) {
+            setHasOlderMessages(prev => ({ ...prev, [selectedId]: unifiedRows.length >= MESSAGE_PAGE_SIZE }));
+            const oldestRow = unifiedRows[unifiedRows.length - 1];
+            setOldestLoadedTimestamp(prev => ({ ...prev, [selectedId]: toIsoTimestamp(oldestRow?.timestamp || oldestRow?.created_at || null) }));
+          }
         }
 
         for (const m of allMsgs) {
@@ -112,7 +117,16 @@ export function useInboxMessages(
           if (m.external_message_id) lastMsgIdsRef.current.add(m.external_message_id);
         }
 
-        setMessages(prev => ({ ...prev, [selectedId]: dedupeUiMessages(allMsgs) }));
+        // MERGE em vez de REPLACE: preserva mensagens antigas carregadas via paginação.
+        // Sem isso, o polling de 15s e o refetch on-focus apagam o histórico extra
+        // e jogam o usuário de volta pro fim da conversa.
+        setMessages(prev => {
+          const existing = prev[selectedId] || [];
+          if (existing.length === 0) {
+            return { ...prev, [selectedId]: dedupeUiMessages(allMsgs) };
+          }
+          return { ...prev, [selectedId]: dedupeUiMessages([...existing, ...allMsgs]) };
+        });
       } catch (error) {
         console.error("Erro ao carregar histórico da conversa:", error);
       } finally {
