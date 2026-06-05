@@ -3409,6 +3409,61 @@ export type Database = {
           },
         ]
       }
+      conversation_companions: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          passenger_id: string
+          relationship: string | null
+          updated_at: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          passenger_id: string
+          relationship?: string | null
+          updated_at?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          passenger_id?: string
+          relationship?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_companions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "conversation_companions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_companions_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_messages: {
         Row: {
           ai_media_model: string | null
