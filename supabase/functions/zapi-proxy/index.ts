@@ -462,16 +462,17 @@ serve(async (req) => {
     }
     const jwt = authHeader.slice(7).trim();
 
-    // Bypass interno · chamadas server-to-server (ex: autopilot-dispatcher)
-    // usam service-role key + header dedicado. Sem o header, segue fluxo normal.
+    // Bypass interno · chamadas server-to-server (autopilot-dispatcher,
+    // zapi-webhook, send-scheduled-messages, etc) usam a service-role key
+    // como Bearer. A chave é segredo server-only · aceitar como bypass é
+    // seguro e dispensa o header opcional `x-internal-call`.
     const internalCall = req.headers.get("x-internal-call");
-    if (
-      internalCall &&
-      SUPABASE_SERVICE_ROLE_KEY &&
-      jwt === SUPABASE_SERVICE_ROLE_KEY
-    ) {
+    const isServiceRole = !!SUPABASE_SERVICE_ROLE_KEY && jwt === SUPABASE_SERVICE_ROLE_KEY;
+    if (isServiceRole) {
+      if (internalCall) console.log("[Z-API] internal call:", internalCall);
       // ok · pula validação de usuário
     } else {
+
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return new Response(
