@@ -144,6 +144,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [dbConvId, setDbConvId] = useState<string | null>(conversation.db_id || null);
   const [currentTags, setCurrentTags] = useState<string[]>(conversation.tags || []);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkReloadKey, setLinkReloadKey] = useState(0);
 
   useEffect(() => { setCurrentTags(conversation.tags || []); }, [conversation.tags]);
 
@@ -263,7 +264,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
       if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, [conversation.id, conversation.phone, conversation.contact_name]);
+  }, [conversation.id, conversation.phone, conversation.contact_name, linkReloadKey]);
 
   // ─── Conversation-level timeline data ───
   const [convTimelineData, setConvTimelineData] = useState<{
@@ -986,8 +987,8 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           currentClientId={clientData?.id || null}
           onLinked={(_id, _name) => {
             setShowLinkDialog(false);
-            // força recarregar dados do cliente
-            window.location.reload();
+            // Recarrega só os dados do cliente, sem refresh da página
+            setLinkReloadKey(k => k + 1);
           }}
           onUnlinked={() => {
             setClientData(null);
