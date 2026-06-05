@@ -99,12 +99,17 @@ export default function SmartImage({
   onResolvedUrl,
 }: SmartImageProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
-  const [inView, setInView] = useState<boolean>(eagerMount);
+  const pdfExportMode = typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search);
+  const isExternalHttpImage = /^https?:\/\//i.test(src);
+  const effectiveEagerMount = eagerMount || pdfExportMode;
+  const effectiveLoading = pdfExportMode ? "eager" : loading;
+  const effectiveForceProxy = forceProxy || (pdfExportMode && isExternalHttpImage);
+  const [inView, setInView] = useState<boolean>(effectiveEagerMount);
   const [currentSrc, setCurrentSrc] = useState<string | null>(() =>
-    forceProxy ? proxyCache.get(src) || null : src
+    effectiveForceProxy ? proxyCache.get(src) || null : src
   );
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(
-    eagerMount ? "loading" : "idle"
+    effectiveEagerMount ? "loading" : "idle"
   );
   const triedProxyRef = useRef(false);
   const mountedRef = useRef(true);
@@ -116,7 +121,7 @@ export default function SmartImage({
 
   // Viewport deferral — only mount the actual <img> when wrapper is near screen.
   useEffect(() => {
-    if (eagerMount || inView) return;
+    if (effectiveEagerMount || inView) return;
     const node = wrapperRef.current;
     if (!node || typeof IntersectionObserver === "undefined") {
       setInView(true);
@@ -136,7 +141,7 @@ export default function SmartImage({
     );
     observer.observe(node);
     return () => observer.disconnect();
-  }, [eagerMount, inView]);
+  }, [effectiveEagerMount, inView]);
 
   // Reset when src changes
   useEffect(() => {
@@ -147,7 +152,7 @@ export default function SmartImage({
       setStatus(inView ? "loading" : "idle");
       return;
     }
-    if (forceProxy && inView) {
+    if (effectiveForceProxy && inView) {
       setCurrentSrc(null);
       setStatus("loading");
       triedProxyRef.current = true;
@@ -164,7 +169,7 @@ export default function SmartImage({
       setCurrentSrc(src);
       setStatus(inView ? "loading" : "idle");
     }
-  }, [src, forceProxy, refererUrl, onResolvedUrl, inView]);
+  }, [src, effectiveForceProxy, refererUrl, onResolvedUrl, inView]);
 
   const handleError = async () => {
     if (triedProxyRef.current) {
@@ -186,7 +191,12 @@ export default function SmartImage({
   const showSkeleton = status === "loading" || status === "idle";
 
   return (
-    <div ref={wrapperRef} className={cn("relative overflow-hidden bg-muted/30", className)}>
+    <div
+      ref={wrapperRef}
+      data-smart-image-status={status}
+      data-smart-image-src={src}
+      className={cn("relative overflow-hidden bg-muted/30", className)}
+    >
       {showSkeleton && (
         <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
           {status === "loading" && (
@@ -204,7 +214,7 @@ export default function SmartImage({
         <img
           src={currentSrc}
           alt={alt}
-          loading={loading}
+          loading={effectiveLoading}
           referrerPolicy="no-referrer"
           decoding="async"
           onLoad={() => mountedRef.current && setStatus("ready")}

@@ -1039,13 +1039,14 @@ export default function ProposalEditor() {
       return;
     }
     setExportingPdf(true);
-    toast.info("Abrindo proposta para imprimir · escolha 'Salvar como PDF' no diálogo", { duration: 6000 });
+    toast.info("Gerando PDF da proposta...", { duration: 4000 });
     try {
       await exportProposalPdf(slug, form.title || "proposta");
+      toast.success("PDF baixado com sucesso");
     } catch (err: any) {
-      toast.error(err.message || "Falha ao abrir impressão");
+      toast.error(err.message || "Falha ao gerar PDF");
     } finally {
-      setTimeout(() => setExportingPdf(false), 1500);
+      setExportingPdf(false);
     }
   };
 

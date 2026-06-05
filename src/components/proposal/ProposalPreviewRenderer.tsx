@@ -310,7 +310,19 @@ function InlineAirlineLogo({ iata, size = 36 }: { iata: string; size?: number })
       <Plane className="text-muted-foreground" style={{ width: size * 0.5, height: size * 0.5 }} />
     </span>
   );
-  return <img src={url} alt={code} width={size} height={size} className="object-contain rounded-lg" onError={() => setError(true)} loading="lazy" />;
+  return (
+    <span className="inline-block" style={{ width: size, height: size }}>
+      <SmartImage
+        src={url}
+        alt={code}
+        className="w-full h-full rounded-lg bg-transparent"
+        imgClassName="object-contain"
+        loading="lazy"
+        eagerMount={typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search)}
+        onResolvedUrl={() => setError(false)}
+      />
+    </span>
+  );
 }
 
 /* ═══ Flight Duration Formatter ═══ */
@@ -809,10 +821,11 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       {/* Cover image (aircraft / airline) — responsive aspect ratio */}
       {flight.image_url && (
         <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 bg-muted aspect-[16/10] sm:aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6]">
-          <img
+          <SmartImage
             src={flight.image_url}
             alt={flight.title || "Capa do aéreo"}
-            className="w-full h-full object-contain sm:object-cover object-center"
+            className="w-full h-full"
+            imgClassName="object-contain sm:object-cover object-center"
             loading="lazy"
           />
         </div>
@@ -955,7 +968,7 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
       {/* Cover */}
       {cover ? (
         <div className="aspect-[16/8] overflow-hidden bg-muted relative">
-          <img src={cover} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full object-cover" loading="lazy" />
+          <SmartImage src={cover} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full" imgClassName="object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white text-center">
             <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20">
@@ -1627,7 +1640,7 @@ function ExperienceCard({ exp, idx }: { exp: any; idx: number }) {
           </div>
         }
       >
-        {exp.image_url && <div className="h-40 overflow-hidden"><img src={exp.image_url} alt={exp.title} className="w-full h-full object-cover" /></div>}
+        {exp.image_url && <div className="h-40 overflow-hidden"><SmartImage src={exp.image_url} alt={exp.title} className="w-full h-full" imgClassName="object-cover" /></div>}
         <div className="p-5">
           <div className="flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4 text-accent" /><h3 className="font-semibold text-foreground">{exp.title}</h3></div>
           {exp.description && <p className="text-sm text-muted-foreground line-clamp-2">{exp.description}</p>}
@@ -1754,7 +1767,7 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
       >
         {item.image_url && (
           <div className="h-40 overflow-hidden">
-            <img src={item.image_url} alt={item.title || meta.label} className="w-full h-full object-cover" loading="lazy" />
+            <SmartImage src={item.image_url} alt={item.title || meta.label} className="w-full h-full" imgClassName="object-cover" loading="lazy" />
           </div>
         )}
         <div className="p-5">
@@ -1951,6 +1964,7 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
   return (
     <div
       ref={__overridesRootRef}
+      data-proposal-export-root
       className={`bg-background text-foreground ${embedded ? "rounded-xl border border-border overflow-hidden" : "min-h-screen"}`}
       style={themeStyle}
     >
@@ -2029,16 +2043,13 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
           transition={{ duration: 0.8, delay: 0.2 }}
           className="relative w-full aspect-[4/3] sm:aspect-[16/10] md:aspect-[16/9] rounded-xl sm:rounded-2xl overflow-hidden bg-muted shadow-md sm:shadow-lg"
         >
-          <img
+          <SmartImage
             src={sanitizeProposalCoverUrl(proposal.cover_image_url) || orlandoFamilyCover}
             alt={proposal.title || "Capa da proposta"}
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full"
+            imgClassName="object-cover"
             loading="eager"
-            decoding="async"
-            onError={(e) => {
-              const t = e.currentTarget as HTMLImageElement;
-              if (t.src !== orlandoFamilyCover) t.src = orlandoFamilyCover;
-            }}
+            eagerMount
           />
         </motion.div>
       </section>
@@ -2092,12 +2103,12 @@ export default function ProposalPreviewRenderer({ proposal, items, embedded = fa
                         className="group rounded-2xl overflow-hidden relative aspect-[4/5] sm:aspect-[3/4] cursor-pointer shadow-lg shadow-black/10 w-full max-w-sm bg-muted"
                       >
                         {imgSrc ? (
-                          <img
+                          <SmartImage
                             src={imgSrc}
                             alt={dest.title}
                             loading="lazy"
-                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                            onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallbackCover; }}
+                            className="absolute inset-0 w-full h-full group-hover:scale-105 transition-transform duration-700"
+                            imgClassName="object-cover"
                           />
                         ) : (
                           <div className="absolute inset-0 flex items-center justify-center bg-muted">
