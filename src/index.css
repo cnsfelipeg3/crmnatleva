@@ -783,6 +783,50 @@ img:not([loading]) {
   }
 }
 
+/* ──────────────────────────────────────────────────────────
+   PWA / iOS Safe Areas
+   Com `viewport-fit=cover` + `apple-mobile-web-app-status-bar-style=black-translucent`
+   o conteúdo passa por trás da status bar do iOS (relógio/notch). Aqui garantimos
+   que TODA UI sticky/fixed no topo ou rodapé respeite os safe-area-insets
+   automaticamente · sem precisar tocar cada componente. Em telas sem notch,
+   env() = 0px (no-op, não afeta desktop).
+   ────────────────────────────────────────────────────────── */
+@supports (padding: env(safe-area-inset-top)) {
+  /* Headers fixos/sticky no topo (AppLayout, AffiliateLayout, PortalLayout,
+     MobilePageHeader, AITeam top bar, Inbox, etc.) */
+  .sticky.top-0,
+  .fixed.top-0,
+  header.sticky,
+  [data-safe-top] {
+    padding-top: env(safe-area-inset-top);
+  }
+  /* Rodapés / abas fixas inferiores (bottom nav, composer do chat, etc.) */
+  .sticky.bottom-0,
+  .fixed.bottom-0,
+  [data-safe-bottom] {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Drawers laterais (Sheet · Sidebar mobile drawer) respeitam notch e
+     home indicator pra que os itens do topo não fiquem cobertos. */
+  [data-sidebar="sidebar"],
+  [role="dialog"][data-state="open"] > [data-radix-dialog-content],
+  .sheet-content {
+    padding-top: max(env(safe-area-inset-top), 0.5rem);
+    padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  }
+  /* Margem lateral em landscape com notch */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Utilitárias opt-in */
+  .safe-top { padding-top: env(safe-area-inset-top); }
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .mt-safe { margin-top: env(safe-area-inset-top); }
+  .mb-safe { margin-bottom: env(safe-area-inset-bottom); }
+}
+
 /* Focus visível mais nítido pra teclado/leitores */
 @media (max-width: 767px) {
   :focus-visible {
