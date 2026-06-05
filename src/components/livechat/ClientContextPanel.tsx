@@ -22,6 +22,7 @@ import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 import { ProfilePictureViewer } from "./ProfilePictureViewer";
 import { ConversationTagsManager } from "./ConversationTagsManager";
 import { LinkClientDialog } from "./LinkClientDialog";
+import { ConversationCompanions } from "./ConversationCompanions";
 import { Link2, Unlink } from "lucide-react";
 
 // ─── Types ───
@@ -823,6 +824,15 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
                   <Star className="h-2.5 w-2.5 fill-current" /> VIP
                 </Badge>
               )}
+            </div>
+
+            {/* Companheiros de viagem */}
+            <div className="mt-3 pt-3 border-t border-border/40">
+              <ConversationCompanions
+                conversationDbId={dbConvId || undefined}
+                ownerPhone={conversation.phone}
+                clientId={clientData?.id || null}
+              />
             </div>
 
             {/* Assigned */}
