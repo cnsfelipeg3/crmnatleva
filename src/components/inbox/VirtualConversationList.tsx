@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Loader2, MessageSquare } from "lucide-react";
 import type { Conversation } from "./types";
@@ -47,10 +47,14 @@ export function VirtualConversationList({
   const virtualizer = useVirtualizer({
     count: conversations.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 88,
+    estimateSize: () => (searchQuery ? 132 : 88),
     overscan: 8,
     measureElement: (el) => el?.getBoundingClientRect().height ?? 88,
   });
+
+  useEffect(() => {
+    virtualizer.measure();
+  }, [virtualizer, searchQuery, contentMatchInfo, conversations.length]);
 
   if (conversations.length === 0) {
     return (
