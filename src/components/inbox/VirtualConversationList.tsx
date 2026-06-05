@@ -47,6 +47,7 @@ export function VirtualConversationList({
   const virtualizer = useVirtualizer({
     count: conversations.length,
     getScrollElement: () => parentRef.current,
+    getItemKey: (index) => conversations[index]?.id ?? index,
     estimateSize: () => (searchQuery ? 132 : 88),
     overscan: 8,
     measureElement: (el) => el?.getBoundingClientRect().height ?? 88,
