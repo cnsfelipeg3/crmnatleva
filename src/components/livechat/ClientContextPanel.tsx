@@ -204,13 +204,13 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           let mergedSales: any[] = salesRes.data || [];
           const clientPhone = (clientRes.data?.phone || "").replace(/\D/g, "");
           if (clientPhone && clientPhone.length >= 8) {
-            const { data: paxRows } = await supabase
+            const { data: paxRows } = await (supabase as any)
               .from("passengers")
               .select("id")
               .or(`phone.eq.${clientPhone},phone.eq.+${clientPhone}`);
             const paxIds = (paxRows || []).map((p: any) => p.id);
             if (paxIds.length > 0) {
-              const { data: partRows } = await supabase
+              const { data: partRows } = await (supabase as any)
                 .from("sale_participants")
                 .select("sales:sale_id(*)")
                 .in("passenger_id", paxIds);
