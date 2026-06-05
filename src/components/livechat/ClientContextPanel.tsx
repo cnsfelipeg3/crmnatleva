@@ -22,6 +22,7 @@ import { AIProposalBriefingDialog } from "./AIProposalBriefingDialog";
 import { ProfilePictureViewer } from "./ProfilePictureViewer";
 import { ConversationTagsManager } from "./ConversationTagsManager";
 import { LinkClientDialog } from "./LinkClientDialog";
+import { ConversationCompanions } from "./ConversationCompanions";
 import { Link2, Unlink } from "lucide-react";
 
 // ─── Types ───
