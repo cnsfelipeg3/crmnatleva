@@ -1089,6 +1089,17 @@ export default function ProposalEditor() {
               <Button variant="outline" size="sm" onClick={() => window.open(`/proposta/${existing.slug}`, "_blank")} className="gap-1.5">
                 <ExternalLink className="w-3.5 h-3.5" /> Visualizar
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportPdf}
+                disabled={exportingPdf}
+                className="gap-1.5"
+                title="Gera um PDF fiel ao layout da proposta pública"
+              >
+                {exportingPdf ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+                Salvar em PDF
+              </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-1.5" disabled={exportingPdf}>
