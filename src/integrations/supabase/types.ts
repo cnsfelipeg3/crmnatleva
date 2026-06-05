@@ -10670,6 +10670,72 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_calls: {
+        Row: {
+          call_status: string
+          call_type: string
+          caller_name: string | null
+          conversation_id: string | null
+          created_at: string
+          duration_seconds: number
+          ended_at: string | null
+          external_call_id: string | null
+          id: string
+          is_video: boolean
+          phone: string
+          raw_payload: Json | null
+          started_at: string
+          updated_at: string
+        }
+        Insert: {
+          call_status?: string
+          call_type?: string
+          caller_name?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          is_video?: boolean
+          phone: string
+          raw_payload?: Json | null
+          started_at?: string
+          updated_at?: string
+        }
+        Update: {
+          call_status?: string
+          call_type?: string
+          caller_name?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          duration_seconds?: number
+          ended_at?: string | null
+          external_call_id?: string | null
+          id?: string
+          is_video?: boolean
+          phone?: string
+          raw_payload?: Json | null
+          started_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "whatsapp_calls_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_cloud_config: {
         Row: {
           access_token_encrypted: string | null

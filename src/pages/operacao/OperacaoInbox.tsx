@@ -93,6 +93,8 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 import { useMessageRetry } from "@/hooks/useMessageRetry";
 import { useMessageReactions } from "@/components/inbox/useMessageReactions";
 import { ReactionPickerButton, MessageReactionsChip } from "@/components/inbox/MessageReactions";
+import { useConversationCalls } from "@/hooks/useConversationCalls";
+import { CallEntry } from "@/components/livechat/CallEntry";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
@@ -329,6 +331,21 @@ function OperacaoInboxInner() {
   // ─── Message reactions (WhatsApp-style) ───
   const visibleMessageIds = useMemo(() => currentMessages.map(m => m.id).filter(Boolean), [currentMessages]);
   const { reactions: reactionsByMsg, addReaction, removeReaction } = useMessageReactions(visibleMessageIds, selectedId);
+
+  // ─── WhatsApp calls timeline ───
+  const conversationCalls = useConversationCalls(selectedId, selected?.phone);
+  const timelineItems = useMemo(() => {
+    type Item = { kind: "msg"; data: any; ts: number } | { kind: "call"; data: any; ts: number };
+    const items: Item[] = [];
+    for (const m of currentMessages) {
+      items.push({ kind: "msg", data: m, ts: new Date(m.created_at).getTime() || 0 });
+    }
+    for (const c of conversationCalls) {
+      items.push({ kind: "call", data: c, ts: new Date(c.started_at).getTime() || 0 });
+    }
+    items.sort((a, b) => a.ts - b.ts);
+    return items;
+  }, [currentMessages, conversationCalls]);
   const handleToggleReaction = useCallback((msg: any, emoji: string) => {
     const list = reactionsByMsg[msg.id] || [];
     const mine = list.find((r: any) => r.reactor_type === "atendente" && r.reactor_id === (user?.id || null));
@@ -3260,9 +3277,15 @@ function OperacaoInboxInner() {
                         </Button>
                       </div>
                     )}
-                    {currentMessages.map((msg, idx) => (
-                      <Fragment key={msg.id}>
-                        {shouldShowDateSeparator(currentMessages, idx) && (
+                    {timelineItems.map((item) => {
+                      if (item.kind === "call") {
+                        return <CallEntry key={`call-${item.data.id}`} call={item.data} />;
+                      }
+                      const msg = item.data;
+                      const idx = currentMessages.indexOf(msg);
+                      return (
+                       <Fragment key={msg.id}>
+                         {shouldShowDateSeparator(currentMessages, idx) && (
                           <div className="flex justify-center my-4">
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
@@ -3583,8 +3606,9 @@ function OperacaoInboxInner() {
                             </ContextMenuContent>
                           )}
                         </ContextMenu>
-                      </Fragment>
-                    ))}
+                       </Fragment>
+                      );
+                    })}
                     {currentMessages.length === 0 && !flowRunning && (
                       loadingMessages ? (
                         <LoadingState variant="block" size="md" className="min-h-[60vh]" />

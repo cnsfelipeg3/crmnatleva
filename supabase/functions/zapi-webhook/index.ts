@@ -711,6 +711,87 @@ Deno.serve(async (req) => {
     }
 
     // ═══════════════════════════════════════════════════════════
+    // FAST-PATH: Eventos de chamada de voz/vídeo (ReceivedCallback)
+    // Z-API entrega: callId, callerId, callerName, callType (audio/video),
+    // callStatus (offer/accept/reject/miss/terminate), callDuration, moment, isVideo
+    // ═══════════════════════════════════════════════════════════
+    if (body?.type === "ReceivedCallback" || body?.callId || body?.callStatus) {
+      try {
+        const callPhoneRaw = String(body.callerId || body.caller || body.phone || "").replace(/\D/g, "");
+        if (!callPhoneRaw) {
+          return new Response(JSON.stringify({ success: true, type: "call_no_phone" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const rawStatus = String(body.callStatus || body.status || "miss").toLowerCase();
+        const statusMap: Record<string, string> = {
+          offer: "offered", offered: "offered",
+          accept: "accepted", accepted: "accepted",
+          miss: "missed", missed: "missed",
+          reject: "rejected", rejected: "rejected",
+          terminate: "terminated", terminated: "terminated", end: "terminated",
+        };
+        const callStatus = statusMap[rawStatus] || "missed";
+        const isVideo = body.isVideo === true || String(body.callType || "").toLowerCase() === "video";
+        const callType = isVideo ? "video" : "voice";
+        const duration = Number(body.callDuration || body.duration || 0) || 0;
+        const callId = String(body.callId || body.messageId || `${callPhoneRaw}-${body.momment || Date.now()}`);
+
+        const momentRaw2 = Number(body.momment);
+        const startedAt = Number.isFinite(momentRaw2)
+          ? new Date((momentRaw2 > 1_000_000_000_000 ? momentRaw2 : momentRaw2 * 1000)).toISOString()
+          : new Date().toISOString();
+
+        // Tenta achar conversa existente por telefone
+        const { data: conv } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("phone", callPhoneRaw)
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        const callerName = body.callerName || body.senderName || body.chatName || null;
+
+        const { error: callErr } = await supabase.from("whatsapp_calls").upsert({
+          conversation_id: conv?.id || null,
+          phone: callPhoneRaw,
+          call_type: callType,
+          call_status: callStatus,
+          is_video: isVideo,
+          duration_seconds: duration,
+          caller_name: callerName,
+          started_at: startedAt,
+          ended_at: callStatus === "terminated" || callStatus === "missed" || callStatus === "rejected"
+            ? new Date().toISOString() : null,
+          external_call_id: callId,
+          raw_payload: body,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "external_call_id" });
+
+        if (callErr) console.error("[Webhook] call insert error:", callErr.message);
+        else console.log(`[Webhook] 📞 call ${callStatus} from ${callPhoneRaw} (${callType}, ${duration}s)`);
+
+        // Atualiza preview da conversa quando há chamada perdida
+        if (conv?.id && (callStatus === "missed" || callStatus === "rejected")) {
+          const preview = isVideo ? "📹 Chamada de vídeo perdida" : "📞 Chamada de voz perdida";
+          await supabase
+            .from("conversations")
+            .update({ last_message_preview: preview, last_message_at: startedAt })
+            .eq("id", conv.id);
+        }
+      } catch (e: any) {
+        console.error("[Webhook] call handler failed:", e?.message);
+      }
+      return new Response(JSON.stringify({ success: true, type: "call_event" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+
+
+    // ═══════════════════════════════════════════════════════════
     // STEP 0: SAVE RAW EVENT IMMEDIATELY — ZERO loss guarantee
     // ═══════════════════════════════════════════════════════════
     const { data: rawEvent, error: rawErr } = await supabase
