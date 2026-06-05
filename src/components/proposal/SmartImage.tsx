@@ -100,9 +100,10 @@ export default function SmartImage({
 }: SmartImageProps) {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const pdfExportMode = typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search);
+  const isExternalHttpImage = /^https?:\/\//i.test(src);
   const effectiveEagerMount = eagerMount || pdfExportMode;
   const effectiveLoading = pdfExportMode ? "eager" : loading;
-  const effectiveForceProxy = forceProxy || pdfExportMode;
+  const effectiveForceProxy = forceProxy || (pdfExportMode && isExternalHttpImage);
   const [inView, setInView] = useState<boolean>(effectiveEagerMount);
   const [currentSrc, setCurrentSrc] = useState<string | null>(() =>
     effectiveForceProxy ? proxyCache.get(src) || null : src
