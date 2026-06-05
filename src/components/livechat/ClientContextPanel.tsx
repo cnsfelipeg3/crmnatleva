@@ -197,25 +197,13 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             setNotes(notesRes.data || []);
             setReceivables(receivablesRes.data || []);
           }
-        } else {
-          // Try matching by name
-          const { data: clientByName } = await supabase
-            .from("clients")
-            .select("*")
-            .ilike("display_name", `%${conversation.contact_name}%`)
-            .limit(1);
-          if (!cancelled && clientByName?.[0]) {
-            setClientData(clientByName[0]);
-            const cid = clientByName[0].id;
-            const [salesRes, notesRes, receivablesRes] = await Promise.all([
-              supabase.from("sales").select("*").eq("client_id", cid).order("created_at", { ascending: false }).limit(20),
-              supabase.from("client_notes").select("*").eq("client_id", cid).order("created_at", { ascending: false }).limit(20),
-              supabase.from("accounts_receivable").select("*").eq("client_id", cid).order("due_date", { ascending: true }).limit(50),
-            ]);
-            setSales(salesRes.data || []);
-            setNotes(notesRes.data || []);
-            setReceivables(receivablesRes.data || []);
-          }
+        } else if (!cancelled) {
+          // Vínculo cliente é manual · não fazemos match automático por nome
+          // para evitar associações erradas. O usuário linka via botão "Vincular cliente".
+          setClientData(null);
+          setSales([]);
+          setNotes([]);
+          setReceivables([]);
         }
 
         // Load profiles for assigned_to
