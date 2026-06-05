@@ -93,6 +93,8 @@ import type { QueuedMessage } from "@/hooks/useMessageQueue";
 import { useMessageRetry } from "@/hooks/useMessageRetry";
 import { useMessageReactions } from "@/components/inbox/useMessageReactions";
 import { ReactionPickerButton, MessageReactionsChip } from "@/components/inbox/MessageReactions";
+import { useConversationCalls } from "@/hooks/useConversationCalls";
+import { CallEntry } from "@/components/livechat/CallEntry";
 
 // (All helpers, types, constants now imported from @/components/inbox/*)
 
