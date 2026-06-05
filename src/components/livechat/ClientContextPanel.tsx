@@ -195,14 +195,39 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         if (clientId) {
           const [clientRes, salesRes, notesRes, receivablesRes] = await Promise.all([
             supabase.from("clients").select("*").eq("id", clientId).single(),
-            supabase.from("sales").select("*").eq("client_id", clientId).order("created_at", { ascending: false }).limit(20),
+            supabase.from("sales").select("*").eq("client_id", clientId).order("created_at", { ascending: false }).limit(50),
             supabase.from("client_notes").select("*").eq("client_id", clientId).order("created_at", { ascending: false }).limit(20),
             supabase.from("accounts_receivable").select("*").eq("client_id", clientId).order("due_date", { ascending: true }).limit(50),
           ]);
 
+          // Also include sales where this person is passenger/payer (matches profile totals)
+          let mergedSales: any[] = salesRes.data || [];
+          const clientPhone = (clientRes.data?.phone || "").replace(/\D/g, "");
+          if (clientPhone && clientPhone.length >= 8) {
+            const { data: paxRows } = await (supabase as any)
+              .from("passengers")
+              .select("id")
+              .or(`phone.eq.${clientPhone},phone.eq.+${clientPhone}`);
+            const paxIds = (paxRows || []).map((p: any) => p.id);
+            if (paxIds.length > 0) {
+              const { data: partRows } = await (supabase as any)
+                .from("sale_participants")
+                .select("sales:sale_id(*)")
+                .in("passenger_id", paxIds);
+              const extra = (partRows || []).map((r: any) => r.sales).filter(Boolean);
+              const seen = new Set(mergedSales.map((s: any) => s.id));
+              for (const s of extra) {
+                if (!seen.has(s.id)) { mergedSales.push(s); seen.add(s.id); }
+              }
+              mergedSales.sort((a: any, b: any) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+            }
+          }
+
           if (!cancelled) {
             setClientData(clientRes.data);
-            setSales(salesRes.data || []);
+            setSales(mergedSales);
             setNotes(notesRes.data || []);
             setReceivables(receivablesRes.data || []);
           }
