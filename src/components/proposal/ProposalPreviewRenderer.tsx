@@ -310,7 +310,17 @@ function InlineAirlineLogo({ iata, size = 36 }: { iata: string; size?: number })
       <Plane className="text-muted-foreground" style={{ width: size * 0.5, height: size * 0.5 }} />
     </span>
   );
-  return <img src={url} alt={code} width={size} height={size} className="object-contain rounded-lg" onError={() => setError(true)} loading="lazy" />;
+  return (
+    <SmartImage
+      src={url}
+      alt={code}
+      className="rounded-lg bg-transparent"
+      imgClassName="object-contain"
+      loading="lazy"
+      eagerMount={typeof window !== "undefined" && /[?&](print|pdf)=1/.test(window.location.search)}
+      onResolvedUrl={() => setError(false)}
+    />
+  );
 }
 
 /* ═══ Flight Duration Formatter ═══ */
