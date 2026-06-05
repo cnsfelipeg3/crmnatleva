@@ -3606,8 +3606,9 @@ function OperacaoInboxInner() {
                             </ContextMenuContent>
                           )}
                         </ContextMenu>
-                      </Fragment>
-                    ))}
+                       </Fragment>
+                      );
+                    })}
                     {currentMessages.length === 0 && !flowRunning && (
                       loadingMessages ? (
                         <LoadingState variant="block" size="md" className="min-h-[60vh]" />
