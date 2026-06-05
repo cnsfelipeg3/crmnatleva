@@ -66,59 +66,70 @@ export async function exportProposalPdf(slug: string, title: string) {
   // Settle layout
   await new Promise((r) => setTimeout(r, 600));
 
-  // Clone the body so we don't mutate the iframe
-  const clone = doc.body.cloneNode(true) as HTMLElement;
-
-  // Force everything onto a single continuous page (no page-breaks)
-  const style = doc.createElement("style");
-  style.textContent = `
-    * { animation: none !important; transition: none !important; }
-    [data-track-section], section, div, article {
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-    }
-  `;
-  clone.prepend(style);
-
-  // Compute total height of the rendered content
+  const fullWidth = 1200;
   const fullHeight = Math.max(
     doc.body.scrollHeight,
     doc.documentElement.scrollHeight,
   );
-  const fullWidth = 1200;
 
-  const opt = {
-    margin: 0,
-    filename: `${(title || "proposta").replace(/[^\w\-]+/g, "_")}.pdf`,
-    image: { type: "jpeg" as const, quality: 0.95 },
-    html2canvas: {
+  try {
+    const html2canvasMod: any = await import("html2canvas");
+    const html2canvas = html2canvasMod.default || html2canvasMod;
+    const { default: jsPDF } = await import("jspdf");
+
+    // Render the whole iframe body into one tall canvas
+    const canvas: HTMLCanvasElement = await html2canvas(doc.body, {
       scale: 2,
       useCORS: true,
       allowTaint: true,
+      backgroundColor: "#ffffff",
       windowWidth: fullWidth,
       windowHeight: fullHeight,
       width: fullWidth,
       height: fullHeight,
-      backgroundColor: "#ffffff",
-    },
-    jsPDF: {
-      unit: "px" as const,
-      format: [fullWidth, fullHeight] as [number, number],
-      orientation: (fullHeight > fullWidth ? "portrait" : "landscape") as "portrait" | "landscape",
-      hotfixes: ["px_scaling"],
-      compress: true,
-    },
-    pagebreak: { mode: ["avoid-all"] as ("avoid-all" | "css" | "legacy")[] },
-  };
+      logging: false,
+    });
 
-  try {
-    const html2pdfMod = await import("html2pdf.js");
-    const html2pdf = (html2pdfMod as any).default || html2pdfMod;
-    await html2pdf().set(opt).from(clone).save();
+    // A4 portrait in mm
+    const pdfWidthMm = 210;
+    const pdfHeightMm = 297;
+    const pxPerMm = canvas.width / pdfWidthMm;
+    const pageHeightPx = Math.floor(pdfHeightMm * pxPerMm);
+
+    const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
+
+    let renderedHeight = 0;
+    const totalHeight = canvas.height;
+
+    // Slice the tall canvas into A4 pages
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = canvas.width;
+    const ctx = pageCanvas.getContext("2d")!;
+
+    while (renderedHeight < totalHeight) {
+      const sliceHeight = Math.min(pageHeightPx, totalHeight - renderedHeight);
+      pageCanvas.height = sliceHeight;
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, pageCanvas.width, sliceHeight);
+      ctx.drawImage(
+        canvas,
+        0, renderedHeight, canvas.width, sliceHeight,
+        0, 0, canvas.width, sliceHeight,
+      );
+      const imgData = pageCanvas.toDataURL("image/jpeg", 0.92);
+      const sliceHeightMm = sliceHeight / pxPerMm;
+      if (renderedHeight > 0) pdf.addPage();
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidthMm, sliceHeightMm);
+      renderedHeight += sliceHeight;
+    }
+
+    const safeName = (title || "proposta").replace(/[^\w\-]+/g, "_");
+    pdf.save(`${safeName}.pdf`);
   } finally {
     document.body.removeChild(iframe);
   }
 }
+
 
 import { getPublicProposalUrl } from "@/lib/publicUrl";
 
