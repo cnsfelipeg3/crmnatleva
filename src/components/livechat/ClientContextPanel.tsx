@@ -212,7 +212,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             const paxIds = (paxRows || []).map((p: any) => p.id);
             if (paxIds.length > 0) {
               const { data: partRows } = await (supabase as any)
-                .from("sale_participants")
+                .from("sale_passengers")
                 .select("sales:sale_id(*)")
                 .in("passenger_id", paxIds);
               const extra = (partRows || []).map((r: any) => r.sales).filter(Boolean);
