@@ -969,6 +969,7 @@ function OperacaoInboxInner() {
             group_photo_url: c.group_photo_url || null,
             group_description: c.group_description || null,
             group_participants: c.group_participants || null,
+            profile_picture_url: c.profile_picture_url || null,
             created_at: c.created_at || null,
             _hasReliableActivity: true,
           };
@@ -2892,10 +2893,13 @@ function OperacaoInboxInner() {
                         className="relative shrink-0 rounded-full focus:outline-none focus:ring-2 focus:ring-primary/50 transition-transform hover:scale-105"
                         aria-label="Ver foto de perfil"
                       >
-                        {profilePicsRef.current.get(selected.id) ? (
-                          <img loading="lazy" decoding="async" src={profilePicsRef.current.get(selected.id)} alt="" className="h-9 w-9 md:h-10 md:w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
-                        ) : null}
-                        <div className={`h-9 w-9 md:h-10 md:w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold ${profilePicsRef.current.get(selected.id) ? 'hidden' : ''}`}>
+                        {(() => {
+                          const headerPic = profilePicsRef.current.get(selected.id) || (selected as any).profile_picture_url || (selected as any).group_photo_url || "";
+                          return headerPic ? (
+                            <img loading="lazy" decoding="async" src={headerPic} alt="" className="h-9 w-9 md:h-10 md:w-10 rounded-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }} />
+                          ) : null;
+                        })()}
+                        <div className={`h-9 w-9 md:h-10 md:w-10 rounded-full bg-secondary flex items-center justify-center text-sm font-bold ${(profilePicsRef.current.get(selected.id) || (selected as any).profile_picture_url || (selected as any).group_photo_url) ? 'hidden' : ''}`}>
                           {(selected.contact_name || "Sem nome").split(" ").map(w => w[0]).join("").slice(0, 2)}
                         </div>
                       </button>
