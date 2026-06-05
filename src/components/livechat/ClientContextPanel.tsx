@@ -204,26 +204,35 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
           // Also include sales where this person is passenger/payer (matches profile totals)
           let mergedSales: any[] = salesRes.data || [];
           const clientPhone = (clientRes.data?.phone || "").replace(/\D/g, "");
+          const clientName = (clientRes.data?.display_name || "").trim();
+
+          // Find passenger records by phone OR by exact name (case-insensitive)
+          const paxIdSet = new Set<string>();
           if (clientPhone && clientPhone.length >= 8) {
-            const { data: paxRows } = await (supabase as any)
-              .from("passengers")
-              .select("id")
+            const { data: paxByPhone } = await (supabase as any)
+              .from("passengers").select("id")
               .or(`phone.eq.${clientPhone},phone.eq.+${clientPhone}`);
-            const paxIds = (paxRows || []).map((p: any) => p.id);
-            if (paxIds.length > 0) {
-              const { data: partRows } = await (supabase as any)
-                .from("sale_passengers")
-                .select("sales:sale_id(*)")
-                .in("passenger_id", paxIds);
-              const extra = (partRows || []).map((r: any) => r.sales).filter(Boolean);
-              const seen = new Set(mergedSales.map((s: any) => s.id));
-              for (const s of extra) {
-                if (!seen.has(s.id)) { mergedSales.push(s); seen.add(s.id); }
-              }
-              mergedSales.sort((a: any, b: any) =>
-                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
+            (paxByPhone || []).forEach((p: any) => paxIdSet.add(p.id));
+          }
+          if (clientName) {
+            const { data: paxByName } = await (supabase as any)
+              .from("passengers").select("id").ilike("full_name", clientName);
+            (paxByName || []).forEach((p: any) => paxIdSet.add(p.id));
+          }
+
+          if (paxIdSet.size > 0) {
+            const { data: partRows } = await (supabase as any)
+              .from("sale_passengers")
+              .select("sales:sale_id(*)")
+              .in("passenger_id", Array.from(paxIdSet));
+            const extra = (partRows || []).map((r: any) => r.sales).filter(Boolean);
+            const seen = new Set(mergedSales.map((s: any) => s.id));
+            for (const s of extra) {
+              if (!seen.has(s.id)) { mergedSales.push(s); seen.add(s.id); }
             }
+            mergedSales.sort((a: any, b: any) =>
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            );
           }
 
           if (!cancelled) {
