@@ -3277,9 +3277,15 @@ function OperacaoInboxInner() {
                         </Button>
                       </div>
                     )}
-                    {currentMessages.map((msg, idx) => (
-                      <Fragment key={msg.id}>
-                        {shouldShowDateSeparator(currentMessages, idx) && (
+                    {timelineItems.map((item) => {
+                      if (item.kind === "call") {
+                        return <CallEntry key={`call-${item.data.id}`} call={item.data} />;
+                      }
+                      const msg = item.data;
+                      const idx = currentMessages.indexOf(msg);
+                      return (
+                       <Fragment key={msg.id}>
+                         {shouldShowDateSeparator(currentMessages, idx) && (
                           <div className="flex justify-center my-4">
                             <span className="bg-secondary/80 text-muted-foreground text-[10px] font-medium px-3 py-1.5 rounded-full">{formatDateSeparator(msg.created_at)}</span>
                           </div>
