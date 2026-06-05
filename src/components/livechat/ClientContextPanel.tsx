@@ -1063,6 +1063,29 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         source={conversation.source}
         tags={conversation.tags}
       />
+
+      {dbConvId && (
+        <LinkClientDialog
+          open={showLinkDialog}
+          onOpenChange={setShowLinkDialog}
+          conversationId={dbConvId}
+          conversationPhone={conversation.phone}
+          conversationName={conversation.contact_name}
+          currentClientId={clientData?.id || null}
+          onLinked={(_id, _name) => {
+            setShowLinkDialog(false);
+            // força recarregar dados do cliente
+            window.location.reload();
+          }}
+          onUnlinked={() => {
+            setClientData(null);
+            setSales([]);
+            setNotes([]);
+            setReceivables([]);
+            setShowLinkDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 }
