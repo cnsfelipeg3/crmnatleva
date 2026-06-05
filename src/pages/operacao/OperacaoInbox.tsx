@@ -969,6 +969,7 @@ function OperacaoInboxInner() {
             group_photo_url: c.group_photo_url || null,
             group_description: c.group_description || null,
             group_participants: c.group_participants || null,
+            profile_picture_url: c.profile_picture_url || null,
             created_at: c.created_at || null,
             _hasReliableActivity: true,
           };
