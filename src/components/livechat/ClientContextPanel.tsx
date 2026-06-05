@@ -137,6 +137,11 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [agentHasReplied, setAgentHasReplied] = useState(false);
   const [msgStats, setMsgStats] = useState<{ totalClient: number; totalAgent: number; avgResponseHours: number | null }>({ totalClient: 0, totalAgent: 0, avgResponseHours: null });
   const [showProfileViewer, setShowProfileViewer] = useState(false);
+  const [dbConvId, setDbConvId] = useState<string | null>(conversation.db_id || null);
+  const [currentTags, setCurrentTags] = useState<string[]>(conversation.tags || []);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+
+  useEffect(() => { setCurrentTags(conversation.tags || []); }, [conversation.tags]);
 
   const initials = conversation.contact_name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
 
