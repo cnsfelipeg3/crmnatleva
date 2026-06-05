@@ -98,8 +98,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
   const itemBody = (
     <div
       onClick={() => onSelect(conv.id)}
-      style={{ contain: "layout paint" }}
-      className={`group relative px-2.5 py-2.5 cursor-pointer transition-colors border-l-2 border-b border-b-border/40 bg-background hover:bg-accent/40 ${
+      className={`group relative px-2.5 py-3 cursor-pointer transition-colors border-l-2 border-b border-b-border/40 bg-background hover:bg-accent/40 ${
         isSelected ? "bg-accent border-l-primary" : conv.is_archived ? "border-l-muted-foreground/30 bg-muted/20 opacity-75" : isUrgent ? "border-l-destructive/50" : "border-l-transparent"
       }`}
     >
@@ -135,7 +134,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-1.5">
           <div className="flex items-center justify-between gap-1 mb-0.5">
             <span className={`text-xs truncate ${hasUnread ? "font-bold text-foreground" : "font-semibold text-foreground/80"}`}>
               {/^\d{10,}$/.test(contactName) ? formatPhoneDisplay(contactName) : contactName}
@@ -172,7 +171,7 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
               )}
             </div>
           ) : (
-            <div className={`flex items-center gap-1.5 text-[11px] ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+            <div className={`flex items-center gap-1.5 text-[11px] leading-4 ${hasUnread ? "text-foreground font-medium" : "text-muted-foreground"}`}>
               {preview.icon}
               <span className={`truncate ${preview.italic ? "italic opacity-50" : ""}`}>
                 {term ? highlightTerm(preview.text, term) : preview.text}
@@ -181,14 +180,14 @@ function ConversationItemInner({ conv, isSelected, profilePic, presence, onSelec
           )}
 
           {hasContentMatch && (
-            <div className="mt-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-[10px] leading-snug text-foreground/90 line-clamp-2">
+            <div className="px-2.5 py-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 text-[10px] leading-4 text-foreground/90 break-words">
               <span className="font-bold text-amber-600 dark:text-amber-400 mr-1">↳ Encontrado:</span>
               {highlightTerm(buildSnippet(contentMatchSnippet || "", term), term)}
             </div>
           )}
 
-          {/* Bottom row: stage + tags · uma linha só, com overflow oculto · evita reflow/overlap */}
-          <div className="flex items-center gap-1 mt-1.5 min-w-0 overflow-hidden flex-nowrap">
+          {/* Bottom row: stage + tags · pode quebrar linha em resultados de busca para nunca sobrepor o trecho encontrado */}
+          <div className="flex items-center gap-1.5 min-w-0 overflow-visible flex-wrap">
             <span className={`shrink-0 text-[8px] px-1.5 py-0.5 rounded-full text-white font-medium ${stageInfo.color}`}>
               {stageInfo.label}
             </span>
