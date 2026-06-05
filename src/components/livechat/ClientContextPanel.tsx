@@ -165,6 +165,7 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
         const dbConv = convRows?.[0];
         const convId = dbConv?.id;
         const clientId = dbConv?.client_id;
+        if (!cancelled && convId) setDbConvId(convId);
 
         // Fetch last agent/client messages + stats for smart actions
         if (convId) {
