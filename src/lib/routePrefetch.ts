@@ -106,6 +106,7 @@ const HIGH_PRIORITY_ROUTES = [
 /**
  * Prefetch das rotas top-priority com concorrência limitada (3 paralelas).
  * Pula completamente em conexão lenta ou modo "Save Data".
+ * Quando termina, dispara a SEGUNDA ONDA (todas as rotas restantes) em idle profundo.
  */
 let warmedAll = false;
 export function prefetchAllRoutes(): void {
@@ -122,6 +123,16 @@ export function prefetchAllRoutes(): void {
   const queue = HIGH_PRIORITY_ROUTES.filter((p) => !cache.has(p) && loaders[p]);
   let active = 0;
   let i = 0;
+  let finished = 0;
+
+  const scheduleSecondWave = () => {
+    const start = () => prefetchSecondaryRoutes();
+    if (typeof (window as any).requestIdleCallback === "function") {
+      (window as any).requestIdleCallback(start, { timeout: 8000 });
+    } else {
+      setTimeout(start, 4000);
+    }
+  };
 
   const next = () => {
     while (active < 3 && i < queue.length) {
@@ -132,10 +143,69 @@ export function prefetchAllRoutes(): void {
         .catch(() => null)
         .finally(() => {
           active--;
+          finished++;
+          if (finished === queue.length) scheduleSecondWave();
           next();
         });
       cache.set(path, promise);
     }
+    if (queue.length === 0) scheduleSecondWave();
   };
   next();
+}
+
+/**
+ * Segunda onda · prefetch das rotas restantes (fora do top-priority).
+ * Concorrência 2, idle profundo. Resultado: qualquer clique vira instantâneo.
+ */
+let warmedSecondary = false;
+export function prefetchSecondaryRoutes(): void {
+  if (warmedSecondary) return;
+  warmedSecondary = true;
+  if (shouldSkipPrefetch()) return;
+
+  const remaining = Object.keys(loaders).filter(
+    (p) => !cache.has(p) && !HIGH_PRIORITY_ROUTES.includes(p)
+  );
+  let active = 0;
+  let i = 0;
+  const next = () => {
+    while (active < 2 && i < remaining.length) {
+      const path = remaining[i++];
+      const loader = loaders[path];
+      active++;
+      const promise = loader().catch(() => null).finally(() => {
+        active--;
+        next();
+      });
+      cache.set(path, promise);
+    }
+  };
+  next();
+}
+
+/**
+ * Prefetch dos "irmãos" de uma seção. Quando o usuário entra em /financeiro,
+ * aquecemos /financeiro/receber, /financeiro/pagar, etc.
+ */
+export function prefetchSection(currentPath: string): void {
+  if (shouldSkipPrefetch()) return;
+  const segment = "/" + currentPath.split("/").filter(Boolean)[0];
+  if (!segment || segment === "/") return;
+  const siblings = Object.keys(loaders).filter(
+    (p) => p.startsWith(segment + "/") && p !== currentPath && !cache.has(p)
+  );
+  for (const p of siblings) {
+    const loader = loaders[p];
+    if (!loader) continue;
+    const start = () => {
+      const promise = loader().catch(() => null);
+      cache.set(p, promise);
+    };
+    if (typeof (window as any).requestIdleCallback === "function") {
+      (window as any).requestIdleCallback(start, { timeout: 1500 });
+    } else {
+      setTimeout(start, 200);
+    }
+  }
 }

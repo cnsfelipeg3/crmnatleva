@@ -277,6 +277,19 @@ function AppRoutes() {
     return () => cancelIdle(handle as number);
   }, [isAuthenticated, isLoading]);
 
+  // Ao mudar de rota, aquecer os "irmãos" da seção atual (ex: /financeiro/*)
+  // para que a navegação dentro da mesma área seja 100% instantânea.
+  useEffect(() => {
+    if (!isAuthenticated || isLoading) return;
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      if (cancelled) return;
+      const { prefetchSection } = await import("@/lib/routePrefetch");
+      prefetchSection(location.pathname);
+    }, 600);
+    return () => { cancelled = true; window.clearTimeout(t); };
+  }, [isAuthenticated, isLoading, location.pathname]);
+
   return (
     <SmartSuspense>
       {import.meta.env.DEV && (
