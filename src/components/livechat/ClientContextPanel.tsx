@@ -826,6 +826,15 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
               )}
             </div>
 
+            {/* Companheiros de viagem */}
+            <div className="mt-3 pt-3 border-t border-border/40">
+              <ConversationCompanions
+                conversationDbId={dbConvId || undefined}
+                ownerPhone={conversation.phone}
+                clientId={clientData?.id || null}
+              />
+            </div>
+
             {/* Assigned */}
             <div className="flex items-center gap-1.5 mt-2.5 text-[10px] text-muted-foreground">
               <User className="h-3 w-3" />
