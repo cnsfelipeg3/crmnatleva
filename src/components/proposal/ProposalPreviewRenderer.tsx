@@ -809,10 +809,11 @@ function FlightCard({ flight, idx }: { flight: any; idx: number }) {
       {/* Cover image (aircraft / airline) — responsive aspect ratio */}
       {flight.image_url && (
         <div className="mb-5 rounded-2xl overflow-hidden border border-border/30 bg-muted aspect-[16/10] sm:aspect-[16/9] md:aspect-[16/7] lg:aspect-[16/6]">
-          <img
+          <SmartImage
             src={flight.image_url}
             alt={flight.title || "Capa do aéreo"}
-            className="w-full h-full object-contain sm:object-cover object-center"
+            className="w-full h-full"
+            imgClassName="object-contain sm:object-cover object-center"
             loading="lazy"
           />
         </div>
@@ -955,7 +956,7 @@ function CruiseCard({ cruise, idx }: { cruise: any; idx: number }) {
       {/* Cover */}
       {cover ? (
         <div className="aspect-[16/8] overflow-hidden bg-muted relative">
-          <img src={cover} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full object-cover" loading="lazy" />
+          <SmartImage src={cover} alt={cruise.title || d.ship_name || "Cruzeiro"} className="w-full h-full" imgClassName="object-cover" loading="lazy" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
           <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 text-white text-center">
             <div className="inline-flex items-center gap-2 mb-2 px-3 py-1 rounded-full bg-white/15 backdrop-blur-sm border border-white/20">
@@ -1627,7 +1628,7 @@ function ExperienceCard({ exp, idx }: { exp: any; idx: number }) {
           </div>
         }
       >
-        {exp.image_url && <div className="h-40 overflow-hidden"><img src={exp.image_url} alt={exp.title} className="w-full h-full object-cover" /></div>}
+        {exp.image_url && <div className="h-40 overflow-hidden"><SmartImage src={exp.image_url} alt={exp.title} className="w-full h-full" imgClassName="object-cover" /></div>}
         <div className="p-5">
           <div className="flex items-center gap-2 mb-1"><Sparkles className="w-4 h-4 text-accent" /><h3 className="font-semibold text-foreground">{exp.title}</h3></div>
           {exp.description && <p className="text-sm text-muted-foreground line-clamp-2">{exp.description}</p>}
@@ -1754,7 +1755,7 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
       >
         {item.image_url && (
           <div className="h-40 overflow-hidden">
-            <img src={item.image_url} alt={item.title || meta.label} className="w-full h-full object-cover" loading="lazy" />
+            <SmartImage src={item.image_url} alt={item.title || meta.label} className="w-full h-full" imgClassName="object-cover" loading="lazy" />
           </div>
         )}
         <div className="p-5">
