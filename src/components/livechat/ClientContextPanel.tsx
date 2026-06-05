@@ -907,17 +907,6 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             </div>
           </Section>
 
-          {/* ─── Next Best Action ─── */}
-          <Section title="Próxima Ação" icon={Sparkles} defaultOpen={true}>
-            <div className="space-y-1.5">
-              {nextActions.map((action, i) => (
-                <div key={i} className={`flex items-start gap-2 text-xs rounded-lg px-2.5 py-1.5 ${action.alert ? 'bg-destructive/5 text-destructive' : 'bg-secondary/30 text-foreground'}`}>
-                  {action.alert ? <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> : <CheckCircle2 className="h-3 w-3 mt-0.5 shrink-0 text-emerald-500" />}
-                  <span>{action.text}</span>
-                </div>
-              ))}
-            </div>
-          </Section>
 
           {/* ─── Commercial Summary ─── */}
           <Section title="Resumo Comercial" icon={TrendingUp} defaultOpen={true}>
