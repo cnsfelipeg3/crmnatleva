@@ -100,14 +100,12 @@ export function VirtualConversationList({
                 top: 0,
                 left: 0,
                 width: "100%",
-                height: `${virtualItem.size}px`,
                 transform: `translateY(${virtualItem.start}px)`,
-                overflow: "hidden",
-                contain: "strict",
               }}
               data-index={virtualItem.index}
               ref={virtualizer.measureElement}
             >
+
               <ConversationItem
                 conv={conv}
                 isSelected={conv.id === selectedId}
