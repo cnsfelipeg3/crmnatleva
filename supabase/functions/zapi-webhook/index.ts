@@ -711,11 +711,14 @@ Deno.serve(async (req) => {
     }
 
     // ═══════════════════════════════════════════════════════════
-    // FAST-PATH: Eventos de chamada de voz/vídeo (ReceivedCallback)
+    // FAST-PATH: Eventos reais de chamada de voz/vídeo.
+    // CUIDADO: mensagens normais também chegam como ReceivedCallback na Z-API.
+    // Só tratar como chamada quando houver campos explícitos de chamada.
     // Z-API entrega: callId, callerId, callerName, callType (audio/video),
     // callStatus (offer/accept/reject/miss/terminate), callDuration, moment, isVideo
     // ═══════════════════════════════════════════════════════════
-    if (body?.type === "ReceivedCallback" || body?.callId || body?.callStatus) {
+    const isExplicitCallEvent = Boolean(body?.callId || body?.callStatus || body?.callType === "video" || body?.callType === "audio" || body?.callType === "voice" || body?.isVideo === true);
+    if (isExplicitCallEvent) {
       try {
         const callPhoneRaw = String(body.callerId || body.caller || body.phone || "").replace(/\D/g, "");
         if (!callPhoneRaw) {
