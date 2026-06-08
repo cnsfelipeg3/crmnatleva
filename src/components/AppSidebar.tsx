@@ -153,12 +153,13 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     const fetchCount = async () => {
       try {
-        const { count, error } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("quotation_briefings")
-          .select("*", { count: "exact", head: true })
+          .select("id")
           .eq("status", "pendente")
-          .eq("is_fictional", false);
-        if (!error && !cancelled) setPendingBriefings(count || 0);
+          .eq("is_fictional", false)
+          .limit(99);
+        if (!error && !cancelled) setPendingBriefings((data || []).length);
       } catch {
         // Silently handle 503 or connection errors
       }
