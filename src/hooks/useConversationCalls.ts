@@ -12,7 +12,20 @@ export type WhatsAppCall = {
   caller_name: string | null;
   started_at: string;
   ended_at: string | null;
+  raw_payload?: Record<string, unknown> | null;
 };
+
+function isRealCall(row: WhatsAppCall) {
+  const payload = row.raw_payload || {};
+  return Boolean(
+    payload.callId ||
+    payload.callStatus ||
+    payload.callType === "video" ||
+    payload.callType === "audio" ||
+    payload.callType === "voice" ||
+    payload.isVideo === true,
+  );
+}
 
 /**
  * Carrega o histórico de chamadas (voz/vídeo) de uma conversa
@@ -44,7 +57,7 @@ export function useConversationCalls(conversationId: string | null | undefined, 
       }
 
       const { data } = await query;
-      if (active && data) setCalls(data as any);
+      if (active && data) setCalls((data as WhatsAppCall[]).filter(isRealCall));
     };
 
     load();
