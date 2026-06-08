@@ -126,17 +126,18 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     let cancelled = false;
     const refresh = async () => {
       try {
-        const { count } = await (supabase as any)
+        const { data } = await (supabase as any)
           .from("conversations")
-          .select("id", { count: "exact", head: true })
+          .select("id")
           .eq("assigned_to", user.id)
           .gt("unread_count", 0)
-          .eq("is_archived", false);
-        if (!cancelled) setMyInboxCount(count || 0);
+          .eq("is_archived", false)
+          .limit(99);
+        if (!cancelled) setMyInboxCount((data || []).length);
       } catch { /* silent */ }
     };
     refresh();
-    const interval = setInterval(refresh, 30000);
+    const interval = setInterval(refresh, 120000);
     const channel = supabase
       .channel("sidebar_inbox_count")
       .on("postgres_changes",
@@ -152,12 +153,13 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
     const fetchCount = async () => {
       try {
-        const { count, error } = await (supabase as any)
+        const { data, error } = await (supabase as any)
           .from("quotation_briefings")
-          .select("*", { count: "exact", head: true })
+          .select("id")
           .eq("status", "pendente")
-          .eq("is_fictional", false);
-        if (!error && !cancelled) setPendingBriefings(count || 0);
+          .eq("is_fictional", false)
+          .limit(99);
+        if (!error && !cancelled) setPendingBriefings((data || []).length);
       } catch {
         // Silently handle 503 or connection errors
       }

@@ -49,7 +49,6 @@ import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
-import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ProfilePictureViewer } from "@/components/livechat/ProfilePictureViewer";
@@ -266,7 +265,7 @@ function OperacaoInboxInner() {
   const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
-  const [waConnected, setWaConnected] = useState(false);
+  const [waConnected, setWaConnected] = useState(true);
   const [viewMode, setViewMode] = useState<"chat" | "pipeline">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -369,7 +368,7 @@ function OperacaoInboxInner() {
       if (document.hidden) return;
       setReloadVersion(v => v + 1);
     };
-    const interval = setInterval(tick, 15000);
+    const interval = setInterval(tick, 45000);
     return () => clearInterval(interval);
   }, [selectedId]);
 
@@ -377,7 +376,7 @@ function OperacaoInboxInner() {
     const interval = setInterval(() => {
       if (document.hidden) return;
       setChatSyncVersion(v => v + 1);
-    }, 30000);
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -385,7 +384,11 @@ function OperacaoInboxInner() {
     const handleFocus = () => {
       if (document.hidden) return;
       if (selectedIdRef.current) setReloadVersion(v => v + 1);
-      setChatSyncVersion(v => v + 1);
+      const now = Date.now();
+      if (now - lastAutoReconcileRef.current > 60000) {
+        lastAutoReconcileRef.current = now;
+        setChatSyncVersion(v => v + 1);
+      }
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
@@ -829,11 +832,10 @@ function OperacaoInboxInner() {
   // Load DB conversations on mount
   useEffect(() => {
     const loadDbConversations = async () => {
-      initPersistence().catch(() => {});
       const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_photo_url", {
         order: { column: "last_message_at", ascending: false },
-        maxRows: 250,
-        cacheMs: 30_000,
+        maxRows: 220,
+        cacheMs: 90_000,
         isFilters: { excluded_at: null },
       });
 
@@ -909,6 +911,7 @@ function OperacaoInboxInner() {
         });
 
       }
+      chatsLoadedRef.current = true;
     };
     loadDbConversations();
   }, []);
@@ -917,7 +920,7 @@ function OperacaoInboxInner() {
 
   // Z-API WhatsApp polling
   useEffect(() => {
-    const POLL_MS = 5000;
+    let cancelled = false;
 
     async function loadChats() {
       try {
@@ -931,9 +934,9 @@ function OperacaoInboxInner() {
           .limit(500);
         if (dbErr) console.error("loadChats: erro DB:", dbErr);
 
-        // Enriquecimento opcional Z-API (unread em tempo real + foto inline)
-        const zapiData = await callZapiProxy("get-chats").catch(() => []);
-        const zapiChats = Array.isArray(zapiData) ? zapiData : [];
+        // Enriquecimento externo removido da abertura automática: o banco é a
+        // fonte principal e realtime atualiza novas mensagens sem travar a tela.
+        const zapiChats: any[] = [];
         const zapiByPhone = new Map<string, any>();
         for (const z of zapiChats) {
           const raw = z.phone || z.id || "";
@@ -1025,7 +1028,7 @@ function OperacaoInboxInner() {
         // Profile pictures para quem ainda não tem
         const needsPic = merged.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
         if (needsPic.length > 0) {
-          const BATCH = 5;
+          const BATCH = 2;
           for (let i = 0; i < needsPic.length; i += BATCH) {
             const batch = needsPic.slice(i, i + BATCH);
             await Promise.allSettled(batch.map(conv =>
@@ -1049,13 +1052,19 @@ function OperacaoInboxInner() {
       try {
         const data = await callZapiProxy("check-status");
         if (data?.connected) {
+          if (cancelled) return;
           setWaConnected(true);
-          await loadChats();
+          if (chatSyncVersion > 0) await loadChats();
         } else { setWaConnected(false); }
       } catch { setWaConnected(false); }
     }
 
-    checkAndStartPolling();
+    const delay = chatSyncVersion === 0 ? 8000 : 0;
+    const timer = window.setTimeout(checkAndStartPolling, delay);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [chatSyncVersion]);
 
   // Busca em conteúdo de mensagens (debounced) · ativa quando query >= 2 chars

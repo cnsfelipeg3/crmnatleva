@@ -15,14 +15,13 @@
     <title>NatLeva CRM</title>
     <meta name="description" content="NatLeva — Viagens são a vida em movimento" />
     <meta name="author" content="NatLeva" />
-    <link rel="icon" href="/favicon.png" type="image/png" sizes="any" />
+    <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="icon" href="/icons/favicon-16.png" type="image/png" sizes="16x16" />
     <link rel="icon" href="/icons/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon-180.png" sizes="180x180" />
-    <link rel="mask-icon" href="/favicon.png" color="#0d2620" />
+    <link rel="mask-icon" href="/icons/favicon-32.png" color="#0d2620" />
 
     <!-- PWA -->
-    <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="application-name" content="NatLeva" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -74,6 +73,17 @@
     <div id="boot-loader"><div class="ring"></div><div class="txt">NatLeva</div></div>
     <div id="root"></div>
     <script>
+      (function(){
+        var host = location.hostname;
+        var isPreview = host.indexOf('lovableproject.com') !== -1 || host.indexOf('lovableproject-dev.com') !== -1 || host.indexOf('preview--') !== -1 || host.indexOf('id-preview--') !== -1;
+        if (!isPreview) {
+          var link = document.createElement('link');
+          link.rel = 'manifest';
+          link.href = '/manifest.webmanifest';
+          document.head.appendChild(link);
+        }
+      })();
+
       // Safety net: if React fails to mount (e.g. chunk error), hide loader after 12s
       setTimeout(function(){var el=document.getElementById('boot-loader');if(el){el.classList.add('hide');setTimeout(function(){el.remove()},400)}},12000);
 
