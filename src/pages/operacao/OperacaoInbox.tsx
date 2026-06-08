@@ -368,7 +368,7 @@ function OperacaoInboxInner() {
       if (document.hidden) return;
       setReloadVersion(v => v + 1);
     };
-    const interval = setInterval(tick, 15000);
+    const interval = setInterval(tick, 45000);
     return () => clearInterval(interval);
   }, [selectedId]);
 
@@ -376,7 +376,7 @@ function OperacaoInboxInner() {
     const interval = setInterval(() => {
       if (document.hidden) return;
       setChatSyncVersion(v => v + 1);
-    }, 30000);
+    }, 120000);
     return () => clearInterval(interval);
   }, []);
 
@@ -384,7 +384,11 @@ function OperacaoInboxInner() {
     const handleFocus = () => {
       if (document.hidden) return;
       if (selectedIdRef.current) setReloadVersion(v => v + 1);
-      setChatSyncVersion(v => v + 1);
+      const now = Date.now();
+      if (now - lastAutoReconcileRef.current > 60000) {
+        lastAutoReconcileRef.current = now;
+        setChatSyncVersion(v => v + 1);
+      }
     };
     window.addEventListener('focus', handleFocus);
     document.addEventListener('visibilitychange', handleFocus);
@@ -828,7 +832,6 @@ function OperacaoInboxInner() {
   // Load DB conversations on mount
   useEffect(() => {
     const loadDbConversations = async () => {
-      initPersistence().catch(() => {});
       const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_photo_url", {
         order: { column: "last_message_at", ascending: false },
         maxRows: 250,
