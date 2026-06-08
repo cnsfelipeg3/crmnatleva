@@ -49,7 +49,6 @@ import { AudioWaveformPlayer } from "@/components/livechat/AudioWaveformPlayer";
 import { AISuggestionPanel } from "@/components/livechat/AISuggestionPanel";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { supabase } from "@/integrations/supabase/client";
-import { initPersistence, persistConversation, persistMessages, loadPersistedMessages } from "@/hooks/useChatPersistence";
 import { fetchAllRows } from "@/lib/fetchAll";
 import { ContactProfilePanel } from "@/components/livechat/ContactProfilePanel";
 import { ProfilePictureViewer } from "@/components/livechat/ProfilePictureViewer";
@@ -266,7 +265,7 @@ function OperacaoInboxInner() {
   const [botActive, setBotActive] = useState(true);
   const [activeFlowName, setActiveFlowName] = useState<string | null>(null);
   const flowNameCacheRef = useRef<Record<string, string | null>>({});
-  const [waConnected, setWaConnected] = useState(false);
+  const [waConnected, setWaConnected] = useState(true);
   const [viewMode, setViewMode] = useState<"chat" | "pipeline">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
