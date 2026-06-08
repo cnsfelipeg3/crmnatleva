@@ -1,6 +1,7 @@
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { forceAppRefresh } from "@/lib/forceRefresh";
 
 interface State {
   hasError: boolean;
@@ -36,6 +37,10 @@ export class ErrorBoundary extends React.Component<Props, State> {
     this.setState({ hasError: false, error: null });
   };
 
+  handleHardRefresh = () => {
+    void forceAppRefresh({ silent: true });
+  };
+
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return <>{this.props.fallback}</>;
@@ -53,9 +58,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
               O erro foi registrado. Tenta recarregar · se persistir, volta pro
               dashboard.
             </p>
-            <div className="flex gap-2 justify-center pt-2">
-              <Button onClick={this.handleReset} variant="default" size="sm">
+            <div className="flex flex-wrap gap-2 justify-center pt-2">
+              <Button onClick={this.handleHardRefresh} variant="default" size="sm">
                 <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
+                Atualizar app
+              </Button>
+              <Button onClick={this.handleReset} variant="outline" size="sm">
                 Tentar de novo
               </Button>
               <Button
