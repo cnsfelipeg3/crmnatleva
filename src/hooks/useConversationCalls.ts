@@ -12,7 +12,20 @@ export type WhatsAppCall = {
   caller_name: string | null;
   started_at: string;
   ended_at: string | null;
+  raw_payload?: Record<string, unknown> | null;
 };
+
+function isRealCall(row: WhatsAppCall) {
+  const payload = row.raw_payload || {};
+  return Boolean(
+    payload.callId ||
+    payload.callStatus ||
+    payload.callType === "video" ||
+    payload.callType === "audio" ||
+    payload.callType === "voice" ||
+    payload.isVideo === true,
+  );
+}
 
 /**
  * Carrega o histórico de chamadas (voz/vídeo) de uma conversa
@@ -30,21 +43,24 @@ export function useConversationCalls(conversationId: string | null | undefined, 
     let active = true;
 
     const load = async () => {
+      const cleanPhone = phone ? String(phone).replace(/\D/g, "") : "";
+
       let query = supabase
         .from("whatsapp_calls" as any)
         .select("*")
         .order("started_at", { ascending: true })
         .limit(200);
 
-      if (conversationId) {
+      if (conversationId && cleanPhone) {
+        query = query.or(`conversation_id.eq.${conversationId},phone.eq.${cleanPhone}`);
+      } else if (conversationId) {
         query = query.eq("conversation_id", conversationId);
-      } else if (phone) {
-        const clean = String(phone).replace(/\D/g, "");
-        query = query.eq("phone", clean);
+      } else if (cleanPhone) {
+        query = query.eq("phone", cleanPhone);
       }
 
       const { data } = await query;
-      if (active && data) setCalls(data as any);
+      if (active && data) setCalls((data as unknown as WhatsAppCall[]).filter(isRealCall));
     };
 
     load();
@@ -53,14 +69,7 @@ export function useConversationCalls(conversationId: string | null | undefined, 
       .channel(`calls-${conversationId || phone}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "whatsapp_calls",
-          ...(conversationId
-            ? { filter: `conversation_id=eq.${conversationId}` }
-            : { filter: `phone=eq.${String(phone).replace(/\D/g, "")}` }),
-        },
+        { event: "*", schema: "public", table: "whatsapp_calls" },
         () => load(),
       )
       .subscribe();

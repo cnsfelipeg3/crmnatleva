@@ -333,7 +333,7 @@ function OperacaoInboxInner() {
   const { reactions: reactionsByMsg, addReaction, removeReaction } = useMessageReactions(visibleMessageIds, selectedId);
 
   // ─── WhatsApp calls timeline ───
-  const conversationCalls = useConversationCalls(selectedId, selected?.phone);
+  const conversationCalls = useConversationCalls(selected?.db_id || null, selected?.phone);
   const timelineItems = useMemo(() => {
     type Item = { kind: "msg"; data: any; ts: number } | { kind: "call"; data: any; ts: number };
     const items: Item[] = [];
