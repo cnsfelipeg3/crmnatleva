@@ -57,7 +57,7 @@ export function useConversationCalls(conversationId: string | null | undefined, 
       }
 
       const { data } = await query;
-      if (active && data) setCalls((data as WhatsAppCall[]).filter(isRealCall));
+      if (active && data) setCalls((data as unknown as WhatsAppCall[]).filter(isRealCall));
     };
 
     load();
