@@ -920,7 +920,7 @@ function OperacaoInboxInner() {
 
   // Z-API WhatsApp polling
   useEffect(() => {
-    const POLL_MS = 5000;
+    let cancelled = false;
 
     async function loadChats() {
       try {
@@ -1052,13 +1052,19 @@ function OperacaoInboxInner() {
       try {
         const data = await callZapiProxy("check-status");
         if (data?.connected) {
+          if (cancelled) return;
           setWaConnected(true);
           if (chatSyncVersion > 0) await loadChats();
         } else { setWaConnected(false); }
       } catch { setWaConnected(false); }
     }
 
-    checkAndStartPolling();
+    const delay = chatSyncVersion === 0 ? 8000 : 0;
+    const timer = window.setTimeout(checkAndStartPolling, delay);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
   }, [chatSyncVersion]);
 
   // Busca em conteúdo de mensagens (debounced) · ativa quando query >= 2 chars
