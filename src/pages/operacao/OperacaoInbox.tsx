@@ -911,6 +911,7 @@ function OperacaoInboxInner() {
         });
 
       }
+      chatsLoadedRef.current = true;
     };
     loadDbConversations();
   }, []);
