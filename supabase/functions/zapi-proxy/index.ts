@@ -15,6 +15,7 @@ const BASE_URL = `https://api.z-api.io/instances/${INSTANCE_ID}/token/${TOKEN}`;
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const WEBHOOK_SHARED_SECRET = Deno.env.get("WEBHOOK_SHARED_SECRET") || "";
 
 // ─── Failure reason taxonomy ───
 // ⚠️ MANTER SINCRONIZADO COM: src/lib/zapiFailureClassifier.ts
@@ -727,6 +728,59 @@ serve(async (req) => {
           notifySentByMe: true,
         });
         break;
+
+      case "configure-zapi-webhooks": {
+        if (!SUPABASE_URL || !WEBHOOK_SHARED_SECRET) {
+          return new Response(
+            JSON.stringify({ success: false, error: "Webhook URL/token ausente" }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const webhookUrl = `${SUPABASE_URL}/functions/v1/zapi-webhook?token=${encodeURIComponent(WEBHOOK_SHARED_SECRET)}`;
+        const webhookTargets = [
+          { name: "received", path: "update-webhook-received", body: { value: webhookUrl, enabled: true } },
+          { name: "delivery", path: "update-webhook-delivery", body: { value: webhookUrl, enabled: true } },
+          { name: "message-status", path: "update-webhook-message-status", body: { value: webhookUrl, enabled: true } },
+          { name: "connected", path: "update-webhook-connected", body: { value: webhookUrl, enabled: true } },
+          { name: "disconnected", path: "update-webhook-disconnected", body: { value: webhookUrl, enabled: true } },
+          { name: "chat-presence", path: "update-webhook-chat-presence", body: { value: webhookUrl, enabled: true } },
+          { name: "every-webhooks", path: "update-every-webhooks", body: { value: webhookUrl, notifySentByMe: true } },
+          { name: "notify-sent-by-me", path: "update-notify-sent-by-me", body: { notifySentByMe: true } },
+        ];
+
+        const results = [];
+        for (const target of webhookTargets) {
+          try {
+            const res = await fetch(`${BASE_URL}/${target.path}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                "Client-Token": CLIENT_TOKEN,
+              },
+              body: JSON.stringify(target.body),
+            });
+            const responseText = await res.text();
+            results.push({
+              name: target.name,
+              ok: res.ok,
+              status: res.status,
+              data: parseJsonSafely(responseText),
+            });
+          } catch (err: any) {
+            results.push({ name: target.name, ok: false, error: err?.message || "request_failed" });
+          }
+        }
+
+        return new Response(JSON.stringify({
+          success: results.some((r) => r.ok),
+          webhookUrl: webhookUrl.replace(WEBHOOK_SHARED_SECRET, "***"),
+          results,
+        }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       // ═══════════════════════════════════════════════════════════
       // === SPRINT 1 QUICK WINS ===
