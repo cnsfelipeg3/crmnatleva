@@ -43,17 +43,20 @@ export function useConversationCalls(conversationId: string | null | undefined, 
     let active = true;
 
     const load = async () => {
+      const cleanPhone = phone ? String(phone).replace(/\D/g, "") : "";
+
       let query = supabase
         .from("whatsapp_calls" as any)
         .select("*")
         .order("started_at", { ascending: true })
         .limit(200);
 
-      if (conversationId) {
+      if (conversationId && cleanPhone) {
+        query = query.or(`conversation_id.eq.${conversationId},phone.eq.${cleanPhone}`);
+      } else if (conversationId) {
         query = query.eq("conversation_id", conversationId);
-      } else if (phone) {
-        const clean = String(phone).replace(/\D/g, "");
-        query = query.eq("phone", clean);
+      } else if (cleanPhone) {
+        query = query.eq("phone", cleanPhone);
       }
 
       const { data } = await query;
@@ -66,14 +69,7 @@ export function useConversationCalls(conversationId: string | null | undefined, 
       .channel(`calls-${conversationId || phone}`)
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "whatsapp_calls",
-          ...(conversationId
-            ? { filter: `conversation_id=eq.${conversationId}` }
-            : { filter: `phone=eq.${String(phone).replace(/\D/g, "")}` }),
-        },
+        { event: "*", schema: "public", table: "whatsapp_calls" },
         () => load(),
       )
       .subscribe();
