@@ -834,8 +834,8 @@ function OperacaoInboxInner() {
     const loadDbConversations = async () => {
       const data = await fetchAllRows("conversations", "id, phone, contact_name, display_name, stage, funnel_stage, tags, source, last_message_at, last_message_preview, unread_count, is_vip, assigned_to, score_potential, score_risk, is_pinned, manually_marked_unread, is_archived, archived_at, is_group, group_subject, group_photo_url", {
         order: { column: "last_message_at", ascending: false },
-        maxRows: 250,
-        cacheMs: 30_000,
+        maxRows: 220,
+        cacheMs: 90_000,
         isFilters: { excluded_at: null },
       });
 
@@ -933,9 +933,9 @@ function OperacaoInboxInner() {
           .limit(500);
         if (dbErr) console.error("loadChats: erro DB:", dbErr);
 
-        // Enriquecimento opcional Z-API (unread em tempo real + foto inline)
-        const zapiData = await callZapiProxy("get-chats").catch(() => []);
-        const zapiChats = Array.isArray(zapiData) ? zapiData : [];
+        // Enriquecimento externo removido da abertura automática: o banco é a
+        // fonte principal e realtime atualiza novas mensagens sem travar a tela.
+        const zapiChats: any[] = [];
         const zapiByPhone = new Map<string, any>();
         for (const z of zapiChats) {
           const raw = z.phone || z.id || "";
@@ -1027,7 +1027,7 @@ function OperacaoInboxInner() {
         // Profile pictures para quem ainda não tem
         const needsPic = merged.filter(c => !profilePicsRef.current.has(c.id)).slice(0, 6);
         if (needsPic.length > 0) {
-          const BATCH = 5;
+          const BATCH = 2;
           for (let i = 0; i < needsPic.length; i += BATCH) {
             const batch = needsPic.slice(i, i + BATCH);
             await Promise.allSettled(batch.map(conv =>
@@ -1052,7 +1052,7 @@ function OperacaoInboxInner() {
         const data = await callZapiProxy("check-status");
         if (data?.connected) {
           setWaConnected(true);
-          await loadChats();
+          if (chatSyncVersion > 0) await loadChats();
         } else { setWaConnected(false); }
       } catch { setWaConnected(false); }
     }
