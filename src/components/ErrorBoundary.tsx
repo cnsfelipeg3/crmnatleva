@@ -1,6 +1,21 @@
 import React from "react";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { forceAppRefresh } from "@/lib/forceRefresh";
+
+const ERROR_RECOVERY_KEY = "__natleva_error_boundary_recovery__";
+const STALE_MODULE_PATTERNS = [
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /Loading chunk/i,
+  /ChunkLoadError/i,
+  /Unable to preload CSS/i,
+];
+
+function isStaleModuleError(error: Error) {
+  const text = `${error.name} ${error.message} ${error.stack ?? ""}`;
+  return STALE_MODULE_PATTERNS.some((pattern) => pattern.test(text));
+}
 
 interface State {
   hasError: boolean;
@@ -30,10 +45,22 @@ export class ErrorBoundary extends React.Component<Props, State> {
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // eslint-disable-next-line no-console
     console.error("[ErrorBoundary]", error, info);
+
+    if (isStaleModuleError(error)) {
+      const lastRecovery = Number(sessionStorage.getItem(ERROR_RECOVERY_KEY) || "0");
+      if (Date.now() - lastRecovery > 30_000) {
+        sessionStorage.setItem(ERROR_RECOVERY_KEY, String(Date.now()));
+        void forceAppRefresh({ silent: true });
+      }
+    }
   }
 
   handleReset = () => {
     this.setState({ hasError: false, error: null });
+  };
+
+  handleHardRefresh = () => {
+    void forceAppRefresh({ silent: true });
   };
 
   render() {
@@ -53,9 +80,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
               O erro foi registrado. Tenta recarregar · se persistir, volta pro
               dashboard.
             </p>
-            <div className="flex gap-2 justify-center pt-2">
-              <Button onClick={this.handleReset} variant="default" size="sm">
+            <div className="flex flex-wrap gap-2 justify-center pt-2">
+              <Button onClick={this.handleHardRefresh} variant="default" size="sm">
                 <RefreshCw className="h-4 w-4 mr-2" aria-hidden="true" />
+                Atualizar app
+              </Button>
+              <Button onClick={this.handleReset} variant="outline" size="sm">
                 Tentar de novo
               </Button>
               <Button
