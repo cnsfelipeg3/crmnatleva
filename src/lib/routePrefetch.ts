@@ -71,6 +71,7 @@ export function prefetchRoute(path: string): void {
   const loader = loaders[path];
   if (!loader) return;
   if (cache.has(path)) return;
+  if (shouldSkipPrefetch()) return;
   try {
     // Defer to idle so it never competes with critical work in flight.
     const start = () => {
@@ -78,9 +79,9 @@ export function prefetchRoute(path: string): void {
       cache.set(path, p);
     };
     if (typeof (window as any).requestIdleCallback === "function") {
-      (window as any).requestIdleCallback(start, { timeout: 800 });
+      (window as any).requestIdleCallback(start, { timeout: 2000 });
     } else {
-      setTimeout(start, 80);
+      setTimeout(start, 250);
     }
   } catch {
     /* noop */
@@ -110,6 +111,9 @@ const HIGH_PRIORITY_ROUTES = [
  */
 let warmedAll = false;
 export function prefetchAllRoutes(): void {
+  // Desativado: carregar várias páginas em segundo plano deixava o CRM pesado
+  // logo após abrir. Mantemos apenas prefetch sob intenção real do usuário.
+  return;
   if (warmedAll) return;
   warmedAll = true;
 
@@ -160,6 +164,7 @@ export function prefetchAllRoutes(): void {
  */
 let warmedSecondary = false;
 export function prefetchSecondaryRoutes(): void {
+  return;
   if (warmedSecondary) return;
   warmedSecondary = true;
   if (shouldSkipPrefetch()) return;
@@ -189,6 +194,7 @@ export function prefetchSecondaryRoutes(): void {
  * aquecemos /financeiro/receber, /financeiro/pagar, etc.
  */
 export function prefetchSection(currentPath: string): void {
+  return;
   if (shouldSkipPrefetch()) return;
   const segment = "/" + currentPath.split("/").filter(Boolean)[0];
   if (!segment || segment === "/") return;
