@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense } from "react";
 import SmartSuspense from "@/components/SmartSuspense";
 import { MinimalLoader, SessionAwareLoader } from "@/components/AppLoaders";
 import { LoginSkeleton, RouteAwareSkeleton } from "@/components/skeletons/PageSkeletons";
@@ -262,33 +262,6 @@ function AppRoutes() {
     location.pathname.startsWith("/loja") ||
     location.pathname.startsWith("/checkout/") ||
     location.pathname === "/unsubscribe";
-
-  // Prefetch das rotas top-priority em idle, com concorrência limitada (3).
-  // Pula em conexão lenta/saveData. Faz navegação entre menus quase instantânea.
-  useEffect(() => {
-    if (!isAuthenticated || isLoading || typeof window === "undefined" || (window as any).__natlevaCorePrefetched) return;
-    (window as any).__natlevaCorePrefetched = true;
-    const idle = window.requestIdleCallback ?? ((cb: IdleRequestCallback) => window.setTimeout(() => cb({ didTimeout: false, timeRemaining: () => 0 } as IdleDeadline), 3000));
-    const cancelIdle = window.cancelIdleCallback ?? window.clearTimeout;
-    const handle = idle(async () => {
-      const { prefetchAllRoutes } = await import("@/lib/routePrefetch");
-      prefetchAllRoutes();
-    }, { timeout: 6000 });
-    return () => cancelIdle(handle as number);
-  }, [isAuthenticated, isLoading]);
-
-  // Ao mudar de rota, aquecer os "irmãos" da seção atual (ex: /financeiro/*)
-  // para que a navegação dentro da mesma área seja 100% instantânea.
-  useEffect(() => {
-    if (!isAuthenticated || isLoading) return;
-    let cancelled = false;
-    const t = window.setTimeout(async () => {
-      if (cancelled) return;
-      const { prefetchSection } = await import("@/lib/routePrefetch");
-      prefetchSection(location.pathname);
-    }, 600);
-    return () => { cancelled = true; window.clearTimeout(t); };
-  }, [isAuthenticated, isLoading, location.pathname]);
 
   return (
     <SmartSuspense>
