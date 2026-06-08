@@ -1,0 +1,19 @@
+{
+  "name": "NatLeva CRM",
+  "short_name": "NatLeva",
+  "description": "NatLeva · Sistema interno de viagens premium",
+  "theme_color": "#0d2620",
+  "background_color": "#0d2620",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "lang": "pt-BR",
+  "categories": ["business", "productivity", "travel"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
