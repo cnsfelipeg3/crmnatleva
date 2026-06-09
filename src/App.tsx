@@ -305,7 +305,7 @@ function AppRoutes() {
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerProfile />} />
           <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
-          <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
+          
           <Route path="/birthdays" element={<Birthdays />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/leads" element={<Leads />} />
