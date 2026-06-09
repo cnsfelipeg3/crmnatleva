@@ -145,6 +145,27 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [currentTags, setCurrentTags] = useState<string[]>(conversation.tags || []);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkReloadKey, setLinkReloadKey] = useState(0);
+  const [linkedProposals, setLinkedProposals] = useState<any[]>([]);
+
+  // Carrega propostas vinculadas a esta conversa
+  useEffect(() => {
+    if (!dbConvId) { setLinkedProposals([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("proposal_conversations")
+        .select("proposal_id, linked_at, proposals:proposal_id(id, title, slug, status, total_value, internal_profit, created_at, views_count, last_viewed_at, cover_image_url)")
+        .eq("conversation_id", dbConvId)
+        .order("linked_at", { ascending: false });
+      if (!cancelled) {
+        const rows = (data || [])
+          .map((r: any) => r.proposals)
+          .filter(Boolean);
+        setLinkedProposals(rows);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [dbConvId]);
 
   useEffect(() => { setCurrentTags(conversation.tags || []); }, [conversation.tags]);
 
@@ -809,6 +830,69 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
               </div>
             </div>
           </Section>
+
+          {/* ─── Propostas enviadas (vinculadas a esta conversa) ─── */}
+          {linkedProposals.length > 0 && (
+            <Section
+              title="Propostas enviadas"
+              icon={FileText}
+              defaultOpen={true}
+              badge={<Badge className="bg-primary/10 text-primary text-[8px] px-1 py-0 h-3.5">{linkedProposals.length}</Badge>}
+            >
+              <div className="space-y-2">
+                {linkedProposals.map((p) => {
+                  const FEATURE_CUTOFF = new Date("2026-06-09T00:00:00-03:00");
+                  const isPreFeature = p.created_at && new Date(p.created_at) < FEATURE_CUTOFF;
+                  const sale = Number(p.total_value || 0);
+                  const profit = Number(p.internal_profit || 0);
+                  const statusLabel: Record<string, string> = {
+                    draft: "Rascunho", sent: "Enviada", viewed: "Visualizada",
+                    negotiating: "Em negociação", approved: "Aprovada", lost: "Perdida",
+                    rascunho_ia: "Rascunho IA",
+                  };
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => navigate(`/propostas/${p.id}`)}
+                      className="w-full text-left rounded-lg p-2.5 transition-colors hover:bg-secondary/50 bg-secondary/20 border border-border/20"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-medium text-foreground truncate flex-1">{p.title || "Proposta"}</span>
+                        {p.status && p.status !== "draft" && p.status !== "rascunho_ia" && (
+                          <Badge className="bg-primary/10 text-primary text-[8px] px-1 py-0 h-3.5 shrink-0">
+                            {statusLabel[p.status] || p.status}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                        <span className="text-[10px] text-muted-foreground">{fmtDate(p.created_at)}</span>
+                        {(p.views_count ?? 0) > 0 && (
+                          <span className="text-[10px] text-muted-foreground inline-flex items-center gap-0.5">
+                            <Eye className="h-2.5 w-2.5" /> {p.views_count}
+                          </span>
+                        )}
+                      </div>
+                      {!isPreFeature && (sale > 0 || profit > 0) && (
+                        <div className="flex items-center gap-3 mt-1.5">
+                          {sale > 0 && (
+                            <span className="text-[10px] text-foreground">
+                              Venda <span className="font-semibold text-emerald-500">{fmt(sale)}</span>
+                            </span>
+                          )}
+                          {profit > 0 && (
+                            <span className="text-[10px] text-foreground">
+                              Lucro <span className="font-semibold text-primary">{fmt(profit)}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </Section>
+          )}
+
 
           {/* ─── Trips ─── */}
           {sales.length > 0 && (

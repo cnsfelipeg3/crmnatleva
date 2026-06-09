@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package, ShoppingCart, Wallet, Lock, CreditCard, Percent, TrendingUp } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package, ShoppingCart, Wallet, Lock, CreditCard, Percent, TrendingUp, MessageSquare, Link2 } from "lucide-react";
+import { LinkConversationsDialog } from "@/components/proposal/LinkConversationsDialog";
 import { ConvertToSaleDialog } from "@/components/proposal/ConvertToSaleDialog";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import { getPublicProposalUrl } from "@/lib/publicUrl";
@@ -186,6 +187,22 @@ export default function ProposalEditor() {
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [linkChatsOpen, setLinkChatsOpen] = useState(false);
+  const [linkedChatsCount, setLinkedChatsCount] = useState<number>(0);
+
+  // Carrega contagem de chats vinculados
+  useEffect(() => {
+    if (isNew || !id) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await (supabase as any)
+        .from("proposal_conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("proposal_id", id);
+      if (!cancelled) setLinkedChatsCount(count || 0);
+    })();
+    return () => { cancelled = true; };
+  }, [id, isNew, linkChatsOpen]);
   const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
@@ -1177,6 +1194,34 @@ export default function ProposalEditor() {
                 <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Itália Romântica" />
               </div>
 
+              {/* 2b. Vincular chat */}
+              <div className="md:col-span-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-muted/20 p-3">
+                  <div className="min-w-0">
+                    <Label className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5 text-primary" /> Vincular chat</Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Conecte uma ou mais conversas do WhatsApp · a proposta aparecerá no painel lateral de cada chat.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (isNew) {
+                        toast.info("Salve a proposta primeiro para vincular conversas.");
+                        return;
+                      }
+                      setLinkChatsOpen(true);
+                    }}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    {linkedChatsCount > 0 ? `${linkedChatsCount} vinculada${linkedChatsCount > 1 ? "s" : ""}` : "Vincular conversa"}
+                  </Button>
+                </div>
+              </div>
+
+
+
               {/* 3. Imagem de capa */}
               <div className="md:col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
@@ -2047,6 +2092,14 @@ export default function ProposalEditor() {
         initialDestination={form.title || ""}
         onSelect={applyCoverImageUrl}
       />
+      {!isNew && id && (
+        <LinkConversationsDialog
+          open={linkChatsOpen}
+          onOpenChange={setLinkChatsOpen}
+          proposalId={id}
+          onChanged={(c) => setLinkedChatsCount(c)}
+        />
+      )}
       <AddFlightWizard
         open={flightWizardOpen}
         onOpenChange={setFlightWizardOpen}
