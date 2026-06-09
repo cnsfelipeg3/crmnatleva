@@ -1869,7 +1869,7 @@ export default function ProposalEditor() {
             </CardContent>
           </Card>
 
-          {/* ── Custo & Lucro · uso interno ──────────────────── */}
+          {/* MOVED_BELOW_PAYMENTS */}
           <Card className="overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50">
               <div className="flex items-start justify-between gap-3 flex-wrap">
