@@ -43,7 +43,7 @@ const Checkin = lazy(() => import("@/pages/Checkin"));
 const Lodging = lazy(() => import("@/pages/Lodging"));
 const ClientDetail = lazy(() => import("@/pages/ClientDetail"));
 const ImportData = lazy(() => import("@/pages/ImportData"));
-const Pendencias = lazy(() => import("@/pages/Pendencias"));
+
 const Viagens = lazy(() => import("@/pages/Viagens"));
 const TorreDeControle = lazy(() => import("@/pages/TorreDeControle"));
 const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
