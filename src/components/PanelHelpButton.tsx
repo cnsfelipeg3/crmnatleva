@@ -1246,10 +1246,10 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Exemplo: 'Liste os 10 clientes VIP que não viajaram este ano'",
     ],
     relatedPanels: [
-      { label: "NatLeva Intelligence", path: "/natleva-intelligence" },
       { label: "Dashboard", path: "/dashboard" },
     ],
   },
+
 
   // ── Implementação ──────────────────────────────────
   "/import": {
