@@ -382,6 +382,12 @@ export default function Proposals() {
                       : margin >= 10 ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800/50"
                       : "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-900/20 dark:border-rose-800/50";
                     const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+                    // Custo/Lucro foi introduzido em 09/06/2026. Propostas anteriores
+                    // não possuem custo cadastrado, então o lucro seria irreal. Ocultar.
+                    const createdAt = (p as any).created_at ? new Date((p as any).created_at) : null;
+                    const FEATURE_CUTOFF = new Date("2026-06-09T00:00:00-03:00");
+                    const isPreFeature = !createdAt || createdAt < FEATURE_CUTOFF;
+                    if (isPreFeature) return null;
                     if (!hasSale && !hasProfit) return null;
                     return (
                       <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
