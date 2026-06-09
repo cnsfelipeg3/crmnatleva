@@ -310,7 +310,7 @@ function AppRoutes() {
           <Route path="/leads" element={<Leads />} />
           <Route path="/import" element={<ImportData />} />
           
-          <Route path="/cotacoes" element={<CotacoesPropostasPipeline />} />
+          
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
           <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
