@@ -309,8 +309,9 @@ export default function CoverImageSuggestDialog({ open, onOpenChange, initialDes
 
         <div className="flex justify-end gap-2 pt-2 border-t">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={confirm} disabled={!selected} className="gap-2">
-            <Check className="w-4 h-4" /> Usar esta capa
+          <Button onClick={confirm} disabled={!selected || confirming} className="gap-2">
+            {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {confirming ? "Salvando..." : "Usar esta capa"}
           </Button>
         </div>
       </DialogContent>
