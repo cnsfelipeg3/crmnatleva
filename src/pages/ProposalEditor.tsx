@@ -172,6 +172,8 @@ export default function ProposalEditor() {
     cover_image_url: "",
     total_value: "",
     value_per_person: "",
+    internal_cost: "",
+    internal_profit: "",
     payment_conditions: [] as { method: string; details: string }[],
     proposal_strategy: prefillStrategy,
     proposal_outcome: "pending",
