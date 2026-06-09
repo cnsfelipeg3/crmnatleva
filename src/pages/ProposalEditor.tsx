@@ -1869,7 +1869,44 @@ export default function ProposalEditor() {
             </CardContent>
           </Card>
 
-          {/* MOVED_BELOW_PAYMENTS */}
+          {/* ── Condições de Pagamento ───────────────────────── */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4.5 h-4.5" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base leading-tight">Condições de Pagamento</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Formas e descontos oferecidos ao cliente</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={addPayment} className="gap-1.5 shrink-0">
+                  <Plus className="w-3.5 h-3.5" /> Adicionar
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-5 space-y-3">
+              {form.payment_conditions.length === 0 && (
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 py-8 px-4 text-center">
+                  <p className="text-sm text-muted-foreground">Nenhuma condição adicionada ainda</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Clique em "Adicionar" para incluir Pix, cartão, parcelamento etc.</p>
+                </div>
+              )}
+              {form.payment_conditions.map((p, idx) => (
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <Input value={p.method} onChange={(e) => updatePayment(idx, "method", e.target.value)} placeholder="Ex: Pix à vista" />
+                  <Input value={p.details} onChange={(e) => updatePayment(idx, "details", e.target.value)} placeholder="Ex: 10% de desconto" />
+                  <Button variant="ghost" size="icon" onClick={() => removePayment(idx)} className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 justify-self-end md:justify-self-auto">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          {/* ── Custo & Lucro · uso interno ──────────────────── */}
           <Card className="overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50">
               <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -1950,43 +1987,6 @@ export default function ProposalEditor() {
                 })()}
                 <p className="text-[11px] text-muted-foreground/80 leading-snug">Lucro sobre o valor de venda.</p>
               </div>
-            </CardContent>
-          </Card>
-
-          {/* ── Condições de Pagamento ───────────────────────── */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/50">
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <CreditCard className="w-4.5 h-4.5" strokeWidth={2} />
-                  </div>
-                  <div className="min-w-0">
-                    <CardTitle className="text-base leading-tight">Condições de Pagamento</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">Formas e descontos oferecidos ao cliente</p>
-                  </div>
-                </div>
-                <Button variant="outline" size="sm" onClick={addPayment} className="gap-1.5 shrink-0">
-                  <Plus className="w-3.5 h-3.5" /> Adicionar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-5 space-y-3">
-              {form.payment_conditions.length === 0 && (
-                <div className="rounded-lg border border-dashed border-border bg-muted/20 py-8 px-4 text-center">
-                  <p className="text-sm text-muted-foreground">Nenhuma condição adicionada ainda</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">Clique em "Adicionar" para incluir Pix, cartão, parcelamento etc.</p>
-                </div>
-              )}
-              {form.payment_conditions.map((p, idx) => (
-                <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                  <Input value={p.method} onChange={(e) => updatePayment(idx, "method", e.target.value)} placeholder="Ex: Pix à vista" />
-                  <Input value={p.details} onChange={(e) => updatePayment(idx, "details", e.target.value)} placeholder="Ex: 10% de desconto" />
-                  <Button variant="ghost" size="icon" onClick={() => removePayment(idx)} className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 justify-self-end md:justify-self-auto">
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              ))}
             </CardContent>
           </Card>
         </TabsContent>
