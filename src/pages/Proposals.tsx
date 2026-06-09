@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { getPublicProposalUrl } from "@/lib/publicUrl";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
+import { FilterPill, MultiCheckList, RangeInputs } from "@/components/proposals/ProposalsFilters";
 import orlandoFamilyCover from "@/assets/proposals/orlando-family-cover.jpg";
 import {
   DropdownMenu,
