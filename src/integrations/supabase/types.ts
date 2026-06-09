@@ -8066,6 +8066,52 @@ export type Database = {
           },
         ]
       }
+      proposal_conversations: {
+        Row: {
+          conversation_id: string
+          id: string
+          linked_at: string
+          linked_by: string | null
+          proposal_id: string
+        }
+        Insert: {
+          conversation_id: string
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          proposal_id: string
+        }
+        Update: {
+          conversation_id?: string
+          id?: string
+          linked_at?: string
+          linked_by?: string | null
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_conversations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_team"
+            referencedColumns: ["conversation_id"]
+          },
+          {
+            foreignKeyName: "proposal_conversations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_conversations_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_interactions: {
         Row: {
           created_at: string
