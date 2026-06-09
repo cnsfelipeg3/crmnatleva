@@ -187,6 +187,22 @@ export default function ProposalEditor() {
   const [collapsedItems, setCollapsedItems] = useState<Set<number>>(new Set());
   const [savingItemIdx, setSavingItemIdx] = useState<number | null>(null);
   const [coverDialogOpen, setCoverDialogOpen] = useState(false);
+  const [linkChatsOpen, setLinkChatsOpen] = useState(false);
+  const [linkedChatsCount, setLinkedChatsCount] = useState<number>(0);
+
+  // Carrega contagem de chats vinculados
+  useEffect(() => {
+    if (isNew || !id) return;
+    let cancelled = false;
+    (async () => {
+      const { count } = await (supabase as any)
+        .from("proposal_conversations")
+        .select("id", { count: "exact", head: true })
+        .eq("proposal_id", id);
+      if (!cancelled) setLinkedChatsCount(count || 0);
+    })();
+    return () => { cancelled = true; };
+  }, [id, isNew, linkChatsOpen]);
   const [photoEditorIdx, setPhotoEditorIdx] = useState<number | null>(null);
   const [inlineEditEnabled, setInlineEditEnabled] = useState(false);
   const [visualOverrides, setVisualOverrides] = useState<VisualOverrides>({ styles: {}, groups: [] });
