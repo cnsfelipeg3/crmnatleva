@@ -28,7 +28,7 @@ const navItems = [
   { to: "/inbox", icon: Inbox, label: "E-mail", alwaysVisible: true },
   
   { to: "/sales", icon: List, label: "Vendas" },
-  
+  { to: "/propostas", icon: FileText, label: "Propostas" },
   
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
