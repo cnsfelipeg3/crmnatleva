@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { FlowCRMPipeline } from "@/components/flow/FlowCRMPipeline";
 import { FlowMetrics } from "@/components/flow/FlowMetrics";
 import { FlowSimulator } from "@/components/flow/FlowSimulator";
