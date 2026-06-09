@@ -29,7 +29,7 @@ const navItems = [
   
   { to: "/sales", icon: List, label: "Vendas" },
   
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
+  
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
@@ -235,11 +235,6 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           {!isCollapsed && (item as any).showBeta && (
             <span className="ml-auto shrink-0 rounded bg-gradient-to-r from-amber-500 to-orange-500 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white shadow-sm">
               BETA
-            </span>
-          )}
-          {item.to === "/cotacoes" && pendingBriefings > 0 && (
-            <span className="ml-auto shrink-0 min-w-[15px] h-[15px] flex items-center justify-center rounded-full bg-champagne text-champagne-foreground text-[8px] font-bold px-1 leading-none">
-              {pendingBriefings}
             </span>
           )}
           {item.to === "/operacao/inbox" && myInboxCount > 0 && (
