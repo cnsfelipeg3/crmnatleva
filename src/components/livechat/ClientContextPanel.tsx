@@ -145,6 +145,27 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
   const [currentTags, setCurrentTags] = useState<string[]>(conversation.tags || []);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkReloadKey, setLinkReloadKey] = useState(0);
+  const [linkedProposals, setLinkedProposals] = useState<any[]>([]);
+
+  // Carrega propostas vinculadas a esta conversa
+  useEffect(() => {
+    if (!dbConvId) { setLinkedProposals([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("proposal_conversations")
+        .select("proposal_id, linked_at, proposals:proposal_id(id, title, slug, status, total_value, internal_profit, created_at, views_count, last_viewed_at, cover_image_url)")
+        .eq("conversation_id", dbConvId)
+        .order("linked_at", { ascending: false });
+      if (!cancelled) {
+        const rows = (data || [])
+          .map((r: any) => r.proposals)
+          .filter(Boolean);
+        setLinkedProposals(rows);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [dbConvId]);
 
   useEffect(() => { setCurrentTags(conversation.tags || []); }, [conversation.tags]);
 
