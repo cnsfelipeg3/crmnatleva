@@ -102,15 +102,44 @@ export default function CoverImageSuggestDialog({ open, onOpenChange, initialDes
     setUrlInput("");
   };
 
-  const confirm = () => {
+  const [confirming, setConfirming] = useState(false);
+
+  const persistAiDataUrl = async (dataUrl: string): Promise<string> => {
+    // Converte data URL gigante da IA em arquivo e sobe pro storage,
+    // devolvendo URL pública leve (caso contrário sanitizeProposalCoverUrl descarta).
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    const ext = blob.type.includes("png") ? "png" : blob.type.includes("webp") ? "webp" : "jpg";
+    const file = new File([blob], `ai-cover-${Date.now()}.${ext}`, { type: blob.type || "image/png" });
+    const uploaded = await uploadCompressedImage(file, "media", "proposal-covers", {
+      maxWidth: 1920,
+      maxHeight: 1080,
+      quality: 0.85,
+    });
+    return uploaded.url;
+  };
+
+  const confirm = async () => {
     if (!selected) {
       toast.error("Selecione uma imagem ou envie a sua");
       return;
     }
-    onSelect(selected);
-    onOpenChange(false);
-    setImages([]);
-    setSelected(null);
+    setConfirming(true);
+    try {
+      let finalUrl = selected;
+      const picked = images.find((i) => i.url === selected);
+      if (picked?.source === "ai" && selected.startsWith("data:")) {
+        finalUrl = await persistAiDataUrl(selected);
+      }
+      onSelect(finalUrl);
+      onOpenChange(false);
+      setImages([]);
+      setSelected(null);
+    } catch (e: any) {
+      toast.error(e?.message || "Falha ao salvar a capa gerada por IA");
+    } finally {
+      setConfirming(false);
+    }
   };
 
   return (
@@ -280,8 +309,9 @@ export default function CoverImageSuggestDialog({ open, onOpenChange, initialDes
 
         <div className="flex justify-end gap-2 pt-2 border-t">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={confirm} disabled={!selected} className="gap-2">
-            <Check className="w-4 h-4" /> Usar esta capa
+          <Button onClick={confirm} disabled={!selected || confirming} className="gap-2">
+            {confirming ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+            {confirming ? "Salvando..." : "Usar esta capa"}
           </Button>
         </div>
       </DialogContent>
