@@ -366,6 +366,42 @@ export default function Proposals() {
                     </div>
                   )}
 
+                  {(() => {
+                    const sale = Number((p as any).total_value);
+                    const costN = Number((p as any).internal_cost);
+                    const profN = Number((p as any).internal_profit);
+                    const profit = Number.isFinite(profN)
+                      ? profN
+                      : (Number.isFinite(sale) && Number.isFinite(costN) ? sale - costN : NaN);
+                    const hasSale = Number.isFinite(sale) && sale > 0;
+                    const hasProfit = Number.isFinite(profit);
+                    const margin = hasSale && hasProfit ? (profit / sale) * 100 : null;
+                    const profitTone = margin == null
+                      ? "text-muted-foreground bg-muted/40 border-border"
+                      : margin >= 25 ? "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-800/50"
+                      : margin >= 10 ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800/50"
+                      : "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-900/20 dark:border-rose-800/50";
+                    const fmt = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+                    if (!hasSale && !hasProfit) return null;
+                    return (
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/50">
+                        <div className="min-w-0">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80">Venda</p>
+                          <p className="text-sm font-semibold text-foreground tabular-nums truncate">{hasSale ? fmt(sale) : "—"}</p>
+                        </div>
+                        <div className="text-right shrink-0" title="Lucro · uso interno">
+                          <p className="text-[10px] uppercase tracking-wide text-muted-foreground/80 flex items-center justify-end gap-1">
+                            <Lock className="w-2.5 h-2.5" /> Lucro
+                          </p>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-xs font-semibold tabular-nums ${profitTone}`}>
+                            {hasProfit ? fmt(profit) : "—"}
+                            {margin != null && <span className="opacity-70 font-normal">· {margin.toFixed(0)}%</span>}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Eye className="w-3.5 h-3.5" />
