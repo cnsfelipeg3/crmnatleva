@@ -391,19 +391,8 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
           </>);
         })()}
 
-        {/* Implementação */}
-        {(() => {
-          const items = filterItems([
-            { to: "/import", icon: FileUp, label: "Importar Planilhas" },
-            { to: "/livechat/import-chatguru", icon: FileDown, label: "Importar Conversas" },
-            { to: "/implementacao/base-conhecimento", icon: BookOpen, label: "Base de Conhecimento" },
-          ]);
-          if (items.length === 0) return null;
-          return (<>
-            {renderGroupButton("Implementação", PackageOpen, implOpen, () => setImplOpen(!implOpen))}
-            {implOpen && !isCollapsed && renderSubGroup(items)}
-          </>);
-        })()}
+
+
 
         {/* Portal do Viajante */}
         {(() => {
