@@ -1194,6 +1194,34 @@ export default function ProposalEditor() {
                 <Input value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} placeholder="Itália Romântica" />
               </div>
 
+              {/* 2b. Vincular chat */}
+              <div className="md:col-span-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2 rounded-lg border border-border/40 bg-muted/20 p-3">
+                  <div className="min-w-0">
+                    <Label className="flex items-center gap-1.5"><MessageSquare className="w-3.5 h-3.5 text-primary" /> Vincular chat</Label>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">Conecte uma ou mais conversas do WhatsApp · a proposta aparecerá no painel lateral de cada chat.</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (isNew) {
+                        toast.info("Salve a proposta primeiro para vincular conversas.");
+                        return;
+                      }
+                      setLinkChatsOpen(true);
+                    }}
+                    className="gap-1.5 shrink-0"
+                  >
+                    <Link2 className="w-3.5 h-3.5" />
+                    {linkedChatsCount > 0 ? `${linkedChatsCount} vinculada${linkedChatsCount > 1 ? "s" : ""}` : "Vincular conversa"}
+                  </Button>
+                </div>
+              </div>
+
+
+
               {/* 3. Imagem de capa */}
               <div className="md:col-span-2 space-y-1.5">
                 <div className="flex items-center justify-between gap-2">
