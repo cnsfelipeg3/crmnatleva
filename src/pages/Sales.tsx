@@ -967,10 +967,11 @@ export default function Sales() {
             {/* Desktop table view · pipeline vertical virtualizado (Aguardando / Emitido) */}
             {!isMobile && <Card className="glass-card overflow-hidden hidden sm:block">
               <div className="overflow-x-auto">
-                  <table className="w-full text-sm min-w-[1660px] table-fixed">
+                  <table className="w-full text-sm min-w-[1660px] table-fixed [&_th]:border-r [&_th]:border-border/30 [&_tr>th:last-child]:border-r-0">
                     <SalesTableColGroup />
                     <thead>
                       <tr className="border-b border-border bg-muted/50">
+
                         <th className="px-1 py-3"></th>
                         {([
                           { key: "name", label: "Venda", align: "text-left", px: "px-3" },
