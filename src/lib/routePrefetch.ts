@@ -18,7 +18,7 @@ const loaders: Record<string, Loader> = {
   "/sales/new": () => import("@/pages/NewSale"),
   "/pendencias": () => import("@/pages/Pendencias"),
   "/cotacoes": () => import("@/pages/CotacoesPropostasPipeline"),
-  "/midias": () => import("@/pages/MediaLibrary"),
+  
   "/passengers": () => import("@/pages/Passengers"),
   "/inteligencia-clientes": () => import("@/pages/ClientIntelligence"),
   "/natleva-intelligence": () => import("@/pages/NatLevaIntelligence"),

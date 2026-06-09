@@ -161,7 +161,7 @@ const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
 const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const PassengerSelfSignup = lazy(() => import("@/pages/PassengerSelfSignup"));
-const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
+
 
 // Prateleira NatLeva (ex-Produtos)
 const Produtos = lazy(() => import("@/pages/produtos/Produtos"));
@@ -414,8 +414,6 @@ function AppRoutes() {
           {/* Rota /operacao/logs ocultada em 06/05/2026 (tela sem dados). Para reativar, descomentar import em src/App.tsx e item de menu em AppSidebar.tsx. */}
           {/* <Route path="/operacao/logs" element={<OperacaoLogs />} /> */}
 
-          {/* Mídias */}
-          <Route path="/midias" element={<MediaLibrary />} />
 
           {/* Booking RapidAPI (BETA) — módulo experimental isolado */}
           <Route path="/booking-search" element={<BookingSearchPage />} />
