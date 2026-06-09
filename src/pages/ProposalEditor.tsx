@@ -2092,6 +2092,14 @@ export default function ProposalEditor() {
         initialDestination={form.title || ""}
         onSelect={applyCoverImageUrl}
       />
+      {!isNew && id && (
+        <LinkConversationsDialog
+          open={linkChatsOpen}
+          onOpenChange={setLinkChatsOpen}
+          proposalId={id}
+          onChanged={(c) => setLinkedChatsCount(c)}
+        />
+      )}
       <AddFlightWizard
         open={flightWizardOpen}
         onOpenChange={setFlightWizardOpen}
