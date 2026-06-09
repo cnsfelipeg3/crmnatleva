@@ -47,7 +47,7 @@ const ImportData = lazy(() => import("@/pages/ImportData"));
 const Viagens = lazy(() => import("@/pages/Viagens"));
 const TorreDeControle = lazy(() => import("@/pages/TorreDeControle"));
 const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
-const NatLevaIntelligence = lazy(() => import("@/pages/NatLevaIntelligence"));
+
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const UserLocations = lazy(() => import("@/pages/settings/UserLocations"));
 
