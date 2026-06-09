@@ -309,7 +309,7 @@ function AppRoutes() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/import" element={<ImportData />} />
-          <Route path="/pendencias" element={<Pendencias />} />
+          
           <Route path="/cotacoes" element={<CotacoesPropostasPipeline />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
