@@ -980,23 +980,6 @@ export function ClientContextPanel({ conversation, profilePic, onClose, onStageC
             </Section>
           )}
 
-          {/* ─── Timeline ─── */}
-          <Section title="Timeline" icon={Activity} defaultOpen={false}>
-            {timeline.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">Nenhum evento registrado.</p>
-            ) : (
-              <div className="space-y-0.5">
-                {timeline.slice(0, 15).map((ev, i) => (
-                  <TimelineItem key={i} {...ev} />
-                ))}
-                {timeline.length > 15 && clientData?.id && (
-                  <button onClick={() => navigate(`/clients/${clientData.id}`)} className="w-full text-center text-[10px] text-primary hover:underline py-1">
-                    Ver timeline completa
-                  </button>
-                )}
-              </div>
-            )}
-          </Section>
 
           {/* ─── Notes ─── */}
           <Section title="Observações" icon={StickyNote} defaultOpen={false}>
