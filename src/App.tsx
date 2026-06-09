@@ -161,7 +161,7 @@ const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
 const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
 const ProposalPublicView = lazy(() => import("@/pages/ProposalPublicView"));
 const PassengerSelfSignup = lazy(() => import("@/pages/PassengerSelfSignup"));
-const MediaLibrary = lazy(() => import("@/pages/MediaLibrary"));
+
 
 // Prateleira NatLeva (ex-Produtos)
 const Produtos = lazy(() => import("@/pages/produtos/Produtos"));
