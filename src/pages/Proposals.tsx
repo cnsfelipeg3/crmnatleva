@@ -619,7 +619,9 @@ export default function Proposals() {
                         {(p as any).quote_request_id && (
                           <Badge variant="info" className="text-[10px]">Portal</Badge>
                         )}
-                        <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                        {p.status && p.status !== "draft" && p.status !== "rascunho_ia" && (
+                          <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                        )}
                       </div>
                       {p.status === "rascunho_ia" && (
                         <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
