@@ -373,15 +373,168 @@ export default function Proposals() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por título ou cliente..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      {/* ─── Toolbar de filtros ─────────────────────────────── */}
+      <Card className="p-3 sm:p-4 border-border/70 bg-card/60 backdrop-blur-sm">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+            <div className="relative flex-1 min-w-0 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por título ou cliente..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-10 h-10 bg-background"
+              />
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Data da viagem */}
+              <FilterPill
+                icon={Plane}
+                label="Viagem"
+                value={fmtRange(travelRange)}
+                active={!!travelRange?.from}
+                onClear={() => setTravelRange(undefined)}
+              >
+                <div className="p-2">
+                  <p className="px-2 pt-1 pb-2 text-xs text-muted-foreground">Período da viagem</p>
+                  <Calendar
+                    mode="range"
+                    selected={travelRange}
+                    onSelect={setTravelRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                  />
+                </div>
+              </FilterPill>
+
+              {/* Data de envio (created_at) */}
+              <FilterPill
+                icon={CalendarIcon}
+                label="Envio"
+                value={fmtRange(sentRange)}
+                active={!!sentRange?.from}
+                onClear={() => setSentRange(undefined)}
+              >
+                <div className="p-2">
+                  <p className="px-2 pt-1 pb-2 text-xs text-muted-foreground">Quando a proposta foi gerada</p>
+                  <Calendar
+                    mode="range"
+                    selected={sentRange}
+                    onSelect={setSentRange}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                  />
+                </div>
+              </FilterPill>
+
+              {/* Origem */}
+              <FilterPill
+                icon={MapPin}
+                label="Origem"
+                value={originSel.size > 0 ? `${originSel.size} selecionada${originSel.size > 1 ? "s" : ""}` : null}
+                active={originSel.size > 0}
+                onClear={() => setOriginSel(new Set())}
+              >
+                <MultiCheckList
+                  options={originOptions.map(o => ({ id: o, label: o }))}
+                  selected={originSel}
+                  setSelected={setOriginSel}
+                  emptyText="Nenhuma origem cadastrada"
+                />
+              </FilterPill>
+
+              {/* Destino */}
+              <FilterPill
+                icon={MapPin}
+                label="Destino"
+                value={destSel.size > 0 ? `${destSel.size} selecionado${destSel.size > 1 ? "s" : ""}` : null}
+                active={destSel.size > 0}
+                onClear={() => setDestSel(new Set())}
+              >
+                <MultiCheckList
+                  options={destinationOptions.map(o => ({ id: o, label: o }))}
+                  selected={destSel}
+                  setSelected={setDestSel}
+                  emptyText="Nenhum destino cadastrado"
+                />
+              </FilterPill>
+
+              {/* Usuário */}
+              <FilterPill
+                icon={UsersIcon}
+                label="Usuário"
+                value={creatorSel.size > 0 ? `${creatorSel.size} selecionado${creatorSel.size > 1 ? "s" : ""}` : null}
+                active={creatorSel.size > 0}
+                onClear={() => setCreatorSel(new Set())}
+              >
+                <MultiCheckList
+                  options={creatorOptions.map(o => ({ id: o.id, label: o.name }))}
+                  selected={creatorSel}
+                  setSelected={setCreatorSel}
+                  emptyText="Sem usuários"
+                />
+              </FilterPill>
+
+              {/* Valor de venda */}
+              <FilterPill
+                icon={DollarSign}
+                label="Venda"
+                value={saleMin || saleMax ? `${saleMin || "0"} · ${saleMax || "∞"}` : null}
+                active={!!(saleMin || saleMax)}
+                onClear={() => { setSaleMin(""); setSaleMax(""); }}
+              >
+                <RangeInputs
+                  hint="Faixa de valor de venda (R$)"
+                  min={saleMin} setMin={setSaleMin}
+                  max={saleMax} setMax={setSaleMax}
+                />
+              </FilterPill>
+
+              {/* Lucro */}
+              <FilterPill
+                icon={TrendingUp}
+                label="Lucro"
+                value={profitMin || profitMax ? `${profitMin || "0"} · ${profitMax || "∞"}` : null}
+                active={!!(profitMin || profitMax)}
+                onClear={() => { setProfitMin(""); setProfitMax(""); }}
+              >
+                <RangeInputs
+                  hint="Faixa de lucro real (R$) · uso interno"
+                  min={profitMin} setMin={setProfitMin}
+                  max={profitMax} setMax={setProfitMax}
+                />
+              </FilterPill>
+
+              {activeFilterCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-9 px-2.5 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-3.5 h-3.5" /> Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {activeFilterCount > 0 && (
+            <>
+              <Separator />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <SlidersHorizontal className="w-3.5 h-3.5" />
+                  {activeFilterCount} filtro{activeFilterCount > 1 ? "s" : ""} ativo{activeFilterCount > 1 ? "s" : ""}
+                </span>
+                <span className="tabular-nums">
+                  {filtered?.length || 0} de {proposals?.length || 0} propostas
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </Card>
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
