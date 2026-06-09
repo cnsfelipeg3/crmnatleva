@@ -244,6 +244,9 @@ export default function Proposals() {
           <p className="text-sm text-muted-foreground">Crie propostas visuais premium para seus clientes</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/propostas/dashboard")} className="gap-2">
+            <BarChart3 className="w-4 h-4" /> Dashboard
+          </Button>
           <Button variant="outline" onClick={() => navigate("/propostas/modelos")} className="gap-2">
             <LayoutTemplate className="w-4 h-4" /> Gerenciar Modelos
           </Button>
