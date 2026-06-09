@@ -142,15 +142,125 @@ export default function Proposals() {
     },
   });
 
+  // ────────────────────────────────────────────────────────────────
+  // Filtros estéticos · alinhados com o padrão Smart Filters
+  // ────────────────────────────────────────────────────────────────
+  const [travelRange, setTravelRange] = useState<DateRange | undefined>();
+  const [sentRange, setSentRange] = useState<DateRange | undefined>();
+  const [originSel, setOriginSel] = useState<Set<string>>(new Set());
+  const [destSel, setDestSel] = useState<Set<string>>(new Set());
+  const [creatorSel, setCreatorSel] = useState<Set<string>>(new Set());
+  const [saleMin, setSaleMin] = useState<string>("");
+  const [saleMax, setSaleMax] = useState<string>("");
+  const [profitMin, setProfitMin] = useState<string>("");
+  const [profitMax, setProfitMax] = useState<string>("");
+
+  const originOptions = useMemo(() => {
+    const s = new Set<string>();
+    (proposals || []).forEach((p: any) => { if (p.origin) s.add(String(p.origin).trim()); });
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [proposals]);
+
+  const destinationOptions = useMemo(() => {
+    const s = new Set<string>();
+    (proposals || []).forEach((p: any) => {
+      (p.destinations || []).forEach((d: string) => { if (d) s.add(String(d).trim()); });
+    });
+    return Array.from(s).sort((a, b) => a.localeCompare(b, "pt-BR"));
+  }, [proposals]);
+
+  const creatorOptions = useMemo(() => {
+    const arr = Object.entries(creatorsMap || {}).map(([id, v]: any) => ({ id, name: v.name }));
+    arr.sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    return arr;
+  }, [creatorsMap]);
+
+  const parseMoney = (v: string): number | null => {
+    if (!v) return null;
+    const n = Number(v.replace(/\./g, "").replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  };
+
   const filtered = useMemo(() => {
     const q = deferredSearch.toLowerCase();
-    return proposals?.filter(
-      (p: any) =>
-        !q ||
-        p.title?.toLowerCase().includes(q) ||
-        p.client_name?.toLowerCase().includes(q)
-    );
-  }, [proposals, deferredSearch]);
+    const smin = parseMoney(saleMin);
+    const smax = parseMoney(saleMax);
+    const pmin = parseMoney(profitMin);
+    const pmax = parseMoney(profitMax);
+
+    return proposals?.filter((p: any) => {
+      if (q && !(p.title?.toLowerCase().includes(q) || p.client_name?.toLowerCase().includes(q))) return false;
+
+      if (travelRange?.from && p.travel_start_date) {
+        const start = new Date(p.travel_start_date + "T00:00:00");
+        if (travelRange.from && start < travelRange.from) return false;
+        if (travelRange.to) {
+          const end = new Date(travelRange.to);
+          end.setHours(23, 59, 59, 999);
+          if (start > end) return false;
+        }
+      } else if (travelRange?.from && !p.travel_start_date) {
+        return false;
+      }
+
+      if (sentRange?.from && p.created_at) {
+        const c = new Date(p.created_at);
+        if (c < sentRange.from) return false;
+        if (sentRange.to) {
+          const end = new Date(sentRange.to);
+          end.setHours(23, 59, 59, 999);
+          if (c > end) return false;
+        }
+      }
+
+      if (originSel.size > 0 && !originSel.has(String(p.origin || "").trim())) return false;
+
+      if (destSel.size > 0) {
+        const dests = (p.destinations || []).map((d: string) => String(d).trim());
+        if (!dests.some((d: string) => destSel.has(d))) return false;
+      }
+
+      if (creatorSel.size > 0 && !creatorSel.has(p.created_by)) return false;
+
+      const sale = Number(p.total_value);
+      if (smin != null && !(Number.isFinite(sale) && sale >= smin)) return false;
+      if (smax != null && !(Number.isFinite(sale) && sale <= smax)) return false;
+
+      const profN = Number(p.internal_profit);
+      const costN = Number(p.internal_cost);
+      const profit = Number.isFinite(profN) ? profN : (Number.isFinite(sale) && Number.isFinite(costN) ? sale - costN : NaN);
+      if (pmin != null && !(Number.isFinite(profit) && profit >= pmin)) return false;
+      if (pmax != null && !(Number.isFinite(profit) && profit <= pmax)) return false;
+
+      return true;
+    });
+  }, [proposals, deferredSearch, travelRange, sentRange, originSel, destSel, creatorSel, saleMin, saleMax, profitMin, profitMax]);
+
+  const activeFilterCount =
+    (travelRange?.from ? 1 : 0) +
+    (sentRange?.from ? 1 : 0) +
+    (originSel.size > 0 ? 1 : 0) +
+    (destSel.size > 0 ? 1 : 0) +
+    (creatorSel.size > 0 ? 1 : 0) +
+    (saleMin || saleMax ? 1 : 0) +
+    (profitMin || profitMax ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setTravelRange(undefined);
+    setSentRange(undefined);
+    setOriginSel(new Set());
+    setDestSel(new Set());
+    setCreatorSel(new Set());
+    setSaleMin(""); setSaleMax("");
+    setProfitMin(""); setProfitMax("");
+  };
+
+  const fmtRange = (r?: DateRange) => {
+    if (!r?.from) return null;
+    const f = format(r.from, "dd MMM", { locale: ptBR });
+    if (!r.to) return f;
+    return `${f} · ${format(r.to, "dd MMM", { locale: ptBR })}`;
+  };
 
   const copyLink = (slug: string) => {
     const url = getPublicProposalUrl(slug);
