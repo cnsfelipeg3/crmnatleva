@@ -43,7 +43,7 @@ const PAGE_LABELS: Record<string, string> = {
   "/rh/permissoes": "Permissões",
   "/rh/relatorios": "Relatórios RH",
   "/rh/configuracoes": "Configurações RH",
-  "/natleva-intelligence": "NatLeva Intelligence",
+  
   "/client-intelligence": "Client Intelligence",
   "/ai-integrations": "Integrações IA",
   "/ai-knowledge-base": "Base de Conhecimento",
