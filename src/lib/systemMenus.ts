@@ -36,7 +36,7 @@ export const SYSTEM_MENUS: SystemMenuItem[] = [
   { key: "clientes.passageiros", label: "Passageiros", path: "/passengers", group: "Clientes", actions: ALL },
   { key: "clientes.leads", label: "Leads", path: "/leads", group: "Clientes", actions: READ_ONLY },
   { key: "clientes.inteligencia", label: "Inteligência Clientes", path: "/inteligencia-clientes", group: "Clientes", actions: READ_ONLY },
-  { key: "clientes.natleva-intel", label: "NatLeva Intelligence", path: "/natleva-intelligence", group: "Clientes", actions: READ_ONLY },
+  
   { key: "clientes.aniversariantes", label: "Aniversariantes", path: "/birthdays", group: "Clientes", actions: READ_ONLY },
 
   // --- Viagens ---
