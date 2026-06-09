@@ -397,14 +397,9 @@ export default function AppSidebar({ mobile, onNavigate }: Props) {
         {/* Portal do Viajante */}
         {(() => {
           const items = filterItems([
-            { to: "/portal-admin", icon: BarChart3, label: "Dashboard" },
-            { to: "/portal-admin/viagens", icon: Plane, label: "Viagens" },
-            { to: "/portal-admin/clientes", icon: Users, label: "Clientes" },
-            { to: "/portal-admin/documentos", icon: FileText, label: "Documentos" },
-            { to: "/itinerario", icon: FileText, label: "Itinerários" },
-            { to: "/portal-admin/notificacoes", icon: MessageSquare, label: "Notificações" },
             { to: "/portal-admin/config", icon: Cog, label: "Configurações" },
           ]);
+
           if (items.length === 0) return null;
           return (<>
             {renderGroupButton("Portal do Viajante", Globe, portalAdminOpen, () => setPortalAdminOpen(!portalAdminOpen))}
