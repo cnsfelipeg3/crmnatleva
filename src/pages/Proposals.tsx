@@ -708,7 +708,7 @@ export default function Proposals() {
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Eye className="w-3.5 h-3.5" />
-                      <span>{p.views_count || 0} visualizações</span>
+                      <span>{(viewsCountMap?.[p.id] ?? p.views_count ?? 0)} visualizações</span>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
