@@ -47,7 +47,7 @@ const ImportData = lazy(() => import("@/pages/ImportData"));
 const Viagens = lazy(() => import("@/pages/Viagens"));
 const TorreDeControle = lazy(() => import("@/pages/TorreDeControle"));
 const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
-const NatLevaIntelligence = lazy(() => import("@/pages/NatLevaIntelligence"));
+
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const UserLocations = lazy(() => import("@/pages/settings/UserLocations"));
 
@@ -305,7 +305,7 @@ function AppRoutes() {
           <Route path="/passengers" element={<Passengers />} />
           <Route path="/passengers/:id" element={<PassengerProfile />} />
           <Route path="/inteligencia-clientes" element={<ClientIntelligence />} />
-          <Route path="/natleva-intelligence" element={<NatLevaIntelligence />} />
+          
           <Route path="/birthdays" element={<Birthdays />} />
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/leads" element={<Leads />} />

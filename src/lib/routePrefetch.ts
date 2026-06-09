@@ -21,7 +21,7 @@ const loaders: Record<string, Loader> = {
   
   "/passengers": () => import("@/pages/Passengers"),
   "/inteligencia-clientes": () => import("@/pages/ClientIntelligence"),
-  "/natleva-intelligence": () => import("@/pages/NatLevaIntelligence"),
+  
   "/birthdays": () => import("@/pages/Birthdays"),
   "/viagens": () => import("@/pages/TorreDeControle"),
   "/viagens/monitor": () => import("@/pages/Viagens"),

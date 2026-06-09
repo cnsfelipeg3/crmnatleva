@@ -309,39 +309,10 @@ const PANEL_HELP: Record<string, PanelHelp> = {
     ],
     relatedPanels: [
       { label: "Dashboard", path: "/dashboard" },
-      { label: "NatLeva Intelligence", path: "/natleva-intelligence" },
       { label: "Aniversariantes", path: "/birthdays" },
     ],
   },
 
-  "/natleva-intelligence": {
-    title: "NatLeva Intelligence",
-    subtitle: "Insights de IA operacional",
-    description:
-      "Painel de inteligência artificial que analisa toda a operação e gera insights acionáveis. A IA identifica padrões de vendas, oportunidades de melhoria, alertas de risco e recomendações estratégicas baseadas nos dados reais da agência.",
-    features: [
-      "Insights gerados automaticamente pela IA a cada ciclo de análise",
-      "Alertas de oportunidades: clientes para reativar, destinos em alta, sazonalidade",
-      "Alertas de riscos: queda de vendas, fornecedores com problemas, pendências acumuladas",
-      "Recomendações de ações práticas com impacto estimado",
-      "Histórico de insights anteriores para acompanhamento",
-    ],
-    steps: [
-      { title: "Revise os insights", detail: "Os insights são organizados por relevância. Os mais urgentes aparecem primeiro com badges vermelhos." },
-      { title: "Leia o detalhe", detail: "Clique em um insight para ver a análise completa, dados de suporte e ação recomendada." },
-      { title: "Execute a ação", detail: "Cada insight sugere uma ação concreta. Use os links diretos para navegar ao painel relevante." },
-    ],
-    tips: [
-      "Revise os insights diariamente para tomar decisões proativas",
-      "Insights com badge 'alta confiança' são baseados em dados sólidos",
-      "Use os insights para embasar reuniões de equipe e planejamento",
-    ],
-    relatedPanels: [
-      { label: "Dashboard", path: "/dashboard" },
-      { label: "Inteligência de Clientes", path: "/inteligencia-clientes" },
-      { label: "Cérebro NatLeva", path: "/implementacao/cerebro-natleva" },
-    ],
-  },
 
   "/birthdays": {
     title: "Aniversariantes",
@@ -1275,10 +1246,10 @@ const PANEL_HELP: Record<string, PanelHelp> = {
       "Exemplo: 'Liste os 10 clientes VIP que não viajaram este ano'",
     ],
     relatedPanels: [
-      { label: "NatLeva Intelligence", path: "/natleva-intelligence" },
       { label: "Dashboard", path: "/dashboard" },
     ],
   },
+
 
   // ── Implementação ──────────────────────────────────
   "/import": {
