@@ -141,6 +141,32 @@ export default function Proposals() {
     },
   });
 
+  // Contagem de visualizações em tempo real (fonte da verdade: proposal_views).
+  // Evita depender do views_count cacheado que pode ficar dessincronizado.
+  const proposalIds = useMemo(
+    () => (proposals || []).map((p: any) => p.id).filter(Boolean),
+    [proposals]
+  );
+
+  const { data: viewsCountMap } = useQuery({
+    queryKey: ["proposals-views-counts", proposalIds],
+    enabled: proposalIds.length > 0,
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposal_views")
+        .select("proposal_id")
+        .in("proposal_id", proposalIds);
+      if (error) throw error;
+      const m: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        m[r.proposal_id] = (m[r.proposal_id] || 0) + 1;
+      });
+      return m;
+    },
+  });
+
   // ────────────────────────────────────────────────────────────────
   // Filtros estéticos · alinhados com o padrão Smart Filters
   // ────────────────────────────────────────────────────────────────
@@ -593,7 +619,9 @@ export default function Proposals() {
                         {(p as any).quote_request_id && (
                           <Badge variant="info" className="text-[10px]">Portal</Badge>
                         )}
-                        <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                        {p.status && p.status !== "draft" && p.status !== "rascunho_ia" && (
+                          <Badge variant={st.variant} className="text-[10px]">{st.label}</Badge>
+                        )}
                       </div>
                       {p.status === "rascunho_ia" && (
                         <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
@@ -680,7 +708,7 @@ export default function Proposals() {
                   <div className="flex items-center justify-between pt-2 border-t border-border/50">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Eye className="w-3.5 h-3.5" />
-                      <span>{p.views_count || 0} visualizações</span>
+                      <span>{(viewsCountMap?.[p.id] ?? p.views_count ?? 0)} visualizações</span>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
