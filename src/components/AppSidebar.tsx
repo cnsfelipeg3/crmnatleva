@@ -26,7 +26,7 @@ const navItems = [
   { to: "/dashboard", icon: Home, label: "Início", alwaysVisible: true },
   { to: "/operacao/inbox", icon: MessageSquare, label: "WhatsApp", alwaysVisible: true },
   { to: "/inbox", icon: Inbox, label: "E-mail", alwaysVisible: true },
-  { to: "/sales/new", icon: Plus, label: "Incluir" },
+  
   { to: "/sales", icon: List, label: "Vendas" },
   { to: "/pendencias", icon: AlertTriangle, label: "Pendências" },
   { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
