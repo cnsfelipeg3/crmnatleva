@@ -1898,7 +1898,7 @@ export default function ProposalEditor() {
             </CardContent>
           </Card>
 
-
+          <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">Condições de Pagamento</CardTitle>
