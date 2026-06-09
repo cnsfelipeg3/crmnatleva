@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package, ShoppingCart } from "lucide-react";
+import { Save, ExternalLink, Copy, ArrowLeft, Plus, Trash2, GripVertical, Plane, Hotel, Sparkles, MapPin, Search, Eye, ChevronDown, ChevronRight, Check, BarChart3, Share2, FileDown, Loader2, Image as ImageIcon, X, Star, Pencil, Upload, Train, Car, Bus, Ticket, Ship, Map as MapIcon, ShieldCheck, Package, ShoppingCart, Wallet, Lock, CreditCard, Percent, TrendingUp } from "lucide-react";
 import { ConvertToSaleDialog } from "@/components/proposal/ConvertToSaleDialog";
 import { exportProposalPdf, shareProposalLink } from "@/lib/proposalPdfExport";
 import { getPublicProposalUrl } from "@/lib/publicUrl";
@@ -1826,96 +1826,163 @@ export default function ProposalEditor() {
         </TabsContent>
 
         <TabsContent value="finance" className="space-y-4">
-          <Card>
-            <CardHeader><CardTitle className="text-base">Resumo Financeiro</CardTitle></CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label>Valor total da viagem (R$)</Label>
-                <Input type="number" value={form.total_value} onChange={(e) => setForm((f) => ({ ...f, total_value: e.target.value }))} placeholder="15000.00" />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Valor por pessoa (R$)</Label>
-                <Input type="number" value={form.value_per_person} onChange={(e) => setForm((f) => ({ ...f, value_per_person: e.target.value }))} placeholder="7500.00" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-dashed border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/10">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <CardTitle className="text-base flex items-center gap-2">
-                  Custo &amp; Lucro
-                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
-                    🔒 Uso Interno
-                  </span>
-                </CardTitle>
-                <p className="text-[11px] text-muted-foreground">Nunca aparece na proposta do cliente</p>
+          {/* ── Resumo Financeiro ─────────────────────────────── */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Wallet className="w-4.5 h-4.5" strokeWidth={2} />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-base leading-tight">Resumo Financeiro</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">Valores apresentados ao cliente na proposta</p>
+                </div>
               </div>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <CardContent className="pt-5 grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="space-y-1.5">
-                <Label>Custo do pacote (R$)</Label>
-                <Input
-                  type="number"
-                  value={form.internal_cost}
-                  onChange={(e) => {
-                    const cost = e.target.value;
-                    setForm((f) => {
-                      const totalNum = parseFloat(f.total_value);
-                      const costNum = parseFloat(cost);
-                      const autoProfit = Number.isFinite(totalNum) && Number.isFinite(costNum)
-                        ? (totalNum - costNum).toFixed(2)
-                        : f.internal_profit;
-                      return { ...f, internal_cost: cost, internal_profit: cost === "" ? "" : autoProfit };
-                    });
-                  }}
-                  placeholder="10000.00"
-                />
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor total da viagem</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">R$</span>
+                  <Input
+                    type="number"
+                    value={form.total_value}
+                    onChange={(e) => setForm((f) => ({ ...f, total_value: e.target.value }))}
+                    placeholder="15.000,00"
+                    className="pl-10 tabular-nums font-medium"
+                  />
+                </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Lucro real (R$) · editável</Label>
-                <Input
-                  type="number"
-                  value={form.internal_profit}
-                  onChange={(e) => setForm((f) => ({ ...f, internal_profit: e.target.value }))}
-                  placeholder="5000.00"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Calculado automaticamente (venda · custo). Edite se a conta não bater.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Margem</Label>
-                <div className="h-10 flex items-center px-3 rounded-md border border-border bg-muted/30 text-sm font-medium">
-                  {(() => {
-                    const t = parseFloat(form.total_value);
-                    const p = parseFloat(form.internal_profit);
-                    if (!Number.isFinite(t) || t <= 0 || !Number.isFinite(p)) return "·";
-                    return `${((p / t) * 100).toFixed(1)}%`;
-                  })()}
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Valor por pessoa</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">R$</span>
+                  <Input
+                    type="number"
+                    value={form.value_per_person}
+                    onChange={(e) => setForm((f) => ({ ...f, value_per_person: e.target.value }))}
+                    placeholder="7.500,00"
+                    className="pl-10 tabular-nums font-medium"
+                  />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-base">Condições de Pagamento</CardTitle>
-                <Button variant="outline" size="sm" onClick={addPayment} className="gap-1.5">
+          {/* ── Custo & Lucro · uso interno ──────────────────── */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Lock className="w-4 h-4" strokeWidth={2.2} />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base leading-tight">Custo &amp; Lucro</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Uso interno · nunca aparece na proposta do cliente</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/50 self-start">
+                  Confidencial
+                </span>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-5 grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Custo do pacote</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">R$</span>
+                  <Input
+                    type="number"
+                    value={form.internal_cost}
+                    onChange={(e) => {
+                      const cost = e.target.value;
+                      setForm((f) => {
+                        const totalNum = parseFloat(f.total_value);
+                        const costNum = parseFloat(cost);
+                        const autoProfit = Number.isFinite(totalNum) && Number.isFinite(costNum)
+                          ? (totalNum - costNum).toFixed(2)
+                          : f.internal_profit;
+                        return { ...f, internal_cost: cost, internal_profit: cost === "" ? "" : autoProfit };
+                      });
+                    }}
+                    placeholder="10.000,00"
+                    className="pl-10 tabular-nums font-medium"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground/80 leading-snug">O quanto a agência paga aos fornecedores.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <TrendingUp className="w-3 h-3" /> Lucro real
+                </Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium pointer-events-none">R$</span>
+                  <Input
+                    type="number"
+                    value={form.internal_profit}
+                    onChange={(e) => setForm((f) => ({ ...f, internal_profit: e.target.value }))}
+                    placeholder="5.000,00"
+                    className="pl-10 tabular-nums font-medium"
+                  />
+                </div>
+                <p className="text-[11px] text-muted-foreground/80 leading-snug">Auto (venda · custo). Edite se a conta não bater.</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Percent className="w-3 h-3" /> Margem
+                </Label>
+                {(() => {
+                  const t = parseFloat(form.total_value);
+                  const p = parseFloat(form.internal_profit);
+                  const hasValue = Number.isFinite(t) && t > 0 && Number.isFinite(p);
+                  const pct = hasValue ? (p / t) * 100 : 0;
+                  const tone =
+                    !hasValue ? "text-muted-foreground/50 bg-muted/40 border-border"
+                      : pct >= 25 ? "text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/20 dark:border-emerald-800/50"
+                      : pct >= 10 ? "text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-300 dark:bg-amber-900/20 dark:border-amber-800/50"
+                      : "text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-900/20 dark:border-rose-800/50";
+                  return (
+                    <div className={`h-10 flex items-center justify-center px-3 rounded-md border text-sm font-semibold tabular-nums transition-colors ${tone}`}>
+                      {hasValue ? `${pct.toFixed(1)}%` : "—"}
+                    </div>
+                  );
+                })()}
+                <p className="text-[11px] text-muted-foreground/80 leading-snug">Lucro sobre o valor de venda.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Condições de Pagamento ───────────────────────── */}
+          <Card className="overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                    <CreditCard className="w-4.5 h-4.5" strokeWidth={2} />
+                  </div>
+                  <div className="min-w-0">
+                    <CardTitle className="text-base leading-tight">Condições de Pagamento</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Formas e descontos oferecidos ao cliente</p>
+                  </div>
+                </div>
+                <Button variant="outline" size="sm" onClick={addPayment} className="gap-1.5 shrink-0">
                   <Plus className="w-3.5 h-3.5" /> Adicionar
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="pt-5 space-y-3">
               {form.payment_conditions.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma condição de pagamento adicionada</p>
+                <div className="rounded-lg border border-dashed border-border bg-muted/20 py-8 px-4 text-center">
+                  <p className="text-sm text-muted-foreground">Nenhuma condição adicionada ainda</p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">Clique em "Adicionar" para incluir Pix, cartão, parcelamento etc.</p>
+                </div>
               )}
               {form.payment_conditions.map((p, idx) => (
-                <div key={idx} className="flex items-center gap-3">
-                  <Input value={p.method} onChange={(e) => updatePayment(idx, "method", e.target.value)} placeholder="Pix à vista" className="flex-1" />
-                  <Input value={p.details} onChange={(e) => updatePayment(idx, "details", e.target.value)} placeholder="10% de desconto" className="flex-1" />
-                  <Button variant="ghost" size="icon" onClick={() => removePayment(idx)} className="shrink-0 text-muted-foreground hover:text-destructive">
+                <div key={idx} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2 items-center">
+                  <Input value={p.method} onChange={(e) => updatePayment(idx, "method", e.target.value)} placeholder="Ex: Pix à vista" />
+                  <Input value={p.details} onChange={(e) => updatePayment(idx, "details", e.target.value)} placeholder="Ex: 10% de desconto" />
+                  <Button variant="ghost" size="icon" onClick={() => removePayment(idx)} className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 justify-self-end md:justify-self-auto">
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
