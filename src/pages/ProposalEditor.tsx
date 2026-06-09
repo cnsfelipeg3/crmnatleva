@@ -315,6 +315,8 @@ export default function ProposalEditor() {
         cover_image_url: existing.cover_image_url || "",
         total_value: existing.total_value?.toString() || "",
         value_per_person: existing.value_per_person?.toString() || "",
+        internal_cost: (existing as any).internal_cost != null ? String((existing as any).internal_cost) : "",
+        internal_profit: (existing as any).internal_profit != null ? String((existing as any).internal_profit) : "",
         payment_conditions: (existing.payment_conditions as any[]) || [],
         proposal_strategy: (existing as any).proposal_strategy || "",
         proposal_outcome: (existing as any).proposal_outcome || "pending",
