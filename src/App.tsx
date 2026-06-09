@@ -43,7 +43,7 @@ const Checkin = lazy(() => import("@/pages/Checkin"));
 const Lodging = lazy(() => import("@/pages/Lodging"));
 const ClientDetail = lazy(() => import("@/pages/ClientDetail"));
 const ImportData = lazy(() => import("@/pages/ImportData"));
-const Pendencias = lazy(() => import("@/pages/Pendencias"));
+
 const Viagens = lazy(() => import("@/pages/Viagens"));
 const TorreDeControle = lazy(() => import("@/pages/TorreDeControle"));
 const ClientIntelligence = lazy(() => import("@/pages/ClientIntelligence"));
@@ -309,7 +309,7 @@ function AppRoutes() {
           <Route path="/inbox" element={<Inbox />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/import" element={<ImportData />} />
-          <Route path="/pendencias" element={<Pendencias />} />
+          
           <Route path="/cotacoes" element={<CotacoesPropostasPipeline />} />
           <Route path="/propostas" element={<Proposals />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
