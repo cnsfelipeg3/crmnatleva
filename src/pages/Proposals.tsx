@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate, Bot, Calendar, User, Trash2, CopyPlus } from "lucide-react";
+import { Plus, Search, Eye, Copy, ExternalLink, MoreHorizontal, FileText, LayoutTemplate, Bot, Calendar, User, Trash2, CopyPlus, BarChart3 } from "lucide-react";
 import { countProposalCompleteness, PROPOSAL_TOTAL_FIELDS } from "@/lib/briefingProposalBridge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -244,6 +244,9 @@ export default function Proposals() {
           <p className="text-sm text-muted-foreground">Crie propostas visuais premium para seus clientes</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => navigate("/propostas/dashboard")} className="gap-2">
+            <BarChart3 className="w-4 h-4" /> Dashboard
+          </Button>
           <Button variant="outline" onClick={() => navigate("/propostas/modelos")} className="gap-2">
             <LayoutTemplate className="w-4 h-4" /> Gerenciar Modelos
           </Button>

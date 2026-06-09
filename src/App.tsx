@@ -155,6 +155,7 @@ const PortalConcierge = lazy(() => import("@/pages/portal/PortalConcierge"));
 // CRM
 
 const Proposals = lazy(() => import("@/pages/Proposals"));
+const ProposalsDashboard = lazy(() => import("@/pages/ProposalsDashboard"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
 const ProposalTemplateEditor = lazy(() => import("@/pages/ProposalTemplateEditor"));
@@ -312,6 +313,7 @@ function AppRoutes() {
           
           
           <Route path="/propostas" element={<Proposals />} />
+          <Route path="/propostas/dashboard" element={<ProposalsDashboard />} />
           <Route path="/propostas/modelos" element={<ProposalTemplates />} />
           <Route path="/propostas/modelos/novo" element={<ProposalTemplateEditor />} />
           <Route path="/propostas/modelos/:id" element={<ProposalTemplateEditor />} />
