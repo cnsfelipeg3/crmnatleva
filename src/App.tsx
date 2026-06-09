@@ -153,7 +153,7 @@ const PortalProfile = lazy(() => import("@/pages/portal/PortalProfile"));
 const PortalConcierge = lazy(() => import("@/pages/portal/PortalConcierge"));
 
 // CRM
-const CotacoesPropostasPipeline = lazy(() => import("@/pages/CotacoesPropostasPipeline"));
+
 const Proposals = lazy(() => import("@/pages/Proposals"));
 const ProposalEditor = lazy(() => import("@/pages/ProposalEditor"));
 const ProposalTemplates = lazy(() => import("@/pages/ProposalTemplates"));
