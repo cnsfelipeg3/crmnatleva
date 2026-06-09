@@ -141,6 +141,32 @@ export default function Proposals() {
     },
   });
 
+  // Contagem de visualizações em tempo real (fonte da verdade: proposal_views).
+  // Evita depender do views_count cacheado que pode ficar dessincronizado.
+  const proposalIds = useMemo(
+    () => (proposals || []).map((p: any) => p.id).filter(Boolean),
+    [proposals]
+  );
+
+  const { data: viewsCountMap } = useQuery({
+    queryKey: ["proposals-views-counts", proposalIds],
+    enabled: proposalIds.length > 0,
+    refetchOnWindowFocus: true,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposal_views")
+        .select("proposal_id")
+        .in("proposal_id", proposalIds);
+      if (error) throw error;
+      const m: Record<string, number> = {};
+      (data || []).forEach((r: any) => {
+        m[r.proposal_id] = (m[r.proposal_id] || 0) + 1;
+      });
+      return m;
+    },
+  });
+
   // ────────────────────────────────────────────────────────────────
   // Filtros estéticos · alinhados com o padrão Smart Filters
   // ────────────────────────────────────────────────────────────────
