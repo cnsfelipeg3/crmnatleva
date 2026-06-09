@@ -172,6 +172,8 @@ export default function ProposalEditor() {
     cover_image_url: "",
     total_value: "",
     value_per_person: "",
+    internal_cost: "",
+    internal_profit: "",
     payment_conditions: [] as { method: string; details: string }[],
     proposal_strategy: prefillStrategy,
     proposal_outcome: "pending",
@@ -313,6 +315,8 @@ export default function ProposalEditor() {
         cover_image_url: existing.cover_image_url || "",
         total_value: existing.total_value?.toString() || "",
         value_per_person: existing.value_per_person?.toString() || "",
+        internal_cost: (existing as any).internal_cost != null ? String((existing as any).internal_cost) : "",
+        internal_profit: (existing as any).internal_profit != null ? String((existing as any).internal_profit) : "",
         payment_conditions: (existing.payment_conditions as any[]) || [],
         proposal_strategy: (existing as any).proposal_strategy || "",
         proposal_outcome: (existing as any).proposal_outcome || "pending",
@@ -590,6 +594,8 @@ export default function ProposalEditor() {
         cover_image_url: currentForm.cover_image_url,
         total_value: currentForm.total_value ? parseFloat(currentForm.total_value) : null,
         value_per_person: currentForm.value_per_person ? parseFloat(currentForm.value_per_person) : null,
+        internal_cost: currentForm.internal_cost !== "" ? parseFloat(currentForm.internal_cost) : null,
+        internal_profit: currentForm.internal_profit !== "" ? parseFloat(currentForm.internal_profit) : null,
         payment_conditions: currentForm.payment_conditions,
         proposal_strategy: currentForm.proposal_strategy || null,
         proposal_outcome: currentForm.proposal_outcome || "pending",
@@ -1830,6 +1836,64 @@ export default function ProposalEditor() {
               <div className="space-y-1.5">
                 <Label>Valor por pessoa (R$)</Label>
                 <Input type="number" value={form.value_per_person} onChange={(e) => setForm((f) => ({ ...f, value_per_person: e.target.value }))} placeholder="7500.00" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-dashed border-amber-300/60 bg-amber-50/40 dark:bg-amber-950/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-base flex items-center gap-2">
+                  Custo &amp; Lucro
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-200/70 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+                    🔒 Uso Interno
+                  </span>
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground">Nunca aparece na proposta do cliente</p>
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-1.5">
+                <Label>Custo do pacote (R$)</Label>
+                <Input
+                  type="number"
+                  value={form.internal_cost}
+                  onChange={(e) => {
+                    const cost = e.target.value;
+                    setForm((f) => {
+                      const totalNum = parseFloat(f.total_value);
+                      const costNum = parseFloat(cost);
+                      const autoProfit = Number.isFinite(totalNum) && Number.isFinite(costNum)
+                        ? (totalNum - costNum).toFixed(2)
+                        : f.internal_profit;
+                      return { ...f, internal_cost: cost, internal_profit: cost === "" ? "" : autoProfit };
+                    });
+                  }}
+                  placeholder="10000.00"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Lucro real (R$) · editável</Label>
+                <Input
+                  type="number"
+                  value={form.internal_profit}
+                  onChange={(e) => setForm((f) => ({ ...f, internal_profit: e.target.value }))}
+                  placeholder="5000.00"
+                />
+                <p className="text-[10px] text-muted-foreground">
+                  Calculado automaticamente (venda · custo). Edite se a conta não bater.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Margem</Label>
+                <div className="h-10 flex items-center px-3 rounded-md border border-border bg-muted/30 text-sm font-medium">
+                  {(() => {
+                    const t = parseFloat(form.total_value);
+                    const p = parseFloat(form.internal_profit);
+                    if (!Number.isFinite(t) || t <= 0 || !Number.isFinite(p)) return "·";
+                    return `${((p / t) * 100).toFixed(1)}%`;
+                  })()}
+                </div>
               </div>
             </CardContent>
           </Card>

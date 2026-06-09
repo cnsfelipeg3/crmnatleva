@@ -8444,6 +8444,8 @@ export type Database = {
           created_by: string | null
           destinations: string[] | null
           id: string
+          internal_cost: number | null
+          internal_profit: number | null
           intro_text: string | null
           is_fictional: boolean
           last_viewed_at: string | null
@@ -8482,6 +8484,8 @@ export type Database = {
           created_by?: string | null
           destinations?: string[] | null
           id?: string
+          internal_cost?: number | null
+          internal_profit?: number | null
           intro_text?: string | null
           is_fictional?: boolean
           last_viewed_at?: string | null
@@ -8520,6 +8524,8 @@ export type Database = {
           created_by?: string | null
           destinations?: string[] | null
           id?: string
+          internal_cost?: number | null
+          internal_profit?: number | null
           intro_text?: string | null
           is_fictional?: boolean
           last_viewed_at?: string | null
