@@ -594,6 +594,8 @@ export default function ProposalEditor() {
         cover_image_url: currentForm.cover_image_url,
         total_value: currentForm.total_value ? parseFloat(currentForm.total_value) : null,
         value_per_person: currentForm.value_per_person ? parseFloat(currentForm.value_per_person) : null,
+        internal_cost: currentForm.internal_cost !== "" ? parseFloat(currentForm.internal_cost) : null,
+        internal_profit: currentForm.internal_profit !== "" ? parseFloat(currentForm.internal_profit) : null,
         payment_conditions: currentForm.payment_conditions,
         proposal_strategy: currentForm.proposal_strategy || null,
         proposal_outcome: currentForm.proposal_outcome || "pending",
