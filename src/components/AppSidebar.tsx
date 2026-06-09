@@ -29,7 +29,7 @@ const navItems = [
   
   { to: "/sales", icon: List, label: "Vendas" },
   
-  { to: "/cotacoes", icon: PlaneTakeoff, label: "Cotações" },
+  
   { to: "/midias", icon: ImageIcon, label: "Mídias" },
 ];
 
