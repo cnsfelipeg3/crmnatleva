@@ -158,8 +158,8 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
         </DialogHeader>
 
         {/* Search */}
-        <div className="px-5 pt-3 pb-2">
-          <div className="relative">
+        <div className="px-5 pt-3 pb-2 flex items-center gap-1.5">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Buscar por nome ou telefone..."
@@ -168,6 +168,17 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
               className="pl-9 h-9 bg-muted/40 border-border/40"
             />
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 shrink-0"
+            onClick={loadData}
+            disabled={loading}
+            title="Atualizar lista"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
 
         {/* Selected chips */}
