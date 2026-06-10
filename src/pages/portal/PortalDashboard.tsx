@@ -17,6 +17,7 @@ import { getIataCoords } from "@/components/maps/iataCoords";
 import { usePortalMode } from "@/hooks/usePortalMode";
 import TravelModeHome from "@/components/portal/TravelModeHome";
 import PostTripHome from "@/components/portal/PostTripHome";
+import PreTripHome from "@/components/portal/PreTripHome";
 import TravelStats from "@/components/portal/TravelStats";
 
 /* ═══ Quick Action ═══ */
@@ -102,6 +103,77 @@ export default function PortalDashboard() {
   };
 
   const nextStatus = nextTrip ? getTripStatus(nextTrip.sale || {}) : "past";
+
+  const commonHomeMiolo = (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 py-8 sm:py-12">
+      {/* Quick Actions */}
+      <div className="grid grid-cols-4 gap-3 sm:gap-4">
+        {[
+          { icon: FileText, label: "Documentos", subtitle: "Vouchers e PDFs", delay: 0.05, gradient: "bg-gradient-to-b from-info/[0.03] to-transparent" },
+          { icon: DollarSign, label: "Financeiro", subtitle: "Parcelas", delay: 0.1, gradient: "bg-gradient-to-b from-success/[0.03] to-transparent" },
+          { icon: CheckSquare, label: "Checklist", subtitle: "Preparação", delay: 0.15, gradient: "bg-gradient-to-b from-warning/[0.03] to-transparent" },
+          { icon: MessageCircle, label: "Suporte", subtitle: "WhatsApp", delay: 0.2, gradient: "bg-gradient-to-b from-accent/[0.03] to-transparent" },
+        ].map((item) => (
+          <QuickAction
+            key={item.label}
+            icon={item.icon}
+            label={item.label}
+            subtitle={item.subtitle}
+            delay={item.delay}
+            gradient={item.gradient}
+            onClick={() => {
+              if (item.label === "Suporte") window.open("https://wa.me/5511999999999", "_blank");
+              else if (nextTrip) navigate(`/portal/viagem/${nextTrip.sale_id}`);
+            }}
+          />
+        ))}
+      </div>
+
+      <TravelStats trips={trips} />
+      <CurrencySummary onExpand={() => navigate("/portal/financeiro?tab=cambio")} />
+
+      <motion.section
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3, duration: 0.6 }}
+      >
+        <div className="flex items-center gap-3 mb-5">
+          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+            <Globe2 className="h-5 w-5 text-accent" />
+          </div>
+          <div>
+            <h2 className="text-lg font-bold text-foreground tracking-tight">Journey Map</h2>
+            <p className="text-xs text-muted-foreground">Explore suas rotas no mapa</p>
+          </div>
+          <span className="text-[10px] text-accent bg-accent/10 px-2.5 py-1 rounded-full font-mono font-bold ml-auto">Mapa</span>
+        </div>
+        <LazyViewportTravelMap
+          className="h-[500px] lg:h-[600px] w-full"
+          waypoints={[...categorized.upcoming, ...categorized.active, ...categorized.past]
+            .map((t) => {
+              const coords = getIataCoords(t.sale?.destination_iata);
+              if (!coords) return null;
+              return {
+                id: t.id,
+                name: t.sale?.destination_iata ?? "Destino",
+                lat: coords.lat,
+                lng: coords.lng,
+                color: categorized.past.includes(t) ? "success" as const : "primary" as const,
+              };
+            })
+            .filter((w): w is NonNullable<typeof w> => w !== null)}
+          onWaypointClick={(id) => navigate(`/portal/viagem/${id}`)}
+        />
+      </motion.section>
+
+      {categorized.upcoming.length > 0 && (
+        <TripShelf emoji="✈️" title="Próximas jornadas" trips={categorized.upcoming.slice(0, 3)} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
+      )}
+      {categorized.active.length > 0 && (
+        <TripShelf emoji="🔥" title="Em viagem agora" trips={categorized.active} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
+      )}
+    </div>
+  );
 
   const homeContent = (
     <PortalLayout>
@@ -301,81 +373,7 @@ export default function PortalDashboard() {
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
         </div>
 
-        {/* ═══════════ CONTENT ═══════════ */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 py-8 sm:py-12">
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-4 gap-3 sm:gap-4">
-            {[
-              { icon: FileText, label: "Documentos", subtitle: "Vouchers e PDFs", delay: 0.05, gradient: "bg-gradient-to-b from-info/[0.03] to-transparent" },
-              { icon: DollarSign, label: "Financeiro", subtitle: "Parcelas", delay: 0.1, gradient: "bg-gradient-to-b from-success/[0.03] to-transparent" },
-              { icon: CheckSquare, label: "Checklist", subtitle: "Preparação", delay: 0.15, gradient: "bg-gradient-to-b from-warning/[0.03] to-transparent" },
-              { icon: MessageCircle, label: "Suporte", subtitle: "WhatsApp", delay: 0.2, gradient: "bg-gradient-to-b from-accent/[0.03] to-transparent" },
-            ].map((item) => (
-              <QuickAction
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                subtitle={item.subtitle}
-                delay={item.delay}
-                gradient={item.gradient}
-                onClick={() => {
-                  if (item.label === "Suporte") window.open("https://wa.me/5511999999999", "_blank");
-                  else if (nextTrip) navigate(`/portal/viagem/${nextTrip.sale_id}`);
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Travel Stats */}
-          <TravelStats trips={trips} />
-
-          {/* Currency Summary */}
-          <CurrencySummary onExpand={() => navigate("/portal/financeiro?tab=cambio")} />
-
-          {/* ═══ Journey Globe — Photorealistic 3D ═══ */}
-          <motion.section
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.6 }}
-          >
-            <div className="flex items-center gap-3 mb-5">
-              <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                <Globe2 className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-foreground tracking-tight">Journey Map</h2>
-                <p className="text-xs text-muted-foreground">Explore suas rotas no mapa</p>
-              </div>
-              <span className="text-[10px] text-accent bg-accent/10 px-2.5 py-1 rounded-full font-mono font-bold ml-auto">Mapa</span>
-            </div>
-            <LazyViewportTravelMap
-              className="h-[500px] lg:h-[600px] w-full"
-              waypoints={[...categorized.upcoming, ...categorized.active, ...categorized.past]
-                .map((t) => {
-                  const coords = getIataCoords(t.sale?.destination_iata);
-                  if (!coords) return null;
-                  return {
-                    id: t.id,
-                    name: t.sale?.destination_iata ?? "Destino",
-                    lat: coords.lat,
-                    lng: coords.lng,
-                    color: categorized.past.includes(t) ? "success" as const : "primary" as const,
-                  };
-                })
-                .filter((w): w is NonNullable<typeof w> => w !== null)}
-              onWaypointClick={(id) => navigate(`/portal/viagem/${id}`)}
-            />
-          </motion.section>
-
-          {/* Recent trips preview — just top 3 upcoming */}
-          {categorized.upcoming.length > 0 && (
-            <TripShelf emoji="✈️" title="Próximas jornadas" trips={categorized.upcoming.slice(0, 3)} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
-          )}
-          {categorized.active.length > 0 && (
-            <TripShelf emoji="🔥" title="Em viagem agora" trips={categorized.active} onOpen={(id) => navigate(`/portal/viagem/${id}`)} />
-          )}
-        </div>
+        {commonHomeMiolo}
       </div>
     </PortalLayout>
   );
@@ -388,8 +386,12 @@ export default function PortalDashboard() {
         </PortalLayout>
       );
     case "pre-trip":
-      // FASE 1: substituir por <PreTripHome/>
-      return homeContent;
+      return (
+        <PortalLayout>
+          {nextTrip && <PreTripHome trip={nextTrip} upcomingTrips={upcomingTrips} />}
+          {commonHomeMiolo}
+        </PortalLayout>
+      );
     case "post-trip":
       return (
         <PortalLayout>
