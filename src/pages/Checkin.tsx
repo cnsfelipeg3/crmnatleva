@@ -600,7 +600,12 @@ export default function Checkin() {
             <p className="text-sm font-semibold text-foreground truncate flex items-center gap-1">
               {origin} <ArrowRight className="w-3 h-3 text-muted-foreground" /> {dest}
             </p>
-            <p className="text-[10px] text-muted-foreground truncate">{airline} {flightNum}</p>
+            <p className="text-[10px] text-muted-foreground truncate">
+              {airline} {flightNum}
+              {task.connectionLegTotal && task.connectionLegTotal > 1 ? (
+                <span className="ml-1 text-primary font-semibold">· Conexão {task.connectionLegIndex}/{task.connectionLegTotal}</span>
+              ) : null}
+            </p>
           </div>
         </div>
 
