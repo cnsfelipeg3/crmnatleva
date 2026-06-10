@@ -372,6 +372,7 @@ function AppRoutes() {
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />
           <Route path="/portal-admin/viagens" element={<PortalAdminTrips />} />
           <Route path="/portal-admin/viagens/:id" element={<PortalAdminTripDetail />} />
+          <Route path="/portal-admin/viagens/:id/preview" element={<PortalAdminPreview />} />
           <Route path="/portal-admin/clientes" element={<PortalAdminClients />} />
           <Route path="/portal-admin/documentos" element={<PortalAdminDocuments />} />
           <Route path="/portal-admin/notificacoes" element={<PortalAdminNotifications />} />
