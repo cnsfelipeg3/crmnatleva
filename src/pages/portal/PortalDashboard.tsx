@@ -391,8 +391,11 @@ export default function PortalDashboard() {
       // FASE 1: substituir por <PreTripHome/>
       return homeContent;
     case "post-trip":
-      // FASE 3: substituir por <PostTripHome/>
-      return homeContent;
+      return (
+        <PortalLayout>
+          <PostTripHome lastTrip={pastTrips[0]} pastTrips={pastTrips} />
+        </PortalLayout>
+      );
     default:
       return homeContent;
   }
