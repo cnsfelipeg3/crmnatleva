@@ -15,6 +15,7 @@ import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
 import { usePortalMode } from "@/hooks/usePortalMode";
+import TravelModeHome from "@/components/portal/TravelModeHome";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
@@ -81,7 +82,7 @@ function TravelStats({ trips }: { trips: any[] }) {
 /* ═══ MAIN DASHBOARD ═══ */
 export default function PortalDashboard() {
   const navigate = useNavigate();
-  const { loading, mode, allTrips: trips, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
+  const { loading, mode, allTrips: trips, activeTrip, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
 
   const categorized = useMemo(() => ({
     upcoming: upcomingTrips,
@@ -413,8 +414,11 @@ export default function PortalDashboard() {
 
   switch (mode) {
     case "in-trip":
-      // FASE 2: substituir por <TravelModeHome/>
-      return homeContent;
+      return (
+        <PortalLayout travelMode travelSale={activeTrip?.sale}>
+          <TravelModeHome trip={activeTrip} />
+        </PortalLayout>
+      );
     case "pre-trip":
       // FASE 1: substituir por <PreTripHome/>
       return homeContent;
