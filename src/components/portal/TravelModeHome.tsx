@@ -159,7 +159,7 @@ export default function TravelModeHome({ trip }: TravelModeHomeProps) {
               <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-accent" /> {localTime}</span>
             </div>
             <div className="mt-6 max-w-2xl">
-              <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} />
+              <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} tone="onDark" />
             </div>
           </motion.div>
         </div>
