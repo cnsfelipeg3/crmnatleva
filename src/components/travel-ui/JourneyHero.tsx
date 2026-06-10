@@ -76,11 +76,67 @@ export function enhanceImageUrl(url: string): string {
   return url;
 }
 
-export function getDestinationImage(iata: string | null, cover?: string | null, saleId?: string) {
+// Match by destination text (city/country/region) when IATA isn't recognized.
+const destTextToIata: Record<string, string> = {
+  orlando: "MCO", "walt disney": "MCO", disney: "MCO",
+  miami: "MIA",
+  lisboa: "LIS", lisbon: "LIS", portugal: "LIS",
+  paris: "CDG", franca: "CDG", france: "CDG",
+  roma: "FCO", rome: "FCO", italia: "FCO", italy: "FCO",
+  cancun: "CUN", "riviera maya": "CUN", mexico: "CUN",
+  "buenos aires": "EZE", argentina: "EZE",
+  maldivas: "MLE", maldives: "MLE",
+  patagonia: "FTE", "el calafate": "FTE",
+  dubai: "DXB", "emirados arabes": "DXB", uae: "DXB",
+  "nova york": "JFK", "new york": "JFK", nyc: "JFK",
+  "los angeles": "LAX",
+  londres: "LHR", london: "LHR", inglaterra: "LHR", "reino unido": "LHR",
+  toquio: "NRT", tokyo: "NRT", japao: "NRT", japan: "NRT",
+  sydney: "SYD", australia: "SYD",
+  barcelona: "BCN",
+  madrid: "MAD", espanha: "MAD", spain: "MAD",
+  "rio de janeiro": "GIG", rio: "GIG",
+  salvador: "SSA", bahia: "SSA",
+  recife: "REC",
+  florianopolis: "FLN", floripa: "FLN",
+  amsterda: "AMS", amsterdam: "AMS", holanda: "AMS",
+  istambul: "IST", istanbul: "IST", turquia: "IST",
+  bangkok: "BKK", tailandia: "BKK", thailand: "BKK",
+  singapura: "SIN", singapore: "SIN",
+  santiago: "SCL", chile: "SCL",
+  bogota: "BOG", colombia: "BOG",
+  lima: "LIM", peru: "LIM",
+  atenas: "ATH", athens: "ATH", grecia: "ATH",
+  cairo: "CAI", egito: "CAI",
+  "cidade do cabo": "CPT", "cape town": "CPT",
+};
+
+function normalizeText(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
+export function resolveDestinationIata(iata?: string | null, destText?: string | null): string | null {
+  if (iata && destImages[iata]) return iata;
+  if (destText) {
+    const norm = normalizeText(destText);
+    if (destTextToIata[norm]) return destTextToIata[norm];
+    for (const key of Object.keys(destTextToIata)) {
+      if (norm.includes(key)) return destTextToIata[key];
+    }
+  }
+  return iata || null;
+}
+
+export function getDestinationImage(
+  iata: string | null,
+  cover?: string | null,
+  saleId?: string,
+  destText?: string | null,
+) {
   if (cover && cover.trim()) return enhanceImageUrl(cover);
-  if (iata && destImages[iata]) return destImages[iata];
-  // Rotate through generic travel images based on iata or saleId for variety
-  const seed = iata || saleId || "trip";
+  const resolved = resolveDestinationIata(iata, destText);
+  if (resolved && destImages[resolved]) return destImages[resolved];
+  const seed = resolved || destText || saleId || "trip";
   const idx = hashCode(seed) % GENERIC_TRAVEL_IMAGES.length;
   return GENERIC_TRAVEL_IMAGES[idx];
 }
