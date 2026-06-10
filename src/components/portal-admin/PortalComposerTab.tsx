@@ -181,9 +181,25 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
                 onChange={e => set("cover_image_url", e.target.value)}
                 placeholder="https://..."
               />
-              <p className="text-[11px] text-muted-foreground">
-                Em branco · a gente usa a capa automática do destino.
-              </p>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[11px] text-muted-foreground">
+                  Em branco · a gente usa a capa automática do destino.
+                </p>
+                {coverStrategy !== "curated" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleGenerateCover}
+                    disabled={generatingCover}
+                  >
+                    {generatingCover
+                      ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Gerando...</>
+                      : <><ImageIcon className="h-3 w-3 mr-1" /> Gerar capa com IA</>}
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1.5">
