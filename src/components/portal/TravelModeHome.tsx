@@ -159,7 +159,7 @@ export default function TravelModeHome({ trip }: TravelModeHomeProps) {
               <span className="inline-flex items-center gap-1.5"><Clock className="h-4 w-4 text-accent" /> {localTime}</span>
             </div>
             <div className="mt-6 max-w-2xl">
-              <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} />
+              <JourneyProgress departureDate={sale?.departure_date} returnDate={sale?.return_date} tone="onDark" />
             </div>
           </motion.div>
         </div>
@@ -319,11 +319,12 @@ export default function TravelModeHome({ trip }: TravelModeHomeProps) {
         href="https://wa.me/5511999999999"
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-5 py-3.5 rounded-full bg-destructive text-destructive-foreground font-bold text-sm shadow-2xl shadow-destructive/30 hover:scale-105 transition"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-5 py-3.5 rounded-full bg-destructive text-destructive-foreground font-bold text-sm shadow-2xl shadow-destructive/30 hover:scale-105 transition"
       >
         <LifeBuoy className="h-5 w-5" />
         SOS · Suporte
       </a>
+
     </div>
   );
 }
