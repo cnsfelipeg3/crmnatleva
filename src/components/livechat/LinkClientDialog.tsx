@@ -63,12 +63,11 @@ export function LinkClientDialog({
 
   const loadClients = async (q: string) => {
     setLoading(true);
+    const term = q.trim();
     let query = supabase
       .from("clients")
       .select("id, display_name, phone, email, client_type, city, state, tags")
-      .order("display_name")
-      .limit(200);
-    const term = q.trim();
+      .limit(500);
     if (term) {
       const digits = term.replace(/\D/g, "");
       const ors = [
@@ -77,7 +76,10 @@ export function LinkClientDialog({
         `city.ilike.%${term}%`,
       ];
       if (digits.length >= 3) ors.push(`phone.ilike.%${digits}%`);
-      query = query.or(ors.join(","));
+      query = query.or(ors.join(",")).order("display_name");
+    } else {
+      // Sem busca: mostrar os mais recentes primeiro (clientes recém-cadastrados aparecem no topo)
+      query = query.order("created_at", { ascending: false });
     }
     const { data } = await query;
     setClients(data || []);
