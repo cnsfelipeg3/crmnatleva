@@ -147,21 +147,22 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
 
 
               {/* Center Nav */}
-              <nav className="hidden md:flex items-center bg-muted/40 rounded-xl p-1">
+              <nav className="hidden md:flex items-center bg-muted/40 rounded-xl p-0.5 mx-2">
                 {navItems.map((item) => {
                   const isActive = location.pathname === item.to;
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200 ${
+                      className={`relative flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap transition-all duration-200 ${
                         isActive
                           ? "bg-card text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      title={item.label}
                     >
-                      <item.icon className="h-3.5 w-3.5" />
-                      {item.label}
+                      <item.icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="hidden xl:inline">{item.label}</span>
                     </Link>
                   );
                 })}
