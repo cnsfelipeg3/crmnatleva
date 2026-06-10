@@ -64,6 +64,7 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
       const globalWelcome = settings?.default_welcome_message || "Bem-vindo ao seu portal de viagens! 🌍";
       const globalFin = settings?.show_financial ?? true;
       const globalDocs = settings?.show_documents ?? true;
+      setCoverStrategy((settings?.cover_strategy as any) || "hybrid");
 
       setIsPublished(!!pub);
       setState({
