@@ -862,7 +862,7 @@ export default function Inbox() {
                 setFoldersOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+                "flex w-full items-center gap-3 rounded-full px-3 py-1.5 text-[13px] transition-colors",
                 active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
               )}
             >
