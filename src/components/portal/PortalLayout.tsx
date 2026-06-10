@@ -9,7 +9,41 @@ import logoNatleva from "@/assets/logo-natleva-clean.webp";
 import PortalNotificationPanel from "@/components/portal/PortalNotificationPanel";
 import PortalAssistant from "@/components/portal/PortalAssistant";
 
-export default function PortalLayout({ children }: { children: ReactNode }) {
+interface PortalLayoutProps {
+  children: ReactNode;
+  travelMode?: boolean;
+  travelSale?: { departure_date?: string | null; return_date?: string | null } | null;
+}
+
+function TravelModeIndicator({ sale }: { sale?: PortalLayoutProps["travelSale"] }) {
+  if (!sale?.departure_date || !sale?.return_date) {
+    return (
+      <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-[11px] font-bold text-accent">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+        </span>
+        Em viagem
+      </div>
+    );
+  }
+  const dep = new Date(sale.departure_date + "T00:00:00");
+  const ret = new Date(sale.return_date + "T23:59:59");
+  const now = new Date();
+  const total = Math.max(1, Math.ceil((ret.getTime() - dep.getTime()) / 86400000));
+  const current = Math.min(total, Math.max(1, Math.ceil((now.getTime() - dep.getTime()) / 86400000)));
+  return (
+    <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-[11px] font-bold text-accent">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+      </span>
+      Em viagem · Dia {current} de {total}
+    </div>
+  );
+}
+
+export default function PortalLayout({ children, travelMode, travelSale }: PortalLayoutProps) {
   const { isAuthenticated, isLoading, signOut, user, portalAccess } = usePortalAuth();
   const navigate = useNavigate();
   const location = useLocation();
