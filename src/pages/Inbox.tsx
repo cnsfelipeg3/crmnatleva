@@ -807,7 +807,7 @@ export default function Inbox() {
               setFoldersOpen(false);
             }}
             className={cn(
-              "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+              "flex w-full items-center gap-3 rounded-full px-3 py-1.5 text-[13px] transition-colors",
               active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
             )}
           >
@@ -862,7 +862,7 @@ export default function Inbox() {
                 setFoldersOpen(false);
               }}
               className={cn(
-                "flex w-full items-center gap-3 rounded-full px-4 py-2 text-sm transition-colors",
+                "flex w-full items-center gap-3 rounded-full px-3 py-1.5 text-[13px] transition-colors",
                 active ? "bg-primary/15 text-primary font-medium" : "hover:bg-accent text-foreground"
               )}
             >
@@ -1111,14 +1111,14 @@ export default function Inbox() {
                         <li key={t.id} className="group relative">
                           <div
                             className={cn(
-                              "flex gap-2 px-2 py-2 sm:px-3 transition-colors cursor-pointer",
+                              "flex gap-2 px-2 py-1.5 sm:px-3 transition-colors cursor-pointer",
                               "hover:bg-accent/60 md:group-hover:pr-[120px]",
                               isOpen && "bg-accent",
                               t.unread && !isOpen && "bg-primary/[0.04]"
                             )}
                             onClick={() => setSelectedId(t.id)}
                           >
-                            <div className="flex flex-col items-center gap-1 pt-1" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex flex-col items-center gap-1 pt-0.5" onClick={(e) => e.stopPropagation()}>
                               <Checkbox
                                 checked={isSelected}
                                 onCheckedChange={(v) => {
@@ -1136,28 +1136,28 @@ export default function Inbox() {
                                 className="text-muted-foreground hover:text-yellow-500 transition-colors"
                                 aria-label={t.starred ? "Remover estrela" : "Adicionar estrela"}
                               >
-                                <Star className={cn("h-4 w-4", t.starred && "fill-yellow-400 text-yellow-400")} />
+                                <Star className={cn("h-3.5 w-3.5", t.starred && "fill-yellow-400 text-yellow-400")} />
                               </button>
                             </div>
 
-                            <Avatar name={name} email={email} size={36} />
+                            <Avatar name={name} email={email} size={28} />
 
                             <div className="min-w-0 flex-1">
                               <div className="flex items-baseline gap-2">
                                 <span
                                   className={cn(
-                                    "truncate text-sm flex-1 min-w-0",
+                                    "truncate text-[13px] flex-1 min-w-0",
                                     t.unread ? "font-semibold text-foreground" : "text-foreground/90"
                                   )}
                                 >
                                   {name || email}
                                   {t.messageCount > 1 && (
-                                    <span className="ml-1 text-xs text-muted-foreground">({t.messageCount})</span>
+                                    <span className="ml-1 text-[11px] text-muted-foreground">({t.messageCount})</span>
                                   )}
                                 </span>
                                 <span
                                   className={cn(
-                                    "shrink-0 text-xs",
+                                    "shrink-0 text-[11px]",
                                     t.unread ? "text-foreground font-medium" : "text-muted-foreground"
                                   )}
                                 >
@@ -1166,13 +1166,13 @@ export default function Inbox() {
                               </div>
                               <div
                                 className={cn(
-                                  "truncate text-sm mt-0.5",
+                                  "truncate text-[13px] leading-snug",
                                   t.unread ? "text-foreground font-medium" : "text-muted-foreground"
                                 )}
                               >
                                 {t.subject || "(sem assunto)"}
                               </div>
-                              <div className="truncate text-xs text-muted-foreground/80 mt-0.5">{t.snippet}</div>
+                              <div className="truncate text-[11.5px] text-muted-foreground/80 leading-snug">{t.snippet}</div>
                             </div>
                           </div>
 
