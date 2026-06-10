@@ -246,7 +246,3 @@ export default function PostTripHome({ lastTrip, pastTrips }: PostTripHomeProps)
     </div>
   );
 }
-
-function Star({ className }: { className?: string }) {
-  return <Sparkles className={className} />;
-}
