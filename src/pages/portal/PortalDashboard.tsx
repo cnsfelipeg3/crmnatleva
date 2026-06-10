@@ -80,53 +80,15 @@ function TravelStats({ trips }: { trips: any[] }) {
 
 /* ═══ MAIN DASHBOARD ═══ */
 export default function PortalDashboard() {
-  const { portalAccess } = usePortalAuth();
   const navigate = useNavigate();
-  const [trips, setTrips] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        const { data } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
-        const apiTrips = data?.trips || [];
-        const mockTrips = getMockTripsForDashboard();
-        const existingIds = new Set(apiTrips.map((t: any) => t.sale_id));
-        const newMocks = mockTrips.filter((m) => !existingIds.has(m.sale_id));
-        setTrips([...apiTrips, ...newMocks]);
-      } catch {
-        setTrips(getMockTripsForDashboard());
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
-  }, []);
-
-  const nextTrip = useMemo(() =>
-    trips.find((t) => getTripStatus(t.sale || {}) === "upcoming") ||
-    trips.find((t) => getTripStatus(t.sale || {}) === "active"),
-  [trips]);
+  const { loading, mode, allTrips: trips, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
 
   const categorized = useMemo(() => ({
-    upcoming: trips.filter((t) => getTripStatus(t.sale || {}) === "upcoming"),
-    active: trips.filter((t) => getTripStatus(t.sale || {}) === "active"),
-    past: trips.filter((t) => getTripStatus(t.sale || {}) === "past"),
-  }), [trips]);
+    upcoming: upcomingTrips,
+    active: activeTrips,
+    past: pastTrips,
+  }), [upcomingTrips, activeTrips, pastTrips]);
 
-  const globeRoutes = useMemo(() => {
-    return trips.map((t) => {
-      const cities: string[] = [];
-      if (t.sale?.origin_iata) cities.push(t.sale.origin_iata);
-      if (t.sale?.destination_iata && !cities.includes(t.sale.destination_iata)) cities.push(t.sale.destination_iata);
-      return {
-        cities,
-        status: getTripStatus(t.sale || {}),
-        saleId: t.sale_id,
-        label: t.custom_title || t.sale?.name || "Viagem",
-      };
-    }).filter((r) => r.cities.length >= 2);
-  }, [trips]);
 
   if (loading) {
     return (
