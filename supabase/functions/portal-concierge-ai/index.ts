@@ -129,7 +129,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model,
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: SYSTEM_PROMPT + (conciergeBrief ? `\n\n## CONTEXTO DA VIAGEM ATUAL (use como referência factual)\n${conciergeBrief}` : "") },
           ...sanitized,
         ],
         stream: true,
