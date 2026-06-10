@@ -720,6 +720,12 @@ export default function Checkin() {
               <p className="text-xs text-muted-foreground">
                 {airline} {flightNum} {cabinType ? `• ${cabinType}` : ""}
               </p>
+              {task.connectionLegTotal && task.connectionLegTotal > 1 && (
+                <p className="text-[11px] text-primary font-semibold mt-0.5 flex items-center gap-1">
+                  <ArrowRight className="w-3 h-3" />
+                  Conexão {task.connectionLegIndex}/{task.connectionLegTotal} · {task.connectionRoute}
+                </p>
+              )}
             </div>
           </div>
 
