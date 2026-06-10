@@ -473,6 +473,17 @@ export default function PortalTripDetail() {
 
   useEffect(() => {
     const fetchData = async () => {
+      // Preview mode: admin Composer injects synthesized data via sessionStorage.
+      // Bypass API/mock entirely so unsaved overrides render faithfully.
+      try {
+        const raw = sessionStorage.getItem("portal-preview:" + id);
+        if (raw) {
+          setData(JSON.parse(raw));
+          setLoading(false);
+          return;
+        }
+      } catch { /* ignore */ }
+
       const mockData = getMockTripDetail(id || "");
       if (mockData) {
         setData({
