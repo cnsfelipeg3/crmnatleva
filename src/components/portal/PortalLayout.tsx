@@ -140,12 +140,13 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
     <div className="min-h-screen flex flex-col bg-background">
       {/* Floating Navbar */}
       <div className="sticky top-0 z-50 px-3 sm:px-5 pt-3">
-        <header className="max-w-7xl mx-auto rounded-2xl bg-card/60 backdrop-blur-2xl border border-border/30 shadow-[0_8px_32px_-8px_hsl(var(--foreground)/0.08)]">
+        <header className={`max-w-7xl mx-auto rounded-2xl bg-card/60 backdrop-blur-2xl border shadow-[0_8px_32px_-8px_hsl(var(--foreground)/0.08)] ${travelMode ? "border-accent/30 ring-1 ring-accent/15" : "border-border/30"}`}>
           <div className="px-4 sm:px-6">
             <div className="flex items-center justify-between h-14">
               {/* Logo */}
               <Link to="/portal" className="flex items-center gap-2.5 group">
                 <img src={logoNatleva} alt="NatLeva" className="h-7 dark:brightness-[1.8] transition-transform group-hover:scale-105" />
+                {travelMode && <TravelModeIndicator sale={travelSale} />}
               </Link>
 
               {/* Center Nav */}
