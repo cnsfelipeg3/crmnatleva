@@ -137,7 +137,14 @@ export default function TravelModeHome({ trip }: TravelModeHomeProps) {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${cover})` }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-background" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(0_0%_0%/0.55)_0%,hsl(0_0%_0%/0.25)_35%,transparent_65%)]" />
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-[55%]"
+          style={{
+            background:
+              "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.92) 25%, hsl(var(--background) / 0.6) 55%, hsl(var(--background) / 0.2) 80%, transparent 100%)",
+          }}
+        />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-10">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
