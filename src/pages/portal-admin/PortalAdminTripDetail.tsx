@@ -66,6 +66,9 @@ export default function PortalAdminTripDetail() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState("portal");
+  const [publishOpen, setPublishOpen] = useState(false);
+
 
   useEffect(() => {
     if (authLoading || !id) return;
