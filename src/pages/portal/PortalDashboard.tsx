@@ -111,7 +111,7 @@ export default function PortalDashboard() {
     );
   }
 
-  if (trips.length === 0) {
+  if (mode === "empty") {
     return (
       <PortalLayout>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40 px-4">
@@ -134,7 +134,7 @@ export default function PortalDashboard() {
 
   const nextStatus = nextTrip ? getTripStatus(nextTrip.sale || {}) : "past";
 
-  return (
+  const homeContent = (
     <PortalLayout>
       <div>
 
