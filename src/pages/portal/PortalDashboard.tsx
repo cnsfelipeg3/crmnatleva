@@ -17,6 +17,7 @@ import { getIataCoords } from "@/components/maps/iataCoords";
 import { usePortalMode } from "@/hooks/usePortalMode";
 import TravelModeHome from "@/components/portal/TravelModeHome";
 import PostTripHome from "@/components/portal/PostTripHome";
+import PreTripHome from "@/components/portal/PreTripHome";
 import TravelStats from "@/components/portal/TravelStats";
 
 /* ═══ Quick Action ═══ */
