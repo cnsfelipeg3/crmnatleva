@@ -37,6 +37,8 @@ const DEFAULTS: PortalSettings = {
   support_whatsapp: "",
 };
 
+import { computeReadiness as computeFullReadiness } from "@/lib/portalReadiness";
+
 interface TripReadiness {
   sale_id: string;
   name: string | null;
@@ -48,17 +50,15 @@ interface TripReadiness {
   missing: string[];
 }
 
-function computeReadiness(sale: any, segCount: number, attCount: number, isPublished: boolean): TripReadiness {
-  const checks: Array<{ key: string; ok: boolean }> = [
-    { key: "Data ida", ok: !!sale.departure_date },
-    { key: "Data volta", ok: !!sale.return_date },
-    { key: "Origem (IATA)", ok: !!sale.origin_iata },
-    { key: "Destino (IATA)", ok: !!sale.destination_iata },
-    { key: "Segmentos de voo", ok: segCount > 0 },
-    { key: "Documentos", ok: attCount > 0 },
-  ];
-  const ok = checks.filter((c) => c.ok).length;
-  const score = Math.round((ok / checks.length) * 100);
+function computeReadiness(
+  sale: any,
+  segCount: number,
+  attCount: number,
+  isPublished: boolean,
+  paxCount = 0,
+  hotelCount = 0,
+): TripReadiness {
+  const r = computeFullReadiness({ sale, segCount, attCount, paxCount, hotelCount });
   return {
     sale_id: sale.id,
     name: sale.name,
@@ -66,10 +66,11 @@ function computeReadiness(sale: any, segCount: number, attCount: number, isPubli
     departure_date: sale.departure_date,
     return_date: sale.return_date,
     is_published: isPublished,
-    score,
-    missing: checks.filter((c) => !c.ok).map((c) => c.key),
+    score: r.score,
+    missing: r.missing.map(m => m.label),
   };
 }
+
 
 export default function PortalAdminConfig() {
   const navigate = useNavigate();
