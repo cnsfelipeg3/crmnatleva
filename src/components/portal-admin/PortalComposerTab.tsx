@@ -40,6 +40,8 @@ function defaultTitle(sale: any): string {
 export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, canPublish, score }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const [coverStrategy, setCoverStrategy] = useState<"hybrid" | "curated" | "ai">("hybrid");
   const [isPublished, setIsPublished] = useState(false);
   const [state, setState] = useState<ComposerState>({
     custom_title: "",
