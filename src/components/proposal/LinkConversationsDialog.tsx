@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, MessageSquare, Check, X } from "lucide-react";
+import { Loader2, Search, MessageSquare, Check, X, RefreshCw } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { WhatsAppAvatar } from "@/components/inbox/WhatsAppAvatar";
 import { cn } from "@/lib/utils";
