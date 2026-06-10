@@ -109,6 +109,28 @@ export default function PortalAdminTripDetail() {
 
   const st = getTripStatus(sale);
 
+  const readiness = computeReadiness({
+    sale,
+    segCount: segments.length,
+    hotelCount: sale?.hotel_name ? 1 : 0,
+    paxCount: passengers.length,
+    attCount: attachments.length,
+  });
+
+  const handleOpenPublish = () => {
+    if (!readiness.canPublish) {
+      const ok = window.confirm(
+        `Score atual ${readiness.score}% (recomendado ≥ ${PUBLISH_THRESHOLD}%). Publicar mesmo assim?`
+      );
+      if (!ok) return;
+    }
+    setPublishOpen(true);
+  };
+
+  const scoreColor = readiness.score >= PUBLISH_THRESHOLD
+    ? "text-emerald-600"
+    : readiness.score >= 50 ? "text-amber-600" : "text-destructive";
+
   return (
     <div className="p-4 md:p-6 space-y-4 animate-fade-in">
       {/* Header */}
@@ -131,17 +153,57 @@ export default function PortalAdminTripDetail() {
           <Button variant="outline" size="sm" onClick={handlePreviewPortal}>
             <Eye className="w-4 h-4 mr-1" /> Visualizar Portal
           </Button>
-          <Button size="sm" onClick={handlePublishToPortal} className="bg-primary">
+          <Button
+            size="sm"
+            onClick={handleOpenPublish}
+            disabled={!readiness.canPublish && readiness.score < 30}
+            className="bg-primary"
+          >
             <Send className="w-4 h-4 mr-1" /> Publicar no Portal
           </Button>
         </div>
       </div>
 
+      {/* ── Readiness Bar ── */}
+      <Card className="p-4 glass-card space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            {readiness.canPublish ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+            )}
+            <h3 className="text-sm font-semibold text-foreground">Prontidão para o portal</h3>
+            <span className={cn("text-xl font-black tabular-nums", scoreColor)}>{readiness.score}%</span>
+            <span className="text-xs text-muted-foreground">· limiar {PUBLISH_THRESHOLD}%</span>
+          </div>
+          {readiness.missing.length > 0 && (
+            <span className="text-xs text-muted-foreground">{readiness.missing.length} pendência(s)</span>
+          )}
+        </div>
+        <Progress value={readiness.score} className="h-2" />
+        {readiness.missing.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {readiness.missing.map(m => (
+              <button
+                key={m.key}
+                onClick={() => m.fixTab && setActiveTab(m.fixTab)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] font-medium hover:bg-amber-500/20 transition"
+              >
+                {m.label}
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Tabs */}
-      <Tabs defaultValue="resumo" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full flex-wrap h-auto gap-1 bg-muted/50 p-1">
           {[
-            { value: "resumo", icon: Globe, label: "Resumo" },
+            { value: "portal", icon: Globe, label: "Portal" },
+            { value: "resumo", icon: Edit, label: "Resumo" },
             { value: "passageiros", icon: Users, label: "Passageiros" },
             { value: "voos", icon: Plane, label: "Voos" },
             { value: "hoteis", icon: Hotel, label: "Hotéis" },
@@ -156,6 +218,21 @@ export default function PortalAdminTripDetail() {
             </TabsTrigger>
           ))}
         </TabsList>
+
+        {/* Portal · Composer */}
+        <TabsContent value="portal">
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregando composer...</div>}>
+            <PortalComposerTab
+              saleId={id!}
+              sale={sale}
+              client={client}
+              onOpenPublishDialog={() => setPublishOpen(true)}
+              canPublish={readiness.canPublish}
+              score={readiness.score}
+            />
+          </Suspense>
+        </TabsContent>
+
 
         {/* Resumo */}
         <TabsContent value="resumo" className="mt-4 space-y-4">
