@@ -1,7 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
 import { motion } from "framer-motion";
 import {
@@ -9,7 +7,6 @@ import {
   MessageCircle, CheckSquare, Compass, Globe2,
   MapPin, Calendar, Star, Sparkles,
 } from "lucide-react";
-import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
 import {
   getDestinationImage, getTripStatus, TripStatusBadge,
   Countdown, TripShelf,
@@ -17,6 +14,7 @@ import {
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
+import { usePortalMode } from "@/hooks/usePortalMode";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
