@@ -68,9 +68,22 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages } = await req.json();
+    const { messages, sale_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+    // Pull concierge_brief for this trip (best-effort, no failures)
+    let conciergeBrief = "";
+    if (sale_id) {
+      try {
+        const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+        const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const { data } = await admin.from("portal_published_sales").select("concierge_brief").eq("sale_id", sale_id).maybeSingle();
+        if (data?.concierge_brief) conciergeBrief = String(data.concierge_brief).trim();
+      } catch (e) {
+        console.error("concierge brief lookup failed (graceful):", e);
+      }
+    }
 
     // Sanitize: ensure any input_audio.data is RAW base64 (strip data URL prefix if present)
     const sanitized = (messages || []).map((m: any) => {
