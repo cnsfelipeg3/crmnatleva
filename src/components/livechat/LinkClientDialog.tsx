@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import {
   Search, User, Phone, Mail, MapPin, Plane, Star, Loader2,
-  Link2, Unlink, AlertTriangle, CheckCircle2, X,
+  Link2, Unlink, AlertTriangle, CheckCircle2, X, RefreshCw,
 } from "lucide-react";
 
 interface LinkClientDialogProps {
