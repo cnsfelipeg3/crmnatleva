@@ -7265,6 +7265,7 @@ export type Database = {
       portal_published_sales: {
         Row: {
           client_id: string
+          concierge_brief: string | null
           cover_image_url: string | null
           created_at: string
           custom_title: string | null
@@ -7274,9 +7275,11 @@ export type Database = {
           published_at: string
           published_by: string | null
           sale_id: string
+          welcome_message: string | null
         }
         Insert: {
           client_id: string
+          concierge_brief?: string | null
           cover_image_url?: string | null
           created_at?: string
           custom_title?: string | null
@@ -7286,9 +7289,11 @@ export type Database = {
           published_at?: string
           published_by?: string | null
           sale_id: string
+          welcome_message?: string | null
         }
         Update: {
           client_id?: string
+          concierge_brief?: string | null
           cover_image_url?: string | null
           created_at?: string
           custom_title?: string | null
@@ -7298,6 +7303,7 @@ export type Database = {
           published_at?: string
           published_by?: string | null
           sale_id?: string
+          welcome_message?: string | null
         }
         Relationships: [
           {

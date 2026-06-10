@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,15 +9,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Globe, Eye, Plane, Hotel, Users, FileText, DollarSign,
   ClipboardCheck, Bell, Calendar, MapPin, Edit, Send, CheckCircle2,
-  Shield, Clock, Luggage, Share2,
+  Shield, Clock, Luggage, Share2, AlertCircle, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateBR } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import AirlineLogo from "@/components/AirlineLogo";
+import { computeReadiness, PUBLISH_THRESHOLD } from "@/lib/portalReadiness";
+
+const PortalComposerTab = lazy(() => import("@/components/portal-admin/PortalComposerTab"));
+const PublishToPortalDialog = lazy(() => import("@/components/portal/PublishToPortalDialog"));
+
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -60,6 +66,9 @@ export default function PortalAdminTripDetail() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [visibilityMap, setVisibilityMap] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState("portal");
+  const [publishOpen, setPublishOpen] = useState(false);
+
 
   useEffect(() => {
     if (authLoading || !id) return;
@@ -86,13 +95,10 @@ export default function PortalAdminTripDetail() {
     }).catch(() => setLoading(false));
   }, [id, user, authLoading]);
 
-  const handlePublishToPortal = () => {
-    toast.success("Viagem publicada no portal do cliente!");
-  };
-
   const handlePreviewPortal = () => {
     window.open(`/portal/viagem/${id}`, "_blank");
   };
+
 
   const toggleVisibility = (key: string) => {
     setVisibilityMap(prev => ({ ...prev, [key]: !prev[key] }));
@@ -102,6 +108,28 @@ export default function PortalAdminTripDetail() {
   if (!sale) return <div className="flex items-center justify-center min-h-[60vh] text-muted-foreground">Viagem não encontrada</div>;
 
   const st = getTripStatus(sale);
+
+  const readiness = computeReadiness({
+    sale,
+    segCount: segments.length,
+    hotelCount: sale?.hotel_name ? 1 : 0,
+    paxCount: passengers.length,
+    attCount: attachments.length,
+  });
+
+  const handleOpenPublish = () => {
+    if (!readiness.canPublish) {
+      const ok = window.confirm(
+        `Score atual ${readiness.score}% (recomendado ≥ ${PUBLISH_THRESHOLD}%). Publicar mesmo assim?`
+      );
+      if (!ok) return;
+    }
+    setPublishOpen(true);
+  };
+
+  const scoreColor = readiness.score >= PUBLISH_THRESHOLD
+    ? "text-emerald-600"
+    : readiness.score >= 50 ? "text-amber-600" : "text-destructive";
 
   return (
     <div className="p-4 md:p-6 space-y-4 animate-fade-in">
@@ -125,17 +153,57 @@ export default function PortalAdminTripDetail() {
           <Button variant="outline" size="sm" onClick={handlePreviewPortal}>
             <Eye className="w-4 h-4 mr-1" /> Visualizar Portal
           </Button>
-          <Button size="sm" onClick={handlePublishToPortal} className="bg-primary">
+          <Button
+            size="sm"
+            onClick={handleOpenPublish}
+            disabled={!readiness.canPublish && readiness.score < 30}
+            className="bg-primary"
+          >
             <Send className="w-4 h-4 mr-1" /> Publicar no Portal
           </Button>
         </div>
       </div>
 
+      {/* ── Readiness Bar ── */}
+      <Card className="p-4 glass-card space-y-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            {readiness.canPublish ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-amber-600" />
+            )}
+            <h3 className="text-sm font-semibold text-foreground">Prontidão para o portal</h3>
+            <span className={cn("text-xl font-black tabular-nums", scoreColor)}>{readiness.score}%</span>
+            <span className="text-xs text-muted-foreground">· limiar {PUBLISH_THRESHOLD}%</span>
+          </div>
+          {readiness.missing.length > 0 && (
+            <span className="text-xs text-muted-foreground">{readiness.missing.length} pendência(s)</span>
+          )}
+        </div>
+        <Progress value={readiness.score} className="h-2" />
+        {readiness.missing.length > 0 && (
+          <div className="flex flex-wrap gap-1.5">
+            {readiness.missing.map(m => (
+              <button
+                key={m.key}
+                onClick={() => m.fixTab && setActiveTab(m.fixTab)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 text-[11px] font-medium hover:bg-amber-500/20 transition"
+              >
+                {m.label}
+                <ChevronRight className="h-3 w-3" />
+              </button>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Tabs */}
-      <Tabs defaultValue="resumo" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full flex-wrap h-auto gap-1 bg-muted/50 p-1">
           {[
-            { value: "resumo", icon: Globe, label: "Resumo" },
+            { value: "portal", icon: Globe, label: "Portal" },
+            { value: "resumo", icon: Edit, label: "Resumo" },
             { value: "passageiros", icon: Users, label: "Passageiros" },
             { value: "voos", icon: Plane, label: "Voos" },
             { value: "hoteis", icon: Hotel, label: "Hotéis" },
@@ -150,6 +218,21 @@ export default function PortalAdminTripDetail() {
             </TabsTrigger>
           ))}
         </TabsList>
+
+        {/* Portal · Composer */}
+        <TabsContent value="portal">
+          <Suspense fallback={<div className="p-6 text-sm text-muted-foreground">Carregando composer...</div>}>
+            <PortalComposerTab
+              saleId={id!}
+              sale={sale}
+              client={client}
+              onOpenPublishDialog={() => setPublishOpen(true)}
+              canPublish={readiness.canPublish}
+              score={readiness.score}
+            />
+          </Suspense>
+        </TabsContent>
+
 
         {/* Resumo */}
         <TabsContent value="resumo" className="mt-4 space-y-4">
@@ -399,20 +482,21 @@ export default function PortalAdminTripDetail() {
           <Card className="p-4 glass-card">
             <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da Viagem</h3>
             <div className="space-y-2">
-              {[
-                { label: "Voos confirmados", done: segments.length > 0 },
-                { label: "Hotel confirmado", done: !!sale.hotel_name },
-                { label: "Passageiros cadastrados", done: passengers.length > 0 },
-                { label: "Documentos anexados", done: attachments.length > 0 },
-                { label: "Pagamento recebido", done: (sale.received_value || 0) > 0 },
-                { label: "Emissão realizada", done: sale.emission_status === "Emitido" },
-                { label: "Itinerário gerado", done: false },
-                { label: "Publicado no portal", done: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded bg-muted/20">
-                  <CheckCircle2 className={cn("w-4 h-4", item.done ? "text-success" : "text-muted-foreground/30")} />
-                  <span className={cn("text-sm", item.done ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
-                </div>
+              {readiness.checks.map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => item.fixTab && setActiveTab(item.fixTab)}
+                  className="w-full flex items-center gap-3 p-2 rounded bg-muted/20 hover:bg-muted/40 transition text-left"
+                >
+                  <CheckCircle2 className={cn("w-4 h-4 shrink-0", item.ok ? "text-success" : "text-muted-foreground/30")} />
+                  <span className={cn("text-sm flex-1", item.ok ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">peso {item.weight}</span>
+                  {!item.ok && (
+                    <span className="text-[11px] text-accent font-semibold inline-flex items-center">
+                      Corrigir <ChevronRight className="h-3 w-3" />
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
           </Card>
@@ -429,6 +513,21 @@ export default function PortalAdminTripDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Publish Dialog (reaproveitado) */}
+      {publishOpen && (
+        <Suspense fallback={null}>
+          <PublishToPortalDialog
+            open={publishOpen}
+            onOpenChange={setPublishOpen}
+            saleId={id!}
+            clientId={sale?.client_id}
+            clientEmail={client?.email}
+            saleName={sale?.name}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
+
