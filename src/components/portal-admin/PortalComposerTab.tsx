@@ -113,6 +113,29 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
     }
   };
 
+  const handleGenerateCover = async () => {
+    setGeneratingCover(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("portal-generate-cover", {
+        body: {
+          sale_id: saleId,
+          destination: sale?.destination_iata || sale?.name || "viagem",
+          title: state.custom_title || defaultTitle(sale),
+        },
+      });
+      if (error) throw error;
+      const url = (data as any)?.url;
+      if (!url) throw new Error("Sem URL retornada");
+      set("cover_image_url", url);
+      toast.success("Capa gerada por IA! Lembre de Salvar.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Falha ao gerar capa: " + (e?.message || "erro"));
+    } finally {
+      setGeneratingCover(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground p-6">
