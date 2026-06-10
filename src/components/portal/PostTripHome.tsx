@@ -192,7 +192,7 @@ export default function PostTripHome({ lastTrip, pastTrips }: PostTripHomeProps)
         >
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-              <Star className="h-5 w-5 text-accent" />
+              <Sparkles className="h-5 w-5 text-accent" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground tracking-tight">Seu passaporte NatLeva</h2>
