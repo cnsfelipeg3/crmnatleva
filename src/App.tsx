@@ -114,6 +114,7 @@ const AdminVitrine = lazy(() => import("@/pages/admin/AdminVitrine"));
 const PortalAdminDashboard = lazy(() => import("@/pages/portal-admin/PortalAdminDashboard"));
 const PortalAdminTrips = lazy(() => import("@/pages/portal-admin/PortalAdminTrips"));
 const PortalAdminTripDetail = lazy(() => import("@/pages/portal-admin/PortalAdminTripDetail"));
+const PortalAdminPreview = lazy(() => import("@/pages/portal-admin/PortalAdminPreview"));
 const PortalAdminClients = lazy(() => import("@/pages/portal-admin/PortalAdminClients"));
 const PortalAdminDocuments = lazy(() => import("@/pages/portal-admin/PortalAdminDocuments"));
 const PortalAdminNotifications = lazy(() => import("@/pages/portal-admin/PortalAdminNotifications"));
