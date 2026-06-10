@@ -161,7 +161,29 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
               </p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                // Persist current (possibly unsaved) Composer state for the preview page
+                sessionStorage.setItem(
+                  "portal-preview-composer:" + saleId,
+                  JSON.stringify({
+                    custom_title: state.custom_title || null,
+                    cover_image_url: state.cover_image_url || null,
+                    welcome_message: state.welcome_message || null,
+                    notes_for_client: state.notes_for_client || null,
+                    visible: state.visible,
+                    show_financial: state.show_financial,
+                    show_documents: state.show_documents,
+                  })
+                );
+                navigate(`/portal-admin/viagens/${saleId}/preview?mode=pre-trip`);
+              }}
+            >
+              <Eye className="h-4 w-4 mr-1.5" /> Pré-visualizar portal
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSave} disabled={saving || !isPublished}>
               {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
               Salvar
