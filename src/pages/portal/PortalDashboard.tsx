@@ -16,6 +16,8 @@ import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
 import { usePortalMode } from "@/hooks/usePortalMode";
 import TravelModeHome from "@/components/portal/TravelModeHome";
+import PostTripHome from "@/components/portal/PostTripHome";
+import TravelStats from "@/components/portal/TravelStats";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
