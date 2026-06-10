@@ -1490,60 +1490,76 @@ function ThreadView({
         </DropdownMenu>
       </div>
 
-      {/* Subject header */}
-      <div className="px-4 sm:px-6 pt-4 pb-3 shrink-0 border-b">
-        <h2 className="text-xl sm:text-2xl font-semibold break-words leading-tight text-foreground">
+      {/* Subject header · Gmail-like */}
+      <div className="px-4 sm:px-6 pt-4 pb-3 shrink-0">
+        <h2 className="text-[22px] sm:text-[26px] font-normal break-words leading-snug text-foreground tracking-tight">
           {subject}
         </h2>
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span>Caixa de entrada</span>
+          <span>·</span>
           <span>{thread.messages.length} {thread.messages.length === 1 ? "mensagem" : "mensagens"}</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
-        <div className="space-y-3 w-full">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 pb-6">
+        <div className="space-y-2 w-full">
           {thread.messages.map((m, idx) => {
             const { name, email } = parseFromName(m.from);
             const isLast = idx === thread.messages.length - 1;
             const isExpanded = expanded.has(m.id) || isLast;
+            const toMe = (m.to || "").toLowerCase().includes((profileEmail || "").toLowerCase());
             return (
               <article
                 key={m.id}
-                className="rounded-xl border bg-card shadow-sm overflow-hidden"
+                className={cn(
+                  "rounded-lg border bg-card transition-shadow",
+                  isExpanded ? "shadow-sm" : "hover:shadow-sm"
+                )}
               >
                 <header
-                  className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3 cursor-pointer",
+                    !isExpanded && "hover:bg-muted/40"
+                  )}
                   onClick={() => !isLast && toggleExpand(m.id)}
                 >
-                  <Avatar name={name} email={email} size={44} />
+                  <Avatar name={name} email={email} size={36} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm sm:text-base font-semibold text-foreground truncate">
-                        {name || email}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                      <div className="min-w-0 flex items-baseline gap-1.5">
+                        <span className="text-[13px] font-semibold text-foreground truncate">
+                          {name || email}
+                        </span>
+                        {isExpanded && (
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            &lt;{email}&gt;
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">
                         {fmtDateFull(m.date)}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      &lt;{email}&gt;
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      Para: {m.to}
-                      {m.cc && ` · Cc: ${m.cc}`}
-                    </div>
-                    {!isExpanded && (
-                      <div className="text-xs text-muted-foreground truncate mt-1 italic">{m.snippet}</div>
+                    {isExpanded ? (
+                      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        para {toMe ? "mim" : (m.to || "—")}
+                        {m.cc && <span className="ml-1">· cc: {m.cc}</span>}
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground/90 truncate mt-0.5">
+                        {m.snippet}
+                      </div>
                     )}
                   </div>
                 </header>
                 {isExpanded && (
-                  <div className="px-4 sm:px-5 pb-5 border-t pt-4">
+                  <div className="px-4 sm:px-5 pb-4 pt-1">
                     {m.html ? (
                       <EmailHtmlFrame html={m.html} />
                     ) : (
-                      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground leading-relaxed">
+                      <pre className="whitespace-pre-wrap break-words font-sans text-[14px] text-foreground leading-[1.6]">
                         {m.text || m.snippet || ""}
                       </pre>
                     )}
@@ -1554,6 +1570,7 @@ function ThreadView({
           })}
         </div>
       </div>
+
 
       {/* Sticky reply actions */}
       <div className="shrink-0 border-t bg-background/95 backdrop-blur px-3 sm:px-6 py-3 flex flex-wrap gap-2">
