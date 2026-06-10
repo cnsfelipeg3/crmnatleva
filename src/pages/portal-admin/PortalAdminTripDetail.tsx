@@ -95,13 +95,10 @@ export default function PortalAdminTripDetail() {
     }).catch(() => setLoading(false));
   }, [id, user, authLoading]);
 
-  const handlePublishToPortal = () => {
-    toast.success("Viagem publicada no portal do cliente!");
-  };
-
   const handlePreviewPortal = () => {
     window.open(`/portal/viagem/${id}`, "_blank");
   };
+
 
   const toggleVisibility = (key: string) => {
     setVisibilityMap(prev => ({ ...prev, [key]: !prev[key] }));
