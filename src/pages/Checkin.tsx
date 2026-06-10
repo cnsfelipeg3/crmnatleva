@@ -45,6 +45,11 @@ interface CheckinTask {
   segment?: any;
   passengers?: any[];
   airline_rule?: any;
+  connectionGroupId?: string;
+  connectionLegIndex?: number;
+  connectionLegTotal?: number;
+  connectionRoute?: string;
+  connectionVia?: string;
 }
 
 // ─── Status config with 6 levels (FAZER_CHECKIN added) ───
