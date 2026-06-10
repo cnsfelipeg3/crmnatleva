@@ -69,7 +69,7 @@ export default function PortalAdminPreview() {
       if (!base) {
         const { data: sale } = await supabase
           .from("sales")
-          .select("id,name,status,origin_iata,destination_iata,departure_date,return_date,total_sale_value,seller_id")
+          .select("id,name,status,origin_iata,destination_iata,departure_date,return_date,seller_id")
           .eq("id", id)
           .maybeSingle();
         base = {
