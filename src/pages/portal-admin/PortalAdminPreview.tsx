@@ -73,9 +73,9 @@ export default function PortalAdminPreview() {
           .eq("id", id)
           .maybeSingle();
         base = {
-          subtitle: sale?.name || "",
+          subtitle: (sale as any)?.name || "",
           published: {},
-          sale: sale || { id, name: "Viagem", status: "active" },
+          sale: (sale as any) || { id, name: "Viagem", status: "active" },
           segments: [], hotels: [], services: [], lodging: [],
           attachments: [], financial: { receivables: [] }, passengers: [],
           sellerName: "",
