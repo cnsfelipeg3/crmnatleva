@@ -39,6 +39,7 @@ function defaultTitle(sale: any): string {
 }
 
 export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, canPublish, score }: Props) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [generatingCover, setGeneratingCover] = useState(false);
