@@ -1575,22 +1575,41 @@ function ThreadView({
 function EmailHtmlFrame({ html }: { html: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(200);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setIsDark(root.classList.contains("dark"));
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const clean = sanitizeEmailHtml(html);
+    // CRITICAL: follow APP theme (not OS prefers-color-scheme), to keep readable contrast
+    // on light app + dark OS (text was rendering near-invisible light grey).
+    const text = isDark ? "#e5e7eb" : "#1f2937";
+    const link = isDark ? "#60a5fa" : "#1a73e8";
+    const quoteBorder = isDark ? "#374151" : "#dadce0";
+    const quoteText = isDark ? "#9ca3af" : "#5f6368";
+    const bg = isDark ? "transparent" : "#ffffff";
     const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank">
       <style>
-        html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.6;color:#111;word-wrap:break-word;overflow-wrap:break-word}
-        a{color:#2563eb;text-decoration:underline}
-        img{max-width:100%;height:auto;border-radius:6px}
-        blockquote{border-left:3px solid #e5e7eb;margin:8px 0;padding:4px 12px;color:#555}
-        table{max-width:100%}
-        pre{white-space:pre-wrap;word-wrap:break-word}
-        @media (prefers-color-scheme: dark){
-          html,body{color:#e5e7eb;background:transparent}
-          a{color:#60a5fa}
-          blockquote{border-color:#374151;color:#9ca3af}
-        }
+        html,body{margin:0;padding:0;background:${bg};font-family:Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.6;color:${text};word-wrap:break-word;overflow-wrap:break-word}
+        *{color:inherit}
+        p,div,span,li,td,th{color:${text}}
+        a{color:${link};text-decoration:none}
+        a:hover{text-decoration:underline}
+        img{max-width:100%;height:auto;border-radius:4px}
+        blockquote{border-left:2px solid ${quoteBorder};margin:8px 0;padding:4px 12px;color:${quoteText}}
+        table{max-width:100%;border-collapse:collapse}
+        pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit}
+        hr{border:0;border-top:1px solid ${quoteBorder};margin:12px 0}
       </style>
     </head><body>${clean}</body></html>`;
     const frame = ref.current;
@@ -1607,14 +1626,12 @@ function EmailHtmlFrame({ html }: { html: string }) {
           body.querySelectorAll("img").forEach((img) => {
             img.setAttribute("referrerpolicy", "no-referrer");
             img.setAttribute("loading", "lazy");
-            // Hide broken images on error
             img.addEventListener("error", () => {
               (img as HTMLImageElement).style.display = "none";
             });
           });
-          // Recompute height after images load
           const resize = () => {
-            const h = Math.min(body.scrollHeight + 16, 6000);
+            const h = Math.min(body.scrollHeight + 16, 8000);
             setHeight(h);
           };
           resize();
@@ -1625,14 +1642,14 @@ function EmailHtmlFrame({ html }: { html: string }) {
     };
     frame.addEventListener("load", onLoad);
     return () => frame.removeEventListener("load", onLoad);
-  }, [html]);
+  }, [html, isDark]);
 
   return (
     <iframe
       ref={ref}
       sandbox="allow-popups allow-popups-to-escape-sandbox"
-      className="w-full bg-transparent"
-      style={{ height, border: 0 }}
+      className="w-full"
+      style={{ height, border: 0, background: "transparent" }}
       title="Email content"
     />
   );
