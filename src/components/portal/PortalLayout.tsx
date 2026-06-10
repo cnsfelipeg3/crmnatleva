@@ -26,10 +26,10 @@ function TravelModeIndicator({ sale }: { sale?: PortalLayoutProps["travelSale"] 
     label = `Em viagem · Dia ${current}/${total}`;
   }
   return (
-    <div className="hidden lg:inline-flex shrink-0 items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-[11px] font-bold text-accent whitespace-nowrap leading-none">
-      <span className="relative flex h-2 w-2">
+    <div className="hidden xl:inline-flex shrink-0 items-center gap-2 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/25 text-[10.5px] font-semibold text-accent whitespace-nowrap leading-none tracking-wide">
+      <span className="relative flex h-1.5 w-1.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
       </span>
       {label}
     </div>
