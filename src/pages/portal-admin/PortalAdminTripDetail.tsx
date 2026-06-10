@@ -482,20 +482,21 @@ export default function PortalAdminTripDetail() {
           <Card className="p-4 glass-card">
             <h3 className="text-sm font-semibold text-foreground mb-3">Checklist da Viagem</h3>
             <div className="space-y-2">
-              {[
-                { label: "Voos confirmados", done: segments.length > 0 },
-                { label: "Hotel confirmado", done: !!sale.hotel_name },
-                { label: "Passageiros cadastrados", done: passengers.length > 0 },
-                { label: "Documentos anexados", done: attachments.length > 0 },
-                { label: "Pagamento recebido", done: (sale.received_value || 0) > 0 },
-                { label: "Emissão realizada", done: sale.emission_status === "Emitido" },
-                { label: "Itinerário gerado", done: false },
-                { label: "Publicado no portal", done: false },
-              ].map((item, i) => (
-                <div key={i} className="flex items-center gap-3 p-2 rounded bg-muted/20">
-                  <CheckCircle2 className={cn("w-4 h-4", item.done ? "text-success" : "text-muted-foreground/30")} />
-                  <span className={cn("text-sm", item.done ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
-                </div>
+              {readiness.checks.map(item => (
+                <button
+                  key={item.key}
+                  onClick={() => item.fixTab && setActiveTab(item.fixTab)}
+                  className="w-full flex items-center gap-3 p-2 rounded bg-muted/20 hover:bg-muted/40 transition text-left"
+                >
+                  <CheckCircle2 className={cn("w-4 h-4 shrink-0", item.ok ? "text-success" : "text-muted-foreground/30")} />
+                  <span className={cn("text-sm flex-1", item.ok ? "text-foreground" : "text-muted-foreground")}>{item.label}</span>
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wide">peso {item.weight}</span>
+                  {!item.ok && (
+                    <span className="text-[11px] text-accent font-semibold inline-flex items-center">
+                      Corrigir <ChevronRight className="h-3 w-3" />
+                    </span>
+                  )}
+                </button>
               ))}
             </div>
           </Card>
@@ -512,6 +513,21 @@ export default function PortalAdminTripDetail() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Publish Dialog (reaproveitado) */}
+      {publishOpen && (
+        <Suspense fallback={null}>
+          <PublishToPortalDialog
+            open={publishOpen}
+            onOpenChange={setPublishOpen}
+            saleId={id!}
+            clientId={sale?.client_id}
+            clientEmail={client?.email}
+            saleName={sale?.name}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }
+
