@@ -1,7 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { usePortalAuth } from "@/contexts/PortalAuthContext";
 import PortalLayout from "@/components/portal/PortalLayout";
 import { motion } from "framer-motion";
 import {
@@ -9,7 +7,6 @@ import {
   MessageCircle, CheckSquare, Compass, Globe2,
   MapPin, Calendar, Star, Sparkles,
 } from "lucide-react";
-import { getMockTripsForDashboard } from "@/lib/portalMockTrips";
 import {
   getDestinationImage, getTripStatus, TripStatusBadge,
   Countdown, TripShelf,
@@ -17,6 +14,7 @@ import {
 import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
+import { usePortalMode } from "@/hooks/usePortalMode";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
@@ -82,53 +80,15 @@ function TravelStats({ trips }: { trips: any[] }) {
 
 /* ═══ MAIN DASHBOARD ═══ */
 export default function PortalDashboard() {
-  const { portalAccess } = usePortalAuth();
   const navigate = useNavigate();
-  const [trips, setTrips] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchTrips = async () => {
-      try {
-        const { data } = await supabase.functions.invoke("portal-api", { body: { action: "trips" } });
-        const apiTrips = data?.trips || [];
-        const mockTrips = getMockTripsForDashboard();
-        const existingIds = new Set(apiTrips.map((t: any) => t.sale_id));
-        const newMocks = mockTrips.filter((m) => !existingIds.has(m.sale_id));
-        setTrips([...apiTrips, ...newMocks]);
-      } catch {
-        setTrips(getMockTripsForDashboard());
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchTrips();
-  }, []);
-
-  const nextTrip = useMemo(() =>
-    trips.find((t) => getTripStatus(t.sale || {}) === "upcoming") ||
-    trips.find((t) => getTripStatus(t.sale || {}) === "active"),
-  [trips]);
+  const { loading, mode, allTrips: trips, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
 
   const categorized = useMemo(() => ({
-    upcoming: trips.filter((t) => getTripStatus(t.sale || {}) === "upcoming"),
-    active: trips.filter((t) => getTripStatus(t.sale || {}) === "active"),
-    past: trips.filter((t) => getTripStatus(t.sale || {}) === "past"),
-  }), [trips]);
+    upcoming: upcomingTrips,
+    active: activeTrips,
+    past: pastTrips,
+  }), [upcomingTrips, activeTrips, pastTrips]);
 
-  const globeRoutes = useMemo(() => {
-    return trips.map((t) => {
-      const cities: string[] = [];
-      if (t.sale?.origin_iata) cities.push(t.sale.origin_iata);
-      if (t.sale?.destination_iata && !cities.includes(t.sale.destination_iata)) cities.push(t.sale.destination_iata);
-      return {
-        cities,
-        status: getTripStatus(t.sale || {}),
-        saleId: t.sale_id,
-        label: t.custom_title || t.sale?.name || "Viagem",
-      };
-    }).filter((r) => r.cities.length >= 2);
-  }, [trips]);
 
   if (loading) {
     return (
@@ -151,7 +111,7 @@ export default function PortalDashboard() {
     );
   }
 
-  if (trips.length === 0) {
+  if (mode === "empty") {
     return (
       <PortalLayout>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center py-40 px-4">
@@ -174,7 +134,7 @@ export default function PortalDashboard() {
 
   const nextStatus = nextTrip ? getTripStatus(nextTrip.sale || {}) : "past";
 
-  return (
+  const homeContent = (
     <PortalLayout>
       <div>
 
@@ -450,4 +410,19 @@ export default function PortalDashboard() {
       </div>
     </PortalLayout>
   );
+
+  switch (mode) {
+    case "in-trip":
+      // FASE 2: substituir por <TravelModeHome/>
+      return homeContent;
+    case "pre-trip":
+      // FASE 1: substituir por <PreTripHome/>
+      return homeContent;
+    case "post-trip":
+      // FASE 3: substituir por <PostTripHome/>
+      return homeContent;
+    default:
+      return homeContent;
+  }
 }
+
