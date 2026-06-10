@@ -200,10 +200,10 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
                 </button>
 
                 <div className="hidden sm:flex items-center gap-1.5 ml-1 pl-2 border-l border-border/40">
-                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center" title={user?.email || ""}>
                     <User className="h-3.5 w-3.5 text-accent" />
                   </div>
-                  <span className="max-w-[140px] truncate text-xs text-muted-foreground">{user?.email}</span>
+                  <span className="hidden 2xl:inline max-w-[160px] truncate text-xs text-muted-foreground">{user?.email}</span>
                 </div>
 
                 <button onClick={handleLogout} className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 ml-0.5" title="Sair">
