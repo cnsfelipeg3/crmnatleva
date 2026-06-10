@@ -1620,8 +1620,8 @@ export default function PanelHelpButton() {
       <button
         onClick={() => { setOpen(true); setTab("overview"); }}
         className={cn(
-          "fixed bottom-3 left-3 z-40 flex items-center justify-center w-6 h-6 rounded-full",
-          "bg-card/70 backdrop-blur border border-border/50 shadow-sm opacity-40",
+          "fixed bottom-3 right-3 z-40 flex items-center justify-center w-7 h-7 rounded-full",
+          "bg-card/80 backdrop-blur border border-border/50 shadow-sm opacity-50",
           "text-muted-foreground",
           "hover:opacity-100 hover:bg-accent hover:text-foreground hover:shadow-md hover:border-primary/30",
           "transition-all duration-200 group"
