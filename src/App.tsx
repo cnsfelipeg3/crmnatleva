@@ -114,6 +114,7 @@ const AdminVitrine = lazy(() => import("@/pages/admin/AdminVitrine"));
 const PortalAdminDashboard = lazy(() => import("@/pages/portal-admin/PortalAdminDashboard"));
 const PortalAdminTrips = lazy(() => import("@/pages/portal-admin/PortalAdminTrips"));
 const PortalAdminTripDetail = lazy(() => import("@/pages/portal-admin/PortalAdminTripDetail"));
+const PortalAdminPreview = lazy(() => import("@/pages/portal-admin/PortalAdminPreview"));
 const PortalAdminClients = lazy(() => import("@/pages/portal-admin/PortalAdminClients"));
 const PortalAdminDocuments = lazy(() => import("@/pages/portal-admin/PortalAdminDocuments"));
 const PortalAdminNotifications = lazy(() => import("@/pages/portal-admin/PortalAdminNotifications"));
@@ -371,6 +372,7 @@ function AppRoutes() {
           <Route path="/portal-admin" element={<PortalAdminDashboard />} />
           <Route path="/portal-admin/viagens" element={<PortalAdminTrips />} />
           <Route path="/portal-admin/viagens/:id" element={<PortalAdminTripDetail />} />
+          <Route path="/portal-admin/viagens/:id/preview" element={<PortalAdminPreview />} />
           <Route path="/portal-admin/clientes" element={<PortalAdminClients />} />
           <Route path="/portal-admin/documentos" element={<PortalAdminDocuments />} />
           <Route path="/portal-admin/notificacoes" element={<PortalAdminNotifications />} />
