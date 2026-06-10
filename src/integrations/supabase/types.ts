@@ -7418,6 +7418,54 @@ export type Database = {
           },
         ]
       }
+      portal_settings: {
+        Row: {
+          ai_welcome: boolean
+          auto_enrich: boolean
+          auto_publish: boolean
+          cover_strategy: string
+          created_at: string
+          default_welcome_message: string
+          id: string
+          scope: string
+          show_checklist: boolean
+          show_documents: boolean
+          show_financial: boolean
+          support_whatsapp: string | null
+          updated_at: string
+        }
+        Insert: {
+          ai_welcome?: boolean
+          auto_enrich?: boolean
+          auto_publish?: boolean
+          cover_strategy?: string
+          created_at?: string
+          default_welcome_message?: string
+          id?: string
+          scope?: string
+          show_checklist?: boolean
+          show_documents?: boolean
+          show_financial?: boolean
+          support_whatsapp?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ai_welcome?: boolean
+          auto_enrich?: boolean
+          auto_publish?: boolean
+          cover_strategy?: string
+          created_at?: string
+          default_welcome_message?: string
+          id?: string
+          scope?: string
+          show_checklist?: boolean
+          show_documents?: boolean
+          show_financial?: boolean
+          support_whatsapp?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       portal_travel_budgets: {
         Row: {
           client_id: string
