@@ -265,6 +265,36 @@ export default function Checkin() {
       return { ...t, sale, segment, passengers: passengersBySale.get(t.sale_id) || [], airline_rule: rulesMap.get(airline) };
     });
 
+    // ─── Compute connection metadata per (sale_id, direction) ───
+    // Tasks com 2+ segmentos no mesmo (venda, ida/volta) são pernas de uma conexão.
+    const groupMap = new Map<string, any[]>();
+    enriched.forEach((t: any) => {
+      if (!t.segment) return;
+      const key = `${t.sale_id}|${t.direction}`;
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(t);
+    });
+    groupMap.forEach((arr) => {
+      if (arr.length < 2) return;
+      arr.sort((a, b) => {
+        const oa = a.segment?.segment_order ?? 999;
+        const ob = b.segment?.segment_order ?? 999;
+        if (oa !== ob) return oa - ob;
+        const da = `${a.segment?.departure_date || ""}T${a.segment?.departure_time || ""}`;
+        const db = `${b.segment?.departure_date || ""}T${b.segment?.departure_time || ""}`;
+        return da.localeCompare(db);
+      });
+      const route = [arr[0].segment?.origin_iata, ...arr.map((x: any) => x.segment?.destination_iata)].filter(Boolean).join(" → ");
+      const groupId = `${arr[0].sale_id}|${arr[0].direction}`;
+      arr.forEach((t: any, idx: number) => {
+        t.connectionGroupId = groupId;
+        t.connectionLegIndex = idx + 1;
+        t.connectionLegTotal = arr.length;
+        t.connectionRoute = route;
+        t.connectionVia = arr.slice(0, -1).map((x: any) => x.segment?.destination_iata).filter(Boolean).join(", ");
+      });
+    });
+
     setTasks(enriched);
     setLoading(false);
   };
