@@ -40,6 +40,8 @@ function defaultTitle(sale: any): string {
 export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, canPublish, score }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generatingCover, setGeneratingCover] = useState(false);
+  const [coverStrategy, setCoverStrategy] = useState<"hybrid" | "curated" | "ai">("hybrid");
   const [isPublished, setIsPublished] = useState(false);
   const [state, setState] = useState<ComposerState>({
     custom_title: "",
@@ -62,6 +64,7 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
       const globalWelcome = settings?.default_welcome_message || "Bem-vindo ao seu portal de viagens! 🌍";
       const globalFin = settings?.show_financial ?? true;
       const globalDocs = settings?.show_documents ?? true;
+      setCoverStrategy((settings?.cover_strategy as any) || "hybrid");
 
       setIsPublished(!!pub);
       setState({
@@ -107,6 +110,29 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
       toast.error("Erro ao salvar: " + error.message);
     } else {
       toast.success("Configuração do portal salva!");
+    }
+  };
+
+  const handleGenerateCover = async () => {
+    setGeneratingCover(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("portal-generate-cover", {
+        body: {
+          sale_id: saleId,
+          destination: sale?.destination_iata || sale?.name || "viagem",
+          title: state.custom_title || defaultTitle(sale),
+        },
+      });
+      if (error) throw error;
+      const url = (data as any)?.url;
+      if (!url) throw new Error("Sem URL retornada");
+      set("cover_image_url", url);
+      toast.success("Capa gerada por IA! Lembre de Salvar.");
+    } catch (e: any) {
+      console.error(e);
+      toast.error("Falha ao gerar capa: " + (e?.message || "erro"));
+    } finally {
+      setGeneratingCover(false);
     }
   };
 
@@ -178,9 +204,25 @@ export default function PortalComposerTab({ saleId, sale, onOpenPublishDialog, c
                 onChange={e => set("cover_image_url", e.target.value)}
                 placeholder="https://..."
               />
-              <p className="text-[11px] text-muted-foreground">
-                Em branco · a gente usa a capa automática do destino.
-              </p>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-[11px] text-muted-foreground">
+                  Em branco · a gente usa a capa automática do destino.
+                </p>
+                {coverStrategy !== "curated" && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleGenerateCover}
+                    disabled={generatingCover}
+                  >
+                    {generatingCover
+                      ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Gerando...</>
+                      : <><ImageIcon className="h-3 w-3 mr-1" /> Gerar capa com IA</>}
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="space-y-1.5">

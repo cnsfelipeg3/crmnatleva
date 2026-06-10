@@ -108,14 +108,61 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Publish the sale
+    // ── Auto-enrich on publish ──
+    // Load settings + sale + existing pub row to compute final values without overwriting admin input.
+    const [{ data: settings }, { data: sale }, { data: existingPub }] = await Promise.all([
+      admin.from("portal_settings").select("auto_enrich, cover_strategy, ai_welcome").eq("scope", "global").maybeSingle(),
+      admin.from("sales").select("name, destination_iata, departure_date").eq("id", sale_id).maybeSingle(),
+      admin.from("portal_published_sales").select("custom_title, cover_image_url, welcome_message, concierge_brief").eq("sale_id", sale_id).maybeSingle(),
+    ]);
+
+    const autoEnrich = !!settings?.auto_enrich;
+    const coverStrategy = settings?.cover_strategy || "hybrid";
+
+    // Deterministic title: "{destino} · {mês/ano}"
+    function determTitle(): string | null {
+      if (!sale) return null;
+      const dest = sale.destination_iata || (sale.name ? sale.name.split("-")[0].trim() : null);
+      if (!dest) return null;
+      let mes = "";
+      if (sale.departure_date) {
+        try {
+          mes = new Date(sale.departure_date + "T00:00:00").toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+        } catch { /* ignore */ }
+      }
+      return mes ? `${dest} · ${mes}` : `${dest}`;
+    }
+
+    const finalTitle =
+      (custom_title && custom_title.trim()) ||
+      existingPub?.custom_title ||
+      (autoEnrich ? determTitle() : null);
+
+    let finalCover =
+      (cover_image_url && cover_image_url.trim()) ||
+      existingPub?.cover_image_url ||
+      null;
+
+    // AI cover only when strategy === 'ai' AND nothing set yet
+    if (!finalCover && autoEnrich && coverStrategy === "ai") {
+      try {
+        const r = await admin.functions.invoke("portal-generate-cover", {
+          body: { sale_id, destination: sale?.destination_iata || sale?.name || "viagem", title: finalTitle },
+        });
+        const u = (r as any)?.data?.url;
+        if (u) finalCover = u;
+      } catch (e) {
+        console.error("auto cover gen failed (graceful):", e);
+      }
+    }
+
     const { error: pubErr } = await admin.from("portal_published_sales").upsert({
       sale_id,
       client_id,
       published_by: user.id,
       is_active: true,
-      cover_image_url: cover_image_url || null,
-      custom_title: custom_title || null,
+      cover_image_url: finalCover,
+      custom_title: finalTitle,
       notes_for_client: notes_for_client || null,
     }, { onConflict: "sale_id" });
 
@@ -125,18 +172,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Background enrich (welcome + brief) — non-blocking, idempotent server-side
+    if (autoEnrich) {
+      admin.functions.invoke("portal-enrich", { body: { sale_id } })
+        .catch((e: any) => console.error("enrich invoke failed (graceful):", e));
+    }
+
     // Create "trip published" notification
     await admin.from("portal_notifications").insert({
       client_id,
       sale_id,
       notification_type: "trip_published",
       title: "Sua viagem está pronta no portal NatLeva! 🎉",
-      message: `Organizamos todos os detalhes da sua viagem${custom_title ? ` "${custom_title}"` : ""}. Acesse o portal para conferir voos, hotéis, documentos e itinerário completo.`,
+      message: `Organizamos todos os detalhes da sua viagem${finalTitle ? ` "${finalTitle}"` : ""}. Acesse o portal para conferir voos, hotéis, documentos e itinerário completo.`,
       channel: "portal",
       status: "sent",
       sent_at: new Date().toISOString(),
       metadata: { key: `published_${sale_id}` },
     });
+
 
     return new Response(JSON.stringify({
       success: true,
