@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2, Search, MessageSquare, Check, X } from "lucide-react";
+import { Loader2, Search, MessageSquare, Check, X, RefreshCw } from "lucide-react";
 import { formatPhoneDisplay } from "@/lib/phone";
 import { WhatsAppAvatar } from "@/components/inbox/WhatsAppAvatar";
 import { cn } from "@/lib/utils";
@@ -49,36 +49,35 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
   const [initial, setInitial] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [{ data: convs }, { data: links }] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("id, contact_name, display_name, phone, last_message_at, last_message_preview, profile_picture_url")
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(500),
+        (supabase as any)
+          .from("proposal_conversations")
+          .select("conversation_id")
+          .eq("proposal_id", proposalId),
+      ]);
+      setConversations((convs || []) as Conversation[]);
+      const ids = new Set<string>((links || []).map((l: any) => l.conversation_id));
+      setSelected(ids);
+      setInitial(ids);
+    } catch (e: any) {
+      toast.error("Erro ao carregar conversas", { description: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const [{ data: convs }, { data: links }] = await Promise.all([
-          supabase
-            .from("conversations")
-            .select("id, contact_name, display_name, phone, last_message_at, last_message_preview, profile_picture_url")
-            .order("last_message_at", { ascending: false, nullsFirst: false })
-            .limit(300),
-          (supabase as any)
-            .from("proposal_conversations")
-            .select("conversation_id")
-            .eq("proposal_id", proposalId),
-        ]);
-        if (cancelled) return;
-        setConversations((convs || []) as Conversation[]);
-        const ids = new Set<string>((links || []).map((l: any) => l.conversation_id));
-        setSelected(ids);
-        setInitial(ids);
-        setSearch("");
-      } catch (e: any) {
-        toast.error("Erro ao carregar conversas", { description: e.message });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setSearch("");
+    loadData();
   }, [open, proposalId]);
 
   const convById = useMemo(() => {
@@ -159,8 +158,8 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
         </DialogHeader>
 
         {/* Search */}
-        <div className="px-5 pt-3 pb-2">
-          <div className="relative">
+        <div className="px-5 pt-3 pb-2 flex items-center gap-1.5">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Buscar por nome ou telefone..."
@@ -169,6 +168,17 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
               className="pl-9 h-9 bg-muted/40 border-border/40"
             />
           </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-9 w-9 p-0 shrink-0"
+            onClick={loadData}
+            disabled={loading}
+            title="Atualizar lista"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
         </div>
 
         {/* Selected chips */}
