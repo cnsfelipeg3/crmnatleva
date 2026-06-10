@@ -81,7 +81,7 @@ function TravelStats({ trips }: { trips: any[] }) {
 /* ═══ MAIN DASHBOARD ═══ */
 export default function PortalDashboard() {
   const navigate = useNavigate();
-  const { loading, mode, allTrips: trips, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
+  const { loading, mode, allTrips: trips, activeTrip, nextTrip, upcomingTrips, activeTrips, pastTrips } = usePortalMode();
 
   const categorized = useMemo(() => ({
     upcoming: upcomingTrips,
