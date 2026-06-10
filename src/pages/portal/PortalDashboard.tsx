@@ -15,6 +15,7 @@ import { CurrencySummary } from "@/components/portal/CurrencyPanel";
 import LazyViewportTravelMap from "@/components/maps/LazyViewportTravelMap";
 import { getIataCoords } from "@/components/maps/iataCoords";
 import { usePortalMode } from "@/hooks/usePortalMode";
+import TravelModeHome from "@/components/portal/TravelModeHome";
 
 /* ═══ Quick Action ═══ */
 function QuickAction({ icon: Icon, label, subtitle, onClick, delay, gradient }: {
