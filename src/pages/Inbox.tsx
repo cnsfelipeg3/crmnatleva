@@ -1490,60 +1490,76 @@ function ThreadView({
         </DropdownMenu>
       </div>
 
-      {/* Subject header */}
-      <div className="px-4 sm:px-6 pt-4 pb-3 shrink-0 border-b">
-        <h2 className="text-xl sm:text-2xl font-semibold break-words leading-tight text-foreground">
+      {/* Subject header · Gmail-like */}
+      <div className="px-4 sm:px-6 pt-4 pb-3 shrink-0">
+        <h2 className="text-[22px] sm:text-[26px] font-normal break-words leading-snug text-foreground tracking-tight">
           {subject}
         </h2>
-        <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
+          <span>Caixa de entrada</span>
+          <span>·</span>
           <span>{thread.messages.length} {thread.messages.length === 1 ? "mensagem" : "mensagens"}</span>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-4">
-        <div className="space-y-3 w-full">
+      <div className="flex-1 overflow-y-auto px-3 sm:px-6 pb-6">
+        <div className="space-y-2 w-full">
           {thread.messages.map((m, idx) => {
             const { name, email } = parseFromName(m.from);
             const isLast = idx === thread.messages.length - 1;
             const isExpanded = expanded.has(m.id) || isLast;
+            const toMe = (m.to || "").toLowerCase().includes((profileEmail || "").toLowerCase());
             return (
               <article
                 key={m.id}
-                className="rounded-xl border bg-card shadow-sm overflow-hidden"
+                className={cn(
+                  "rounded-lg border bg-card transition-shadow",
+                  isExpanded ? "shadow-sm" : "hover:shadow-sm"
+                )}
               >
                 <header
-                  className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/30 transition-colors"
+                  className={cn(
+                    "flex items-start gap-3 px-4 py-3 cursor-pointer",
+                    !isExpanded && "hover:bg-muted/40"
+                  )}
                   onClick={() => !isLast && toggleExpand(m.id)}
                 >
-                  <Avatar name={name} email={email} size={44} />
+                  <Avatar name={name} email={email} size={36} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm sm:text-base font-semibold text-foreground truncate">
-                        {name || email}
-                      </span>
-                      <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
+                      <div className="min-w-0 flex items-baseline gap-1.5">
+                        <span className="text-[13px] font-semibold text-foreground truncate">
+                          {name || email}
+                        </span>
+                        {isExpanded && (
+                          <span className="text-[11px] text-muted-foreground truncate">
+                            &lt;{email}&gt;
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground shrink-0 whitespace-nowrap">
                         {fmtDateFull(m.date)}
                       </span>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      &lt;{email}&gt;
-                    </div>
-                    <div className="text-xs text-muted-foreground truncate mt-0.5">
-                      Para: {m.to}
-                      {m.cc && ` · Cc: ${m.cc}`}
-                    </div>
-                    {!isExpanded && (
-                      <div className="text-xs text-muted-foreground truncate mt-1 italic">{m.snippet}</div>
+                    {isExpanded ? (
+                      <div className="text-[11px] text-muted-foreground truncate mt-0.5">
+                        para {toMe ? "mim" : (m.to || "—")}
+                        {m.cc && <span className="ml-1">· cc: {m.cc}</span>}
+                      </div>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground/90 truncate mt-0.5">
+                        {m.snippet}
+                      </div>
                     )}
                   </div>
                 </header>
                 {isExpanded && (
-                  <div className="px-4 sm:px-5 pb-5 border-t pt-4">
+                  <div className="px-4 sm:px-5 pb-4 pt-1">
                     {m.html ? (
                       <EmailHtmlFrame html={m.html} />
                     ) : (
-                      <pre className="whitespace-pre-wrap break-words font-sans text-sm text-foreground leading-relaxed">
+                      <pre className="whitespace-pre-wrap break-words font-sans text-[14px] text-foreground leading-[1.6]">
                         {m.text || m.snippet || ""}
                       </pre>
                     )}
@@ -1554,6 +1570,7 @@ function ThreadView({
           })}
         </div>
       </div>
+
 
       {/* Sticky reply actions */}
       <div className="shrink-0 border-t bg-background/95 backdrop-blur px-3 sm:px-6 py-3 flex flex-wrap gap-2">
@@ -1575,22 +1592,41 @@ function ThreadView({
 function EmailHtmlFrame({ html }: { html: string }) {
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(200);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
+
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      setIsDark(root.classList.contains("dark"));
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const clean = sanitizeEmailHtml(html);
+    // CRITICAL: follow APP theme (not OS prefers-color-scheme), to keep readable contrast
+    // on light app + dark OS (text was rendering near-invisible light grey).
+    const text = isDark ? "#e5e7eb" : "#1f2937";
+    const link = isDark ? "#60a5fa" : "#1a73e8";
+    const quoteBorder = isDark ? "#374151" : "#dadce0";
+    const quoteText = isDark ? "#9ca3af" : "#5f6368";
+    const bg = isDark ? "transparent" : "#ffffff";
     const doc = `<!doctype html><html><head><meta charset="utf-8"><base target="_blank">
       <style>
-        html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;line-height:1.6;color:#111;word-wrap:break-word;overflow-wrap:break-word}
-        a{color:#2563eb;text-decoration:underline}
-        img{max-width:100%;height:auto;border-radius:6px}
-        blockquote{border-left:3px solid #e5e7eb;margin:8px 0;padding:4px 12px;color:#555}
-        table{max-width:100%}
-        pre{white-space:pre-wrap;word-wrap:break-word}
-        @media (prefers-color-scheme: dark){
-          html,body{color:#e5e7eb;background:transparent}
-          a{color:#60a5fa}
-          blockquote{border-color:#374151;color:#9ca3af}
-        }
+        html,body{margin:0;padding:0;background:${bg};font-family:Roboto,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.6;color:${text};word-wrap:break-word;overflow-wrap:break-word}
+        *{color:inherit}
+        p,div,span,li,td,th{color:${text}}
+        a{color:${link};text-decoration:none}
+        a:hover{text-decoration:underline}
+        img{max-width:100%;height:auto;border-radius:4px}
+        blockquote{border-left:2px solid ${quoteBorder};margin:8px 0;padding:4px 12px;color:${quoteText}}
+        table{max-width:100%;border-collapse:collapse}
+        pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit}
+        hr{border:0;border-top:1px solid ${quoteBorder};margin:12px 0}
       </style>
     </head><body>${clean}</body></html>`;
     const frame = ref.current;
@@ -1607,14 +1643,12 @@ function EmailHtmlFrame({ html }: { html: string }) {
           body.querySelectorAll("img").forEach((img) => {
             img.setAttribute("referrerpolicy", "no-referrer");
             img.setAttribute("loading", "lazy");
-            // Hide broken images on error
             img.addEventListener("error", () => {
               (img as HTMLImageElement).style.display = "none";
             });
           });
-          // Recompute height after images load
           const resize = () => {
-            const h = Math.min(body.scrollHeight + 16, 6000);
+            const h = Math.min(body.scrollHeight + 16, 8000);
             setHeight(h);
           };
           resize();
@@ -1625,14 +1659,14 @@ function EmailHtmlFrame({ html }: { html: string }) {
     };
     frame.addEventListener("load", onLoad);
     return () => frame.removeEventListener("load", onLoad);
-  }, [html]);
+  }, [html, isDark]);
 
   return (
     <iframe
       ref={ref}
       sandbox="allow-popups allow-popups-to-escape-sandbox"
-      className="w-full bg-transparent"
-      style={{ height, border: 0 }}
+      className="w-full"
+      style={{ height, border: 0, background: "transparent" }}
       title="Email content"
     />
   );
