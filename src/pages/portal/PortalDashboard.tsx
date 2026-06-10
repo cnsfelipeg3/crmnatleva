@@ -410,4 +410,19 @@ export default function PortalDashboard() {
       </div>
     </PortalLayout>
   );
+
+  switch (mode) {
+    case "in-trip":
+      // FASE 2: substituir por <TravelModeHome/>
+      return homeContent;
+    case "pre-trip":
+      // FASE 1: substituir por <PreTripHome/>
+      return homeContent;
+    case "post-trip":
+      // FASE 3: substituir por <PostTripHome/>
+      return homeContent;
+    default:
+      return homeContent;
+  }
 }
+
