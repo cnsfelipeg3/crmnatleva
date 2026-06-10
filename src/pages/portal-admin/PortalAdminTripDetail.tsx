@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,15 +9,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
 import {
   ArrowLeft, Globe, Eye, Plane, Hotel, Users, FileText, DollarSign,
   ClipboardCheck, Bell, Calendar, MapPin, Edit, Send, CheckCircle2,
-  Shield, Clock, Luggage, Share2,
+  Shield, Clock, Luggage, Share2, AlertCircle, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateBR } from "@/lib/dateFormat";
 import { toast } from "sonner";
 import AirlineLogo from "@/components/AirlineLogo";
+import { computeReadiness, PUBLISH_THRESHOLD } from "@/lib/portalReadiness";
+
+const PortalComposerTab = lazy(() => import("@/components/portal-admin/PortalComposerTab"));
+const PublishToPortalDialog = lazy(() => import("@/components/portal/PublishToPortalDialog"));
+
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
