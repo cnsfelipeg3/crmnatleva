@@ -49,36 +49,35 @@ export function LinkConversationsDialog({ open, onOpenChange, proposalId, onChan
   const [initial, setInitial] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [{ data: convs }, { data: links }] = await Promise.all([
+        supabase
+          .from("conversations")
+          .select("id, contact_name, display_name, phone, last_message_at, last_message_preview, profile_picture_url")
+          .order("last_message_at", { ascending: false, nullsFirst: false })
+          .limit(500),
+        (supabase as any)
+          .from("proposal_conversations")
+          .select("conversation_id")
+          .eq("proposal_id", proposalId),
+      ]);
+      setConversations((convs || []) as Conversation[]);
+      const ids = new Set<string>((links || []).map((l: any) => l.conversation_id));
+      setSelected(ids);
+      setInitial(ids);
+    } catch (e: any) {
+      toast.error("Erro ao carregar conversas", { description: e.message });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (!open) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const [{ data: convs }, { data: links }] = await Promise.all([
-          supabase
-            .from("conversations")
-            .select("id, contact_name, display_name, phone, last_message_at, last_message_preview, profile_picture_url")
-            .order("last_message_at", { ascending: false, nullsFirst: false })
-            .limit(300),
-          (supabase as any)
-            .from("proposal_conversations")
-            .select("conversation_id")
-            .eq("proposal_id", proposalId),
-        ]);
-        if (cancelled) return;
-        setConversations((convs || []) as Conversation[]);
-        const ids = new Set<string>((links || []).map((l: any) => l.conversation_id));
-        setSelected(ids);
-        setInitial(ids);
-        setSearch("");
-      } catch (e: any) {
-        toast.error("Erro ao carregar conversas", { description: e.message });
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => { cancelled = true; };
+    setSearch("");
+    loadData();
   }, [open, proposalId]);
 
   const convById = useMemo(() => {
