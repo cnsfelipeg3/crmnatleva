@@ -215,9 +215,26 @@ export default function JourneyHero({
         animate={{ scale: 1 }}
         transition={{ duration: 16, ease: "linear", repeat: Infinity, repeatType: "reverse" }}
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-black/50 to-black/20" />
-      <div className="absolute inset-0 bg-gradient-to-r from-black/50 via-transparent to-transparent" />
-      <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-t from-background to-transparent" />
+      {/* Refined cinematic overlay — top vignette + side darken for legibility */}
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,hsl(0_0%_0%/0.45)_0%,hsl(0_0%_0%/0.15)_30%,transparent_55%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(0_0%_0%/0.55)_0%,hsl(0_0%_0%/0.15)_35%,transparent_65%)]" />
+      {/* High-end soft fade to page background — multi-stop ease, ~45% of hero height */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[45%]"
+        style={{
+          background:
+            "linear-gradient(to top, hsl(var(--background)) 0%, hsl(var(--background) / 0.92) 28%, hsl(var(--background) / 0.6) 55%, hsl(var(--background) / 0.25) 78%, transparent 100%)",
+        }}
+      />
+      {/* Whisper of grain for depth (no extra weight) */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            "radial-gradient(hsl(var(--foreground)) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
+        }}
+      />
 
       {/* Back */}
       {onBack && (

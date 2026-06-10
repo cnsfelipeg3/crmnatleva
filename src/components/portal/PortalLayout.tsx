@@ -26,10 +26,10 @@ function TravelModeIndicator({ sale }: { sale?: PortalLayoutProps["travelSale"] 
     label = `Em viagem · Dia ${current}/${total}`;
   }
   return (
-    <div className="hidden lg:inline-flex shrink-0 items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-[11px] font-bold text-accent whitespace-nowrap leading-none">
-      <span className="relative flex h-2 w-2">
+    <div className="hidden xl:inline-flex shrink-0 items-center gap-2 px-2.5 py-1 rounded-full bg-accent/10 border border-accent/25 text-[10.5px] font-semibold text-accent whitespace-nowrap leading-none tracking-wide">
+      <span className="relative flex h-1.5 w-1.5">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-accent" />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
       </span>
       {label}
     </div>
@@ -147,21 +147,22 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
 
 
               {/* Center Nav */}
-              <nav className="hidden md:flex items-center bg-muted/40 rounded-xl p-1">
+              <nav className="hidden md:flex items-center bg-muted/40 rounded-xl p-0.5 mx-2">
                 {navItems.map((item) => {
                   const isActive = location.pathname === item.to;
                   return (
                     <Link
                       key={item.to}
                       to={item.to}
-                      className={`relative flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[13px] font-medium whitespace-nowrap transition-all duration-200 ${
+                      className={`relative flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-lg text-[12.5px] font-medium whitespace-nowrap transition-all duration-200 ${
                         isActive
                           ? "bg-card text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
                       }`}
+                      title={item.label}
                     >
-                      <item.icon className="h-3.5 w-3.5" />
-                      {item.label}
+                      <item.icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="hidden xl:inline">{item.label}</span>
                     </Link>
                   );
                 })}
@@ -199,10 +200,10 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
                 </button>
 
                 <div className="hidden sm:flex items-center gap-1.5 ml-1 pl-2 border-l border-border/40">
-                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center">
+                  <div className="w-7 h-7 rounded-full bg-accent/10 flex items-center justify-center" title={user?.email || ""}>
                     <User className="h-3.5 w-3.5 text-accent" />
                   </div>
-                  <span className="max-w-[140px] truncate text-xs text-muted-foreground">{user?.email}</span>
+                  <span className="hidden 2xl:inline max-w-[160px] truncate text-xs text-muted-foreground">{user?.email}</span>
                 </div>
 
                 <button onClick={handleLogout} className="p-2 rounded-xl text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-all duration-200 ml-0.5" title="Sair">
