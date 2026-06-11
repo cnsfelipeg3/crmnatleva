@@ -142,7 +142,7 @@ export default function PortalLayout({ children, travelMode, travelSale }: Porta
               <Link to="/portal" className="flex items-center gap-2.5 group shrink-0">
                 <img src={logoNatleva} alt="NatLeva" className="h-7 dark:brightness-[1.8] transition-transform group-hover:scale-105" />
               </Link>
-              {travelMode && <TravelModeIndicator sale={travelSale} />}
+              
             </div>
 
 
