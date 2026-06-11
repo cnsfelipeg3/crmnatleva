@@ -706,14 +706,6 @@ export default function PortalTripDetail() {
             </div>
           )}
 
-          {/* ── Preparação ── */}
-          <div id="preparacao" data-section className="scroll-mt-28">
-            <SectionHeader id="preparacao-header" icon={Shield} title="Preparação" subtitle="Checklist inteligente da sua viagem">
-              <div className="rounded-2xl border border-border/40 overflow-hidden bg-card p-5 sm:p-6">
-                <PortalChecklist sale={sale} segments={segments || []} hotels={hotels || []} services={services || []} passengers={passengers || []} attachments={attachments || []} financial={financial || { receivables: [] }} lodging={lodging || []} />
-              </div>
-            </SectionHeader>
-          </div>
 
           {/* ── Documentos ── */}
           <div id="documentos" data-section className="scroll-mt-28">
