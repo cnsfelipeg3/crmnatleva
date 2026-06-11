@@ -162,6 +162,31 @@ export default function FlightRegistrationSection({
   const [loadingGroup, setLoadingGroup] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(groups.map(g => g.id)));
 
+  // EDIT MODE FIX: quando o pai carrega `segments` async (vinda do banco) DEPOIS
+  // do mount, o useState inicial já criou grupos vazios. Aqui ressincronizamos
+  // os grupos apenas uma vez, quando os segments chegam pela primeira vez.
+  const segmentsHydratedRef = useRef(false);
+  useEffect(() => {
+    if (segmentsHydratedRef.current) return;
+    if (!segments || segments.length === 0) return;
+    segmentsHydratedRef.current = true;
+    const idaSegs = segments.filter(s => s.direction === "ida");
+    const voltaSegs = segments.filter(s => s.direction === "volta");
+    const result: FlightGroup[] = [];
+    const outbound = createGroup("main_outbound", "Voo de Ida");
+    if (idaSegs.length > 0) outbound.segments = idaSegs;
+    if (idaSegs.length > 1) outbound.connectionType = idaSegs.length === 2 ? "1_conexao" : idaSegs.length === 3 ? "2_conexoes" : "3_mais";
+    result.push(outbound);
+    if (voltaSegs.length > 0) {
+      const ret = createGroup("main_return", "Voo de Volta");
+      ret.segments = voltaSegs;
+      if (voltaSegs.length > 1) ret.connectionType = voltaSegs.length === 2 ? "1_conexao" : voltaSegs.length === 3 ? "2_conexoes" : "3_mais";
+      result.push(ret);
+    }
+    setGroups(result);
+    setExpandedGroups(new Set(result.map(g => g.id)));
+  }, [segments]);
+
   // Amadeus offer selection dialog
   const [offerDialogOpen, setOfferDialogOpen] = useState(false);
   const [pendingOffers, setPendingOffers] = useState<{ groupId: string; offers: AmadeusOffer[]; direction: string } | null>(null);
