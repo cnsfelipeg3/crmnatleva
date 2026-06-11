@@ -371,8 +371,11 @@ export default function NewSale() {
           })));
         }
 
-        // Load hotel data from sale itself for first hotel entry
-        if (sale.hotel_name && hotelEntries.length === 0) {
+        // Fallback: se NÃO veio nenhum hotel via cost_items mas existe hotel_name na sale,
+        // usa os campos da própria sale (vendas antigas). Verifica via `costs` (variável local
+        // recém carregada), nunca via `hotelEntries` (state stale dentro do mesmo render).
+        const hotelsFromCosts = (costs || []).filter((c: any) => c.category === "hotel");
+        if (sale.hotel_name && hotelsFromCosts.length === 0) {
           const h = createEmptyHotelEntry();
           h.hotel_name = sale.hotel_name || "";
           h.hotel_room = sale.hotel_room || "";
@@ -384,6 +387,51 @@ export default function NewSale() {
           h.hotel_country = sale.hotel_country || "";
           h.hotel_address = sale.hotel_address || "";
           setHotelEntries([h]);
+        }
+
+        // Load tariff conditions (aéreo, hotel, e por product_type)
+        const { data: tariffs } = await supabase.from("tariff_conditions").select("*").eq("sale_id", editId);
+        if (tariffs && tariffs.length > 0) {
+          const air = tariffs.find((t: any) => t.product_type === "aereo");
+          const hot = tariffs.find((t: any) => t.product_type === "hotel");
+          if (air) {
+            setAirTariff({
+              fare_name: air.fare_name || "",
+              is_refundable: air.is_refundable || "nao_reembolsavel",
+              alteration_allowed: !!air.alteration_allowed,
+              cancellation_allowed: !!air.cancellation_allowed,
+              refund_type: air.refund_type || "nao_reembolsavel",
+              penalty_type: air.penalty_type || "sem_multa",
+              penalty_percent: Number(air.penalty_percent) || 0,
+              penalty_fixed_value: Number(air.penalty_fixed_value) || 0,
+              fare_difference_applies: !!air.fare_difference_applies,
+              penalty_plus_fare_difference: !!air.penalty_plus_fare_difference,
+              cancellation_deadline: air.cancellation_deadline || "",
+              alteration_deadline: air.alteration_deadline || "",
+              credit_voucher_allowed: !!air.credit_voucher_allowed,
+              credit_miles_allowed: !!air.credit_miles_allowed,
+              observations: air.observations || "",
+            } as TariffCondition);
+          }
+          if (hot) {
+            setHotelTariff({
+              fare_name: hot.fare_name || "",
+              is_refundable: hot.is_refundable || "nao_reembolsavel",
+              alteration_allowed: !!hot.alteration_allowed,
+              cancellation_allowed: !!hot.cancellation_allowed,
+              refund_type: hot.refund_type || "nao_reembolsavel",
+              penalty_type: hot.penalty_type || "sem_multa",
+              penalty_percent: Number(hot.penalty_percent) || 0,
+              penalty_fixed_value: Number(hot.penalty_fixed_value) || 0,
+              fare_difference_applies: !!hot.fare_difference_applies,
+              penalty_plus_fare_difference: !!hot.penalty_plus_fare_difference,
+              cancellation_deadline: hot.cancellation_deadline || "",
+              alteration_deadline: hot.alteration_deadline || "",
+              credit_voucher_allowed: !!hot.credit_voucher_allowed,
+              credit_miles_allowed: !!hot.credit_miles_allowed,
+              observations: hot.observations || "",
+            } as TariffCondition);
+          }
         }
       } catch (err) {
         console.error("Error loading sale for edit:", err);
