@@ -571,7 +571,7 @@ export default function PortalTripDetail() {
     segments?.length > 0 && { id: "voos", label: "Voos", icon: Plane, count: segments.length },
     allHotels.length > 0 && { id: "hospedagem", label: "Hotéis", icon: Hotel, count: allHotels.length },
     services?.length > 0 && { id: "experiencias", label: "Experiências", icon: Star, count: services.length },
-    { id: "preparacao", label: "Preparação", icon: Shield },
+    
     { id: "documentos", label: "Documentos", icon: FileText, count: attachments?.length || 0 },
     financial?.receivables?.length > 0 && { id: "financeiro", label: "Financeiro", icon: CreditCard },
     passengers?.length > 0 && { id: "viajantes", label: "Viajantes", icon: Users, count: passengers.length },
