@@ -571,7 +571,7 @@ export default function PortalTripDetail() {
     segments?.length > 0 && { id: "voos", label: "Voos", icon: Plane, count: segments.length },
     allHotels.length > 0 && { id: "hospedagem", label: "Hotéis", icon: Hotel, count: allHotels.length },
     services?.length > 0 && { id: "experiencias", label: "Experiências", icon: Star, count: services.length },
-    { id: "preparacao", label: "Preparação", icon: Shield },
+    
     { id: "documentos", label: "Documentos", icon: FileText, count: attachments?.length || 0 },
     financial?.receivables?.length > 0 && { id: "financeiro", label: "Financeiro", icon: CreditCard },
     passengers?.length > 0 && { id: "viajantes", label: "Viajantes", icon: Users, count: passengers.length },
@@ -706,14 +706,6 @@ export default function PortalTripDetail() {
             </div>
           )}
 
-          {/* ── Preparação ── */}
-          <div id="preparacao" data-section className="scroll-mt-28">
-            <SectionHeader id="preparacao-header" icon={Shield} title="Preparação" subtitle="Checklist inteligente da sua viagem">
-              <div className="rounded-2xl border border-border/40 overflow-hidden bg-card p-5 sm:p-6">
-                <PortalChecklist sale={sale} segments={segments || []} hotels={hotels || []} services={services || []} passengers={passengers || []} attachments={attachments || []} financial={financial || { receivables: [] }} lodging={lodging || []} />
-              </div>
-            </SectionHeader>
-          </div>
 
           {/* ── Documentos ── */}
           <div id="documentos" data-section className="scroll-mt-28">
