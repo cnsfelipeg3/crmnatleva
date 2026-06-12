@@ -1,0 +1,2 @@
+UPDATE public.clients SET tags = array_remove(array_remove(tags, 'monday'), 'importado') WHERE 'monday'=ANY(tags) OR 'importado'=ANY(tags);
+UPDATE public.conversations SET tags = array_remove(array_remove(tags, 'monday'), 'importado') WHERE 'monday'=ANY(tags) OR 'importado'=ANY(tags);
