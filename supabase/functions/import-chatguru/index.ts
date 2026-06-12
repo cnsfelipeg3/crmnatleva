@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
               .insert({
                 external_id: chatId,
                 phone, display_name: displayName, source: "chatguru",
-                status: "fechado", tags: ["chatguru", "importado"],
+                status: "fechado", tags: ["chatguru"],
                 last_message_at: lastMsg.created,
                 last_message_preview: lastText.substring(0, 200),
                 client_id: clientId,
