@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
               } else if (job.create_contacts) {
                 const { data: newClient } = await supabase
                   .from("clients")
-                  .insert({ display_name: displayName, phone, tags: ["chatguru", "importado"] })
+                  .insert({ display_name: displayName, phone, tags: ["chatguru"] })
                   .select("id")
                   .single();
                 if (newClient) { clientId = newClient.id; contactsCreated++; }
