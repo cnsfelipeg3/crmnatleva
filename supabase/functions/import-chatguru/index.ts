@@ -239,7 +239,7 @@ Deno.serve(async (req) => {
               } else if (job.create_contacts) {
                 const { data: newClient } = await supabase
                   .from("clients")
-                  .insert({ display_name: displayName, phone, tags: ["chatguru", "importado"] })
+                  .insert({ display_name: displayName, phone, tags: ["chatguru"] })
                   .select("id")
                   .single();
                 if (newClient) { clientId = newClient.id; contactsCreated++; }
@@ -251,7 +251,7 @@ Deno.serve(async (req) => {
               .insert({
                 external_id: chatId,
                 phone, display_name: displayName, source: "chatguru",
-                status: "fechado", tags: ["chatguru", "importado"],
+                status: "fechado", tags: ["chatguru"],
                 last_message_at: lastMsg.created,
                 last_message_preview: lastText.substring(0, 200),
                 client_id: clientId,
