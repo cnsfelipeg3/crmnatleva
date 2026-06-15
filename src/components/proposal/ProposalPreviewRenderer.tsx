@@ -116,7 +116,7 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
       className="rounded-2xl overflow-hidden border border-border/30 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-accent/5 cursor-pointer group/card h-full flex flex-col"
       onClick={() => setExpanded(!expanded)}
     >
-      {children}
+      <div className="flex-1 flex flex-col">{children}</div>
       <AnimatePresence>
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }} className="overflow-hidden" onClick={(e) => e.stopPropagation()}>
