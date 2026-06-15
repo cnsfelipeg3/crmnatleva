@@ -113,7 +113,7 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
     <div
-      className="rounded-2xl overflow-hidden border border-border/30 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-accent/5 cursor-pointer group/card"
+      className="rounded-2xl overflow-hidden border border-border/30 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-accent/5 cursor-pointer group/card h-full flex flex-col"
       onClick={() => setExpanded(!expanded)}
     >
       {children}
