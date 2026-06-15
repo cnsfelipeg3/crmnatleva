@@ -1713,7 +1713,7 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
   if (d.locator) pills.push({ icon: <Tag className="w-3.5 h-3.5" />, label: "Localizador", value: String(d.locator) });
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }} className="h-full flex">
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }} className="h-full">
       <ExpandableCard
         expandedContent={
           <div className="px-5 pb-4 space-y-3">
