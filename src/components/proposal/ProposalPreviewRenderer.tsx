@@ -113,10 +113,10 @@ function ExpandableCard({ children, expandedContent, defaultExpanded = false }: 
   const [expanded, setExpanded] = useState(defaultExpanded);
   return (
     <div
-      className="rounded-2xl overflow-hidden border border-border/30 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-accent/5 cursor-pointer group/card"
+      className="rounded-2xl overflow-hidden border border-border/30 bg-card transition-all duration-300 hover:shadow-xl hover:shadow-accent/5 cursor-pointer group/card h-full flex flex-col"
       onClick={() => setExpanded(!expanded)}
     >
-      {children}
+      <div className="flex-1 flex flex-col">{children}</div>
       <AnimatePresence>
         {expanded && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }} className="overflow-hidden" onClick={(e) => e.stopPropagation()}>
@@ -1713,7 +1713,7 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
   if (d.locator) pills.push({ icon: <Tag className="w-3.5 h-3.5" />, label: "Localizador", value: String(d.locator) });
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }}>
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: idx * 0.08 }} className="h-full">
       <ExpandableCard
         expandedContent={
           <div className="px-5 pb-4 space-y-3">
@@ -1770,15 +1770,15 @@ function MiscItemCard({ item, idx, kind }: { item: any; idx: number; kind: strin
             <SmartImage src={item.image_url} alt={item.title || meta.label} className="w-full h-full" imgClassName="object-cover" loading="lazy" />
           </div>
         )}
-        <div className="p-5">
+        <div className="p-5 flex-1 flex flex-col">
           <div className="flex items-center gap-2 mb-1">
             <Icon className="w-4 h-4 text-accent" />
             <span className="text-[10px] uppercase tracking-[0.25em] text-accent font-semibold">{meta.label}</span>
           </div>
-          <h3 className="font-semibold text-foreground leading-snug">{item.title || `${meta.label} sem título`}</h3>
-          {route && <p className="text-sm text-muted-foreground mt-1 truncate">{route}</p>}
+          <h3 className="font-semibold text-foreground leading-snug line-clamp-2 min-h-[2.75rem]">{item.title || `${meta.label} sem título`}</h3>
+          {route && <p className="text-sm text-muted-foreground mt-1 line-clamp-2 break-words min-h-[2.5rem]">{route}</p>}
           {item.description && <p className="text-sm text-muted-foreground line-clamp-2 mt-1">{item.description}</p>}
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-[11px] text-muted-foreground">
+          <div className="mt-auto pt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground min-h-[1.25rem]">
             {dateStr && <span className="inline-flex items-center gap-1"><Calendar className="w-3 h-3" /> {dateStr}</span>}
             {timeStr && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" /> {timeStr}</span>}
             {guests && <span className="inline-flex items-center gap-1"><Users className="w-3 h-3" /> {guests}</span>}
